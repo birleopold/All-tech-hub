@@ -1,0 +1,44 @@
+{% extends "staff_base.html" %}
+{% block title %}Documents{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-3">Commercial documents</h1>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="type" class="form-select">
+      <option value="">All types</option>
+      <option value="quote" {% if request.GET.type == 'quote' %}selected{% endif %}>Quotations</option>
+      <option value="proforma" {% if request.GET.type == 'proforma' %}selected{% endif %}>Proformas</option>
+      <option value="invoice" {% if request.GET.type == 'invoice' %}selected{% endif %}>Invoices</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="status" class="form-select">
+      <option value="">All statuses</option>
+      {% for val,label in document_status_choices %}
+      <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
+  <div class="col-auto ms-auto"><a class="btn btn-primary" href="{% url 'staff_document_create' %}">New document</a></div>
+</form>
+<div class="table-responsive card shadow-sm border-0">
+  <table class="table table-hover mb-0 align-middle">
+    <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Customer</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for d in documents %}
+      <tr>
+        <td><a href="{% url 'staff_document_edit' d.pk %}">{{ d.number }}</a></td>
+        <td>{{ d.get_doc_type_display }}</td>
+        <td>{{ d.customer.name }}</td>
+        <td>{{ d.get_status_display }}</td>
+        <td>{{ company.currency_code }} {{ d.total }}</td>
+        <td>{{ d.issue_date }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-muted">No documents.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

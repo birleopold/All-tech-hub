@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}My documents{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h1 class="h3 mb-0">My documents</h1>
+    <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Portal home</a>
+  </div>
+  <div class="table-responsive card border-0 shadow-sm">
+    <table class="table mb-0 align-middle">
+      <caption class="visually-hidden">Your quotes and invoices with document number, type, status, date, total, and PDF download</caption>
+      <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th></th></tr></thead>
+      <tbody>
+        {% for d in documents %}
+        <tr>
+          <td>{{ d.number }}</td>
+          <td>{{ d.get_doc_type_display }}</td>
+          <td>{{ d.get_status_display }}</td>
+          <td>{{ d.issue_date }}</td>
+          <td class="text-end">{{ company.currency_code }} {{ d.total|floatformat:2 }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_document_pdf' d.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open PDF for {{ d.number }} in a new tab">PDF</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-muted">No documents yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

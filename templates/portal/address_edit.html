@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Edit address{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <h1 class="h3 mb-3">Edit address</h1>
+      <form method="post" class="card border-0 shadow-sm">
+        {% csrf_token %}
+        <div class="card-body">
+          {% for field in form %}
+          <div class="mb-2">
+            <label class="form-label small text-muted mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="small text-danger">{{ field.errors }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="card-footer bg-white d-flex justify-content-between">
+          <a class="btn btn-link" href="{% url 'portal_addresses' %}">Cancel</a>
+          <button class="btn btn-primary" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

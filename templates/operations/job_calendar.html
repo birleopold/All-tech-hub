@@ -1,0 +1,195 @@
+{% extends "staff_base.html" %}
+{% block title %}Job calendar{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="h3 mb-0">Job calendar</h1>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Calendar view">
+      <a class="btn {% if view_mode == 'week' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=week">Week</a>
+      <a class="btn {% if view_mode == 'month' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?view=month">Month</a>
+    </div>
+    {% if view_mode == 'week' %}
+    <a class="btn btn-outline-secondary btn-sm" href="?view=week&week={{ prev_week }}">← Prev</a>
+    <a class="btn btn-outline-secondary btn-sm" href="?view=week&week={{ this_week }}">This week</a>
+    <a class="btn btn-outline-secondary btn-sm" href="?view=week&week={{ next_week }}">Next →</a>
+    <span class="text-muted small">{{ week_start|date:"Y-m-d" }} → {{ week_end|date:"Y-m-d" }}</span>
+    {% else %}
+    <a class="btn btn-outline-secondary btn-sm" href="?view=month&month={{ prev_month }}">← Prev</a>
+    <a class="btn btn-outline-secondary btn-sm" href="?view=month&month={{ this_month }}">This month</a>
+    <a class="btn btn-outline-secondary btn-sm" href="?view=month&month={{ next_month }}">Next →</a>
+    <span class="text-muted small">{{ month_first|date:"F Y" }}</span>
+    {% endif %}
+    <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_jobs' %}">Back to list</a>
+  </div>
+</div>
+<p class="text-muted small">
+  {% if view_mode == 'week' %}
+  Scheduled jobs grouped by technician — drag a card onto a different day to reschedule. Cancelled jobs are hidden.
+  {% else %}
+  Month overview — click a job to open it, or drag onto another day to reschedule.
+  {% endif %}
+</p>
+<div id="cal-flash" class="alert alert-info py-1 px-2 small d-none" role="status"></div>
+
+{% if view_mode == 'week' %}
+<div class="table-responsive card border-0 shadow-sm">
+  <table class="table mb-0 align-top">
+    <thead class="table-light">
+      <tr>
+        <th style="min-width: 8rem;">Technician</th>
+        {% for d in days %}
+        <th class="small text-nowrap {% if d == today %}bg-info-subtle{% endif %}">
+          {{ d|date:"D" }}<br><span class="text-muted">{{ d|date:"M d" }}</span>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr {% if row.is_unassigned %}class="table-warning"{% endif %}>
+        <th class="text-nowrap">{{ row.label }}</th>
+        {% for cell in row.days %}
+        <td class="small cal-cell" data-date="{{ cell.date|date:'Y-m-d' }}" style="min-width: 9rem;">
+          {% for it in cell.items %}
+          <div class="cal-job border rounded p-1 mb-1 bg-white {% if it.job.is_overdue %}border-danger{% endif %}"
+               draggable="true"
+               data-job-id="{{ it.job.pk }}"
+               data-start="{{ it.job.scheduled_for|date:'c' }}"
+               data-end="{% if it.job.scheduled_until %}{{ it.job.scheduled_until|date:'c' }}{% endif %}">
+            <div class="d-flex justify-content-between gap-1">
+              <strong class="text-nowrap">{{ it.label_time }}{% if it.until %}–{{ it.until }}{% endif %}</strong>
+              <span class="badge text-bg-light">{{ it.job.get_status_display }}</span>
+            </div>
+            <a class="text-decoration-none" href="{% url 'staff_job_detail' it.job.pk %}">{{ it.job.number }}</a>
+            <div class="text-truncate" title="{{ it.job.title }}">{{ it.job.title|truncatechars:34 }}</div>
+            <div class="text-muted text-truncate" title="{{ it.job.customer.name }}">{{ it.job.customer.name|truncatechars:30 }}</div>
+          </div>
+          {% empty %}
+          <span class="text-muted">—</span>
+          {% endfor %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-2">
+    <div class="d-grid" style="grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+      <div class="text-center small text-muted fw-semibold">Mon</div>
+      <div class="text-center small text-muted fw-semibold">Tue</div>
+      <div class="text-center small text-muted fw-semibold">Wed</div>
+      <div class="text-center small text-muted fw-semibold">Thu</div>
+      <div class="text-center small text-muted fw-semibold">Fri</div>
+      <div class="text-center small text-muted fw-semibold">Sat</div>
+      <div class="text-center small text-muted fw-semibold">Sun</div>
+      {% for d in month_days %}
+      <div class="cal-cell border rounded p-1 {% if d.is_today %}bg-info-subtle{% endif %} {% if not d.in_month %}bg-light text-muted{% endif %}"
+           data-date="{{ d.date|date:'Y-m-d' }}"
+           style="min-height: 8rem;">
+        <div class="small d-flex justify-content-between">
+          <strong>{{ d.date|date:"j" }}</strong>
+          {% if d.jobs %}<span class="badge text-bg-secondary">{{ d.jobs|length }}</span>{% endif %}
+        </div>
+        {% for j in d.jobs %}
+        <div class="cal-job small border rounded px-1 py-0 mb-1 bg-white {% if j.is_overdue %}border-danger{% endif %}"
+             draggable="true"
+             data-job-id="{{ j.pk }}"
+             data-start="{{ j.scheduled_for|date:'c' }}"
+             data-end="{% if j.scheduled_until %}{{ j.scheduled_until|date:'c' }}{% endif %}"
+             title="{{ j.title }} — {{ j.customer.name }}">
+          <a class="text-decoration-none d-block text-truncate" href="{% url 'staff_job_detail' j.pk %}">{{ j.scheduled_for|date:'H:i' }} {{ j.number }}</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  var flash = document.getElementById('cal-flash');
+  function note(msg, ok) {
+    if (!flash) return;
+    flash.textContent = msg;
+    flash.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger');
+    flash.classList.add(ok ? 'alert-success' : 'alert-danger');
+    setTimeout(function () { flash.classList.add('d-none'); }, 4000);
+  }
+  function csrf() {
+    var v = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (v) return v.value;
+    var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function shiftIso(iso, targetDateStr) {
+    if (!iso || !targetDateStr) return null;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    var parts = targetDateStr.split('-').map(function (x) { return parseInt(x, 10); });
+    d.setFullYear(parts[0], parts[1] - 1, parts[2]);
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    var tzo = -d.getTimezoneOffset();
+    var sign = tzo >= 0 ? '+' : '-';
+    var abs = Math.abs(tzo);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
+      + sign + pad(Math.floor(abs / 60)) + ':' + pad(abs % 60);
+  }
+  document.querySelectorAll('.cal-job').forEach(function (card) {
+    card.addEventListener('dragstart', function (e) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        id: card.dataset.jobId,
+        start: card.dataset.start,
+        end: card.dataset.end || ''
+      }));
+      card.classList.add('opacity-50');
+    });
+    card.addEventListener('dragend', function () { card.classList.remove('opacity-50'); });
+  });
+  document.querySelectorAll('.cal-cell').forEach(function (cell) {
+    cell.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      cell.classList.add('border-primary');
+    });
+    cell.addEventListener('dragleave', function () { cell.classList.remove('border-primary'); });
+    cell.addEventListener('drop', function (e) {
+      e.preventDefault();
+      cell.classList.remove('border-primary');
+      var raw = e.dataTransfer.getData('text/plain');
+      if (!raw) return;
+      var payload;
+      try { payload = JSON.parse(raw); } catch (_) { return; }
+      var newStart = shiftIso(payload.start, cell.dataset.date);
+      if (!newStart) return;
+      var newEnd = payload.end ? shiftIso(payload.end, cell.dataset.date) : '';
+      var body = new URLSearchParams();
+      body.set('scheduled_for', newStart);
+      if (newEnd) body.set('scheduled_until', newEnd);
+      fetch('/staff/jobs/' + payload.id + '/reschedule/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-CSRFToken': csrf(), 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+      }).then(function (r) {
+        return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+      }).then(function (res) {
+        if (res.ok && res.body.ok) {
+          note('Rescheduled — refreshing…', true);
+          setTimeout(function () { window.location.reload(); }, 600);
+        } else {
+          note(res.body.error || 'Could not reschedule.', false);
+        }
+      }).catch(function () { note('Network error.', false); });
+    });
+  });
+})();
+</script>
+{# Hidden CSRF input for AJAX #}
+<form style="display:none">{% csrf_token %}</form>
+{% endblock %}

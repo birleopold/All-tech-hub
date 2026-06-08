@@ -1,0 +1,156 @@
+{% extends "staff_base.html" %}
+{% block title %}{% if is_create %}New document{% else %}Edit {{ object.number }}{% endif %}{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-3">{% if is_create %}New commercial document{% else %}Edit {{ object.number }}{% endif %}</h1>
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body row g-3">
+      {% for field in form %}
+      <div class="col-md-6">
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field.errors }}
+        {{ field }}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <h2 class="h5 mb-2">Line items</h2>
+  {{ line_formset.management_form }}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="table-responsive">
+      <table class="table mb-0 align-middle" id="line-table">
+        <thead class="table-light"><tr><th>Product</th><th>Option</th><th>Description</th><th>Qty</th><th>Unit price</th><th>Del</th></tr></thead>
+        <tbody>
+          {% for f in line_formset %}
+          <tr class="line-form-row">
+            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+            <td>{{ f.product.errors }}{{ f.product }}</td>
+            <td style="min-width:14rem">{{ f.product_variant.errors }}{{ f.product_variant }}</td>
+            <td>{{ f.description.errors }}{{ f.description }}</td>
+            <td style="width:7rem">{{ f.quantity.errors }}{{ f.quantity }}</td>
+            <td style="width:8rem">{{ f.unit_price.errors }}{{ f.unit_price }}</td>
+            <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <button type="submit" class="btn btn-primary">Save</button>
+    {% if not is_create %}
+    <a class="btn btn-outline-secondary" href="{% url 'staff_document_view' object.pk %}">View</a>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' object.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open document PDF in a new tab">PDF</a>
+    {% if object.doc_type == 'invoice' %}
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_demand_note' object.pk %}">Create demand note</a>
+    {% endif %}
+    {% if object.doc_type == 'invoice' or object.doc_type == 'proforma' %}
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_receipt' object.pk %}">Create receipt</a>
+    {% endif %}
+    {% if object.order_id %}
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_delivery_note' object.pk %}">Create delivery note</a>
+    {% endif %}
+    {% if object.doc_type == 'quote' %}
+      {% if object.quote_requires_internal_approval and not object.quote_internally_approved %}
+    <p class="text-warning small mb-2">Internal approval is required before converting this quotation.</p>
+      {% else %}
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_proforma' object.pk %}">Convert to proforma</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_invoice' object.pk %}">Convert to invoice</a>
+      {% endif %}
+    {% elif object.doc_type == 'proforma' %}
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_invoice' object.pk %}">Convert to invoice</a>
+    {% endif %}
+    {% endif %}
+    <a class="btn btn-link" href="{% url 'staff_documents' %}">Back to list</a>
+  </div>
+</form>
+{% endblock %}
+{% block extra_js %}
+{{ variants_for_js|json_script:"alltech-variants-meta" }}
+{{ products_price_map|json_script:"alltech-product-prices" }}
+<script>
+(function () {
+  const metaEl = document.getElementById("alltech-variants-meta");
+  const priceEl = document.getElementById("alltech-product-prices");
+  if (!metaEl || !priceEl) return;
+  let variantsMeta = [];
+  let productPrices = {};
+  try {
+    variantsMeta = JSON.parse(metaEl.textContent);
+    productPrices = JSON.parse(priceEl.textContent);
+  } catch (e) { return; }
+  const metaById = Object.fromEntries(variantsMeta.map(function (m) { return [String(m.id), m]; }));
+
+  function wireVariantOptions(varSel) {
+    Array.prototype.forEach.call(varSel.options, function (opt) {
+      if (!opt.value) return;
+      const m = metaById[opt.value];
+      if (m) opt.dataset.pid = String(m.pid);
+    });
+  }
+
+  function filterVariantOptions(row, productId) {
+    const varSel = row.querySelector(".line-variant");
+    if (!varSel) return;
+    const pid = productId ? String(productId) : "";
+    let currentOk = false;
+    Array.prototype.forEach.call(varSel.options, function (opt) {
+      if (!opt.value) {
+        opt.disabled = false;
+        return;
+      }
+      const ok = !pid || opt.dataset.pid === pid;
+      opt.disabled = !ok;
+      if (ok && opt.value === varSel.value) currentOk = true;
+    });
+    if (!currentOk) varSel.value = "";
+  }
+
+  function setUnitPrice(row, priceStr) {
+    const priceInput = row.querySelector('input[name$="-unit_price"]');
+    if (priceInput && priceStr) priceInput.value = priceStr;
+  }
+
+  function onProductChange(row, sel) {
+    const id = sel.value;
+    filterVariantOptions(row, id);
+    const varSel = row.querySelector(".line-variant");
+    if (varSel && varSel.value) {
+      const m = metaById[varSel.value];
+      if (m) setUnitPrice(row, m.price);
+      return;
+    }
+    if (id && productPrices[id] !== undefined) setUnitPrice(row, productPrices[id]);
+  }
+
+  function onVariantChange(row, sel) {
+    const m = metaById[sel.value];
+    if (m) setUnitPrice(row, m.price);
+    const desc = row.querySelector('input[name$="-description"]');
+    if (desc && !desc.value && m) desc.value = m.label;
+  }
+
+  document.querySelectorAll(".line-form-row").forEach(function (row) {
+    const prod = row.querySelector(".line-product");
+    const vsel = row.querySelector(".line-variant");
+    if (vsel) wireVariantOptions(vsel);
+    if (prod && vsel) {
+      filterVariantOptions(row, prod.value);
+      prod.addEventListener("change", function () { onProductChange(row, prod); });
+      vsel.addEventListener("change", function () { onVariantChange(row, vsel); });
+    }
+    if (prod) {
+      prod.addEventListener("change", function () {
+        const opt = prod.options[prod.selectedIndex];
+        const desc = row.querySelector('input[name$="-description"]');
+        if (desc && opt && opt.text && !desc.value) {
+          var t = opt.text.split(" — ")[0];
+          if (t) desc.value = t;
+        }
+      });
+    }
+  });
+})();
+</script>
+{% endblock %}

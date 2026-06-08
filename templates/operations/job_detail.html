@@ -1,0 +1,249 @@
+{% extends "staff_base.html" %}
+{% block title %}{{ job.number }}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-0">{{ job.number }}</h1>
+    <p class="text-muted mb-0">{{ job.title }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-primary" href="{% url 'staff_job_edit' job.pk %}">Edit</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_job_pdf' job.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open job PDF in a new tab">PDF</a>
+    <a class="btn btn-outline-success" href="{% url 'staff_email_jobcard' job.pk %}">Email</a>
+    <a class="btn btn-outline-success" href="{% url 'staff_email_job_update' job.pk %}">Email update</a>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_jobs' %}">All jobs</a>
+  </div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Customer</h2>
+        <p class="mb-1">{{ job.customer.name }}</p>
+        <p class="small text-muted mb-0">{{ job.customer.email }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Status</h2>
+        <p class="mb-1">{{ job.get_status_display }} · {{ job.get_priority_display }}</p>
+        <p class="small text-muted mb-0">Received {{ job.received_on|date:"Y-m-d H:i" }}{% if job.assigned_to %} · {{ job.assigned_to.get_username }}{% endif %}{% if job.scheduled_for %} · Scheduled {{ job.scheduled_for|date:"Y-m-d H:i" }}{% endif %}</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6">Device</h2>
+    <dl class="row small mb-0">
+      <dt class="col-sm-3">Type</dt><dd class="col-sm-9">{{ job.device_type|default:"—" }}</dd>
+      <dt class="col-sm-3">Make / model</dt><dd class="col-sm-9">{{ job.device_make }} {{ job.device_model }}</dd>
+      <dt class="col-sm-3">Serial</dt><dd class="col-sm-9">{{ job.serial_number|default:"—" }}</dd>
+      <dt class="col-sm-3">Accessories</dt><dd class="col-sm-9">{{ job.accessories_received|default:"—"|linebreaks }}</dd>
+    </dl>
+  </div>
+</div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6">Work</h2>
+    <p class="small text-muted">Reported</p>
+    <p>{{ job.problem_reported|default:"—"|linebreaks }}</p>
+    <p class="small text-muted">Diagnosis</p>
+    <p>{{ job.diagnosis|default:"—"|linebreaks }}</p>
+    <p class="small text-muted">Resolution</p>
+    <p>{{ job.resolution|default:"—"|linebreaks }}</p>
+  </div>
+</div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6">Parts &amp; stock</h2>
+    <p class="small text-muted mb-2">Record parts taken from inventory for this job (negative quantity).</p>
+    <div class="table-responsive mb-3">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>When</th><th>Item</th><th class="text-end">Qty</th><th>By</th><th>Note</th></tr></thead>
+        <tbody>
+          {% for u in job.inventory_adjustments.all %}
+          <tr>
+            <td class="text-nowrap">{{ u.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{% if u.product_variant %}{{ u.product_variant }}{% else %}{{ u.product }}{% endif %}</td>
+            <td class="text-end">{{ u.quantity_delta }}</td>
+            <td>{% if u.created_by %}{{ u.created_by.get_username }}{% else %}—{% endif %}</td>
+            <td class="small">{{ u.note|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted">No inventory movements linked to this job.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <form method="post" action="{% url 'staff_job_stock_use' job.pk %}" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-3">
+        <label class="form-label small">Product</label>
+        {{ job_stock_form.product }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Option</label>
+        {{ job_stock_form.product_variant }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Qty (negative)</label>
+        {{ job_stock_form.quantity_delta }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Note</label>
+        {{ job_stock_form.note }}
+      </div>
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-sm btn-primary w-100">Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6">Photos</h2>
+    <div class="row g-2 mb-3">
+      {% for a in job.attachments.all %}
+      <div class="col-6 col-md-3">
+        <a href="{{ a.image.url }}" target="_blank" rel="noopener noreferrer" aria-label="View full-size photo{% if a.caption %}: {{ a.caption }}{% endif %}">
+          <img src="{{ a.image.url }}" alt="{{ a.caption|default:job.number }}" class="img-fluid rounded border" loading="lazy">
+        </a>
+        {% if a.caption %}<p class="small text-muted mb-0">{{ a.caption }}</p>{% endif %}
+      </div>
+      {% empty %}
+      <p class="text-muted small mb-0">No photos yet.</p>
+      {% endfor %}
+    </div>
+    <form method="post" action="{% url 'staff_job_attachment' job.pk %}" enctype="multipart/form-data" class="row g-2 align-items-end">
+      {% csrf_token %}
+      <div class="col-md-4">
+        <label class="form-label small">Image</label>
+        {{ attachment_form.image }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Caption</label>
+        {{ attachment_form.caption }}
+      </div>
+      <div class="col-md-2">
+        <div class="form-check mt-4">
+          {{ attachment_form.show_to_customer }}
+          <label class="form-check-label small" for="{{ attachment_form.show_to_customer.id_for_label }}">Portal</label>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm btn-primary w-100 mt-4">Upload</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% if feedback %}
+<div class="alert alert-success">
+  <strong>Customer feedback —</strong>
+  <span class="text-warning ms-1">{% for i in "12345" %}{% if forloop.counter <= feedback.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span>
+  ({{ feedback.rating }}/5) <span class="text-muted small">{{ feedback.submitted_at|date:"Y-m-d H:i" }}</span>
+  {% if feedback.comment %}<p class="mb-0 mt-1">{{ feedback.comment|linebreaksbr }}</p>{% endif %}
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Status history</h2>
+    {% if status_events %}
+    <ul class="list-group list-group-flush">
+      {% for ev in status_events %}
+      <li class="list-group-item px-0 d-flex justify-content-between flex-wrap gap-2">
+        <span>
+          {% if ev.from_status %}{{ ev.from_status|title }} → {% endif %}<strong>{{ ev.to_status|title }}</strong>
+          {% if ev.actor %}<span class="small text-muted ms-1">by {{ ev.actor.get_username }}</span>{% endif %}
+          {% if ev.note %}<div class="small text-muted">{{ ev.note }}</div>{% endif %}
+        </span>
+        <span class="text-muted small">{{ ev.created_at|date:"Y-m-d H:i" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted small mb-0">No status changes recorded yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Notes</h2>
+    {% for n in job.notes.all %}
+    <div class="border-bottom pb-2 mb-2">
+      <p class="small text-muted mb-1">{{ n.created_at|date:"Y-m-d H:i" }}{% if n.author %} · {{ n.author.get_username }}{% endif %}{% if n.is_internal %} · internal{% endif %}</p>
+      <p class="mb-0">{{ n.body|linebreaks }}</p>
+    </div>
+    {% empty %}
+    <p class="text-muted small">No notes yet.</p>
+    {% endfor %}
+    <form method="post" action="{% url 'staff_job_note' job.pk %}" class="mt-3">
+      {% csrf_token %}
+      <div class="mb-2">{{ note_form.body.label_tag }} {{ note_form.body }}</div>
+      <div class="form-check mb-2">{{ note_form.is_internal }} {{ note_form.is_internal.label_tag }}</div>
+      <button type="submit" class="btn btn-sm btn-primary">Add note</button>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Technician time</h2>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Tech</th><th>Started</th><th>Ended</th><th class="text-end">Minutes</th><th>Billable</th><th>Note</th></tr></thead>
+        <tbody>
+          {% for t in job.time_entries.all %}
+          <tr>
+            <td>{{ t.technician.get_username }}</td>
+            <td>{{ t.started_at|date:"Y-m-d H:i" }}</td>
+            <td>{% if t.ended_at %}{{ t.ended_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+            <td class="text-end">{{ t.minutes }}</td>
+            <td>{% if t.is_billable %}Yes{% else %}No{% endif %}</td>
+            <td>{{ t.note|default:"" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-muted">No time entries yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <form method="post" action="{% url 'staff_job_time' job.pk %}" class="mt-3">
+      {% csrf_token %}
+      <div class="row g-2">
+        <div class="col-md-3">
+          <label class="form-label small">Technician</label>
+          {{ time_form.technician }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Started</label>
+          {{ time_form.started_at }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Ended</label>
+          {{ time_form.ended_at }}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Minutes</label>
+          {{ time_form.minutes }}
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <div class="form-check">
+            {{ time_form.is_billable }}
+            <label class="form-check-label small" for="{{ time_form.is_billable.id_for_label }}">Bill</label>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label small">Note</label>
+          {{ time_form.note }}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-sm btn-success mt-2">Add time</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

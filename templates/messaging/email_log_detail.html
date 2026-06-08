@@ -1,0 +1,47 @@
+{% extends "staff_base.html" %}
+{% block title %}Email log{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">Email log</h1>
+    <p class="text-muted mb-0">{{ email.to_email }} · {{ email.get_status_display }} · {{ email.created_at|date:"Y-m-d H:i" }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary" href="{% url 'staff_email_log' %}">Back</a>
+    <form method="post" action="{% url 'staff_email_log_retry' email.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-success" {% if email.status == 'sent' %}disabled{% endif %}>Retry</button>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <p class="small text-muted mb-1">Subject</p>
+    <p class="mb-3">{{ email.subject }}</p>
+    <p class="small text-muted mb-1">Body</p>
+    <pre class="bg-light p-3 rounded mb-0" style="white-space: pre-wrap">{{ email.body }}</pre>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <p class="small text-muted mb-1">Linked</p>
+    <p class="mb-1">
+      {% if email.commercial_document_id %}
+        Document: <a href="{% url 'staff_document_view' email.commercial_document_id %}">{{ email.commercial_document.number }}</a>
+      {% elif email.job_card_id %}
+        Job card: <a href="{% url 'staff_job_detail' email.job_card_id %}">{{ email.job_card.number }}</a>
+      {% else %}
+        —
+      {% endif %}
+    </p>
+    {% if email.error %}
+    <div class="alert alert-danger mt-3 mb-0">
+      <strong>Error:</strong> {{ email.error }}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

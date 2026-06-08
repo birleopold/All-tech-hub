@@ -1,0 +1,141 @@
+{% extends "staff_base.html" %}
+{% block title %}{{ document.number }}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-0">{{ document.number }}</h1>
+    <p class="text-muted mb-0">{{ document.get_doc_type_display }} · {{ document.get_status_display }}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_pdf' document.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open document PDF in a new tab">PDF</a>
+    <a class="btn btn-outline-success" href="{% url 'staff_email_document' document.pk %}">Email</a>
+    <a class="btn btn-primary" href="{% url 'staff_document_edit' document.pk %}">Edit</a>
+  </div>
+</div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body row">
+    <div class="col-md-6">
+      <p class="small text-muted mb-1">Customer</p>
+      <p class="mb-2">{{ document.customer.name }}{% if document.customer.company_name %} — {{ document.customer.company_name }}{% endif %}</p>
+      <p class="small mb-0">{{ document.customer.email }}{% if document.customer.phone %} · {{ document.customer.phone }}{% endif %}</p>
+    </div>
+    <div class="col-md-6">
+      <p class="small text-muted mb-1">Dates</p>
+      <p class="mb-1">Issue {{ document.issue_date }}{% if document.due_date %} · Due {{ document.due_date }}{% endif %}</p>
+      {% if document.doc_type == 'invoice' or document.doc_type == 'proforma' %}
+      <p class="small text-muted mb-1">Payment</p>
+      <p class="mb-0">Paid {{ company.currency_code }} {{ document.amount_paid|floatformat:2 }} · Balance {{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% if quote_approval_pending %}
+<div class="alert alert-warning border-0 shadow-sm mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2" role="status">
+  <div>
+    <strong>Internal approval required.</strong>
+    <span class="d-block small">This quotation cannot be converted to proforma or invoice until a staff member approves it.</span>
+  </div>
+  <form method="post" action="{% url 'staff_document_quote_approve' document.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-success">Approve quotation</button>
+  </form>
+</div>
+{% elif quote_approval_complete %}
+<div class="alert alert-success border-0 shadow-sm mb-3" role="status">
+  <strong>Internally approved.</strong>
+  {% if document.quote_approved_at %}
+  <span class="small text-muted">({{ document.quote_approved_at|date:"Y-m-d H:i" }}{% if document.quote_approved_by %} · {{ document.quote_approved_by.get_username }}{% endif %})</span>
+  {% endif %}
+</div>
+{% endif %}
+{% if document.doc_type == 'quote' %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 text-muted text-uppercase mb-2">Customer acceptance</h2>
+    {% if quote_customer_accepted %}
+    <p class="mb-0 text-success"><strong>Accepted</strong>{% if document.quote_customer_signature_name %} by {{ document.quote_customer_signature_name }}{% endif %}{% if document.quote_customer_responded_at %} · {{ document.quote_customer_responded_at|date:"Y-m-d H:i" }}{% endif %}</p>
+    {% elif quote_customer_declined %}
+    <p class="mb-2 text-muted">Customer declined this quotation.</p>
+    {% elif quote_customer_pending and quote_customer_url %}
+    <p class="small mb-2">Awaiting customer response. Share this link:</p>
+    <p class="mb-2"><code class="user-select-all">{{ quote_customer_url }}</code></p>
+    {% else %}
+    <p class="small text-muted mb-2">Generate a secure link for the customer to accept or decline online.</p>
+    {% endif %}
+    {% if not quote_customer_accepted %}
+    <form method="post" action="{% url 'staff_document_quote_customer_link' document.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-primary">{% if quote_customer_url %}Refresh customer link{% else %}Enable customer approval link{% endif %}</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+<div class="table-responsive card border-0 shadow-sm">
+  <table class="table mb-0">
+    <thead class="table-light"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+      {% for line in document.lines.all %}
+      <tr>
+        <td>{{ line.description }}</td>
+        <td class="text-end">{{ line.quantity }}</td>
+        <td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td>
+        <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr><th colspan="3" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ document.subtotal|floatformat:2 }}</th></tr>
+      <tr><th colspan="3" class="text-end">Tax ({{ document.tax_rate }}%)</th><th class="text-end">{{ company.currency_code }} {{ document.tax_amount|floatformat:2 }}</th></tr>
+      <tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>
+      {% if document.doc_type == 'invoice' or document.doc_type == 'proforma' %}
+      <tr><th colspan="3" class="text-end">Paid to date</th><th class="text-end">{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</th></tr>
+      <tr><th colspan="3" class="text-end">Balance due</th><th class="text-end">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</th></tr>
+      {% endif %}
+    </tfoot>
+  </table>
+</div>
+{% if document.payments.count %}
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-body">
+    <h2 class="h6">Payment history</h2>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>By</th></tr></thead>
+        <tbody>
+          {% for p in document.payments.all %}
+          <tr>
+            <td>{{ p.recorded_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ company.currency_code }} {{ p.amount|floatformat:2 }}</td>
+            <td>{{ p.get_method_display }}</td>
+            <td>{{ p.reference|default:"—" }}</td>
+            <td>{% if p.recorded_by %}{{ p.recorded_by.get_username }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if show_payment_form %}
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-body col-lg-6">
+    <h2 class="h6">Record payment</h2>
+    <form method="post" action="{% url 'staff_document_payment' document.pk %}">
+      {% csrf_token %}
+      {% for field in payment_form %}
+      <div class="mb-2">
+        <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field.errors }}{{ field }}
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-sm btn-success">Record payment</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% if document.notes %}
+<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Notes</h2><p class="mb-0">{{ document.notes|linebreaks }}</p></div></div>
+{% endif %}
+{% endblock %}

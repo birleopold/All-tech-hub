@@ -1,0 +1,78 @@
+{% extends "staff_base.html" %}
+{% block title %}{% if object %}Edit product{% else %}New product{% endif %}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="h3 mb-0">{% if object %}Edit product{% else %}New product{% endif %}</h1>
+  <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Back to products</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm p-4">
+  {% csrf_token %}
+  <div class="row g-3">
+    {% for field in form %}
+    <div class="col-md-6">
+      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field.errors }}{{ field }}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if object %}
+  <hr class="my-4">
+  <h2 class="h5 mb-3">Gallery images</h2>
+  {{ image_formset.management_form }}
+  <div class="table-responsive mb-4">
+    <table class="table table-sm align-middle">
+      <thead><tr><th>Image</th><th>Sort</th><th>Alt text</th><th>Delete</th></tr></thead>
+      <tbody>
+        {% for f in image_formset %}
+        <tr>
+          {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+          <td>{{ f.image.errors }}{{ f.image }}</td>
+          <td style="width:6rem">{{ f.sort_order }}</td>
+          <td>{{ f.alt_text }}</td>
+          <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="h5 mb-3">Variants <span class="text-muted small fw-normal">(optional — e.g. sizes; when set, customers pick an option)</span></h2>
+  {{ variant_formset.management_form }}
+  <div class="table-responsive mb-3">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Name</th><th>SKU</th><th>Price</th><th>Compare at</th>
+          <th>Track stock</th><th>Stock</th><th>Sort</th><th>Active</th><th>Del</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in variant_formset %}
+        <tr>
+          {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+          <td>{{ f.name.errors }}{{ f.name }}</td>
+          <td style="width:7rem">{{ f.sku }}</td>
+          <td style="width:7rem">{{ f.price }}</td>
+          <td style="width:7rem">{{ f.compare_at_price }}</td>
+          <td class="text-center">{{ f.track_inventory }}</td>
+          <td style="width:6rem">{{ f.stock_quantity }}</td>
+          <td style="width:5rem">{{ f.sort_order }}</td>
+          <td class="text-center">{{ f.is_active }}</td>
+          <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted small mt-3 mb-0">After creating the product you can add gallery images and variants on the edit screen.</p>
+  {% endif %}
+
+  <div class="mt-4">
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+{% endblock %}

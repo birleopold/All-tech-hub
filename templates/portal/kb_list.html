@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Help{% endblock %}
+{% block content %}
+<div class="container py-5 col-lg-8">
+  <h1 class="h2 mb-3">Help articles</h1>
+  <p class="text-muted mb-3"><a href="{% url 'portal_home' %}">← Portal home</a></p>
+  <form method="get" class="mb-4" role="search">
+    <label class="visually-hidden" for="kb-q">Search articles</label>
+    <div class="input-group">
+      <input type="search" class="form-control" id="kb-q" name="q" value="{{ search_q }}" placeholder="Search help articles…">
+      <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+  </form>
+  {% if articles %}
+  <ul class="list-group shadow-sm border-0">
+    {% for article in articles %}
+    <li class="list-group-item d-flex justify-content-between align-items-start">
+      <div>
+        <a class="fw-semibold" href="{% url 'portal_kb_article' article.slug %}">{{ article.title }}</a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-muted">No articles published yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

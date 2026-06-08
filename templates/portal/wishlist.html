@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}My wishlist{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">My wishlist</h1>
+    <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Back to portal</a>
+  </div>
+  <p class="text-muted small">Saved products to look at later or buy on your next visit.</p>
+
+  {% if items %}
+  <div class="row g-3">
+    {% for it in items %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        {% if it.product.primary_display_image %}
+        <a href="{{ it.product.get_absolute_url }}">
+          <img class="card-img-top" src="{{ it.product.primary_display_image.url }}" alt="{{ it.product.name }}" style="object-fit:cover; height:180px;">
+        </a>
+        {% endif %}
+        <div class="card-body d-flex flex-column">
+          <h2 class="h6 mb-1"><a class="text-decoration-none" href="{{ it.product.get_absolute_url }}">{{ it.product.name }}</a></h2>
+          <p class="small text-muted mb-2">{{ it.product.category.name }}</p>
+          <p class="fw-semibold mb-2">
+            {% if it.product.has_sellable_variants %}
+            From {{ company.currency_code }} {{ it.product.min_active_variant_price }}
+            {% else %}
+            {{ company.currency_code }} {{ it.product.price }}
+            {% endif %}
+          </p>
+          <p class="small text-muted mt-auto">Saved {{ it.created_at|date:"Y-m-d" }}</p>
+          <form method="post" action="{% url 'portal_wishlist_remove' it.product.pk %}" class="m-0">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'portal_wishlist' %}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted">Your wishlist is empty. Browse the <a href="{% url 'product_list' %}">shop</a> and save items for later.</p>
+  {% endif %}
+</div>
+{% endblock %}

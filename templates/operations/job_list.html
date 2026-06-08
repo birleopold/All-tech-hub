@@ -1,0 +1,115 @@
+{% extends "staff_base.html" %}
+{% block title %}Job cards{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-3">Job cards</h1>
+<form method="get" class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-md-3">
+        <label class="form-label small" for="f-q">Search</label>
+        <input type="search" class="form-control" id="f-q" name="q" value="{{ request.GET.q }}" placeholder="Number, customer, device…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="f-status">Status</label>
+        <select name="status" id="f-status" class="form-select">
+          <option value="">All</option>
+          {% for val,label in job_status_choices %}
+          <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="f-priority">Priority</label>
+        <select name="priority" id="f-priority" class="form-select">
+          <option value="">Any</option>
+          {% for val,label in job_priority_choices %}
+          <option value="{{ val }}" {% if request.GET.priority == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="f-assigned">Technician</label>
+        <select name="assigned_to" id="f-assigned" class="form-select">
+          <option value="">Anyone</option>
+          {% for u in staff_users %}
+          <option value="{{ u.pk }}" {% if request.GET.assigned_to == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="f-schedule">Schedule</label>
+        <select name="schedule" id="f-schedule" class="form-select">
+          <option value="">Any</option>
+          <option value="upcoming" {% if schedule_filter == 'upcoming' %}selected{% endif %}>Upcoming (14 days)</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="f-due">SLA</label>
+        <select name="due" id="f-due" class="form-select">
+          <option value="">Any</option>
+          <option value="overdue" {% if request.GET.due == 'overdue' %}selected{% endif %}>Overdue</option>
+          <option value="today" {% if request.GET.due == 'today' %}selected{% endif %}>Due today</option>
+          <option value="week" {% if request.GET.due == 'week' %}selected{% endif %}>Due this week</option>
+        </select>
+      </div>
+      <div class="col-md-1">
+        <label class="form-label small" for="f-sort">Sort</label>
+        <select name="sort_by" id="f-sort" class="form-select">
+          <option value="">Default</option>
+          <option value="received_on" {% if request.GET.sort_by == 'received_on' %}selected{% endif %}>Received</option>
+          <option value="scheduled_for" {% if request.GET.sort_by == 'scheduled_for' %}selected{% endif %}>Scheduled</option>
+          <option value="priority" {% if request.GET.sort_by == 'priority' %}selected{% endif %}>Priority</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button class="btn btn-primary" type="submit">Filter</button>
+        <a class="btn btn-outline-secondary" href="{% url 'staff_jobs' %}">Reset</a>
+      </div>
+    </div>
+    {% include "core/_saved_search_tools.html" %}
+  </div>
+</form>
+<div class="d-flex justify-content-end gap-2 mb-2">
+  <a class="btn btn-outline-primary" href="{% url 'staff_job_calendar' %}">Calendar view</a>
+  <a class="btn btn-primary" href="{% url 'staff_job_create' %}">New job</a>
+</div>
+<div class="table-responsive card shadow-sm border-0">
+  <table class="table table-hover mb-0 align-middle">
+    <thead class="table-light"><tr><th>Number</th><th>Title</th><th>Customer</th><th>Status</th><th class="text-end">Days in status</th><th>Scheduled</th><th>Priority</th><th>SLA</th><th>Received</th></tr></thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td><a href="{% url 'staff_job_detail' j.pk %}">{{ j.number }}</a></td>
+        <td>{{ j.title }}</td>
+        <td>{{ j.customer.name }}</td>
+        <td>{{ j.get_status_display }}</td>
+        <td class="text-end">{{ j.days_in_current_status }}</td>
+        <td class="text-nowrap small">
+          {% if j.scheduled_for %}
+          {{ j.scheduled_for|date:"Y-m-d H:i" }}{% if j.scheduled_until %} – {{ j.scheduled_until|date:"H:i" }}{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ j.get_priority_display }}</td>
+        <td class="small">{% if j.due_in_label %}<span class="badge {% if j.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ j.due_in_label }}</span>{% endif %}</td>
+        <td>{{ j.received_on|date:"Y-m-d H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="text-muted">No job cards match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-3" aria-label="Job list pages">
+  <ul class="pagination pagination-sm mb-0">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q|urlencode }}{% endif %}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

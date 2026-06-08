@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Quotation {{ document.number }}{% endblock %}
+{% block content %}
+<div class="container py-4 col-lg-8">
+  <p class="text-muted small mb-1">{{ company.company_name }}</p>
+  <h1 class="h3 mb-2">Quotation {{ document.number }}</h1>
+  <p class="text-muted">Prepared for {{ document.customer.name }}</p>
+
+  {% if document.quote_customer_accepted is True %}
+  <div class="alert alert-success" role="status">
+    <strong>Accepted</strong>
+    {% if document.quote_customer_signature_name %} by {{ document.quote_customer_signature_name }}{% endif %}
+    {% if document.quote_customer_responded_at %} on {{ document.quote_customer_responded_at|date:"Y-m-d H:i" }}{% endif %}
+  </div>
+  {% elif document.quote_customer_accepted is False %}
+  <div class="alert alert-secondary" role="status">
+    <strong>Declined</strong>
+    {% if document.quote_customer_responded_at %} on {{ document.quote_customer_responded_at|date:"Y-m-d H:i" }}{% endif %}.
+    {% if document.quote_customer_decline_reason %}
+    <p class="small mb-0 mt-1"><em>Reason:</em> {{ document.quote_customer_decline_reason }}</p>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="mb-3">Review the summary below, then accept or decline.</p>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <p class="mb-2"><strong>Issue date:</strong> {{ document.issue_date }}</p>
+      {% if document.due_date %}<p class="mb-2"><strong>Valid until:</strong> {{ document.due_date }}</p>{% endif %}
+      {% if document.title %}<p class="mb-3">{{ document.title }}</p>{% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for line in document.lines.all %}
+            <tr>
+              <td>{{ line.description }}</td>
+              <td class="text-end">{{ line.quantity }}</td>
+              <td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td>
+              <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>
+          </tfoot>
+        </table>
+      </div>
+      {% if document.terms %}<p class="small text-muted mt-3 mb-0"><strong>Terms:</strong> {{ document.terms|linebreaksbr }}</p>{% endif %}
+    </div>
+  </div>
+
+  {% if document.quote_customer_accepted is None %}
+  <form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+      {% csrf_token %}
+      <label class="form-label" for="signature_name">Your full name (electronic acceptance)</label>
+      <input type="text" class="form-control mb-3" id="signature_name" name="signature_name" maxlength="200" autocomplete="name">
+      <label class="form-label" for="decline_reason">Reason (only required if declining)</label>
+      <textarea class="form-control mb-3" id="decline_reason" name="decline_reason" rows="2" maxlength="500" placeholder="Optional — helps us improve."></textarea>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="submit" name="action" value="accept" class="btn btn-success">Accept quotation</button>
+        <button type="submit" name="action" value="decline" class="btn btn-outline-secondary">Decline</button>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Acceptance is recorded with your name and the current time.</p>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

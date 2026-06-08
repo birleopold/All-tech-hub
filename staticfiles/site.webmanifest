@@ -1,0 +1,10 @@
+{
+  "name": "ALLTECH Hub",
+  "short_name": "ALLTECH",
+  "description": "IT & retail — shop, services, and customer portal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1f33",
+  "theme_color": "#0b1f33",
+  "lang": "en"
+}

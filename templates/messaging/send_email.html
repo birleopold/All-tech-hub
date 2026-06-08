@@ -1,0 +1,20 @@
+{% extends "staff_base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-3">{{ title }}</h1>
+<form method="post" class="card border-0 shadow-sm p-4 col-lg-7">
+  {% csrf_token %}
+  {% for field in form %}
+  <div class="mb-3">
+    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field.errors }}{{ field }}
+    {% if field.name == 'attach_pdf' %}
+    <div class="form-text">Attach a PDF copy.</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <button type="submit" class="btn btn-primary">Send</button>
+  <a class="btn btn-link" href="javascript:history.back()">Cancel</a>
+</form>
+{% endblock %}
+

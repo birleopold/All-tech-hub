@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.number }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h3 mb-0">{{ job.number }}</h1>
+      <p class="text-muted mb-0">{{ job.title }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'portal_jobs' %}">Back</a>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="small text-muted mb-1">Current status</p>
+          <p class="fs-5 mb-2"><strong>{{ job.get_status_display }}</strong> · {{ job.get_priority_display }}</p>
+          <p class="small text-muted mb-0">Received {{ job.received_on|date:"Y-m-d H:i" }}{% if job.scheduled_for %} · Scheduled {{ job.scheduled_for|date:"Y-m-d H:i" }}{% endif %}{% if job.estimated_completion %} · ETA {{ job.estimated_completion }}{% endif %}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="small text-muted mb-1">Device</p>
+          <p class="mb-1">{{ job.device_type|default:"—" }}</p>
+          <p class="small text-muted mb-0">{{ job.device_make }} {{ job.device_model }}{% if job.serial_number %} · SN {{ job.serial_number }}{% endif %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if can_leave_feedback %}
+  <div class="alert alert-info d-flex justify-content-between align-items-center">
+    <span>Job is complete — share your experience with our service.</span>
+    <a class="btn btn-sm btn-primary" href="{% url 'portal_job_feedback' job.pk %}">Leave feedback</a>
+  </div>
+  {% elif feedback %}
+  <div class="alert alert-success">
+    <strong>Thanks for your feedback —</strong> you rated this job {{ feedback.rating }}/5.
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <h2 class="h6">Status history</h2>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>Received</span>
+          <span class="text-muted small">{{ job.received_on|date:"Y-m-d H:i" }}</span>
+        </li>
+        {% for ev in status_events %}
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>
+            {% if ev.from_status %}{{ ev.from_status|title }} → {% endif %}<strong>{{ ev.to_status|title }}</strong>
+            {% if ev.note %}<span class="d-block small text-muted">{{ ev.note }}</span>{% endif %}
+          </span>
+          <span class="text-muted small">{{ ev.created_at|date:"Y-m-d H:i" }}</span>
+        </li>
+        {% empty %}
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>Current status</span><span class="text-muted small">{{ job.get_status_display }}</span>
+        </li>
+        {% endfor %}
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>Scheduled</span>
+          <span class="text-muted small">{% if job.scheduled_for %}{{ job.scheduled_for|date:"Y-m-d H:i" }}{% if job.scheduled_until %} – {{ job.scheduled_until|date:"H:i" }}{% endif %}{% else %}—{% endif %}</span>
+        </li>
+        {% if job.estimated_completion %}
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>Estimated completion</span><span class="text-muted small">{{ job.estimated_completion }}</span>
+        </li>
+        {% endif %}
+        {% if job.closed_on %}
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>Closed</span><span class="text-muted small">{{ job.closed_on|date:"Y-m-d H:i" }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <h2 class="h6">Photos</h2>
+      {% if attachments %}
+      <div class="row g-2">
+        {% for a in attachments %}
+        <div class="col-6 col-md-4">
+          <a href="{{ a.image.url }}" target="_blank" rel="noopener noreferrer" aria-label="View full-size photo{% if a.caption %}: {{ a.caption }}{% endif %}">
+            <img src="{{ a.image.url }}" alt="{{ a.caption|default:job.number }}" class="img-fluid rounded border" loading="lazy">
+          </a>
+          {% if a.caption %}<p class="small text-muted mb-0">{{ a.caption }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted small mb-0">No photos shared yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h2 class="h6 mb-3">Updates</h2>
+      {% for n in notes %}
+      <div class="border-bottom pb-2 mb-2">
+        <p class="small text-muted mb-1">{{ n.created_at|date:"Y-m-d H:i" }}</p>
+        <p class="mb-0">{{ n.body|linebreaks }}</p>
+      </div>
+      {% empty %}
+      <p class="text-muted mb-0">No updates yet.</p>
+      {% endfor %}
+      <p class="small text-muted mt-3 mb-0">Only customer-visible updates are shown here.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

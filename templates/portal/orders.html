@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}My orders{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h1 class="h3 mb-0">My orders</h1>
+    <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Portal home</a>
+  </div>
+
+  <div class="table-responsive card border-0 shadow-sm">
+    <table class="table mb-0 align-middle">
+      <caption class="visually-hidden">Your orders with reference, status, date, total, and a link to each order</caption>
+      <thead class="table-light"><tr><th>Reference</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th></th></tr></thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>{{ o.reference }}</td>
+          <td>{{ o.get_status_display }}</td>
+          <td>{{ o.placed_at|date:"Y-m-d H:i" }}</td>
+          <td class="text-end">{{ company.currency_code }} {{ o.total|floatformat:2 }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_order_detail' o.pk %}" aria-label="View order {{ o.reference }}">View</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-muted">No orders yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,71 @@
+{% extends "staff_base.html" %}
+{% block title %}{{ ticket.reference }}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+  <div>
+    <h1 class="h3 mb-1">{{ ticket.reference }} — {{ ticket.subject }}</h1>
+    <p class="text-muted small mb-0">
+      {{ ticket.customer.name }} · {{ ticket.get_status_display }} · {{ ticket.get_priority_display }} · {{ ticket.get_category_display }}
+      {% if ticket.related_order %}<br><small class="text-muted">Order: <a href="{% url 'staff_order_detail' ticket.related_order.pk %}">{{ ticket.related_order.reference }}</a></small>{% endif %}
+      {% if ticket.related_serial %}<br><small class="text-muted">Serial: {{ ticket.related_serial.serial_number }} ({{ ticket.related_serial.product.name }})</small>{% endif %}
+      {% if ticket.assigned_to %} · Assigned to {{ ticket.assigned_to.get_username }}{% endif %}
+      {% if ticket.due_in_label %}
+        · <span class="badge {% if ticket.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ ticket.due_in_label }}</span>
+      {% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{% url 'staff_ticket_edit' ticket.pk %}">Edit ticket</a>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_tickets' %}">Back</a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 text-muted text-uppercase">Description</h2>
+    <p class="mb-0">{{ ticket.description|linebreaksbr }}</p>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Conversation</h2>
+    {% for c in comments %}
+    <div class="mb-3 p-3 rounded {% if c.is_internal %}bg-warning-subtle border border-warning-subtle{% else %}bg-light{% endif %}">
+      <div class="d-flex justify-content-between small text-muted mb-1">
+        <span>
+          <strong>{{ c.author.get_username|default:"Customer" }}</strong>
+          {% if c.is_internal %}<span class="badge bg-warning text-dark ms-1">internal</span>{% endif %}
+        </span>
+        <span>{{ c.created_at|date:"Y-m-d H:i" }}</span>
+      </div>
+      <p class="mb-1">{{ c.body|linebreaksbr }}</p>
+      {% if c.attachment %}
+      <a class="small" href="{{ c.attachment.url }}" target="_blank" rel="noopener">View attachment</a>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p class="text-muted mb-3">No comments yet.</p>
+    {% endfor %}
+
+    <form method="post" enctype="multipart/form-data" action="{% url 'staff_ticket_comment_create' ticket.pk %}" class="mt-3">
+      {% csrf_token %}
+      <div class="mb-2">{{ comment_form.body }}</div>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex gap-3 align-items-center">
+          <div class="form-check">
+            {{ comment_form.is_internal }}
+            <label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">
+              Internal note (hidden from customer)
+            </label>
+          </div>
+          <div>{{ comment_form.attachment }}</div>
+        </div>
+        <button class="btn btn-primary" type="submit">Post comment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<p class="small text-muted">Created {{ ticket.created_at|date:"Y-m-d H:i" }} · Updated {{ ticket.updated_at|date:"Y-m-d H:i" }}</p>
+{% endblock %}

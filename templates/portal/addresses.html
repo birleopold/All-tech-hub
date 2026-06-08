@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}My addresses{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">My addresses</h1>
+    <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Back to portal</a>
+  </div>
+  <p class="text-muted small">Saved addresses speed up checkout and repair pickups.</p>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      {% for a in addresses %}
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+            <div>
+              <h2 class="h6 mb-1">{{ a.label }}{% if a.is_default %} <span class="badge bg-primary ms-1">Default</span>{% endif %}</h2>
+              <p class="small text-muted mb-1">{{ a.get_kind_display }}{% if a.contact_name %} · {{ a.contact_name }}{% endif %}{% if a.contact_phone %} · {{ a.contact_phone }}{% endif %}</p>
+              <p class="mb-0">{{ a.as_text|linebreaksbr }}</p>
+            </div>
+            <div class="d-flex flex-column gap-1">
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_address_edit' a.pk %}">Edit</a>
+              <form method="post" onsubmit="return confirm('Remove this address?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="address_id" value="{{ a.pk }}">
+                <button class="btn btn-sm btn-outline-danger w-100" type="submit">Delete</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted">You have no saved addresses yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Add new address</h2>
+          <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-2">
+              <label class="form-label small text-muted mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}<div class="small text-danger">{{ field.errors }}</div>{% endif %}
+            </div>
+            {% endfor %}
+            <button class="btn btn-primary mt-2" type="submit">Save address</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

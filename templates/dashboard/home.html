@@ -1,0 +1,151 @@
+{% extends "staff_base.html" %}
+{% block title %}Staff dashboard{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-4">Dashboard</h1>
+<div class="row g-3 mb-4">
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Orders today</p>
+        <p class="display-6 mb-0">{{ orders_today }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Open job cards</p>
+        <p class="display-6 mb-0"><a href="{% url 'staff_jobs' %}" class="text-decoration-none text-dark">{{ open_jobs }}</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Open tickets</p>
+        <p class="display-6 mb-0"><a href="{% url 'staff_tickets' %}" class="text-decoration-none text-dark">{{ open_tickets }}</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Contact inbox</p>
+        <p class="display-6 mb-0"><a href="{% url 'staff_contact_messages' %}?handled=0" class="text-decoration-none text-dark">{{ unhandled_contacts }}</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Draft quotes</p>
+        <p class="display-6 mb-0">{{ draft_quotes }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100 {% if low_stock_count %}border-warning{% endif %}">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Low stock SKUs</p>
+        <p class="display-6 mb-0"><a href="{% url 'staff_reports' %}" class="text-decoration-none text-dark">{{ low_stock_count }}</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100 {% if pending_reviews %}border-info{% endif %}">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Pending reviews</p>
+        <p class="display-6 mb-0"><a href="/admin/catalog/productreview/?is_published__exact=0" class="text-decoration-none text-dark">{{ pending_reviews }}</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">CSAT (avg of recent)</p>
+        <p class="display-6 mb-0">
+          {% if avg_job_rating %}{{ avg_job_rating }}<span class="fs-6 text-muted"> / 5</span>{% else %}<span class="text-muted">—</span>{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100 {% if overdue_jobs %}border-danger{% endif %}">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Overdue jobs (SLA)</p>
+        <p class="display-6 mb-0"><a href="{% url 'staff_jobs' %}?due=overdue" class="text-decoration-none {% if overdue_jobs %}text-danger{% else %}text-dark{% endif %}">{{ overdue_jobs }}</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-lg-2">
+    <div class="card border-0 shadow-sm h-100 {% if overdue_tickets %}border-danger{% endif %}">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Overdue tickets (SLA)</p>
+        <p class="display-6 mb-0"><a href="{% url 'staff_tickets' %}?due=overdue" class="text-decoration-none {% if overdue_tickets %}text-danger{% else %}text-dark{% endif %}">{{ overdue_tickets }}</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if recent_feedback %}
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6 text-muted text-uppercase mb-3">Recent customer feedback</h2>
+    <ul class="list-unstyled mb-0">
+      {% for f in recent_feedback %}
+      <li class="border-bottom py-2 d-flex justify-content-between gap-3">
+        <span>
+          <span class="text-warning" aria-label="{{ f.rating }} of 5 stars">{% for i in '12345' %}{% if forloop.counter <= f.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span>
+          <a class="ms-2" href="{% url 'staff_job_detail' f.job.pk %}">{{ f.job.number }}</a>
+          <span class="text-muted small">— {{ f.job.customer.name }}</span>
+          {% if f.comment %}<div class="small text-muted">{{ f.comment|truncatewords:20 }}</div>{% endif %}
+        </span>
+        <span class="text-muted small text-nowrap">{{ f.submitted_at|date:"Y-m-d" }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <h2 class="h6 text-muted text-uppercase">Recent orders</h2>
+    <div class="list-group shadow-sm">
+      {% for o in recent_orders %}
+      <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'staff_order_detail' o.pk %}">
+        <span>{{ o.reference }}</span>
+        <span class="text-muted small">{{ o.customer.name }}</span>
+      </a>
+      {% empty %}
+      <span class="list-group-item text-muted">No orders yet.</span>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <h2 class="h6 text-muted text-uppercase">Recent job cards</h2>
+    <div class="list-group shadow-sm">
+      {% for j in recent_jobs %}
+      <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'staff_job_detail' j.pk %}">
+        <span>{{ j.number }}</span>
+        <span class="text-muted small">{{ j.status }}</span>
+      </a>
+      {% empty %}
+      <span class="list-group-item text-muted">No jobs yet.</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="mt-4">
+  <h2 class="h6 text-muted text-uppercase">Recent documents</h2>
+  <div class="list-group shadow-sm">
+    {% for d in recent_documents %}
+    <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'staff_document_edit' d.pk %}">
+      <span>{{ d.number }} — {{ d.get_doc_type_display }}</span>
+      <span class="text-muted small">{{ d.customer.name }}</span>
+    </a>
+    {% empty %}
+    <span class="list-group-item text-muted">No documents yet.</span>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

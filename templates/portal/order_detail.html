@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.reference }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="h3 mb-0">{{ order.reference }}</h1>
+      <p class="text-muted mb-0">{{ order.get_status_display }} · {{ order.placed_at|date:"Y-m-d H:i" }} · {{ order.get_fulfillment_type_display }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'portal_orders' %}">Back</a>
+  </div>
+
+  <div class="table-responsive card border-0 shadow-sm mb-3">
+    <table class="table mb-0">
+      <caption class="visually-hidden">Line items for order {{ order.reference }}</caption>
+      <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Line</th></tr></thead>
+      <tbody>
+        {% for line in order.lines.all %}
+        <tr>
+          <td>{{ line.description }}</td>
+          <td class="text-end">{{ line.quantity }}</td>
+          <td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td>
+          <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ order.total|floatformat:2 }}</th></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <h2 class="h6">Documents for this order</h2>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <caption class="visually-hidden">Documents linked to this order</caption>
+          <thead><tr><th>Number</th><th>Type</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th></th></tr></thead>
+          <tbody>
+            {% for d in documents %}
+            <tr>
+              <td>{{ d.number }}</td>
+              <td>{{ d.get_doc_type_display }}</td>
+              <td>{{ d.get_status_display }}</td>
+              <td>{{ d.issue_date }}</td>
+              <td class="text-end">{{ company.currency_code }} {{ d.total|floatformat:2 }}</td>
+              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_document_pdf' d.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open PDF for {{ d.number }} in a new tab">PDF</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-muted">No documents yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Delivery notes and receipts will appear here when issued by staff.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

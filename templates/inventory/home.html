@@ -1,0 +1,66 @@
+{% extends "staff_base.html" %}
+{% block title %}Inventory{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="h3 mb-0">Inventory</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-primary" href="{% url 'staff_products' %}">Manage products</a>
+    <a class="btn btn-primary" href="{% url 'staff_product_create' %}">New product</a>
+  </div>
+</div>
+
+{% if low_stock_items %}
+<div class="alert alert-warning border-0 shadow-sm mb-3" role="status">
+  <strong>{{ low_stock_items|length }} low-stock item(s)</strong> at or below reorder level.
+  <a class="alert-link" href="{% url 'staff_products' %}?low=1">View in catalog</a>
+</div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Quick stock adjustment</h2>
+        <form method="post" action="{% url 'staff_stock_adjust' %}">
+          {% csrf_token %}
+          {% for field in adjustment_form %}
+          <div class="mb-2">
+            <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field.errors }}{{ field }}
+            {% if field.name == "quantity_delta" %}
+            <div class="form-text">Use positive to add stock, negative to reduce stock.</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-success">Apply adjustment</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Recent adjustments</h2>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Item</th><th class="text-end">Δ</th><th>Reason</th><th>By</th><th>Date</th></tr></thead>
+            <tbody>
+              {% for a in recent_adjustments %}
+              <tr>
+                <td>{% if a.product_variant %}{{ a.product_variant }}{% else %}{{ a.product.name }}{% endif %}</td>
+                <td class="text-end">{{ a.quantity_delta }}</td>
+                <td>{{ a.get_reason_display }}</td>
+                <td>{% if a.created_by %}{{ a.created_by.get_username }}{% else %}—{% endif %}</td>
+                <td>{{ a.created_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-muted">No adjustments yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

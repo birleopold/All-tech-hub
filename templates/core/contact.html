@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Contact{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <h1 class="h2 mb-3">Contact</h1>
+      <p class="text-muted">Tell us what you need — sales, support, or a service visit.</p>
+      <form method="post" class="card shadow-sm border-0 p-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field.errors }}
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Send message</button>
+      </form>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-2">
+            Business hours
+            {% if is_open_now %}
+            <span class="badge bg-success">Open now</span>
+            {% else %}
+            <span class="badge bg-secondary">Closed</span>
+            {% endif %}
+          </h2>
+          <table class="table table-sm mb-0">
+            <tbody>
+              {% for h in business_hours %}
+              <tr>
+                <td class="text-muted">{{ h.get_weekday_display }}</td>
+                <td>{{ h.display_hours }}{% if h.note %} <span class="small text-muted">— {{ h.note }}</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

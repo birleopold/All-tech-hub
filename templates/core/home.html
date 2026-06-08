@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<section class="hero mb-5">
+  <div class="container py-4">
+    <p class="text-uppercase small text-white-50 mb-2">IT support · hardware · professional services</p>
+    <h1 class="display-5 fw-bold mb-3">{{ company.tagline|default:"Reliable technology for your business and home." }}</h1>
+    <p class="lead text-white-50 col-lg-8 mb-4">
+      Shop components and devices, book repairs and installations, and work with a team that documents every job — from quote to invoice.
+    </p>
+    <a class="btn btn-light me-2" href="{% url 'product_list' %}">Browse shop</a>
+    <a class="btn btn-outline-light" href="{% url 'contact' %}">Request support</a>
+  </div>
+</section>
+
+<div class="container">
+  {% if featured_services %}
+  <h2 class="h4 mb-3">Featured services</h2>
+  <div class="row g-3 mb-5">
+    {% for p in featured_services %}
+    <div class="col-md-4">
+      <div class="card card-product h-100">
+        <div class="card-body">
+          <span class="badge badge-kind-service mb-2">Service</span>
+          <h3 class="h6 card-title">{{ p.name }}</h3>
+          <p class="card-text small text-muted">{{ p.short_description|default:p.description|truncatewords:22 }}</p>
+          <p class="fw-semibold mb-0">{{ company.currency_code }} {{ p.price }}</p>
+          <a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if featured_products %}
+  <h2 class="h4 mb-3">Popular products</h2>
+  <div class="row g-3">
+    {% for p in featured_products %}
+    <div class="col-6 col-md-3">
+      <div class="card card-product h-100">
+        {% if p.primary_display_image %}
+        <img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover" style="height:140px" alt="{{ p.name }}">
+        {% endif %}
+        <div class="card-body">
+          <span class="badge badge-kind-product mb-2">Product</span>
+          <h3 class="h6 card-title">{{ p.name }}</h3>
+          <p class="fw-semibold mb-0">
+            {% if p.has_sellable_variants and p.min_active_variant_price %}
+            From {{ company.currency_code }} {{ p.min_active_variant_price }}
+            {% else %}
+            {{ company.currency_code }} {{ p.price }}
+            {% endif %}
+          </p>
+          <a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

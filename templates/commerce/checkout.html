@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <h1 class="h3 mb-3">Checkout</h1>
+      <form method="post" class="card border-0 shadow-sm p-4">
+        {% csrf_token %}
+        {% if checkout_token %}<input type="hidden" name="checkout_token" value="{{ checkout_token }}">{% endif %}
+        {% for field in form %}
+          {% if field.name == 'fulfillment_type' %}
+            <fieldset class="mb-3">
+              <legend class="form-label mb-2">{{ field.label }}</legend>
+              {{ field.errors }}
+              <div class="d-flex flex-wrap gap-2">
+                {% for radio in field %}
+                <label class="form-check d-flex align-items-center gap-2 border rounded px-3 py-2 mb-0 flex-grow-1 fulfillment-option {% if radio.data.selected %}border-primary bg-primary-subtle{% endif %}" style="min-width: 10rem; cursor: pointer;">
+                  <input type="radio"
+                         class="form-check-input mt-0"
+                         name="{{ radio.data.name }}"
+                         value="{{ radio.data.value }}"
+                         id="{{ radio.id_for_label }}"
+                         {% if radio.data.selected %}checked{% endif %}
+                         {% if radio.data.attrs.required %}required{% endif %}>
+                  <span class="form-check-label">{{ radio.choice_label }}</span>
+                </label>
+                {% endfor %}
+              </div>
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            </fieldset>
+          {% else %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field.errors }}
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+        <button type="submit" class="btn btn-primary">Place order</button>
+      </form>
+      <script>
+      (function () {
+        document.querySelectorAll('.fulfillment-option input[type="radio"]').forEach(function (r) {
+          r.addEventListener('change', function () {
+            document.querySelectorAll('.fulfillment-option').forEach(function (lbl) {
+              lbl.classList.remove('border-primary', 'bg-primary-subtle');
+            });
+            if (r.checked) {
+              r.closest('.fulfillment-option').classList.add('border-primary', 'bg-primary-subtle');
+            }
+          });
+        });
+      })();
+      </script>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm p-4">
+        <h2 class="h6">Order summary</h2>
+        <ul class="list-group list-group-flush mb-3">
+          {% for row in checkout_lines %}
+          <li class="list-group-item d-flex justify-content-between px-0">
+            <span>{{ row.qty }}× {{ row.line.label }}</span>
+            <span>{{ company.currency_code }} {{ row.line_total }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="small text-muted">Subtotal {{ company.currency_code }} {{ subtotal }}</div>
+        {% if discount %}<div class="small text-success">Discount{% if coupon %} ({{ coupon.code }}){% endif %} −{{ company.currency_code }} {{ discount }}</div>{% endif %}
+        <div class="small text-muted">Tax {{ company.currency_code }} {{ tax_amount }}</div>
+        <div class="fw-semibold">Total {{ company.currency_code }} {{ total }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

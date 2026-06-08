@@ -1,0 +1,47 @@
+{% extends "staff_base.html" %}
+{% block title %}Email log{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="h3 mb-0">Email log</h1>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-5">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Search by recipient or subject">
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" name="status">
+      <option value="">All statuses</option>
+      {% for val,label in status_choices %}
+      <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100" type="submit">Filter</button>
+  </div>
+</form>
+
+<div class="table-responsive card border-0 shadow-sm">
+  <table class="table table-hover mb-0 align-middle">
+    <thead class="table-light"><tr><th>To</th><th>Subject</th><th>Status</th><th>Linked</th><th>When</th><th></th></tr></thead>
+    <tbody>
+      {% for e in emails %}
+      <tr>
+        <td>{{ e.to_email }}</td>
+        <td class="text-truncate" style="max-width: 360px">{{ e.subject }}</td>
+        <td>{{ e.get_status_display }}</td>
+        <td class="small text-muted">
+          {% if e.commercial_document_id %}Doc: {{ e.commercial_document.number }}{% elif e.job_card_id %}Job: {{ e.job_card.number }}{% else %}—{% endif %}
+        </td>
+        <td class="small text-muted">{{ e.created_at|date:"Y-m-d H:i" }}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_email_log_detail' e.pk %}">View</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-muted">No emails yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

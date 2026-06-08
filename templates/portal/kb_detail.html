@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }}{% endblock %}
+{% block content %}
+<div class="container py-5 col-lg-8">
+  <p class="small text-muted mb-2"><a href="{% url 'portal_kb' %}">← All articles</a> · <a href="{% url 'portal_home' %}">Portal</a></p>
+  <h1 class="h2 mb-3">{{ article.title }}</h1>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      {{ article.body|linebreaks }}
+    </div>
+  </div>
+</div>
+{% endblock %}

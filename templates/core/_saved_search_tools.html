@@ -1,0 +1,63 @@
+<div class="mb-3 border-top pt-3">
+  <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+    <span class="small text-muted text-uppercase">Quick filters</span>
+    {% if saved_search_scope == 'jobs' %}
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_jobs' %}?status=intake">Intake</a>
+    <a class="btn btn-sm btn-outline-warning" href="{% url 'staff_jobs' %}?priority=urgent">Urgent</a>
+    <a class="btn btn-sm btn-outline-success" href="{% url 'staff_jobs' %}?assigned_to={{ request.user.id }}">Assigned to me</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_jobs' %}?schedule=upcoming">Upcoming (14d)</a>
+    {% else %}
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_tickets' %}?status=open">Open</a>
+    <a class="btn btn-sm btn-outline-warning" href="{% url 'staff_tickets' %}?priority=urgent">Urgent</a>
+    <a class="btn btn-sm btn-outline-success" href="{% url 'staff_tickets' %}?assigned_to={{ request.user.id }}">Assigned to me</a>
+    {% endif %}
+    <button type="button" class="btn btn-sm btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#saveSearchModal">Save current filters</button>
+  </div>
+  {% if saved_searches %}
+  <ul class="list-inline mb-0">
+    {% for s in saved_searches %}
+    <li class="list-inline-item mb-1">
+      <a class="btn btn-sm btn-outline-secondary" href="?{% for k,v in s.params.items %}{{ k }}={{ v|urlencode }}&{% endfor %}">{{ s.name }}</a>
+      <form method="post" action="{% url 'staff_delete_saved_search' s.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-link text-danger p-0" aria-label="Delete saved filter {{ s.name }}">&times;</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+<div class="modal fade" id="saveSearchModal" tabindex="-1" aria-labelledby="saveSearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="h5 modal-title" id="saveSearchModalLabel">Save filter preset</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'staff_save_search' %}">
+        <div class="modal-body">
+          {% csrf_token %}
+          <input type="hidden" name="scope" value="{{ saved_search_scope }}">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input type="hidden" name="params" id="saved-params-input" value="">
+          <label class="form-label" for="saved-search-name">Name</label>
+          <input type="text" class="form-control" id="saved-search-name" name="name" required maxlength="100" placeholder="e.g. Urgent intake">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var modal = document.getElementById('saveSearchModal');
+  var input = document.getElementById('saved-params-input');
+  function sync() { if (input) input.value = window.location.search || ''; }
+  if (modal) modal.addEventListener('show.bs.modal', sync);
+  sync();
+});
+</script>

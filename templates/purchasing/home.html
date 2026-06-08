@@ -1,0 +1,33 @@
+{% extends "staff_base.html" %}
+{% block title %}Purchasing{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="h3 mb-0">Purchasing</h1>
+  <a class="btn btn-primary" href="{% url 'staff_po_create' %}">New purchase order</a>
+</div>
+
+<h2 class="h6 text-muted text-uppercase">Recent purchase orders</h2>
+<div class="table-responsive card border-0 shadow-sm">
+  <table class="table table-hover mb-0 align-middle">
+    <thead class="table-light"><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+      {% for po in recent_pos %}
+      <tr>
+        <td><a href="{% url 'staff_po_edit' po.pk %}">{{ po.number }}</a></td>
+        <td>{{ po.supplier.name }}</td>
+        <td>{{ po.get_status_display }}</td>
+        <td>{{ po.ordered_on }}</td>
+        <td class="text-end">
+          <form method="post" action="{% url 'staff_po_receive' po.pk %}" class="d-inline">{% csrf_token %}
+            <button class="btn btn-sm btn-outline-success" type="submit">Receive remaining</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-muted">No purchase orders yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

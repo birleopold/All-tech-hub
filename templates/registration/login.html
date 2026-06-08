@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Staff login{% endblock %}
+{% block content %}
+<div class="container py-5 col-md-4">
+  <h1 class="h4 mb-3">Staff login</h1>
+  {% if form.errors %}
+  <div class="alert alert-danger">Invalid username or password.</div>
+  {% endif %}
+  <form method="post" class="card border-0 shadow-sm p-4">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label" for="id_username">Username</label>
+      <input type="text" name="username" class="form-control" id="id_username" required autofocus>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="id_password">Password</label>
+      <input type="password" name="password" class="form-control" id="id_password" required>
+    </div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="btn btn-primary w-100">Sign in</button>
+  </form>
+</div>
+{% endblock %}

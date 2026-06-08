@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Request repair{% endblock %}
+{% block content %}
+<div class="container py-4 col-lg-7">
+  <h1 class="h3 mb-2">Request a repair</h1>
+  <p class="text-muted small mb-4">Tell us about your device. We create a job card in intake and email you updates.</p>
+  <form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Submit repair request</button>
+      <a class="btn btn-link" href="{% url 'portal_jobs' %}">My jobs</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

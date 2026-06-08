@@ -1,0 +1,63 @@
+{% extends "staff_base.html" %}
+{% block title %}Products{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="h3 mb-0">Products</h1>
+  <a class="btn btn-primary" href="{% url 'staff_product_create' %}">New product</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-6">
+    <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Search name, SKU, category…">
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100" type="submit">Search</button>
+  </div>
+  <div class="col-md-4 text-end">
+    <a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}">Inventory home</a>
+  </div>
+</form>
+
+<div class="table-responsive card border-0 shadow-sm">
+  <table class="table table-hover mb-0 align-middle">
+    <thead class="table-light">
+      <tr><th>Name</th><th>Kind</th><th>Category</th><th>SKU</th><th class="text-end">Price</th><th class="text-end">Stock</th><th class="text-center">Opts</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.get_kind_display }}</td>
+        <td>{{ p.category.name }}</td>
+        <td class="text-muted small">{{ p.sku|default:"—" }}</td>
+        <td class="text-end">
+          {% if p.has_sellable_variants and p.min_active_variant_price %}
+          <span class="text-muted small">from</span> {{ company.currency_code }} {{ p.min_active_variant_price|floatformat:2 }}
+          {% else %}
+          {{ company.currency_code }} {{ p.price|floatformat:2 }}
+          {% endif %}
+        </td>
+        <td class="text-end">
+          {% if p.kind == 'physical' %}
+            {% if p.has_sellable_variants %}
+            {% if p.variants_total_stock is not None %}
+            <span class="small text-muted" title="Sum of variant stock (tracked)">Σ {{ p.variants_total_stock }}</span>
+            {% else %}
+            <span class="small text-muted">—</span>
+            {% endif %}
+            {% else %}
+            {{ p.stock_quantity }}
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-center small">{% if p.has_sellable_variants %}{{ p.active_variant_count }}{% else %}—{% endif %}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_product_edit' p.pk %}">Edit</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-muted">No products found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

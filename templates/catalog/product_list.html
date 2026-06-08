@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Shop{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <aside class="col-lg-3 mb-4">
+      <h2 class="h6 text-uppercase text-muted" id="catalog-filters-heading">Filters</h2>
+      <form method="get" class="d-grid gap-2" aria-labelledby="catalog-filters-heading">
+        <input type="search" name="q" value="{{ search_q }}" class="form-control" placeholder="Search…">
+        <select name="kind" class="form-select">
+          <option value="">All types</option>
+          <option value="physical" {% if current_kind == 'physical' %}selected{% endif %}>Products</option>
+          <option value="service" {% if current_kind == 'service' %}selected{% endif %}>Services</option>
+        </select>
+        <select name="category" class="form-select">
+          <option value="">All categories</option>
+          {% for c in categories %}
+          <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">Apply</button>
+      </form>
+    </aside>
+    <div class="col-lg-9" role="region" aria-labelledby="catalog-heading">
+      <h1 class="h3 mb-4" id="catalog-heading">Catalog</h1>
+      <div class="row g-3">
+        {% for p in products %}
+        <div class="col-md-4">
+          <div class="card card-product h-100">
+            {% if p.primary_display_image %}
+            <img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover" style="height:160px" alt="{{ p.name }}">
+            {% endif %}
+            <div class="card-body">
+              {% if p.kind == 'service' %}
+              <span class="badge badge-kind-service">Service</span>
+              {% else %}
+              <span class="badge badge-kind-product">Product</span>
+              {% endif %}
+              <h2 class="h6 mt-2">{{ p.name }}</h2>
+              <p class="small text-muted mb-2">{{ p.short_description|truncatewords:16 }}</p>
+              <p class="fw-semibold mb-0">
+                {% if p.has_sellable_variants and p.min_active_variant_price %}
+                From {{ company.currency_code }} {{ p.min_active_variant_price }}
+                {% else %}
+                {{ company.currency_code }} {{ p.price }}
+                {% endif %}
+              </p>
+              <a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted">No items match your filters.</p>
+        {% endfor %}
+      </div>
+      {% if is_paginated %}
+      <nav class="mt-4" aria-label="Catalog pagination">
+        <ul class="pagination">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to previous page">Previous</a></li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }}</span></li>
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to next page">Next</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

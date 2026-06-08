@@ -1,0 +1,83 @@
+{% extends "staff_base.html" %}
+{% block title %}Support tickets{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Support tickets</h1>
+  <span class="badge text-bg-secondary">{{ open_ticket_count }} open</span>
+</div>
+<form method="get" class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label small" for="t-q">Search</label>
+        <input type="search" class="form-control" id="t-q" name="q" value="{{ request.GET.q }}" placeholder="Reference, subject, customer…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="t-status">Status</label>
+        <select name="status" id="t-status" class="form-select">
+          <option value="">All</option>
+          {% for val,label in status_choices %}
+          <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="t-priority">Priority</label>
+        <select name="priority" id="t-priority" class="form-select">
+          <option value="">Any</option>
+          {% for val,label in priority_choices %}
+          <option value="{{ val }}" {% if request.GET.priority == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="t-assigned">Assigned</label>
+        <select name="assigned_to" id="t-assigned" class="form-select">
+          <option value="">Anyone</option>
+          {% for u in staff_users %}
+          <option value="{{ u.pk }}" {% if request.GET.assigned_to == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small" for="t-due">SLA</label>
+        <select name="due" id="t-due" class="form-select">
+          <option value="">Any</option>
+          <option value="overdue" {% if request.GET.due == 'overdue' %}selected{% endif %}>Overdue</option>
+          <option value="today" {% if request.GET.due == 'today' %}selected{% endif %}>Due today</option>
+          <option value="week" {% if request.GET.due == 'week' %}selected{% endif %}>Due this week</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end gap-2">
+        <button class="btn btn-primary" type="submit">Filter</button>
+        <a class="btn btn-outline-secondary" href="{% url 'staff_tickets' %}">Reset</a>
+      </div>
+    </div>
+    {% include "core/_saved_search_tools.html" %}
+  </div>
+</form>
+<p class="text-end mb-2"><a class="btn btn-primary btn-sm" href="{% url 'staff_ticket_create' %}">New ticket</a></p>
+<div class="table-responsive card shadow-sm border-0">
+  <table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Ref</th><th>Subject</th><th>Customer</th><th>Status</th><th>Priority</th><th>Assigned</th><th>SLA</th><th>Updated</th></tr></thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr>
+        <td><a href="{% url 'staff_ticket_detail' t.pk %}">{{ t.reference }}</a></td>
+        <td>{{ t.subject }}</td>
+        <td>{{ t.customer.name }}</td>
+        <td>{{ t.get_status_display }}</td>
+        <td>{{ t.get_priority_display }}</td>
+        <td>{% if t.assigned_to %}{{ t.assigned_to.get_username }}{% else %}—{% endif %}</td>
+        <td class="small">
+          {% if t.due_in_label %}<span class="badge {% if t.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ t.due_in_label }}</span>{% endif %}
+        </td>
+        <td class="text-nowrap small">{{ t.updated_at|date:"Y-m-d H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="text-muted">No tickets.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

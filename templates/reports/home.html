@@ -1,0 +1,106 @@
+{% extends "staff_base.html" %}
+{% block title %}Reports{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-4">Reports &amp; analytics</h1>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Revenue (last 30 days)</p>
+        <p class="display-6 mb-0">{{ company.currency_code }} {{ revenue_30|floatformat:2 }}</p>
+        <p class="text-muted small mb-0">From {{ start_30 }} to {{ today }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Revenue (last 90 days)</p>
+        <p class="display-6 mb-0">{{ company.currency_code }} {{ revenue_90|floatformat:2 }}</p>
+        <p class="text-muted small mb-0">From {{ start_90 }} to {{ today }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase mb-2">Data export</h2>
+        <p class="small mb-2">CSV downloads (Excel / Sheets).</p>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_orders_csv' %}?days=90">Orders (90d)</a>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_jobs_csv' %}">Job cards</a>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_tickets_csv' %}">Support tickets</a>
+          <a class="btn btn-outline-warning btn-sm" href="{% url 'staff_export_low_stock_csv' %}">Low stock</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase mb-2">Low stock</h2>
+        <p class="display-6 mb-2">{{ low_stock_count }}</p>
+        <p class="small text-muted mb-2">Products at or below reorder level.</p>
+        {% if low_stock_items %}
+        <ul class="list-unstyled small mb-2">
+          {% for p in low_stock_items %}
+          <li>{{ p.name }} — {{ p.stock_quantity }} left (reorder {{ p.reorder_level }})</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_inventory' %}?low=1">Inventory</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <h2 class="h6 text-muted text-uppercase mb-2">Most selling products (last 30 days)</h2>
+    <div class="table-responsive card border-0 shadow-sm">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Revenue</th></tr>
+        </thead>
+        <tbody>
+          {% for row in top_products_30 %}
+          <tr>
+            <td>{{ row.description }}</td>
+            <td class="text-end">{{ row.qty }}</td>
+            <td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-muted">No product sales in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <h2 class="h6 text-muted text-uppercase mb-2">Most selling services (last 30 days)</h2>
+    <div class="table-responsive card border-0 shadow-sm">
+      <table class="table table-sm mb-0">
+        <thead class="table-light">
+          <tr><th>Service</th><th class="text-end">Qty</th><th class="text-end">Revenue</th></tr>
+        </thead>
+        <tbody>
+          {% for row in top_services_30 %}
+          <tr>
+            <td>{{ row.description }}</td>
+            <td class="text-end">{{ row.qty }}</td>
+            <td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-muted">No service sales in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
