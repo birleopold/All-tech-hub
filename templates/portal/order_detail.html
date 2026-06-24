@@ -30,6 +30,32 @@
     </table>
   </div>
 
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h6">Order timeline</h2>
+        <ol class="mb-0">
+          <li class="mb-2"><strong>Order placed</strong> · {{ order.placed_at|date:"Y-m-d H:i" }}</li>
+          {% for event in status_events %}
+          <li class="mb-2"><strong>{{ event.get_to_status_display }}</strong> · {{ event.created_at|date:"Y-m-d H:i" }}{% if event.note %}<div class="small text-muted">{{ event.note }}</div>{% endif %}</li>
+          {% endfor %}
+        </ol>
+      </div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h6">Delivery tracking</h2>
+        {% if shipment %}
+        <p class="mb-1"><strong>{{ shipment.get_status_display }}</strong></p>
+        {% if shipment.carrier %}<p class="mb-1">Carrier: {{ shipment.carrier }}</p>{% endif %}
+        {% if shipment.tracking_number %}<p class="mb-1">Tracking: <code>{{ shipment.tracking_number }}</code></p>{% endif %}
+        {% if shipment.estimated_delivery %}<p class="mb-1">Estimated delivery: {{ shipment.estimated_delivery }}</p>{% endif %}
+        {% if shipment.tracking_url %}<a class="btn btn-sm btn-outline-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Track with carrier</a>{% endif %}
+        {% else %}<p class="text-muted mb-0">Tracking details will appear once your order is prepared.</p>{% endif %}
+      </div></div>
+    </div>
+  </div>
+
   <div class="card border-0 shadow-sm">
     <div class="card-body">
       <h2 class="h6">Documents for this order</h2>
@@ -58,4 +84,3 @@
   </div>
 </div>
 {% endblock %}
-

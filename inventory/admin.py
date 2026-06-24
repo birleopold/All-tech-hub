@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from inventory.models import StockAdjustment, StockTake, StockTakeLine
+from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
 
 
 @admin.register(StockAdjustment)
@@ -24,3 +24,6 @@ class StockTakeAdmin(admin.ModelAdmin):
     search_fields = ("reference", "name")
     inlines = [StockTakeLineInline]
     readonly_fields = ("reference", "posted_at")
+
+
+admin.site.register(StockMovement)

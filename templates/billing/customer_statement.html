@@ -1,0 +1,20 @@
+{% extends "staff_base.html" %}
+{% block title %}Statement — {{ statement_customer.name }}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div><h1 class="h3 mb-1">Customer statement</h1><p class="text-muted mb-0">{{ statement_customer }}</p></div>
+  <a class="btn btn-primary" href="{% url 'staff_account_payment_create' %}?customer={{ statement_customer.pk }}">Record payment</a>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-6"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Outstanding</div><div class="h3 mb-0">{{ company.currency_code }} {{ total_outstanding|floatformat:2 }}</div></div></div></div>
+  <div class="col-md-6"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Available credit</div><div class="h3 mb-0">{{ company.currency_code }} {{ total_credit|floatformat:2 }}</div></div></div></div>
+</div>
+<div class="card border-0 shadow-sm mb-4"><div class="table-responsive"><table class="table mb-0">
+  <thead><tr><th>Date</th><th>Document</th><th>Status</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
+  <tbody>{% for document in documents %}<tr><td>{{ document.issue_date }}</td><td><a href="{% url 'staff_document_view' document.pk %}">{{ document.number }}</a></td><td>{{ document.get_status_display }}</td><td class="text-end">{{ document.total|floatformat:2 }}</td><td class="text-end">{{ document.amount_paid|floatformat:2 }}</td><td class="text-end">{{ document.balance_due|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No documents.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+<div class="row g-4">
+  <div class="col-lg-6"><div class="card border-0 shadow-sm"><div class="card-body"><h2 class="h5">Account payments</h2>{% for payment in account_payments %}<div class="border-top py-2">{{ payment.recorded_at|date:"Y-m-d H:i" }} · {{ payment.get_method_display }} · {{ company.currency_code }} {{ payment.amount|floatformat:2 }}<div class="small text-muted">{{ payment.reference|default:"No reference" }}</div></div>{% empty %}<p class="text-muted">No account payments.</p>{% endfor %}</div></div></div>
+  <div class="col-lg-6"><div class="card border-0 shadow-sm"><div class="card-body"><h2 class="h5">Credits</h2>{% for credit in credits %}<div class="border-top py-2">{{ credit.created_at|date:"Y-m-d" }} · remaining {{ company.currency_code }} {{ credit.remaining_amount|floatformat:2 }}<div class="small text-muted">{{ credit.note }}</div></div>{% empty %}<p class="text-muted">No credits.</p>{% endfor %}</div></div></div>
+</div>
+{% endblock %}

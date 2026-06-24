@@ -71,13 +71,13 @@ class Command(BaseCommand):
                 now - doc.last_payment_reminder_sent < min_gap
             ):
                 continue
-            to_email = doc.customer.email.strip()
+            to_email = doc.display_customer_email.strip()
             if not to_email:
                 self.stdout.write(self.style.WARNING(f"Skip {doc.number}: no customer email."))
                 continue
             subject = f"Reminder: invoice {doc.number} due {doc.due_date}"
             body = (
-                f"Dear {doc.customer.name},\n\n"
+                f"Dear {doc.display_customer_name},\n\n"
                 f"This is a friendly reminder that invoice {doc.number} for "
                 f"{company.currency_code} {doc.total} has a balance of "
                 f"{company.currency_code} {balance} with due date {doc.due_date}.\n\n"

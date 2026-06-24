@@ -1,6 +1,5 @@
 """Low-stock helpers for dashboard and inventory views."""
 
-from django.db.models import Q
 
 from catalog.models import Product
 

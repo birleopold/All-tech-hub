@@ -6,6 +6,7 @@ from django.urls import include, path
 
 from billing import views as billing_views
 from core import api_views as core_api
+from core import auth_views as core_auth
 
 urlpatterns = [
     path("api/v1/products/", core_api.api_products, name="api_products"),
@@ -16,13 +17,33 @@ urlpatterns = [
         billing_views.quote_customer_portal,
         name="quote_customer_portal",
     ),
+    path(
+        "pay/<uuid:token>/",
+        billing_views.payment_request_portal,
+        name="payment_request_portal",
+    ),
     path("admin/", admin.site.urls),
     path(
         "accounts/login/",
-        auth_views.LoginView.as_view(template_name="registration/login.html"),
+        core_auth.StaffLoginView.as_view(),
         name="login",
     ),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path(
+        "staff/security/two-factor/",
+        core_auth.two_factor_setup,
+        name="staff_two_factor_setup",
+    ),
+    path(
+        "staff/security/two-factor/confirm/",
+        core_auth.two_factor_confirm,
+        name="staff_two_factor_confirm",
+    ),
+    path(
+        "staff/security/two-factor/disable/",
+        core_auth.two_factor_disable,
+        name="staff_two_factor_disable",
+    ),
     path("", include("core.urls")),
     path("catalog/", include("catalog.urls")),
     path("cart/", include("commerce.urls")),

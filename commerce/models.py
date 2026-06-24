@@ -80,11 +80,19 @@ class Coupon(models.Model):
 class Order(models.Model):
     STATUS_PENDING = "pending"
     STATUS_CONFIRMED = "confirmed"
+    STATUS_PROCESSING = "processing"
+    STATUS_READY = "ready"
+    STATUS_DISPATCHED = "dispatched"
+    STATUS_DELIVERED = "delivered"
     STATUS_FULFILLED = "fulfilled"
     STATUS_CANCELLED = "cancelled"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
         (STATUS_CONFIRMED, "Confirmed"),
+        (STATUS_PROCESSING, "Processing"),
+        (STATUS_READY, "Ready for pickup / dispatch"),
+        (STATUS_DISPATCHED, "Dispatched"),
+        (STATUS_DELIVERED, "Delivered"),
         (STATUS_FULFILLED, "Fulfilled"),
         (STATUS_CANCELLED, "Cancelled"),
     ]
@@ -144,6 +152,9 @@ class Order(models.Model):
     )
     coupon_code_applied = models.CharField(max_length=40, blank=True)
     total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
+    cancellation_reason = models.CharField(max_length=255, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
     placed_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -158,6 +169,14 @@ class Order(models.Model):
             "order_detail",
             kwargs={"reference": self.reference, "view_key": self.view_key},
         )
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in {
+            self.STATUS_CANCELLED,
+            self.STATUS_DELIVERED,
+            self.STATUS_FULFILLED,
+        }
 
 
 class OrderLine(models.Model):
@@ -186,3 +205,112 @@ class OrderLine(models.Model):
     @property
     def line_total(self) -> Decimal:
         return (Decimal(self.quantity) * self.unit_price).quantize(Decimal("0.01"))
+
+
+class CustomerReturn(models.Model):
+    DISPOSITION_RESTOCK = "restock"
+    DISPOSITION_DAMAGED = "damaged"
+    DISPOSITION_CHOICES = [
+        (DISPOSITION_RESTOCK, "Return to stock"),
+        (DISPOSITION_DAMAGED, "Damaged / do not restock"),
+    ]
+
+    reference = models.CharField(max_length=32, unique=True, db_index=True)
+    order_line = models.ForeignKey(
+        OrderLine, on_delete=models.PROTECT, related_name="returns"
+    )
+    quantity = models.PositiveIntegerField()
+    reason = models.CharField(max_length=255)
+    disposition = models.CharField(
+        max_length=16, choices=DISPOSITION_CHOICES, default=DISPOSITION_RESTOCK
+    )
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="customer_returns_processed",
+    )
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-processed_at", "-id"]
+
+    @property
+    def previously_returned(self) -> int:
+        return sum(
+            self.order_line.returns.exclude(pk=self.pk).values_list(
+                "quantity", flat=True
+            )
+        )
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+        if self.quantity <= 0:
+            raise ValidationError("Return quantity must be positive.")
+        if self.previously_returned + self.quantity > self.order_line.quantity:
+            raise ValidationError("Return quantity exceeds the quantity sold.")
+
+    def __str__(self):
+        return self.reference
+
+
+class OrderStatusEvent(models.Model):
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name="status_events"
+    )
+    from_status = models.CharField(max_length=20, blank=True)
+    to_status = models.CharField(max_length=20, choices=Order.STATUS_CHOICES)
+    note = models.CharField(max_length=255, blank=True)
+    visible_to_customer = models.BooleanField(default=True)
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="order_status_changes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+
+
+class Shipment(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_IN_TRANSIT = "in_transit"
+    STATUS_DELIVERED = "delivered"
+    STATUS_EXCEPTION = "exception"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_IN_TRANSIT, "In transit"),
+        (STATUS_DELIVERED, "Delivered"),
+        (STATUS_EXCEPTION, "Delivery exception"),
+    ]
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="shipment")
+    carrier = models.CharField(max_length=120, blank=True)
+    tracking_number = models.CharField(max_length=120, blank=True)
+    tracking_url = models.URLField(blank=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING
+    )
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    estimated_delivery = models.DateField(null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class OrderStockRestoration(models.Model):
+    order = models.OneToOneField(
+        Order, on_delete=models.PROTECT, related_name="stock_restoration"
+    )
+    restored_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="order_stock_restorations",
+    )
+    restored_at = models.DateTimeField(auto_now_add=True)

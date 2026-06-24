@@ -1,21 +1,81 @@
-from django.contrib.auth.models import User
-from django.test import TestCase
-
 from datetime import time
 
+from django.contrib.auth.models import Permission, User
+from django.test import TestCase, override_settings
+from django.urls import reverse
+
 from catalog.models import Category, Product
+from core.barcodes import normalize_code39
 from core.filters import apply_job_filters, apply_ticket_filters
 from core.models import (
     BusinessHours,
     CompanySettings,
     StaffSavedSearch,
+    StaffTwoFactor,
     SupportTicket,
     TicketComment,
     hours_summary,
     is_open_now,
 )
+from core.totp import generate_secret, token_for, verify_token
 from crm.models import Customer
 from operations.models import JobCard
+
+
+class BarcodeTests(TestCase):
+    def test_code39_normalizes_scanner_safe_text(self):
+        self.assertEqual(normalize_code39("sku_abc/12"), "SKU-ABC/12")
+
+
+@override_settings(ENFORCE_STAFF_ROLES=True)
+class StaffRoleAuthorizationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            "limited-staff", password="pw", is_staff=True
+        )
+        self.client.force_login(self.user)
+
+    def test_staff_without_inventory_permission_is_denied(self):
+        response = self.client.get(reverse("staff_inventory"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_staff_with_inventory_permission_is_allowed(self):
+        permission = Permission.objects.get(
+            content_type__app_label="inventory",
+            codename="view_stockadjustment",
+        )
+        self.user.user_permissions.add(permission)
+        response = self.client.get(reverse("staff_inventory"))
+        self.assertEqual(response.status_code, 200)
+
+
+class TwoFactorTests(TestCase):
+    def test_totp_round_trip(self):
+        secret = generate_secret()
+        token = token_for(secret, timestamp=1_700_000_000)
+        self.assertTrue(verify_token(secret, token, timestamp=1_700_000_000))
+
+    def test_staff_login_requires_code_when_enabled(self):
+        user = User.objects.create_user(
+            "twofactor", password="secret", is_staff=True
+        )
+        secret = generate_secret()
+        StaffTwoFactor.objects.create(user=user, secret=secret, enabled=True)
+        bad = self.client.post(
+            reverse("login"),
+            {"username": "twofactor", "password": "secret", "otp": "000000"},
+        )
+        self.assertEqual(bad.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        good = self.client.post(
+            reverse("login"),
+            {
+                "username": "twofactor",
+                "password": "secret",
+                "otp": token_for(secret),
+            },
+        )
+        self.assertEqual(good.status_code, 302)
 
 
 class CompanyCurrencyTests(TestCase):

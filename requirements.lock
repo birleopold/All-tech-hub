@@ -1,0 +1,13 @@
+asgiref==3.11.1
+charset-normalizer==3.4.7
+coverage==7.14.2
+Django==5.2.15
+gunicorn==23.0.0
+packaging==26.2
+pillow==12.2.0
+psycopg==3.3.4
+psycopg-binary==3.3.4
+reportlab==4.5.1
+ruff==0.15.18
+sqlparse==0.5.5
+tzdata==2026.2

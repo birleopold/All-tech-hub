@@ -3,7 +3,10 @@
 {% block staff_content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
   <h1 class="h3 mb-0">{% if object %}Edit product{% else %}New product{% endif %}</h1>
-  <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Back to products</a>
+  <div class="d-flex flex-wrap gap-2">
+    {% if object %}<a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' object.pk %}">Print labels</a>{% endif %}
+    <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Back to products</a>
+  </div>
 </div>
 
 <form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm p-4">

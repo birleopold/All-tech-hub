@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Payment {{ document.number }}{% endblock %}
+{% block content %}
+<div class="container py-4 col-lg-8">
+  <p class="text-muted small mb-1">{{ company.company_name }}</p>
+  <h1 class="h3 mb-2">Payment request</h1>
+  <p class="text-muted">For {{ document.get_doc_type_display|lower }} {{ document.number }}</p>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <p class="small text-muted mb-1">Customer</p>
+          <p class="mb-0">{{ document.display_customer_name }}</p>
+          {% if document.display_customer_company %}<p class="small text-muted mb-0">{{ document.display_customer_company }}</p>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <p class="small text-muted mb-1">Balance due</p>
+          <p class="display-6 mb-0">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</p>
+        </div>
+      </div>
+      <hr>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for line in document.lines.all %}
+            <tr>
+              <td>{{ line.description }}</td>
+              <td class="text-end">{{ line.quantity }}</td>
+              <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><th colspan="2" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>
+            <tr><th colspan="2" class="text-end">Paid</th><th class="text-end">{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</th></tr>
+            <tr><th colspan="2" class="text-end">Balance due</th><th class="text-end">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</th></tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if document.balance_due <= 0 %}
+  <div class="alert alert-success border-0 shadow-sm" role="status">This document is fully paid. Thank you.</div>
+  {% elif document.status == 'cancelled' %}
+  <div class="alert alert-secondary border-0 shadow-sm" role="status">This payment request is no longer active.</div>
+  {% else %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Payment instructions</h2>
+      {% if company.bank_details %}
+      <p>{{ company.bank_details|linebreaksbr }}</p>
+      {% endif %}
+      {% if company.phone %}
+      <p class="mb-0">For Mobile Money assistance, contact {{ company.phone }}.</p>
+      {% endif %}
+      {% if not company.bank_details and not company.phone %}
+      <p class="text-muted mb-0">Contact our team for Mobile Money or bank transfer instructions.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+      {% csrf_token %}
+      <h2 class="h5 mb-3">Submit payment reference</h2>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="payer_name">Your name</label>
+          <input class="form-control" id="payer_name" name="payer_name" maxlength="120" value="{{ document.display_customer_name }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="payer_phone">Phone</label>
+          <input class="form-control" id="payer_phone" name="payer_phone" maxlength="64" value="{{ document.display_customer_phone }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="payer_email">Email</label>
+          <input class="form-control" id="payer_email" name="payer_email" type="email" maxlength="254" value="{{ document.display_customer_email }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="amount">Amount paid</label>
+          <input class="form-control" id="amount" name="amount" inputmode="decimal" value="{{ document.balance_due|floatformat:2 }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="method">Method</label>
+          <select class="form-select" id="method" name="method">
+            <option>Mobile Money</option>
+            <option>Bank transfer</option>
+            <option>Card</option>
+            <option>Cash deposit</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="reference">Transaction reference</label>
+          <input class="form-control" id="reference" name="reference" maxlength="120" required>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary mt-3">Submit for verification</button>
+      <p class="small text-muted mt-2 mb-0">Submitting a reference does not mark the document paid until staff verify and record the payment.</p>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

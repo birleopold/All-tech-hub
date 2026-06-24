@@ -24,5 +24,10 @@ urlpatterns = [
         views.staff_export_low_stock_csv,
         name="staff_export_low_stock_csv",
     ),
+    path(
+        "reports/export/documents.csv",
+        views.staff_export_documents_csv,
+        name="staff_export_documents_csv",
+    ),
 ]
 

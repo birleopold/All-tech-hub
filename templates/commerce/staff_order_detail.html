@@ -15,6 +15,25 @@
     </form>
   </div>
 </div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6">Customer return</h2>
+    <form method="post" action="{% url 'staff_order_return' order.pk %}" class="row g-2">
+      {% csrf_token %}
+      {% for field in return_form %}
+      <div class="col-md-3"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>
+      {% endfor %}
+      <div class="col-12"><button class="btn btn-outline-danger" type="submit">Record return</button></div>
+    </form>
+    {% if customer_returns %}
+    <ul class="list-group list-group-flush mt-3">
+      {% for r in customer_returns %}
+      <li class="list-group-item px-0">{{ r.reference }} · {{ r.quantity }} × {{ r.order_line.description }} · {{ r.get_disposition_display }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
 <div class="row g-3 mb-4">
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100">
@@ -36,18 +55,10 @@
 </div>
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body">
-    <h2 class="h6 text-muted">Update order</h2>
+    <h2 class="h6 text-muted">Internal note</h2>
     <form method="post" class="row g-2 align-items-end">
       {% csrf_token %}
-      <div class="col-md-4">
-        <label class="form-label small">Status</label>
-        <select name="status" class="form-select">
-          {% for val,label in order_status_choices %}
-          <option value="{{ val }}" {% if order.status == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-6">
+      <div class="col-md-10">
         <label class="form-label small">Staff note</label>
         <input type="text" name="staff_note" class="form-control" value="{{ order.staff_note }}" placeholder="Internal note">
       </div>
@@ -57,6 +68,38 @@
     </form>
   </div>
 </div>
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <h2 class="h6">Advance order status</h2>
+      <form method="post" action="{% url 'staff_order_transition' order.pk %}">
+        {% csrf_token %}
+        {% for field in status_form %}<div class="mb-2"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+        <button class="btn btn-primary">Update status</button>
+      </form>
+    </div></div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <h2 class="h6">Shipment tracking</h2>
+      <form method="post" action="{% url 'staff_order_shipment' order.pk %}" class="row g-2">
+        {% csrf_token %}
+        {% for field in shipment_form %}<div class="col-md-6"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+        <div class="col-12"><button class="btn btn-outline-primary">Save shipment</button></div>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% if order.status_events.all %}
+<div class="card border-0 shadow-sm mb-4"><div class="card-body">
+  <h2 class="h6">Fulfillment timeline</h2>
+  <ol class="mb-0">
+    {% for event in order.status_events.all %}
+    <li class="mb-2"><strong>{{ event.get_to_status_display }}</strong> · {{ event.created_at|date:"Y-m-d H:i" }}{% if event.note %}<div class="small text-muted">{{ event.note }}</div>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</div></div>
+{% endif %}
 {% if order.documents.all %}
 <div class="mb-3">
   <h2 class="h6 text-muted">Linked documents</h2>

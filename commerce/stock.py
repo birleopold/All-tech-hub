@@ -11,7 +11,13 @@ class InsufficientStock(Exception):
     """Raised when an atomic decrement cannot reserve enough quantity."""
 
 
-def decrement_line_stock(*, product: Product, variant: ProductVariant | None, qty: int) -> None:
+def decrement_line_stock(
+    *,
+    product: Product,
+    variant: ProductVariant | None,
+    qty: int,
+    reference: str = "",
+) -> None:
     if product.kind != Product.KIND_PHYSICAL:
         return
     if qty <= 0:
@@ -27,6 +33,16 @@ def decrement_line_stock(*, product: Product, variant: ProductVariant | None, qt
             raise InsufficientStock(
                 f"Not enough stock for “{product.name} ({variant.name})”. Try a lower quantity."
             )
+        from inventory.models import StockMovement
+        from inventory.services import record_stock_movement
+
+        record_stock_movement(
+            product=product,
+            product_variant=variant,
+            quantity_delta=-qty,
+            movement_type=StockMovement.TYPE_SALE,
+            reference=reference,
+        )
         return
     if not product.track_inventory:
         return
@@ -38,3 +54,12 @@ def decrement_line_stock(*, product: Product, variant: ProductVariant | None, qt
         raise InsufficientStock(
             f"Not enough stock for “{product.name}”. Try a lower quantity."
         )
+    from inventory.models import StockMovement
+    from inventory.services import record_stock_movement
+
+    record_stock_movement(
+        product=product,
+        quantity_delta=-qty,
+        movement_type=StockMovement.TYPE_SALE,
+        reference=reference,
+    )

@@ -1,156 +1,768 @@
 {% extends "staff_base.html" %}
 {% block title %}{% if is_create %}New document{% else %}Edit {{ object.number }}{% endif %}{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">{% if is_create %}New commercial document{% else %}Edit {{ object.number }}{% endif %}</h1>
-<form method="post" novalidate>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div>
+    <p class="text-primary small fw-semibold text-uppercase mb-1">Commercial documents</p>
+    <h1 class="h3 mb-1" id="document-page-title">{% if is_create %}Create document{% else %}Edit {{ object.number }}{% endif %}</h1>
+    <p class="text-muted mb-0">{% if is_create %}Complete the details and line items, then create the document in one step.{% else %}Update the document, line items, totals, and workflow settings.{% endif %}</p>
+  </div>
+  {% if not is_create %}
+  <span class="badge rounded-pill text-bg-{% if object.status == 'paid' %}success{% elif object.status == 'cancelled' %}secondary{% elif object.status == 'partial' %}warning{% else %}primary{% endif %} px-3 py-2">{{ object.get_status_display }}</span>
+  {% endif %}
+</div>
+
+{% if object.is_locked %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div><strong>This document is locked.</strong> Issued financial records cannot be silently edited.</div>
+  {% if can_revise %}<a class="btn btn-sm btn-outline-dark" href="{% url 'staff_document_view' object.pk %}#revision-actions">Open revision controls</a>{% endif %}
+</div>
+{% endif %}
+
+<form method="post" novalidate id="document-form">
   {% csrf_token %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body row g-3">
-      {% for field in form %}
-      <div class="col-md-6">
-        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field.errors }}
-        {{ field }}
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  <h2 class="h5 mb-2">Line items</h2>
-  {{ line_formset.management_form }}
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="table-responsive">
-      <table class="table mb-0 align-middle" id="line-table">
-        <thead class="table-light"><tr><th>Product</th><th>Option</th><th>Description</th><th>Qty</th><th>Unit price</th><th>Del</th></tr></thead>
-        <tbody>
-          {% for f in line_formset %}
-          <tr class="line-form-row">
-            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-            <td>{{ f.product.errors }}{{ f.product }}</td>
-            <td style="min-width:14rem">{{ f.product_variant.errors }}{{ f.product_variant }}</td>
-            <td>{{ f.description.errors }}{{ f.description }}</td>
-            <td style="width:7rem">{{ f.quantity.errors }}{{ f.quantity }}</td>
-            <td style="width:8rem">{{ f.unit_price.errors }}{{ f.unit_price }}</td>
-            <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div class="d-flex flex-wrap gap-2 mb-4">
-    <button type="submit" class="btn btn-primary">Save</button>
-    {% if not is_create %}
-    <a class="btn btn-outline-secondary" href="{% url 'staff_document_view' object.pk %}">View</a>
-    <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' object.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open document PDF in a new tab">PDF</a>
-    {% if object.doc_type == 'invoice' %}
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_demand_note' object.pk %}">Create demand note</a>
-    {% endif %}
-    {% if object.doc_type == 'invoice' or object.doc_type == 'proforma' %}
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_receipt' object.pk %}">Create receipt</a>
-    {% endif %}
-    {% if object.order_id %}
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_delivery_note' object.pk %}">Create delivery note</a>
-    {% endif %}
-    {% if object.doc_type == 'quote' %}
-      {% if object.quote_requires_internal_approval and not object.quote_internally_approved %}
-    <p class="text-warning small mb-2">Internal approval is required before converting this quotation.</p>
-      {% else %}
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_proforma' object.pk %}">Convert to proforma</a>
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_invoice' object.pk %}">Convert to invoice</a>
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-xl-8">
+      {% if is_create %}
+      <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-8"><label class="form-label" for="{{ form.template.id_for_label }}">{{ form.template.label }}</label>{{ form.template }}<div class="form-text">Templates fill document defaults and repeat line items; you can still change everything.</div></div>
+            <div class="col-md-4"><button class="btn btn-outline-secondary w-100" id="apply-template" type="button">Apply template</button></div>
+          </div>
+        </div>
+      </section>
       {% endif %}
-    {% elif object.doc_type == 'proforma' %}
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_to_invoice' object.pk %}">Convert to invoice</a>
-    {% endif %}
-    {% endif %}
-    <a class="btn btn-link" href="{% url 'staff_documents' %}">Back to list</a>
+      <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+          <h2 class="h5 mb-3">Document details</h2>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.doc_type.id_for_label }}">{{ form.doc_type.label }}</label>
+              {{ form.doc_type.errors }}{{ form.doc_type }}
+            </div>
+            <div class="col-md-6">
+              <div class="alert alert-primary py-2 mb-0 h-100" id="document-type-guidance" role="status"></div>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+              {{ form.title.errors }}{{ form.title }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.salesperson.id_for_label }}">{{ form.salesperson.label }}</label>
+              {{ form.salesperson.errors }}{{ form.salesperson }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.location.id_for_label }}">{{ form.location.label }}</label>
+              {{ form.location.errors }}{{ form.location }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.vehicle_reference.id_for_label }}">{{ form.vehicle_reference.label }}</label>
+              {{ form.vehicle_reference.errors }}{{ form.vehicle_reference }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="{{ form.contact_reference.id_for_label }}">{{ form.contact_reference.label }}</label>
+              {{ form.contact_reference.errors }}{{ form.contact_reference }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" for="{{ form.issue_date.id_for_label }}">{{ form.issue_date.label }}</label>
+              {{ form.issue_date.errors }}{{ form.issue_date }}
+            </div>
+            <div class="col-md-4" id="due-date-field">
+              <label class="form-label" for="{{ form.due_date.id_for_label }}" id="due-date-label">{{ form.due_date.label }}</label>
+              {{ form.due_date.errors }}{{ form.due_date }}
+            </div>
+            <div class="col-md-4" id="status-field">
+              <label class="form-label" for="{{ form.status.id_for_label }}">{{ form.status.label }}</label>
+              {{ form.status.errors }}{{ form.status }}
+            </div>
+            <div class="col-md-8" id="order-field">
+              <label class="form-label" for="{{ form.order.id_for_label }}">{{ form.order.label }}</label>
+              {{ form.order.errors }}{{ form.order }}
+              {% if form.order.help_text %}<div class="form-text">{{ form.order.help_text }}</div>{% endif %}
+            </div>
+            <div class="col-md-4" id="tax-field">
+              <label class="form-label" for="{{ form.tax_rate.id_for_label }}">{{ form.tax_rate.label }}</label>
+              <div class="input-group">{{ form.tax_rate }}<span class="input-group-text">%</span></div>
+              {{ form.tax_rate.errors }}
+              <div class="form-text">Editable for this document. The company default only supplies the starting value.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+          <h2 class="h5 mb-3">Pricing, tax and charges</h2>
+          <div class="row g-3">
+            <div class="col-md-4"><label class="form-label" for="{{ form.pricing_mode.id_for_label }}">{{ form.pricing_mode.label }}</label>{{ form.pricing_mode.errors }}{{ form.pricing_mode }}</div>
+            <div class="col-md-4"><label class="form-label" for="{{ form.discount_type.id_for_label }}">{{ form.discount_type.label }}</label>{{ form.discount_type.errors }}{{ form.discount_type }}</div>
+            <div class="col-md-4"><label class="form-label" for="{{ form.discount_value.id_for_label }}">{{ form.discount_value.label }}</label>{{ form.discount_value.errors }}{{ form.discount_value }}{% if form.discount_value.help_text %}<div class="form-text">{{ form.discount_value.help_text }}</div>{% endif %}</div>
+            <div class="col-md-4"><label class="form-label" for="{{ form.shipping_amount.id_for_label }}">{{ form.shipping_amount.label }}</label>{{ form.shipping_amount.errors }}{{ form.shipping_amount }}</div>
+            <div class="col-md-4"><label class="form-label" for="{{ form.other_charges_label.id_for_label }}">{{ form.other_charges_label.label }}</label>{{ form.other_charges_label.errors }}{{ form.other_charges_label }}</div>
+            <div class="col-md-4"><label class="form-label" for="{{ form.other_charges.id_for_label }}">{{ form.other_charges.label }}</label>{{ form.other_charges.errors }}{{ form.other_charges }}</div>
+            <div class="col-md-4"><label class="form-label" for="{{ form.withholding_tax_rate.id_for_label }}">{{ form.withholding_tax_rate.label }}</label><div class="input-group">{{ form.withholding_tax_rate }}<span class="input-group-text">%</span></div>{{ form.withholding_tax_rate.errors }}</div>
+            <div class="col-12 row g-3 m-0 p-0" id="receipt-payment-fields"><div class="col-md-4"><label class="form-label" for="{{ form.amount_tendered.id_for_label }}">{{ form.amount_tendered.label }}</label>{{ form.amount_tendered.errors }}{{ form.amount_tendered }}</div><div class="col-md-4"><label class="form-label" for="{{ form.receipt_payment_method.id_for_label }}">{{ form.receipt_payment_method.label }}</label>{{ form.receipt_payment_method.errors }}{{ form.receipt_payment_method }}</div><div class="col-md-4"><label class="form-label" for="{{ form.receipt_payment_reference.id_for_label }}">{{ form.receipt_payment_reference.label }}</label>{{ form.receipt_payment_reference.errors }}{{ form.receipt_payment_reference }}</div></div>
+            <div class="col-md-4 d-flex align-items-end"><div class="form-check mb-2">{{ form.hide_prices }}<label class="form-check-label" for="{{ form.hide_prices.id_for_label }}">{{ form.hide_prices.label }}</label></div></div>
+            <div class="col-md-4 d-flex align-items-center"><div class="form-check">{{ form.tax_exempt }}<label class="form-check-label" for="{{ form.tax_exempt.id_for_label }}">{{ form.tax_exempt.label }}</label></div></div>
+            <div class="col-md-8"><label class="form-label" for="{{ form.tax_exemption_reason.id_for_label }}">{{ form.tax_exemption_reason.label }}</label>{{ form.tax_exemption_reason.errors }}{{ form.tax_exemption_reason }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+              <h2 class="h5 mb-1" id="customer-section-title">Customer details</h2>
+              <p class="small text-muted mb-0">A system account is never required. Use these fields for walk-ins and one-off customers.</p>
+            </div>
+            <span class="badge text-bg-light border">Saved on this document</span>
+          </div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="{{ form.customer.id_for_label }}">{{ form.customer.label }}</label>
+              <input class="form-control form-control-sm mb-2" id="customer-filter" type="search" placeholder="Filter customers by name or company">
+              {{ form.customer.errors }}{{ form.customer }}
+              {% if form.customer.help_text %}<div class="form-text">{{ form.customer.help_text }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_name.id_for_label }}">{{ form.customer_name.label }}</label>
+              {{ form.customer_name.errors }}{{ form.customer_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_company.id_for_label }}">{{ form.customer_company.label }}</label>
+              {{ form.customer_company.errors }}{{ form.customer_company }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_email.id_for_label }}">{{ form.customer_email.label }}</label>
+              {{ form.customer_email.errors }}{{ form.customer_email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_phone.id_for_label }}">{{ form.customer_phone.label }}</label>
+              {{ form.customer_phone.errors }}{{ form.customer_phone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_tax_reference.id_for_label }}">{{ form.customer_tax_reference.label }}</label>
+              {{ form.customer_tax_reference.errors }}{{ form.customer_tax_reference }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.customer_address.id_for_label }}">{{ form.customer_address.label }}</label>
+              {{ form.customer_address.errors }}{{ form.customer_address }}
+            </div>
+            <div class="col-12">
+              <div class="form-check">{{ form.save_customer_to_crm }}<label class="form-check-label" for="{{ form.save_customer_to_crm.id_for_label }}">{{ form.save_customer_to_crm.label }}</label></div>
+              {{ form.save_customer_to_crm.errors }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-0">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 p-md-4 pb-md-3">
+            <div>
+              <h2 class="h5 mb-1" id="line-section-title">Line items</h2>
+              <p class="small text-muted mb-0">Catalog links are optional. Type any outside-stock, consignment, neighbour-supplied, or custom item directly.</p>
+            </div>
+            <button class="btn btn-sm btn-outline-primary" type="button" id="add-line">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Add line
+            </button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" id="bulk-paste-toggle">
+              <i class="bi bi-clipboard-plus" aria-hidden="true"></i> Bulk paste
+            </button>
+          </div>
+          <div class="px-3 px-md-4 pb-3 d-none" id="bulk-paste-panel">
+            <label class="form-label" for="bulk-paste-input">Paste rows: description, quantity, unit price, optional unit cost</label>
+            <textarea class="form-control" id="bulk-paste-input" rows="4" placeholder="Router&#9;2&#9;150000&#9;110000&#10;Installation labour&#9;1&#9;50000"></textarea>
+            <button class="btn btn-sm btn-primary mt-2" type="button" id="bulk-paste-apply">Add pasted lines</button>
+          </div>
+          {{ line_formset.management_form }}
+          {% if line_formset.non_form_errors %}
+          <div class="alert alert-danger mx-3 mx-md-4" role="alert">{{ line_formset.non_form_errors }}</div>
+          {% endif %}
+          <div class="table-responsive">
+            <table class="table align-middle mb-0 document-lines" id="line-table">
+              <thead class="table-light">
+                <tr><th>Catalog link (optional)</th><th>Description</th><th>Qty</th><th id="unit-price-heading">Unit price</th><th class="text-end" id="amount-heading">Amount</th><th><span class="visually-hidden">Actions</span></th></tr>
+              </thead>
+              <tbody id="line-rows">
+                {% for f in line_formset %}
+                <tr class="line-form-row" draggable="true">
+                  {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+                  <td class="line-product-cell">
+                    <input class="form-control form-control-sm mb-2 product-filter" type="search" placeholder="Filter catalog">
+                    {{ f.product.errors }}{{ f.product }}
+                    <div class="mt-2">{{ f.product_variant.errors }}{{ f.product_variant }}</div>
+                    <div class="mt-2">{{ f.source_type.errors }}{{ f.source_type }}</div>
+                  </td>
+                  <td>
+                    {{ f.description.errors }}{{ f.description }}{{ f.sort_order }}
+                    <details class="mt-2 line-advanced">
+                      <summary class="small text-primary">Advanced details</summary>
+                      <div class="row g-2 mt-1">
+                        <div class="col-md-6"><label class="form-label small">SKU</label>{{ f.sku }}</div>
+                        <div class="col-md-6"><label class="form-label small">Section</label>{{ f.section }}</div>
+                        <div class="col-md-6"><label class="form-label small">Serial</label>{{ f.serial_number }}</div>
+                        <div class="col-md-6"><label class="form-label small">Warranty</label>{{ f.warranty }}</div>
+                        <div class="col-12"><label class="form-label small">Line note</label>{{ f.line_note }}</div>
+                        <div class="col-md-6"><label class="form-label small">Discount type</label>{{ f.discount_type }}</div>
+                        <div class="col-md-6"><label class="form-label small">Discount</label>{{ f.discount_value }}</div>
+                        <div class="col-md-6"><label class="form-label small">Tax %</label>{{ f.tax_rate }}</div>
+                        <div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2">{{ f.tax_exempt }}<label class="form-check-label small">Tax exempt</label></div></div>
+                        <div class="col-md-6 cost-field {% if not can_view_margin %}d-none{% endif %}"><label class="form-label small">Unit cost</label>{{ f.unit_cost }}</div>
+                        <div class="col-md-6"><label class="form-label small">Supplier / owner</label>{{ f.supplier_name }}</div>
+                        <div class="col-12"><label class="form-label small">Source reference</label>{{ f.source_reference }}</div>
+                      </div>
+                    </details>
+                  </td>
+                  <td class="line-number-cell">{{ f.quantity.errors }}{{ f.quantity }}</td>
+                  <td class="line-number-cell">{{ f.unit_price.errors }}{{ f.unit_price }}</td>
+                  <td class="text-end fw-semibold line-total">{{ company.currency_code }} 0.00</td>
+                  <td class="text-end">
+                    <div class="d-none delete-field">{{ f.DELETE }}</div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-line" aria-label="Remove line"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <template id="empty-line-template">
+            <tr class="line-form-row" draggable="true">
+              {% with f=line_formset.empty_form %}
+              {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
+              <td class="line-product-cell"><input class="form-control form-control-sm mb-2 product-filter" type="search" placeholder="Filter catalog">{{ f.product }}<div class="mt-2">{{ f.product_variant }}</div><div class="mt-2">{{ f.source_type }}</div></td>
+              <td>{{ f.description }}{{ f.sort_order }}<details class="mt-2 line-advanced"><summary class="small text-primary">Advanced details</summary><div class="row g-2 mt-1"><div class="col-md-6"><label class="form-label small">SKU</label>{{ f.sku }}</div><div class="col-md-6"><label class="form-label small">Section</label>{{ f.section }}</div><div class="col-md-6"><label class="form-label small">Serial</label>{{ f.serial_number }}</div><div class="col-md-6"><label class="form-label small">Warranty</label>{{ f.warranty }}</div><div class="col-12"><label class="form-label small">Line note</label>{{ f.line_note }}</div><div class="col-md-6"><label class="form-label small">Discount type</label>{{ f.discount_type }}</div><div class="col-md-6"><label class="form-label small">Discount</label>{{ f.discount_value }}</div><div class="col-md-6"><label class="form-label small">Tax %</label>{{ f.tax_rate }}</div><div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2">{{ f.tax_exempt }}<label class="form-check-label small">Tax exempt</label></div></div><div class="col-md-6 cost-field {% if not can_view_margin %}d-none{% endif %}"><label class="form-label small">Unit cost</label>{{ f.unit_cost }}</div><div class="col-md-6"><label class="form-label small">Supplier / owner</label>{{ f.supplier_name }}</div><div class="col-12"><label class="form-label small">Source reference</label>{{ f.source_reference }}</div></div></details></td>
+              <td class="line-number-cell">{{ f.quantity }}</td>
+              <td class="line-number-cell">{{ f.unit_price }}</td>
+              <td class="text-end fw-semibold line-total">{{ company.currency_code }} 0.00</td>
+              <td class="text-end"><div class="d-none delete-field">{{ f.DELETE }}</div><button type="button" class="btn btn-sm btn-outline-danger remove-line" aria-label="Remove line"><i class="bi bi-trash" aria-hidden="true"></i></button></td>
+              {% endwith %}
+            </tr>
+          </template>
+        </div>
+      </section>
+
+      <section class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+          <h2 class="h5 mb-3">Notes and terms</h2>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+              {{ form.notes.errors }}{{ form.notes }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.terms.id_for_label }}">{{ form.terms.label }}</label>
+              {{ form.terms.errors }}{{ form.terms }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {% if form.quote_requires_internal_approval or form.quote_requires_customer_acceptance %}
+      <section class="card border-0 shadow-sm mb-4" id="quote-options">
+        <div class="card-body p-3 p-md-4">
+          <h2 class="h5 mb-3">Quotation approvals</h2>
+          {% if form.quote_requires_internal_approval %}
+          <div class="form-check mb-3">{{ form.quote_requires_internal_approval }}<label class="form-check-label" for="{{ form.quote_requires_internal_approval.id_for_label }}">{{ form.quote_requires_internal_approval.label }}</label></div>
+          {% endif %}
+          {% if form.quote_requires_customer_acceptance %}
+          <div class="form-check">{{ form.quote_requires_customer_acceptance }}<label class="form-check-label" for="{{ form.quote_requires_customer_acceptance.id_for_label }}">{{ form.quote_requires_customer_acceptance.label }}</label></div>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    <div class="col-xl-4">
+      <div class="card border-0 shadow-sm document-summary">
+        <div class="card-body p-3 p-md-4">
+          <h2 class="h5 mb-3">Summary</h2>
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><strong id="summary-subtotal">{{ company.currency_code }} 0.00</strong></div>
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Discount</span><strong id="summary-discount">− {{ company.currency_code }} 0.00</strong></div>
+          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Shipping &amp; charges</span><strong id="summary-charges">{{ company.currency_code }} 0.00</strong></div>
+          <div class="d-flex justify-content-between mb-3" id="summary-tax-row"><span class="text-muted">Tax</span><strong id="summary-tax">{{ company.currency_code }} 0.00</strong></div>
+          <div class="d-flex justify-content-between mb-3"><span class="text-muted">Withholding</span><strong id="summary-withholding">− {{ company.currency_code }} 0.00</strong></div>
+          <div class="d-flex justify-content-between border-top pt-3 fs-5"><span>Total</span><strong id="summary-total">{{ company.currency_code }} 0.00</strong></div>
+          <div class="d-flex justify-content-between mt-2 d-none" id="summary-change-row"><span class="text-muted">Change due</span><strong id="summary-change">{{ company.currency_code }} 0.00</strong></div>
+          {% if can_view_margin %}<div class="border-top mt-3 pt-3 small"><div class="d-flex justify-content-between"><span class="text-muted">Estimated cost</span><strong id="summary-cost">{{ company.currency_code }} 0.00</strong></div><div class="d-flex justify-content-between"><span class="text-muted">Estimated gross profit</span><strong id="summary-profit">{{ company.currency_code }} 0.00</strong></div></div>{% endif %}
+          <p class="small text-muted mt-3 mb-0">The document number is assigned only after the complete form saves successfully.</p>
+          <div class="d-grid gap-2 mt-4">
+            <button type="submit" name="save_action" value="view" class="btn btn-primary" id="primary-save-button">{% if is_create %}Create and view{% else %}Save and view{% endif %}</button>
+            <button type="submit" name="save_action" value="edit" class="btn btn-outline-primary" id="secondary-save-button">{% if is_create %}Create and keep editing{% else %}Save changes{% endif %}</button>
+            <div class="input-group"><span class="input-group-text">Template</span>{{ form.template_name }}<button type="submit" name="save_action" value="template" class="btn btn-outline-secondary">Save</button></div>
+            <a class="btn btn-link" href="{% if is_create %}{% url 'staff_documents' %}{% else %}{% url 'staff_document_view' object.pk %}{% endif %}">Cancel</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </form>
+
+{% if not is_create %}
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-body">
+    <h2 class="h5">Next actions</h2>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' object.pk %}" target="_blank" rel="noopener noreferrer">Open PDF</a>
+      {% if object.doc_type == 'invoice' %}<form method="post" action="{% url 'staff_document_to_demand_note' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Create demand note</button></form>{% endif %}
+      {% if object.doc_type == 'invoice' %}<form method="post" action="{% url 'staff_document_to_credit_note' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Create credit note</button></form>{% endif %}
+      {% if object.doc_type == 'invoice' or object.doc_type == 'proforma' %}<form method="post" action="{% url 'staff_document_to_receipt' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Create receipt</button></form>{% endif %}
+      {% if object.order_id %}<form method="post" action="{% url 'staff_document_to_delivery_note' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Create delivery note</button></form>{% endif %}
+      {% if object.doc_type == 'quote' and not object.quote_requires_internal_approval or object.doc_type == 'quote' and object.quote_internally_approved %}
+      <form method="post" action="{% url 'staff_document_to_proforma' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Convert to proforma</button></form>
+      <form method="post" action="{% url 'staff_document_to_invoice' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Convert to invoice</button></form>
+      {% elif object.doc_type == 'proforma' %}
+      <form method="post" action="{% url 'staff_document_to_invoice' object.pk %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Convert to invoice</button></form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
+
 {% block extra_js %}
 {{ variants_for_js|json_script:"alltech-variants-meta" }}
 {{ products_price_map|json_script:"alltech-product-prices" }}
+{{ products_name_map|json_script:"alltech-product-names" }}
+{{ products_source_map|json_script:"alltech-product-sources" }}
+{{ customers_for_js|json_script:"alltech-customers-meta" }}
+{{ templates_for_js|json_script:"alltech-document-templates" }}
 <script>
 (function () {
-  const metaEl = document.getElementById("alltech-variants-meta");
-  const priceEl = document.getElementById("alltech-product-prices");
-  if (!metaEl || !priceEl) return;
-  let variantsMeta = [];
-  let productPrices = {};
-  try {
-    variantsMeta = JSON.parse(metaEl.textContent);
-    productPrices = JSON.parse(priceEl.textContent);
-  } catch (e) { return; }
-  const metaById = Object.fromEntries(variantsMeta.map(function (m) { return [String(m.id), m]; }));
+  const currency = "{{ company.currency_code|escapejs }}";
+  const rows = document.getElementById("line-rows");
+  const totalForms = document.getElementById("id_lines-TOTAL_FORMS");
+  const template = document.getElementById("empty-line-template");
+  const addButton = document.getElementById("add-line");
+  const docType = document.getElementById("id_doc_type");
+  const quoteOptions = document.getElementById("quote-options");
+  if (!rows || !totalForms || !template) return;
 
-  function wireVariantOptions(varSel) {
-    Array.prototype.forEach.call(varSel.options, function (opt) {
-      if (!opt.value) return;
-      const m = metaById[opt.value];
-      if (m) opt.dataset.pid = String(m.pid);
-    });
+  function parseJSON(id) {
+    const el = document.getElementById(id);
+    try { return el ? JSON.parse(el.textContent) : {}; } catch (error) { return {}; }
+  }
+  const variants = parseJSON("alltech-variants-meta");
+  const prices = parseJSON("alltech-product-prices");
+  const names = parseJSON("alltech-product-names");
+  const productSources = parseJSON("alltech-product-sources");
+  const customers = parseJSON("alltech-customers-meta");
+  const documentTemplates = parseJSON("alltech-document-templates");
+  const variantMap = Object.fromEntries(variants.map(function (item) { return [String(item.id), item]; }));
+  const customerMap = Object.fromEntries(customers.map(function (item) { return [String(item.id), item]; }));
+  const templateMap = Object.fromEntries(documentTemplates.map(function (item) { return [String(item.id), item]; }));
+  const typeConfig = {
+    quote: {
+      guidance: "Price proposal before work or supply. You can require internal and customer approval.",
+      dueLabel: "Valid until",
+      showDue: true, showTax: true, showQuote: true,
+      lines: "Quoted items and services", customer: "Prepared for",
+      noun: "quotation",
+      statuses: [["draft", "Draft"], ["issued", "Issued"]]
+    },
+    proforma: {
+      guidance: "Advance payment request. It is not the final tax invoice.",
+      dueLabel: "Payment due",
+      showDue: true, showTax: true, showQuote: false,
+      lines: "Items and services", customer: "Bill to",
+      noun: "proforma invoice",
+      statuses: [["draft", "Draft"], ["issued", "Issued"]]
+    },
+    invoice: {
+      guidance: "Final bill for supplied goods or completed services.",
+      dueLabel: "Payment due",
+      showDue: true, showTax: true, showQuote: false,
+      lines: "Billed items and services", customer: "Bill to",
+      noun: "tax invoice",
+      statuses: [["draft", "Draft"], ["issued", "Issued"]]
+    },
+    receipt: {
+      guidance: "Proof of payment or completed counter sale. Order and account links are optional.",
+      dueLabel: "Due date",
+      showDue: false, showTax: true, showQuote: false,
+      lines: "Paid items and services", customer: "Received from",
+      noun: "receipt",
+      statuses: [["issued", "Issued"], ["paid", "Paid"]]
+    },
+    delivery_note: {
+      guidance: "Records goods handed over or delivered. Prices and tax remain editable when your workflow requires them.",
+      dueLabel: "Due date",
+      showDue: false, showTax: true, showQuote: false,
+      lines: "Items delivered", customer: "Deliver to",
+      noun: "delivery note",
+      statuses: [["draft", "Draft"], ["issued", "Issued"]]
+    },
+    demand_note: {
+      guidance: "Formal payment demand. It can stand alone or refer to an earlier invoice in the notes.",
+      dueLabel: "Payment deadline",
+      showDue: true, showTax: true, showQuote: false,
+      lines: "Amounts demanded", customer: "Demand issued to",
+      noun: "demand note",
+      statuses: [["draft", "Draft"], ["issued", "Issued"]]
+    },
+    credit_note: {
+      guidance: "Adjustment or credit granted to a customer. Enter positive line values; the document identifies the credit.",
+      dueLabel: "Due date",
+      showDue: false, showTax: true, showQuote: false,
+      lines: "Credited items and services", customer: "Credit issued to",
+      noun: "credit note",
+      statuses: [["draft", "Draft"], ["issued", "Issued"]]
+    }
+  };
+
+  function money(value) {
+    return currency + " " + Number(value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
   }
 
-  function filterVariantOptions(row, productId) {
-    const varSel = row.querySelector(".line-variant");
-    if (!varSel) return;
-    const pid = productId ? String(productId) : "";
-    let currentOk = false;
-    Array.prototype.forEach.call(varSel.options, function (opt) {
-      if (!opt.value) {
-        opt.disabled = false;
-        return;
+  function updateTotals() {
+    let subtotal = 0;
+    let lineTax = 0;
+    let totalCost = 0;
+    const pricingMode = (document.getElementById("id_pricing_mode") || {}).value || "exclusive";
+    const documentTaxRate = parseFloat((document.getElementById("id_tax_rate") || {}).value) || 0;
+    const documentTaxExempt = Boolean((document.getElementById("id_tax_exempt") || {}).checked);
+    rows.querySelectorAll(".line-form-row").forEach(function (row) {
+      const deleted = row.querySelector('input[name$="-DELETE"]');
+      const quantity = parseFloat((row.querySelector('input[name$="-quantity"]') || {}).value) || 0;
+      const price = parseFloat((row.querySelector('input[name$="-unit_price"]') || {}).value) || 0;
+      const cost = parseFloat((row.querySelector('input[name$="-unit_cost"]') || {}).value) || 0;
+      const discountType = (row.querySelector('select[name$="-discount_type"]') || {}).value || "percent";
+      const discountValue = parseFloat((row.querySelector('input[name$="-discount_value"]') || {}).value) || 0;
+      const lineTaxInput = row.querySelector('input[name$="-tax_rate"]');
+      const taxRate = lineTaxInput && lineTaxInput.value !== "" ? parseFloat(lineTaxInput.value) || 0 : documentTaxRate;
+      const lineIsExempt = Boolean((row.querySelector('input[name$="-tax_exempt"]') || {}).checked);
+      const gross = quantity * price;
+      const discount = discountType === "fixed" ? Math.min(discountValue, gross) : gross * Math.min(discountValue, 100) / 100;
+      const afterDiscount = Math.max(0, gross - discount);
+      const net = pricingMode === "inclusive" && taxRate > 0 && !lineIsExempt && !documentTaxExempt ? afterDiscount / (1 + taxRate / 100) : afterDiscount;
+      const tax = lineIsExempt || documentTaxExempt ? 0 : (pricingMode === "inclusive" ? afterDiscount - net : net * taxRate / 100);
+      const amount = deleted && deleted.checked ? 0 : net + tax;
+      if (!(deleted && deleted.checked)) {
+        subtotal += net;
+        lineTax += tax;
+        totalCost += quantity * cost;
       }
-      const ok = !pid || opt.dataset.pid === pid;
-      opt.disabled = !ok;
-      if (ok && opt.value === varSel.value) currentOk = true;
+      const lineTotal = row.querySelector(".line-total");
+      if (lineTotal) lineTotal.textContent = money(amount);
     });
-    if (!currentOk) varSel.value = "";
+    const discountType = (document.getElementById("id_discount_type") || {}).value || "percent";
+    const discountValue = parseFloat((document.getElementById("id_discount_value") || {}).value) || 0;
+    const discount = discountType === "fixed" ? Math.min(discountValue, subtotal) : subtotal * Math.min(discountValue, 100) / 100;
+    const ratio = subtotal > 0 ? (subtotal - discount) / subtotal : 0;
+    const shipping = parseFloat((document.getElementById("id_shipping_amount") || {}).value) || 0;
+    const otherCharges = parseFloat((document.getElementById("id_other_charges") || {}).value) || 0;
+    const charges = shipping + otherCharges;
+    let tax = documentTaxExempt ? 0 : lineTax * ratio;
+    if (!documentTaxExempt && pricingMode === "exclusive") tax += charges * documentTaxRate / 100;
+    const beforeWithholding = subtotal - discount + charges + tax;
+    const withholdingRate = parseFloat((document.getElementById("id_withholding_tax_rate") || {}).value) || 0;
+    const withholding = beforeWithholding * Math.min(withholdingRate, 100) / 100;
+    const total = Math.max(0, beforeWithholding - withholding);
+    const tendered = parseFloat((document.getElementById("id_amount_tendered") || {}).value) || 0;
+    document.getElementById("summary-subtotal").textContent = money(subtotal);
+    document.getElementById("summary-discount").textContent = "− " + money(discount);
+    document.getElementById("summary-charges").textContent = money(charges);
+    document.getElementById("summary-tax").textContent = money(tax);
+    document.getElementById("summary-withholding").textContent = "− " + money(withholding);
+    document.getElementById("summary-total").textContent = money(total);
+    document.getElementById("summary-change").textContent = money(Math.max(0, tendered - total));
+    const changeRow = document.getElementById("summary-change-row");
+    if (changeRow) changeRow.classList.toggle("d-none", tendered <= 0);
+    const costEl = document.getElementById("summary-cost");
+    const profitEl = document.getElementById("summary-profit");
+    if (costEl) costEl.textContent = money(totalCost);
+    if (profitEl) profitEl.textContent = money(subtotal - discount - totalCost);
   }
 
-  function setUnitPrice(row, priceStr) {
-    const priceInput = row.querySelector('input[name$="-unit_price"]');
-    if (priceInput && priceStr) priceInput.value = priceStr;
+  function filterVariants(row) {
+    const product = row.querySelector(".line-product");
+    const variant = row.querySelector(".line-variant");
+    if (!variant) return;
+    const productId = product ? String(product.value) : "";
+    let selectedIsValid = !variant.value;
+    Array.from(variant.options).forEach(function (option) {
+      if (!option.value) return;
+      const item = variantMap[String(option.value)];
+      const visible = !productId || (item && String(item.pid) === productId);
+      option.hidden = !visible;
+      option.disabled = !visible;
+      if (visible && option.value === variant.value) selectedIsValid = true;
+    });
+    if (!selectedIsValid) variant.value = "";
   }
 
-  function onProductChange(row, sel) {
-    const id = sel.value;
-    filterVariantOptions(row, id);
-    const varSel = row.querySelector(".line-variant");
-    if (varSel && varSel.value) {
-      const m = metaById[varSel.value];
-      if (m) setUnitPrice(row, m.price);
-      return;
-    }
-    if (id && productPrices[id] !== undefined) setUnitPrice(row, productPrices[id]);
+  function wireRow(row) {
+    const product = row.querySelector(".line-product");
+    const variant = row.querySelector(".line-variant");
+    const description = row.querySelector('input[name$="-description"]');
+    const price = row.querySelector('input[name$="-unit_price"]');
+    const remove = row.querySelector(".remove-line");
+    const productFilter = row.querySelector(".product-filter");
+    filterVariants(row);
+
+    if (product) product.addEventListener("change", function () {
+      filterVariants(row);
+      if (product.value && price) price.value = prices[product.value] || price.value;
+      if (product.value && description && !description.value) description.value = names[product.value] || "";
+      const source = row.querySelector('select[name$="-source_type"]');
+      if (product.value && source) source.value = productSources[product.value] || "stock";
+      updateTotals();
+    });
+    if (variant) variant.addEventListener("change", function () {
+      const item = variantMap[String(variant.value)];
+      if (item && price) price.value = item.price;
+      if (item && description && !description.value) description.value = item.label;
+      updateTotals();
+    });
+    if (productFilter && product) productFilter.addEventListener("input", function () {
+      const query = productFilter.value.trim().toLowerCase();
+      Array.from(product.options).forEach(function (option) {
+        if (!option.value) return;
+        const visible = !query || option.text.toLowerCase().includes(query);
+        option.hidden = !visible;
+      });
+    });
+    row.querySelectorAll('input[name$="-quantity"], input[name$="-unit_price"], input[name$="-unit_cost"], input[name$="-discount_value"], input[name$="-tax_rate"], input[name$="-tax_exempt"], select[name$="-discount_type"]').forEach(function (input) {
+      input.addEventListener("input", updateTotals);
+      input.addEventListener("change", updateTotals);
+    });
+    if (remove) remove.addEventListener("click", function () {
+      const deleteInput = row.querySelector('input[name$="-DELETE"]');
+      const idInput = row.querySelector('input[name$="-id"]');
+      if (idInput && idInput.value && deleteInput) {
+        deleteInput.checked = true;
+        row.classList.add("d-none");
+      } else {
+        row.remove();
+      }
+      updateTotals();
+    });
   }
 
-  function onVariantChange(row, sel) {
-    const m = metaById[sel.value];
-    if (m) setUnitPrice(row, m.price);
-    const desc = row.querySelector('input[name$="-description"]');
-    if (desc && !desc.value && m) desc.value = m.label;
-  }
-
-  document.querySelectorAll(".line-form-row").forEach(function (row) {
-    const prod = row.querySelector(".line-product");
-    const vsel = row.querySelector(".line-variant");
-    if (vsel) wireVariantOptions(vsel);
-    if (prod && vsel) {
-      filterVariantOptions(row, prod.value);
-      prod.addEventListener("change", function () { onProductChange(row, prod); });
-      vsel.addEventListener("change", function () { onVariantChange(row, vsel); });
-    }
-    if (prod) {
-      prod.addEventListener("change", function () {
-        const opt = prod.options[prod.selectedIndex];
-        const desc = row.querySelector('input[name$="-description"]');
-        if (desc && opt && opt.text && !desc.value) {
-          var t = opt.text.split(" — ")[0];
-          if (t) desc.value = t;
-        }
+  function appendLine(data) {
+    const index = parseInt(totalForms.value, 10);
+    const wrapper = document.createElement("tbody");
+    wrapper.innerHTML = template.innerHTML.replaceAll("__prefix__", index).trim();
+    const row = wrapper.firstElementChild;
+    rows.appendChild(row);
+    totalForms.value = index + 1;
+    wireRow(row);
+    const quantity = row.querySelector('input[name$="-quantity"]');
+    if (quantity) quantity.value = data && data.quantity ? data.quantity : "1";
+    if (data) {
+      const mappings = {
+        description: "description", source_type: "source_type", sku: "sku",
+        serial_number: "serial_number", warranty: "warranty", line_note: "line_note",
+        section: "section", unit_price: "unit_price", unit_cost: "unit_cost",
+        supplier_name: "supplier_name", source_reference: "source_reference",
+        discount_type: "discount_type", discount_value: "discount_value",
+        tax_rate: "tax_rate"
+      };
+      Object.keys(mappings).forEach(function (key) {
+        const input = row.querySelector('[name$="-' + mappings[key] + '"]');
+        if (input && data[key] !== undefined && data[key] !== null) input.value = data[key];
       });
     }
+    updateTotals();
+    return row;
+  }
+
+  if (addButton) addButton.addEventListener("click", function () {
+    const row = appendLine();
+    const firstInput = row.querySelector("select, input");
+    if (firstInput) firstInput.focus();
   });
+
+  rows.querySelectorAll(".line-form-row").forEach(wireRow);
+  const taxRate = document.getElementById("id_tax_rate");
+  ["id_tax_rate", "id_pricing_mode", "id_discount_type", "id_discount_value", "id_shipping_amount", "id_other_charges", "id_withholding_tax_rate", "id_amount_tendered", "id_tax_exempt"].forEach(function (id) {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener("input", updateTotals);
+      input.addEventListener("change", updateTotals);
+    }
+  });
+  const customerSelect = document.getElementById("id_customer");
+  const customerFilter = document.getElementById("customer-filter");
+  if (customerFilter && customerSelect) customerFilter.addEventListener("input", function () {
+    const query = customerFilter.value.trim().toLowerCase();
+    Array.from(customerSelect.options).forEach(function (option) {
+      if (!option.value) return;
+      option.hidden = Boolean(query) && !option.text.toLowerCase().includes(query);
+    });
+  });
+  if (customerSelect) customerSelect.addEventListener("change", function () {
+    const customer = customerMap[String(customerSelect.value)];
+    if (!customer) return;
+    const fields = {
+      id_customer_name: customer.name,
+      id_customer_company: customer.company,
+      id_customer_email: customer.email,
+      id_customer_phone: customer.phone,
+      id_customer_tax_reference: customer.tax_reference
+    };
+    Object.keys(fields).forEach(function (id) {
+      const input = document.getElementById(id);
+      if (input) input.value = fields[id] || "";
+    });
+  });
+
+  const bulkToggle = document.getElementById("bulk-paste-toggle");
+  const bulkPanel = document.getElementById("bulk-paste-panel");
+  const bulkApply = document.getElementById("bulk-paste-apply");
+  if (bulkToggle && bulkPanel) bulkToggle.addEventListener("click", function () {
+    bulkPanel.classList.toggle("d-none");
+  });
+  if (bulkApply) bulkApply.addEventListener("click", function () {
+    const input = document.getElementById("bulk-paste-input");
+    (input.value || "").split(/\r?\n/).filter(Boolean).forEach(function (text) {
+      const columns = text.includes("\t") ? text.split("\t") : text.split(",");
+      appendLine({
+        description: (columns[0] || "").trim(),
+        quantity: (columns[1] || "1").trim(),
+        unit_price: (columns[2] || "0").trim(),
+        unit_cost: (columns[3] || "0").trim(),
+        source_type: "custom"
+      });
+    });
+    input.value = "";
+    bulkPanel.classList.add("d-none");
+  });
+
+  const templateSelect = document.getElementById("id_template");
+  const applyTemplateButton = document.getElementById("apply-template");
+  if (applyTemplateButton && templateSelect) applyTemplateButton.addEventListener("click", function () {
+    const selected = templateMap[String(templateSelect.value)];
+    if (!selected) return;
+    const fields = {
+      id_doc_type: selected.doc_type, id_title: selected.title,
+      id_notes: selected.notes, id_terms: selected.terms,
+      id_pricing_mode: selected.pricing_mode, id_tax_rate: selected.tax_rate
+    };
+    Object.keys(fields).forEach(function (id) {
+      const input = document.getElementById(id);
+      if (input) input.value = fields[id] || "";
+    });
+    rows.querySelectorAll(".line-form-row").forEach(function (row) {
+      const idInput = row.querySelector('input[name$="-id"]');
+      if (!idInput || !idInput.value) row.remove();
+    });
+    (selected.lines || []).forEach(appendLine);
+    applyDocumentType();
+    updateTotals();
+  });
+
+  let draggedRow = null;
+  rows.addEventListener("dragstart", function (event) {
+    draggedRow = event.target.closest(".line-form-row");
+    if (draggedRow) draggedRow.classList.add("opacity-50");
+  });
+  rows.addEventListener("dragover", function (event) {
+    event.preventDefault();
+    const target = event.target.closest(".line-form-row");
+    if (draggedRow && target && target !== draggedRow) {
+      const box = target.getBoundingClientRect();
+      rows.insertBefore(draggedRow, event.clientY < box.top + box.height / 2 ? target : target.nextSibling);
+    }
+  });
+  rows.addEventListener("dragend", function () {
+    if (draggedRow) draggedRow.classList.remove("opacity-50");
+    draggedRow = null;
+    rows.querySelectorAll(".line-form-row").forEach(function (row, index) {
+      const order = row.querySelector('input[name$="-sort_order"]');
+      if (order) order.value = index;
+    });
+  });
+
+  const editorForm = document.getElementById("document-form");
+  const draftKey = "alltech-document-draft-{{ object.pk|default:'new' }}";
+  function saveLocalDraft() {
+    if (!editorForm) return;
+    const draft = {};
+    editorForm.querySelectorAll("input, select, textarea").forEach(function (input) {
+      if (!input.name || input.name === "csrfmiddlewaretoken" || input.type === "file") return;
+      draft[input.name] = input.type === "checkbox" ? input.checked : input.value;
+    });
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  }
+  if (editorForm) {
+    let autosaveTimer;
+    editorForm.addEventListener("input", function () {
+      window.clearTimeout(autosaveTimer);
+      autosaveTimer = window.setTimeout(saveLocalDraft, 500);
+    });
+    editorForm.addEventListener("submit", function () { localStorage.removeItem(draftKey); });
+  }
+  if ({{ is_create|yesno:"true,false" }} && !{{ form.is_bound|yesno:"true,false" }}) {
+    try {
+      const draft = JSON.parse(localStorage.getItem(draftKey) || "null");
+      if (draft) {
+        const desiredLines = parseInt(draft["lines-TOTAL_FORMS"] || totalForms.value, 10);
+        while (parseInt(totalForms.value, 10) < desiredLines) appendLine();
+        Object.keys(draft).forEach(function (name) {
+          const input = editorForm.querySelector('[name="' + CSS.escape(name) + '"]');
+          if (!input) return;
+          if (input.type === "checkbox") input.checked = Boolean(draft[name]);
+          else input.value = draft[name];
+        });
+      }
+    } catch (error) {}
+  }
+
+  function applyDocumentType() {
+    if (!docType) return;
+    const config = typeConfig[docType.value] || typeConfig.invoice;
+    const guidance = document.getElementById("document-type-guidance");
+    const dueField = document.getElementById("due-date-field");
+    const dueLabel = document.getElementById("due-date-label");
+    const taxField = document.getElementById("tax-field");
+    const taxSummary = document.getElementById("summary-tax-row");
+    const lineTitle = document.getElementById("line-section-title");
+    const customerTitle = document.getElementById("customer-section-title");
+    const statusSelect = document.getElementById("id_status");
+    const pageTitle = document.getElementById("document-page-title");
+    const primarySave = document.getElementById("primary-save-button");
+    const secondarySave = document.getElementById("secondary-save-button");
+    const tenderedField = document.getElementById("receipt-payment-fields");
+    const hidePrices = document.getElementById("id_hide_prices");
+    if (guidance) guidance.textContent = config.guidance;
+    if (dueField) dueField.classList.toggle("d-none", !config.showDue);
+    if (dueLabel) dueLabel.textContent = config.dueLabel;
+    if (taxField) taxField.classList.toggle("d-none", !config.showTax);
+    if (taxSummary) taxSummary.classList.toggle("d-none", !config.showTax);
+    if (quoteOptions) quoteOptions.classList.toggle("d-none", !config.showQuote);
+    if (lineTitle) lineTitle.textContent = config.lines;
+    if (customerTitle) customerTitle.textContent = config.customer;
+    if (tenderedField) tenderedField.classList.toggle("d-none", docType.value !== "receipt");
+    if (hidePrices && {{ is_create|yesno:"true,false" }} && docType.value === "delivery_note") hidePrices.checked = true;
+    if ({{ is_create|yesno:"true,false" }}) {
+      if (pageTitle) pageTitle.textContent = "Create " + config.noun;
+      if (primarySave) primarySave.textContent = "Create " + config.noun + " and view";
+      if (secondarySave) secondarySave.textContent = "Create and keep editing";
+    }
+    if (statusSelect && {{ is_create|yesno:"true,false" }}) {
+      const currentStatus = statusSelect.value;
+      statusSelect.innerHTML = "";
+      config.statuses.forEach(function (status) {
+        const option = document.createElement("option");
+        option.value = status[0];
+        option.textContent = status[1];
+        statusSelect.appendChild(option);
+      });
+      statusSelect.value = config.statuses.some(function (status) {
+        return status[0] === currentStatus;
+      }) ? currentStatus : config.statuses[0][0];
+    }
+  }
+  if (docType) docType.addEventListener("change", applyDocumentType);
+  applyDocumentType();
+  updateTotals();
 })();
 </script>
 {% endblock %}

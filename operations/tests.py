@@ -9,7 +9,7 @@ from django.utils import timezone
 from core.models import AuditEvent, StaffNotification, SupportTicket
 from crm.models import Customer
 from operations.job_status import allowed_next_statuses, validate_job_status_transition
-from operations.models import JobCard, JobFeedback, JobStatusEvent, JobFeedback, JobStatusEvent
+from operations.models import JobCard, JobFeedback, JobStatusEvent
 
 
 class JobStatusFsmTests(TestCase):
@@ -99,6 +99,22 @@ class JobDaysInStatusTests(TestCase):
             status=JobCard.STATUS_INTAKE,
         )
         self.assertGreaterEqual(job.days_in_current_status, 0)
+
+
+class JobLabelViewTests(TestCase):
+    def test_job_label_sheet_renders_job_number(self):
+        customer = Customer.objects.create(name="Label Customer", email="label@example.com")
+        user = User.objects.create_user("job-label", "job-label@example.com", "pw", is_staff=True)
+        job = JobCard.objects.create(
+            customer=customer,
+            title="Printer repair",
+            serial_number="PR-123",
+        )
+        self.client.force_login(user)
+        response = self.client.get(reverse("staff_job_labels", args=[job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, job.number)
+        self.assertContains(response, "PR-123")
 
 
 class JobScheduleOverlapTests(TestCase):

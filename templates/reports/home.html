@@ -24,6 +24,35 @@
   </div>
 </div>
 
+<div class="row g-3 mb-4">
+  <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Issued document sales today</p><p class="h3 mb-0">{{ company.currency_code }} {{ document_sales_today|floatformat:2 }}</p></div></div></div>
+  <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Cash received today</p><p class="h3 mb-0">{{ company.currency_code }} {{ cash_received_today|floatformat:2 }}</p><a class="small" href="{% url 'staff_payment_reconciliation' %}">Open reconciliation</a></div></div></div>
+  <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">External/consignment profit (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ external_item_margin_30.profit|floatformat:2 }}</p><p class="small text-muted mb-0">Revenue {{ external_item_margin_30.revenue|floatformat:2 }} · cost {{ external_item_margin_30.cost|floatformat:2 }}</p></div></div></div>
+</div>
+
+{% if document_sequence_gaps %}
+<div class="alert alert-warning"><strong>Document-number gap monitor:</strong>{% for row in document_sequence_gaps %} {{ row.prefix }} has {{ row.gap }} allocated number{{ row.gap|pluralize }} without a current document.{% if not forloop.last %};{% endif %}{% endfor %}</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6 text-muted text-uppercase">Invoice aging</h2>
+    <div class="row g-3">
+      {% for bucket in invoice_aging %}
+      <div class="col-6 col-lg-3"><div class="border rounded p-3"><div class="small text-muted">{{ bucket.label }}</div><strong>{{ company.currency_code }} {{ bucket.amount|floatformat:2 }}</strong></div></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4"><div class="card-body">
+  <h2 class="h6 text-muted text-uppercase">Order fulfillment</h2>
+  <p><strong>{{ unfulfilled_orders }}</strong> active order(s) awaiting completion.</p>
+  <div class="d-flex flex-wrap gap-2">
+    {% for item in fulfillment_counts %}<span class="badge text-bg-light border">{{ item.label }}: {{ item.count }}</span>{% endfor %}
+  </div>
+</div></div>
+
 <div class="row g-4 mb-4">
   <div class="col-lg-6">
     <div class="card border-0 shadow-sm h-100">
@@ -35,6 +64,7 @@
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_jobs_csv' %}">Job cards</a>
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_tickets_csv' %}">Support tickets</a>
           <a class="btn btn-outline-warning btn-sm" href="{% url 'staff_export_low_stock_csv' %}">Low stock</a>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_documents_csv' %}">Commercial documents</a>
         </div>
       </div>
     </div>
@@ -103,4 +133,3 @@
   </div>
 </div>
 {% endblock %}
-

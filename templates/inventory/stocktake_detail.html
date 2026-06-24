@@ -13,6 +13,7 @@
     {% if take.note %}<p class="small mt-1">{{ take.note }}</p>{% endif %}
   </div>
   <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener noreferrer" href="{% url 'staff_stocktake_labels' take.pk %}">Print labels</a>
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'staff_stocktakes' %}">All stock takes</a>
     {% if take.is_open %}
     <form method="post" action="{% url 'staff_stocktake_post' take.pk %}" onsubmit="return confirm('Post this stock take? Variances will be applied to stock.');">

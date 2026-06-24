@@ -18,9 +18,9 @@ def email_document(request, pk: int):
         raise Http404
     doc = get_object_or_404(CommercialDocument, pk=pk)
     initial = {
-        "to_email": doc.customer.email,
+        "to_email": doc.display_customer_email,
         "subject": f"{doc.get_doc_type_display()} {doc.number}",
-        "body": f"Hello {doc.customer.name},\n\nPlease find attached: {doc.get_doc_type_display()} {doc.number}.\n\nRegards,\n",
+        "body": f"Hello {doc.display_customer_name},\n\nPlease find attached: {doc.get_doc_type_display()} {doc.number}.\n\nRegards,\n",
         "attach_pdf": True,
     }
     if request.method == "POST":
@@ -192,4 +192,3 @@ def email_log_retry(request, pk: int):
     else:
         messages.error(request, f"Retry failed: {log.error}")
     return redirect("staff_email_log_detail", pk=pk)
-

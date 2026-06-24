@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import FormView
 
@@ -118,6 +119,16 @@ def _customer_for_request(request) -> Customer | None:
     if not request.user.is_authenticated:
         return None
     return getattr(request.user, "customer_profile", None)
+
+
+def _safe_portal_next(request, candidate: str | None, fallback: str) -> str:
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    return fallback
 
 
 class MyJobsView(ListView):
@@ -261,7 +272,10 @@ def my_order_detail(request, pk: int):
         return redirect("portal_login")
     order = get_object_or_404(
         Order.objects.select_related("customer").prefetch_related(
-            "lines__product", "lines__product_variant", "documents"
+            "lines__product",
+            "lines__product_variant",
+            "documents",
+            "status_events",
         ),
         pk=pk,
     )
@@ -271,7 +285,12 @@ def my_order_detail(request, pk: int):
     return render(
         request,
         "portal/order_detail.html",
-        {"order": order, "documents": docs},
+        {
+            "order": order,
+            "documents": docs,
+            "shipment": getattr(order, "shipment", None),
+            "status_events": order.status_events.filter(visible_to_customer=True),
+        },
     )
 
 
@@ -370,7 +389,9 @@ def wishlist_add(request, product_id: int):
         messages.success(request, f"Added “{product.name}” to your wishlist.")
     else:
         messages.info(request, f"“{product.name}” is already on your wishlist.")
-    nxt = request.POST.get("next") or product.get_absolute_url()
+    nxt = _safe_portal_next(
+        request, request.POST.get("next"), product.get_absolute_url()
+    )
     return redirect(nxt)
 
 
@@ -382,7 +403,9 @@ def wishlist_remove(request, product_id: int):
         return redirect("portal_login")
     WishlistItem.objects.filter(customer=customer, product_id=product_id).delete()
     messages.info(request, "Removed from wishlist.")
-    return redirect(request.POST.get("next") or "portal_wishlist")
+    return redirect(
+        _safe_portal_next(request, request.POST.get("next"), "portal_wishlist")
+    )
 
 
 def my_addresses(request):

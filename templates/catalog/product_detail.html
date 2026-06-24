@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
+<script type="application/ld+json">{{ product_schema_json }}</script>
 <div class="container py-4">
   <div class="row g-4">
     <div class="col-md-5">

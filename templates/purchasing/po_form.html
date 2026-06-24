@@ -56,5 +56,23 @@
   </div>
   <button type="submit" class="btn btn-primary">Save PO</button>
 </form>
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-body">
+    <h2 class="h6">Return stock to supplier</h2>
+    <form method="post" action="{% url 'staff_po_return' object.pk %}" class="row g-2">
+      {% csrf_token %}
+      {% for field in supplier_return_form %}
+      <div class="col-md-4"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>
+      {% endfor %}
+      <div class="col-12"><button class="btn btn-outline-danger" type="submit">Record supplier return</button></div>
+    </form>
+    {% if supplier_returns %}
+    <ul class="list-group list-group-flush mt-3">
+      {% for r in supplier_returns %}
+      <li class="list-group-item px-0">{{ r.reference }} · {{ r.quantity }} × {{ r.purchase_line.product.name }} · {{ r.reason }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
-

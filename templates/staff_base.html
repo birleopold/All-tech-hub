@@ -32,11 +32,14 @@
     <p class="small text-uppercase text-muted mb-2">Operations</p>
     <ul class="nav flex-column gap-1 mb-4 list-unstyled">
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_dashboard' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_search' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_reports' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_audit_log' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_orders' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_orders' or u == 'staff_order_detail' %}aria-current="page"{% endif %}>Shop orders</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_documents' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_documents' or u != 'staff_document_create' and 'staff_document_' in u %}aria-current="page"{% endif %}>Quotes &amp; invoices</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_document_create' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_document_create' %}aria-current="page"{% endif %}>New document</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_account_payment_create' %}" data-bs-dismiss="offcanvas">Account payment</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_payment_reconciliation' %}" data-bs-dismiss="offcanvas">Payment reconciliation</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_inventory' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_inventory' or 'staff_product' in u %}aria-current="page"{% endif %}>Inventory</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_stocktakes' %}" data-bs-dismiss="offcanvas" {% if 'staff_stocktake' in u %}aria-current="page"{% endif %}>Stock takes</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_purchasing' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_purchasing' or 'staff_po' in u %}aria-current="page"{% endif %}>Purchasing</a></li>
@@ -47,6 +50,7 @@
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_contact_messages' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_contact_messages' %}aria-current="page"{% endif %}>Contact inbox</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_notifications' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_notifications' %}aria-current="page"{% endif %}>Notifications{% if staff_unread_notifications %} <span class="badge text-bg-danger">{{ staff_unread_notifications }}</span>{% endif %}</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_business_hours' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_business_hours' %}aria-current="page"{% endif %}>Business hours</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_two_factor_setup' %}" data-bs-dismiss="offcanvas">Two-factor security</a></li>
       <li><a class="nav-link px-0 py-2" href="/admin/" data-bs-dismiss="offcanvas" target="_blank" rel="noopener noreferrer" aria-label="Django site admin (opens in a new tab)">Django admin</a></li>
     </ul>
     <a class="btn btn-outline-secondary w-100 mb-2" href="{% url 'home' %}" data-bs-dismiss="offcanvas">Public site</a>
@@ -63,13 +67,20 @@
   <div class="row g-0 flex-md-nowrap">
     <nav class="col-md-3 col-lg-2 staff-sidebar py-4 px-3 d-none d-md-block" aria-label="Staff workspace">
       <p class="small text-uppercase text-muted mb-2">Operations</p>
+      <form method="get" action="{% url 'staff_search' %}" class="mb-3" role="search">
+        <label class="visually-hidden" for="staff-sidebar-search">Staff search</label>
+        <input class="form-control form-control-sm" id="staff-sidebar-search" name="q" value="{{ search_q|default:'' }}" placeholder="Search...">
+      </form>
       <ul class="nav flex-column gap-1 mb-4">
         <li><a class="nav-link px-0" href="{% url 'staff_dashboard' %}" {% if resolve_url_name == 'staff_dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
+        <li><a class="nav-link px-0" href="{% url 'staff_search' %}" {% if resolve_url_name == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_reports' %}" {% if resolve_url_name == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_audit_log' %}" {% if resolve_url_name == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_orders' %}" {% if resolve_url_name == 'staff_orders' or resolve_url_name == 'staff_order_detail' %}aria-current="page"{% endif %}>Shop orders</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_documents' %}" {% if resolve_url_name == 'staff_documents' or resolve_url_name != 'staff_document_create' and 'staff_document_' in resolve_url_name %}aria-current="page"{% endif %}>Quotes &amp; invoices</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_document_create' %}" {% if resolve_url_name == 'staff_document_create' %}aria-current="page"{% endif %}>New document</a></li>
+        <li><a class="nav-link px-0" href="{% url 'staff_account_payment_create' %}">Account payment</a></li>
+        <li><a class="nav-link px-0" href="{% url 'staff_payment_reconciliation' %}">Payment reconciliation</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_inventory' %}" {% if resolve_url_name == 'staff_inventory' or 'staff_product' in resolve_url_name %}aria-current="page"{% endif %}>Inventory</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_stocktakes' %}" {% if 'staff_stocktake' in resolve_url_name %}aria-current="page"{% endif %}>Stock takes</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_purchasing' %}" {% if resolve_url_name == 'staff_purchasing' or 'staff_po' in resolve_url_name %}aria-current="page"{% endif %}>Purchasing</a></li>
@@ -80,6 +91,7 @@
         <li><a class="nav-link px-0" href="{% url 'staff_contact_messages' %}" {% if resolve_url_name == 'staff_contact_messages' %}aria-current="page"{% endif %}>Contact inbox</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_notifications' %}" {% if resolve_url_name == 'staff_notifications' %}aria-current="page"{% endif %}>Notifications{% if staff_unread_notifications %} <span class="badge rounded-pill text-bg-danger">{{ staff_unread_notifications }}</span>{% endif %}</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_business_hours' %}" {% if resolve_url_name == 'staff_business_hours' %}aria-current="page"{% endif %}>Business hours</a></li>
+        <li><a class="nav-link px-0" href="{% url 'staff_two_factor_setup' %}">Two-factor security</a></li>
         <li><a class="nav-link px-0" href="/admin/" target="_blank" rel="noopener noreferrer" aria-label="Django site admin (opens in a new tab)">Django admin</a></li>
       </ul>
     </nav>

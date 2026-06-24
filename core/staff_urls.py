@@ -3,6 +3,7 @@ from django.urls import path
 from core import staff_views
 
 urlpatterns = [
+    path("search/", staff_views.StaffGlobalSearchView.as_view(), name="staff_search"),
     path("audit/", staff_views.AuditEventListView.as_view(), name="staff_audit_log"),
     path("tickets/", staff_views.SupportTicketListView.as_view(), name="staff_tickets"),
     path("tickets/new/", staff_views.SupportTicketCreateView.as_view(), name="staff_ticket_create"),

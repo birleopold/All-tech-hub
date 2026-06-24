@@ -5,6 +5,7 @@
   <h1 class="h3 mb-0">Inventory</h1>
   <div class="d-flex gap-2 flex-wrap">
     <a class="btn btn-outline-primary" href="{% url 'staff_products' %}">Manage products</a>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_stock_movements' %}">Movement ledger</a>
     <a class="btn btn-primary" href="{% url 'staff_product_create' %}">New product</a>
   </div>
 </div>
@@ -63,4 +64,3 @@
   </div>
 </div>
 {% endblock %}
-

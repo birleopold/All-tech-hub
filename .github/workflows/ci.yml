@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py check
+      - run: python manage.py test
+      - name: Production deployment check
+        env:
+          ALLTECH_ENV: production
+          ALLTECH_SECRET_KEY: ci-only-secret-key-that-is-longer-than-fifty-characters-123456
+          ALLTECH_ALLOWED_HOSTS: example.com
+        run: python manage.py check --deploy

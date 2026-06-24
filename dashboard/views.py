@@ -1,7 +1,6 @@
+from django.db.models import Avg
 from django.utils import timezone
 from django.views.generic import TemplateView
-
-from django.db.models import Avg, Q
 
 from billing.models import CommercialDocument
 from catalog.models import ProductReview
@@ -20,6 +19,9 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         today = timezone.localdate()
         ctx["orders_today"] = Order.objects.filter(placed_at__date=today).count()
+        ctx["orders_in_transit"] = Order.objects.filter(
+            status=Order.STATUS_DISPATCHED
+        ).count()
         ctx["open_jobs"] = JobCard.objects.exclude(
             status__in=[JobCard.STATUS_COMPLETED, JobCard.STATUS_CANCELLED]
         ).count()

@@ -1,4 +1,3 @@
-from datetime import datetime, time
 
 from django.conf import settings
 from django.db import models
@@ -25,8 +24,28 @@ class CompanySettings(models.Model):
     default_tax_rate = models.DecimalField(
         max_digits=5, decimal_places=2, default=0, help_text="Percentage, e.g. 15.00"
     )
+    document_approval_threshold = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+        help_text="Documents above this total require high-value approval. Zero disables.",
+    )
+    maximum_unapproved_discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=20,
+        help_text="Higher discounts require the billing discount override permission.",
+    )
     currency_code = models.CharField(max_length=8, default="UGX")
     logo = models.ImageField(upload_to="company/", blank=True, null=True)
+    signature_image = models.ImageField(
+        upload_to="company/", blank=True, null=True
+    )
+    stamp_image = models.ImageField(upload_to="company/", blank=True, null=True)
+    authorised_signatory = models.CharField(max_length=160, blank=True)
+    document_footer = models.TextField(
+        blank=True, help_text="Optional footer shown on commercial documents."
+    )
     sla_low_hours = models.PositiveIntegerField(
         default=168, help_text="SLA target (hours) for Low priority work — default 1 week."
     )
@@ -484,3 +503,28 @@ class AuditEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.created_at:%Y-%m-%d %H:%M} {self.verb}"
+
+
+class StaffTwoFactor(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="two_factor",
+    )
+    secret = models.CharField(max_length=64)
+    enabled = models.BooleanField(default=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"2FA {self.user.get_username()}"
+
+
+class LoginAttempt(models.Model):
+    username = models.CharField(max_length=150, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True, db_index=True)
+    successful = models.BooleanField(default=False)
+    attempted_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-attempted_at", "-id"]

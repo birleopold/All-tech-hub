@@ -13,6 +13,10 @@
       <input type="text" name="username" class="form-control" id="id_username" required autofocus>
     </div>
     <div class="mb-3">
+      <label class="form-label" for="id_otp">Authenticator code</label>
+      <input type="text" name="otp" inputmode="numeric" autocomplete="one-time-code" class="form-control" id="id_otp" maxlength="6" placeholder="Required only when 2FA is enabled">
+    </div>
+    <div class="mb-3">
       <label class="form-label" for="id_password">Password</label>
       <input type="password" name="password" class="form-control" id="id_password" required>
     </div>

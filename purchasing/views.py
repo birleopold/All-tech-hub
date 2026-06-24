@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.forms import inlineformset_factory
 from django.http import Http404
@@ -6,9 +7,18 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from billing.models import allocate_document_number
 from core.mixins import StaffRequiredMixin
-from purchasing.models import PurchaseLine, PurchaseOrder, StockReceipt, StockReceiptLine
-
+from inventory.models import StockMovement
+from inventory.services import change_stock
+from purchasing.forms import SupplierReturnForm
+from purchasing.models import (
+    PurchaseLine,
+    PurchaseOrder,
+    StockReceipt,
+    StockReceiptLine,
+    SupplierReturn,
+)
 
 PurchaseLineFormSet = inlineformset_factory(
     PurchaseOrder,
@@ -52,6 +62,12 @@ class PurchaseOrderUpdateView(StaffRequiredMixin, UpdateView):
             self.request.POST if self.request.method == "POST" else None,
             instance=self.object,
         )
+        ctx["supplier_return_form"] = SupplierReturnForm(
+            purchase_order=self.object
+        )
+        ctx["supplier_returns"] = SupplierReturn.objects.filter(
+            purchase_line__purchase_order=self.object
+        ).select_related("purchase_line", "processed_by")
         return ctx
 
     def form_valid(self, form):
@@ -77,25 +93,63 @@ def receive_stock(request, pk: int):
     )
     if request.method != "POST":
         return redirect("staff_po_edit", pk=pk)
-    # Create one receipt and receive the remaining quantities by default.
+    remaining_lines = [
+        (line, int(line.quantity) - int(line.received_quantity))
+        for line in po.lines.all()
+        if int(line.quantity) > int(line.received_quantity)
+    ]
+    if not remaining_lines:
+        messages.info(request, "Nothing to receive (all lines already received).")
+        return redirect("staff_po_edit", pk=pk)
     receipt = StockReceipt.objects.create(purchase_order=po, received_by=request.user)
-    received_any = False
-    for line in po.lines.all():
-        remaining = int(line.quantity) - int(line.received_quantity)
-        if remaining <= 0:
-            continue
+    for line, remaining in remaining_lines:
         rline = StockReceiptLine.objects.create(
             receipt=receipt,
             purchase_line=line,
             quantity_received=remaining,
         )
         rline.apply()
-        received_any = True
     po.refresh_from_db()
     po.sync_receiving_status()
     po.save(update_fields=["status", "updated_at"])
-    if not received_any:
-        messages.info(request, "Nothing to receive (all lines already received).")
-        return redirect("staff_po_edit", pk=pk)
     messages.success(request, f"Stock received: {receipt.number}. Inventory updated.")
+    return redirect("staff_po_edit", pk=pk)
+
+
+@transaction.atomic
+def supplier_return(request, pk: int):
+    if not request.user.is_staff or request.method != "POST":
+        raise Http404
+    po = get_object_or_404(PurchaseOrder, pk=pk)
+    form = SupplierReturnForm(request.POST, purchase_order=po)
+    if not form.is_valid():
+        messages.error(request, "Check the supplier return details.")
+        return redirect("staff_po_edit", pk=pk)
+    returned = form.save(commit=False)
+    returned.reference = allocate_document_number("SRT")
+    returned.processed_by = request.user
+    returned.purchase_line = PurchaseLine.objects.select_for_update().get(
+        pk=returned.purchase_line_id
+    )
+    try:
+        returned.full_clean()
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        return redirect("staff_po_edit", pk=pk)
+    line = returned.purchase_line
+    try:
+        change_stock(
+            product=line.product,
+            product_variant=line.product_variant,
+            quantity_delta=-returned.quantity,
+            movement_type=StockMovement.TYPE_SUPPLIER_RETURN,
+            reference=returned.reference,
+            note=returned.reason,
+            actor=request.user,
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        return redirect("staff_po_edit", pk=pk)
+    returned.save()
+    messages.success(request, f"Supplier return {returned.reference} recorded.")
     return redirect("staff_po_edit", pk=pk)

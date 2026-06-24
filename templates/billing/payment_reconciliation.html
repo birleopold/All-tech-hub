@@ -1,0 +1,14 @@
+{% extends "staff_base.html" %}
+{% block title %}Payment reconciliation{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div><h1 class="h3 mb-1">Payment reconciliation</h1><p class="text-muted mb-0">Daily cashier and payment-method totals.</p></div>
+  <a class="btn btn-primary" href="{% url 'staff_account_payment_create' %}">Record account payment</a>
+</div>
+<form method="get" class="d-flex gap-2 mb-3"><input class="form-control" style="max-width:14rem" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"><button class="btn btn-outline-primary">Load date</button></form>
+<div class="row g-3 mb-4">{% for row in method_totals %}<div class="col-md-6 col-xl-4"><div class="card border-0 shadow-sm"><div class="card-body"><strong>{{ row.label }}</strong><div class="small text-muted">Document payments</div><div>{{ company.currency_code }} {{ row.document_total|floatformat:2 }}</div><div class="small text-muted mt-2">Account payments</div><div>{{ company.currency_code }} {{ row.account_total|floatformat:2 }}</div></div></div></div>{% endfor %}</div>
+<div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Time</th><th>Reference</th><th>Method</th><th>Cashier</th><th class="text-end">Amount</th><th>Status</th></tr></thead><tbody>
+{% for payment in payments %}<tr><td>{{ payment.recorded_at|date:"H:i" }}</td><td>{{ payment.document.number }}</td><td>{{ payment.get_method_display }}</td><td>{{ payment.recorded_by|default:"—" }}</td><td class="text-end">{{ payment.amount|floatformat:2 }}</td><td>{% if payment.reconciled %}<span class="badge text-bg-success">Reconciled</span>{% else %}<span class="badge text-bg-warning">Open</span>{% endif %}</td></tr>{% endfor %}
+{% for payment in account_payments %}<tr><td>{{ payment.recorded_at|date:"H:i" }}</td><td>Account · {{ payment.reference|default:payment.pk }}</td><td>{{ payment.get_method_display }}</td><td>{{ payment.recorded_by|default:"—" }}</td><td class="text-end">{{ payment.amount|floatformat:2 }}</td><td><span class="badge text-bg-info">Account</span></td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

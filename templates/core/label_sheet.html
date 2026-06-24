@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: Arial, sans-serif; margin: 0; color: #111; background: #f5f5f5; }
+    .toolbar { padding: 12px 16px; background: #fff; border-bottom: 1px solid #ddd; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+    .toolbar h1 { font-size: 18px; margin: 0; }
+    .toolbar button, .toolbar a { border: 1px solid #bbb; border-radius: 4px; background: #fff; color: #111; padding: 8px 10px; text-decoration: none; font-size: 14px; }
+    .sheet { padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .label { background: #fff; border: 1px dashed #aaa; min-height: 132px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; break-inside: avoid; page-break-inside: avoid; }
+    .label__kind { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #555; }
+    .label__title { font-weight: 700; font-size: 14px; line-height: 1.2; margin-top: 2px; }
+    .label__subtitle, .label__meta { font-size: 11px; color: #555; line-height: 1.25; margin-top: 2px; }
+    .barcode { height: 46px; display: flex; align-items: stretch; margin: 8px 0 4px; background: #fff; overflow: hidden; }
+    .barcode span { display: block; height: 100%; flex: 0 0 auto; }
+    .barcode .bar { background: #000; }
+    .barcode .narrow { width: 2px; }
+    .barcode .wide { width: 6px; }
+    .label__code { font-family: "Courier New", monospace; font-size: 13px; text-align: center; letter-spacing: .04em; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .sheet { padding: 0; grid-template-columns: repeat(2, 1fr); gap: 0; }
+      .label { border: 1px solid #ddd; min-height: 120px; }
+      @page { margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>{{ title }}</h1>
+    <div>
+      <button type="button" onclick="window.print()">Print labels</button>
+      <a href="{{ back_url }}">Back</a>
+    </div>
+  </div>
+  <main class="sheet">
+    {% for label in labels %}
+    <section class="label">
+      <div>
+        <div class="label__kind">{{ label.kind }}</div>
+        <div class="label__title">{{ label.title|truncatechars:64 }}</div>
+        {% if label.subtitle %}<div class="label__subtitle">{{ label.subtitle|truncatechars:72 }}</div>{% endif %}
+        {% if label.meta %}<div class="label__meta">{{ label.meta|truncatechars:90 }}</div>{% endif %}
+      </div>
+      <div>
+        <div class="barcode" aria-hidden="true">
+          {% for segment in label.segments %}
+          <span class="{% if segment.bar %}bar {% endif %}{% if segment.wide %}wide{% else %}narrow{% endif %}"></span>
+          {% endfor %}
+        </div>
+        <div class="label__code">{{ label.code }}</div>
+      </div>
+    </section>
+    {% empty %}
+    <p>No labels to print.</p>
+    {% endfor %}
+  </main>
+</body>
+</html>

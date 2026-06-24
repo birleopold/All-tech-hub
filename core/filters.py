@@ -11,7 +11,6 @@ from django.utils.dateparse import parse_date
 from core.models import CompanySettings, SupportTicket
 from operations.models import JobCard
 
-
 PRIORITIES = ("low", "normal", "high", "urgent")
 
 

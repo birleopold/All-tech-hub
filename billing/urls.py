@@ -15,6 +15,11 @@ urlpatterns = [
         name="staff_document_quote_customer_link",
     ),
     path(
+        "documents/<int:pk>/payment-link/",
+        views.payment_request_enable,
+        name="staff_document_payment_link",
+    ),
+    path(
         "documents/new/",
         views.CommercialDocumentCreateView.as_view(),
         name="staff_document_create",
@@ -34,6 +39,56 @@ urlpatterns = [
         "documents/<int:pk>/payment/",
         views.document_record_payment,
         name="staff_document_payment",
+    ),
+    path(
+        "documents/<int:pk>/issue/",
+        views.document_issue,
+        name="staff_document_issue",
+    ),
+    path(
+        "documents/<int:pk>/revise/",
+        views.document_start_revision,
+        name="staff_document_revise",
+    ),
+    path(
+        "documents/<int:pk>/cancel/",
+        views.document_cancel,
+        name="staff_document_cancel",
+    ),
+    path(
+        "documents/<int:pk>/duplicate/",
+        views.document_duplicate,
+        name="staff_document_duplicate",
+    ),
+    path(
+        "payments/<int:payment_pk>/refund/",
+        views.payment_refund,
+        name="staff_payment_refund",
+    ),
+    path(
+        "payments/<int:payment_pk>/reconcile/",
+        views.payment_reconcile,
+        name="staff_payment_reconcile",
+    ),
+    path(
+        "account-payments/new/",
+        views.account_payment_create,
+        name="staff_account_payment_create",
+    ),
+    path(
+        "customers/<int:customer_pk>/statement/",
+        views.customer_statement,
+        name="staff_customer_statement",
+    ),
+    path(
+        "payments/reconciliation/",
+        views.payment_reconciliation,
+        name="staff_payment_reconciliation",
+    ),
+    path(
+        "credits/<int:credit_pk>/apply/<int:document_pk>/",
+        views.apply_customer_credit,
+        name="staff_apply_customer_credit",
     ),
     path(
         "documents/<int:pk>/to-proforma/",
@@ -64,5 +119,11 @@ urlpatterns = [
         views.convert_document,
         {"target": "invoice"},
         name="staff_document_to_invoice",
+    ),
+    path(
+        "documents/<int:pk>/to-credit-note/",
+        views.convert_document,
+        {"target": "credit-note"},
+        name="staff_document_to_credit_note",
     ),
 ]

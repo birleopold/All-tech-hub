@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from commerce.models import Coupon, Order, OrderLine
+from commerce.models import (
+    Coupon,
+    CustomerReturn,
+    Order,
+    OrderLine,
+    OrderStatusEvent,
+    OrderStockRestoration,
+    Shipment,
+)
 
 
 class OrderLineInline(admin.TabularInline):
@@ -23,3 +31,9 @@ class CouponAdmin(admin.ModelAdmin):
     list_display = ("code", "kind", "value", "min_subtotal", "times_used", "max_uses", "is_active", "active_until")
     list_filter = ("kind", "is_active")
     search_fields = ("code", "description")
+
+
+admin.site.register(CustomerReturn)
+admin.site.register(OrderStatusEvent)
+admin.site.register(Shipment)
+admin.site.register(OrderStockRestoration)

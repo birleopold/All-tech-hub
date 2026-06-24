@@ -9,6 +9,7 @@
   <div class="d-flex gap-2">
     <a class="btn btn-primary" href="{% url 'staff_job_edit' job.pk %}">Edit</a>
     <a class="btn btn-outline-primary" href="{% url 'staff_job_pdf' job.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open job PDF in a new tab">PDF</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_job_labels' job.pk %}" target="_blank" rel="noopener noreferrer">Labels</a>
     <a class="btn btn-outline-success" href="{% url 'staff_email_jobcard' job.pk %}">Email</a>
     <a class="btn btn-outline-success" href="{% url 'staff_email_job_update' job.pk %}">Email update</a>
     <a class="btn btn-outline-secondary" href="{% url 'staff_jobs' %}">All jobs</a>

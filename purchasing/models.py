@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -66,11 +67,15 @@ class PurchaseOrder(models.Model):
 
     @property
     def total_ordered_value(self) -> Decimal:
-        return sum((l.line_total for l in self.lines.all()), Decimal("0")).quantize(Decimal("0.01"))
+        return sum(
+            (line.line_total for line in self.lines.all()), Decimal("0")
+        ).quantize(Decimal("0.01"))
 
     @property
     def total_received_value(self) -> Decimal:
-        return sum((l.received_total for l in self.lines.all()), Decimal("0")).quantize(Decimal("0.01"))
+        return sum(
+            (line.received_total for line in self.lines.all()), Decimal("0")
+        ).quantize(Decimal("0.01"))
 
     def sync_receiving_status(self) -> None:
         if self.status == self.STATUS_CANCELLED:
@@ -78,8 +83,10 @@ class PurchaseOrder(models.Model):
         lines = list(self.lines.all())
         if not lines:
             return
-        all_received = all(l.received_quantity >= l.quantity for l in lines)
-        any_received = any(l.received_quantity > 0 for l in lines)
+        all_received = all(
+            line.received_quantity >= line.quantity for line in lines
+        )
+        any_received = any(line.received_quantity > 0 for line in lines)
         if all_received:
             self.status = self.STATUS_RECEIVED
         elif any_received:
@@ -103,6 +110,12 @@ class PurchaseLine(models.Model):
 
     class Meta:
         ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(received_quantity__lte=models.F("quantity")),
+                name="purchase_received_not_over_ordered",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.quantity}× {self.product.name}"
@@ -156,17 +169,47 @@ class StockReceiptLine(models.Model):
     receipt = models.ForeignKey(StockReceipt, on_delete=models.CASCADE, related_name="lines")
     purchase_line = models.ForeignKey(PurchaseLine, on_delete=models.PROTECT, related_name="receipt_lines")
     quantity_received = models.PositiveIntegerField(default=1)
+    applied_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["receipt", "purchase_line"],
+                name="unique_purchase_line_per_receipt",
+            )
+        ]
+
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.receipt_id
+            and self.purchase_line_id
+            and self.purchase_line.purchase_order_id != self.receipt.purchase_order_id
+        ):
+            raise ValidationError(
+                "The purchase line must belong to the receipt's purchase order."
+            )
 
     @transaction.atomic
     def apply(self) -> None:
         """Apply this line: update PO line received qty and product stock."""
+        current = StockReceiptLine.objects.select_for_update().get(pk=self.pk)
+        if current.applied_at is not None:
+            raise ValidationError("This receipt line has already been applied.")
         pl = PurchaseLine.objects.select_for_update().get(pk=self.purchase_line_id)
         qty = int(self.quantity_received)
         if qty <= 0:
-            return
+            raise ValidationError("Received quantity must be positive.")
+        if pl.purchase_order_id != self.receipt.purchase_order_id:
+            raise ValidationError(
+                "The receipt line must belong to the receipt's purchase order."
+            )
+        remaining = int(pl.quantity) - int(pl.received_quantity)
+        if qty > remaining:
+            raise ValidationError(
+                f"Cannot receive {qty}; only {remaining} unit(s) remain."
+            )
         pl.received_quantity = int(pl.received_quantity) + qty
         pl.save(update_fields=["received_quantity"])
         if pl.product_variant_id:
@@ -177,3 +220,55 @@ class StockReceiptLine(models.Model):
             Product.objects.filter(pk=pl.product_id).update(
                 stock_quantity=models.F("stock_quantity") + qty
             )
+        from inventory.models import StockMovement
+        from inventory.services import record_stock_movement
+
+        record_stock_movement(
+            product=pl.product,
+            product_variant=pl.product_variant,
+            quantity_delta=qty,
+            movement_type=StockMovement.TYPE_PURCHASE,
+            reference=self.receipt.number,
+            note=f"PO {pl.purchase_order.number}",
+            actor=self.receipt.received_by,
+        )
+        current.applied_at = timezone.now()
+        current.save(update_fields=["applied_at"])
+        self.applied_at = current.applied_at
+
+
+class SupplierReturn(models.Model):
+    reference = models.CharField(max_length=32, unique=True, db_index=True)
+    purchase_line = models.ForeignKey(
+        PurchaseLine, on_delete=models.PROTECT, related_name="supplier_returns"
+    )
+    quantity = models.PositiveIntegerField()
+    reason = models.CharField(max_length=255)
+    processed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="supplier_returns_processed",
+    )
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-processed_at", "-id"]
+
+    @property
+    def previously_returned(self) -> int:
+        return sum(
+            self.purchase_line.supplier_returns.exclude(pk=self.pk).values_list(
+                "quantity", flat=True
+            )
+        )
+
+    def clean(self):
+        super().clean()
+        if self.quantity <= 0:
+            raise ValidationError("Return quantity must be positive.")
+        if self.previously_returned + self.quantity > self.purchase_line.received_quantity:
+            raise ValidationError("Return quantity exceeds the quantity received.")
+
+    def __str__(self):
+        return self.reference

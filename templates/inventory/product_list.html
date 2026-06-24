@@ -51,7 +51,12 @@
           {% else %}—{% endif %}
         </td>
         <td class="text-center small">{% if p.has_sellable_variants %}{{ p.active_variant_count }}{% else %}—{% endif %}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_product_edit' p.pk %}">Edit</a></td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm">
+            <a class="btn btn-outline-primary" href="{% url 'staff_product_edit' p.pk %}">Edit</a>
+            <a class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' p.pk %}">Labels</a>
+          </div>
+        </td>
       </tr>
       {% empty %}
       <tr><td colspan="8" class="text-muted">No products found.</td></tr>
@@ -60,4 +65,3 @@
   </table>
 </div>
 {% endblock %}
-

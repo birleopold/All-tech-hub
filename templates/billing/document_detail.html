@@ -8,16 +8,21 @@
   </div>
   <div class="d-flex flex-wrap gap-2">
     <a class="btn btn-outline-primary" href="{% url 'staff_document_pdf' document.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open document PDF in a new tab">PDF</a>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' document.pk %}?copy=1" target="_blank" rel="noopener noreferrer">Copy PDF</a>
     <a class="btn btn-outline-success" href="{% url 'staff_email_document' document.pk %}">Email</a>
-    <a class="btn btn-primary" href="{% url 'staff_document_edit' document.pk %}">Edit</a>
+    {% if document.display_customer_phone %}<a class="btn btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={{ document.get_doc_type_display|urlencode }}%20{{ document.number|urlencode }}">WhatsApp</a>{% endif %}
+    {% if not document.is_locked %}<a class="btn btn-primary" href="{% url 'staff_document_edit' document.pk %}">Edit</a>{% endif %}
+    <form method="post" action="{% url 'staff_document_duplicate' document.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Duplicate</button></form>
+    {% if document.status == 'draft' %}<form method="post" action="{% url 'staff_document_issue' document.pk %}">{% csrf_token %}<button class="btn btn-success">Issue &amp; lock</button></form>{% endif %}
   </div>
 </div>
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body row">
     <div class="col-md-6">
       <p class="small text-muted mb-1">Customer</p>
-      <p class="mb-2">{{ document.customer.name }}{% if document.customer.company_name %} — {{ document.customer.company_name }}{% endif %}</p>
-      <p class="small mb-0">{{ document.customer.email }}{% if document.customer.phone %} · {{ document.customer.phone }}{% endif %}</p>
+      <p class="mb-2">{{ document.display_customer_name }}{% if document.display_customer_company %} — {{ document.display_customer_company }}{% endif %}</p>
+      <p class="small mb-0">{% if document.display_customer_email %}{{ document.display_customer_email }}{% endif %}{% if document.display_customer_email and document.display_customer_phone %} · {% endif %}{% if document.display_customer_phone %}{{ document.display_customer_phone }}{% endif %}</p>
+      {% if document.customer_address %}<p class="small text-muted mt-1 mb-0">{{ document.customer_address|linebreaksbr }}</p>{% endif %}
     </div>
     <div class="col-md-6">
       <p class="small text-muted mb-1">Dates</p>
@@ -29,6 +34,38 @@
     </div>
   </div>
 </div>
+{% if payment_request_text %}
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div>
+        <h2 class="h6 text-muted text-uppercase mb-2">Payment request</h2>
+        <p class="mb-2">{{ payment_request_text }}</p>
+        {% if payment_request_url %}
+        <p class="small mb-2">Secure payment page: <code class="user-select-all">{{ payment_request_url }}</code></p>
+        {% endif %}
+        <p class="small text-muted mb-0">Use this until the online payment gateway is connected. Record the payment below when the transaction reference arrives.</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        {% if payment_request_url %}
+        <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{{ payment_request_url }}">Open payment page</a>
+        {% else %}
+        <form method="post" action="{% url 'staff_document_payment_link' document.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-primary">Generate payment link</button>
+        </form>
+        {% endif %}
+        {% if document.display_customer_phone %}
+        <a class="btn btn-sm btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={% if payment_request_url %}{{ payment_request_text|add:' '|add:payment_request_url|urlencode }}{% else %}{{ payment_request_text|urlencode }}{% endif %}">Send on WhatsApp</a>
+        {% endif %}
+        {% if document.display_customer_email %}
+        <a class="btn btn-sm btn-outline-primary" href="mailto:{{ document.display_customer_email }}?subject=Payment%20request%20{{ document.number|urlencode }}&body={% if payment_request_url %}{{ payment_request_text|add:' '|add:payment_request_url|urlencode }}{% else %}{{ payment_request_text|urlencode }}{% endif %}">Email request</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% if quote_approval_pending %}
 <div class="alert alert-warning border-0 shadow-sm mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2" role="status">
   <div>
@@ -73,28 +110,38 @@
 {% endif %}
 <div class="table-responsive card border-0 shadow-sm">
   <table class="table mb-0">
-    <thead class="table-light"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit</th><th class="text-end">Total</th></tr></thead>
+    <thead class="table-light"><tr><th>Description</th><th>Source</th><th class="text-end">Qty</th>{% if not document.hide_prices %}<th class="text-end">Unit</th><th class="text-end">Total</th>{% endif %}</tr></thead>
     <tbody>
       {% for line in document.lines.all %}
       <tr>
-        <td>{{ line.description }}</td>
+        <td>{% if line.section %}<div class="small text-uppercase text-primary">{{ line.section }}</div>{% endif %}{{ line.description }}{% if line.line_note %}<div class="small text-muted">{{ line.line_note }}</div>{% endif %}</td>
+        <td><span class="badge text-bg-light border">{{ line.get_source_type_display }}</span>{% if line.supplier_name %}<div class="small text-muted">{{ line.supplier_name }}</div>{% endif %}</td>
         <td class="text-end">{{ line.quantity }}</td>
+        {% if not document.hide_prices %}
         <td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td>
         <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
     <tfoot>
-      <tr><th colspan="3" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ document.subtotal|floatformat:2 }}</th></tr>
-      <tr><th colspan="3" class="text-end">Tax ({{ document.tax_rate }}%)</th><th class="text-end">{{ company.currency_code }} {{ document.tax_amount|floatformat:2 }}</th></tr>
-      <tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>
+      {% if not document.hide_prices %}
+      <tr><th colspan="4" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ document.subtotal|floatformat:2 }}</th></tr>
+      {% if document.discount_amount %}<tr><th colspan="4" class="text-end">Discount</th><th class="text-end">− {{ company.currency_code }} {{ document.discount_amount|floatformat:2 }}</th></tr>{% endif %}
+      {% if document.shipping_amount %}<tr><th colspan="4" class="text-end">Shipping</th><th class="text-end">{{ company.currency_code }} {{ document.shipping_amount|floatformat:2 }}</th></tr>{% endif %}
+      {% if document.other_charges %}<tr><th colspan="4" class="text-end">{{ document.other_charges_label|default:"Other charges" }}</th><th class="text-end">{{ company.currency_code }} {{ document.other_charges|floatformat:2 }}</th></tr>{% endif %}
+      <tr><th colspan="4" class="text-end">Tax</th><th class="text-end">{{ company.currency_code }} {{ document.tax_amount|floatformat:2 }}</th></tr>
+      {% if document.withholding_tax_amount %}<tr><th colspan="4" class="text-end">Withholding</th><th class="text-end">− {{ company.currency_code }} {{ document.withholding_tax_amount|floatformat:2 }}</th></tr>{% endif %}
+      <tr><th colspan="4" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>
       {% if document.doc_type == 'invoice' or document.doc_type == 'proforma' %}
-      <tr><th colspan="3" class="text-end">Paid to date</th><th class="text-end">{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</th></tr>
-      <tr><th colspan="3" class="text-end">Balance due</th><th class="text-end">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</th></tr>
+      <tr><th colspan="4" class="text-end">Paid to date</th><th class="text-end">{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</th></tr>
+      <tr><th colspan="4" class="text-end">Balance due</th><th class="text-end">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</th></tr>
+      {% endif %}
       {% endif %}
     </tfoot>
   </table>
 </div>
+{% if document.section_totals %}<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Section subtotals</h2><div class="row g-2">{% for section in document.section_totals %}<div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">{{ section.label }}</div><strong>{{ company.currency_code }} {{ section.total|floatformat:2 }}</strong></div></div>{% endfor %}</div></div></div>{% endif %}
 {% if document.payments.count %}
 <div class="card border-0 shadow-sm mt-3">
   <div class="card-body">
@@ -118,6 +165,32 @@
   </div>
 </div>
 {% endif %}
+{% if document.payments.count %}
+<div class="card border-0 shadow-sm mt-3">
+  <div class="card-body">
+    <h2 class="h6">Reconciliation and refunds</h2>
+    {% for p in document.payments.all %}
+    <div class="border rounded p-3 mb-2">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <span>{{ p.get_method_display }} · {{ company.currency_code }} {{ p.amount|floatformat:2 }} · refunded {{ p.refunded_amount|floatformat:2 }}</span>
+        {% if p.reconciled %}<span class="badge text-bg-success">Reconciled</span>{% else %}
+        <form method="post" action="{% url 'staff_payment_reconcile' p.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Mark reconciled</button></form>
+        {% endif %}
+      </div>
+      {% if p.refundable_amount > 0 %}
+      <details class="mt-2"><summary class="btn btn-sm btn-outline-danger">Refund payment</summary>
+        <form method="post" action="{% url 'staff_payment_refund' p.pk %}" class="row g-2 mt-1">
+          {% csrf_token %}
+          {% for field in refund_form %}<div class="col-md-4"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+          <div class="col-12"><button class="btn btn-sm btn-danger">Process refund and create credit note</button></div>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 {% if show_payment_form %}
 <div class="card border-0 shadow-sm mt-3">
   <div class="card-body col-lg-6">
@@ -135,6 +208,26 @@
   </div>
 </div>
 {% endif %}
+{% if available_credits and document.balance_due > 0 %}
+<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Available customer credit</h2>{% for credit in available_credits %}<form method="post" action="{% url 'staff_apply_customer_credit' credit.pk document.pk %}" class="row g-2 align-items-end border-top py-2">{% csrf_token %}<div class="col"><div class="small text-muted">Credit #{{ credit.pk }}</div><strong>{{ company.currency_code }} {{ credit.remaining_amount|floatformat:2 }}</strong></div><div class="col-md-4"><label class="form-label small">Amount to apply</label><input class="form-control form-control-sm" type="number" name="amount" min="0.01" step="0.01" max="{{ credit.remaining_amount }}" value="{{ credit.remaining_amount }}"></div><div class="col-auto"><button class="btn btn-sm btn-success">Apply credit</button></div></form>{% endfor %}</div></div>
+{% endif %}
+{% if can_view_margin %}
+<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Internal margin</h2><div class="row g-3"><div class="col-md-4"><div class="small text-muted">Estimated cost</div><strong>{{ company.currency_code }} {{ document.total_cost|floatformat:2 }}</strong></div><div class="col-md-4"><div class="small text-muted">Gross profit</div><strong>{{ company.currency_code }} {{ document.gross_profit|floatformat:2 }}</strong></div><div class="col-md-4"><div class="small text-muted">Gross margin</div><strong>{{ document.gross_margin_percent }}%</strong></div></div></div></div>
+{% endif %}
+<div class="card border-0 shadow-sm mt-3" id="revision-actions"><div class="card-body">
+  <h2 class="h6">Document control</h2>
+  {% if document.customer_id %}<p><a href="{% url 'staff_customer_statement' document.customer_id %}">Open customer statement</a></p>{% endif %}
+  {% if document.is_locked %}<p class="small text-muted">Locked {{ document.locked_at|date:"Y-m-d H:i" }}{% if document.locked_by %} by {{ document.locked_by.get_username }}{% endif %}.</p>{% endif %}
+  <div class="d-flex flex-wrap gap-3">
+    {% if document.is_locked and can_revise and document.status != 'cancelled' %}
+    <details><summary class="btn btn-outline-primary">Start revision</summary><form method="post" action="{% url 'staff_document_revise' document.pk %}" class="mt-2">{% csrf_token %}<label class="form-label">Reason</label>{{ action_form.reason }}<button class="btn btn-primary btn-sm mt-2">Preserve version and revise</button></form></details>
+    {% endif %}
+    {% if can_void and document.status != 'cancelled' %}
+    <details><summary class="btn btn-outline-danger">Void document</summary><form method="post" action="{% url 'staff_document_cancel' document.pk %}" class="mt-2">{% csrf_token %}<label class="form-label">Reason</label>{{ action_form.reason }}<button class="btn btn-danger btn-sm mt-2">Confirm void</button></form></details>
+    {% endif %}
+  </div>
+  {% if revisions %}<h3 class="h6 mt-4">Revision history</h3><ul class="list-group list-group-flush">{% for revision in revisions %}<li class="list-group-item px-0">Revision {{ revision.revision_number }} · {{ revision.created_at|date:"Y-m-d H:i" }}{% if revision.created_by %} · {{ revision.created_by.get_username }}{% endif %}<div class="small text-muted">{{ revision.reason }}</div></li>{% endfor %}</ul>{% endif %}
+</div></div>
 {% if document.notes %}
 <div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Notes</h2><p class="mb-0">{{ document.notes|linebreaks }}</p></div></div>
 {% endif %}

@@ -1,3 +1,102 @@
-from django.test import TestCase
+from decimal import Decimal
 
-# Create your tests here.
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.urls import reverse
+
+from catalog.models import Category, Product
+from purchasing.models import (
+    PurchaseLine,
+    PurchaseOrder,
+    StockReceipt,
+    StockReceiptLine,
+    Supplier,
+    SupplierReturn,
+)
+
+
+class ReceivingIntegrityTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("buyer", password="pw", is_staff=True)
+        self.supplier = Supplier.objects.create(name="Supplier")
+        category = Category.objects.create(name="PO", slug="po-tests")
+        self.product = Product.objects.create(
+            category=category,
+            name="Ordered item",
+            slug="ordered-item",
+            price=Decimal("10"),
+            stock_quantity=0,
+        )
+        self.po = PurchaseOrder.objects.create(
+            supplier=self.supplier, created_by=self.user
+        )
+        self.line = PurchaseLine.objects.create(
+            purchase_order=self.po,
+            product=self.product,
+            quantity=2,
+            unit_cost=Decimal("5"),
+        )
+        self.receipt = StockReceipt.objects.create(
+            purchase_order=self.po, received_by=self.user
+        )
+
+    def test_over_receiving_is_rejected(self):
+        receipt_line = StockReceiptLine.objects.create(
+            receipt=self.receipt,
+            purchase_line=self.line,
+            quantity_received=3,
+        )
+        with self.assertRaises(ValidationError):
+            receipt_line.apply()
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 0)
+
+    def test_cross_purchase_order_line_is_rejected(self):
+        other_po = PurchaseOrder.objects.create(
+            supplier=self.supplier, created_by=self.user
+        )
+        other_line = PurchaseLine.objects.create(
+            purchase_order=other_po,
+            product=self.product,
+            quantity=1,
+            unit_cost=Decimal("5"),
+        )
+        receipt_line = StockReceiptLine(
+            receipt=self.receipt,
+            purchase_line=other_line,
+            quantity_received=1,
+        )
+        with self.assertRaises(ValidationError):
+            receipt_line.full_clean()
+
+    def test_receipt_line_cannot_be_applied_twice(self):
+        receipt_line = StockReceiptLine.objects.create(
+            receipt=self.receipt,
+            purchase_line=self.line,
+            quantity_received=1,
+        )
+        receipt_line.apply()
+        with self.assertRaises(ValidationError):
+            receipt_line.apply()
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 1)
+
+    def test_supplier_return_reduces_stock(self):
+        self.line.received_quantity = 2
+        self.line.save(update_fields=["received_quantity"])
+        self.product.stock_quantity = 2
+        self.product.save(update_fields=["stock_quantity"])
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("staff_po_return", args=[self.po.pk]),
+            {
+                "purchase_line": self.line.pk,
+                "quantity": 1,
+                "reason": "Faulty shipment",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 1)
+        self.assertEqual(SupplierReturn.objects.count(), 1)

@@ -1,13 +1,23 @@
 import uuid
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.contrib.sessions.backends.db import SessionStore
+from django.core.exceptions import ValidationError
 from django.test import Client, TestCase
 from django.urls import reverse
 
 from catalog.models import Category, Product, ProductVariant
 from commerce import cart as cart_mod
-from commerce.models import Coupon, Order
+from commerce.fulfillment import transition_order
+from commerce.models import (
+    Coupon,
+    CustomerReturn,
+    Order,
+    OrderStatusEvent,
+    OrderStockRestoration,
+    Shipment,
+)
 from commerce.stock import InsufficientStock, decrement_line_stock
 from crm.models import Customer
 
@@ -25,6 +35,84 @@ class OrderFulfillmentTests(TestCase):
             total=0,
         )
         self.assertEqual(o.fulfillment_type, Order.FULFILLMENT_DELIVERY)
+
+    def setUp(self):
+        self.category = Category.objects.create(name="Fulfillment", slug="fulfillment")
+        self.product = Product.objects.create(
+            category=self.category,
+            name="Fulfillment item",
+            slug="fulfillment-item",
+            price=Decimal("10"),
+            stock_quantity=3,
+        )
+        self.customer = Customer.objects.create(
+            name="Fulfillment buyer", email="fulfillment@example.com"
+        )
+        self.order = Order.objects.create(
+            reference="ORD-FULFILL",
+            customer=self.customer,
+            contact_name=self.customer.name,
+            contact_email=self.customer.email,
+        )
+        self.order.lines.create(
+            product=self.product,
+            description=self.product.name,
+            quantity=2,
+            unit_price=Decimal("10"),
+        )
+        self.user = User.objects.create_user("fulfiller", password="pw", is_staff=True)
+
+    def test_valid_status_flow_creates_history(self):
+        transition_order(self.order, Order.STATUS_CONFIRMED, actor=self.user)
+        transition_order(self.order, Order.STATUS_PROCESSING, actor=self.user)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_PROCESSING)
+        self.assertEqual(OrderStatusEvent.objects.filter(order=self.order).count(), 2)
+
+    def test_invalid_status_jump_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            transition_order(self.order, Order.STATUS_DELIVERED, actor=self.user)
+
+    def test_cancellation_restores_stock_once(self):
+        self.product.stock_quantity = 1
+        self.product.save(update_fields=["stock_quantity"])
+        transition_order(
+            self.order,
+            Order.STATUS_CANCELLED,
+            actor=self.user,
+            note="Customer request",
+        )
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 3)
+        self.assertTrue(OrderStockRestoration.objects.filter(order=self.order).exists())
+        transition_order(self.order, Order.STATUS_CANCELLED, actor=self.user)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 3)
+
+    def test_staff_order_list_renders(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("staff_orders"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_shipment_update_advances_order(self):
+        transition_order(self.order, Order.STATUS_CONFIRMED, actor=self.user)
+        transition_order(self.order, Order.STATUS_PROCESSING, actor=self.user)
+        transition_order(self.order, Order.STATUS_READY, actor=self.user)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("staff_order_shipment", args=[self.order.pk]),
+            {
+                "carrier": "Demo Courier",
+                "tracking_number": "TRACK-1",
+                "tracking_url": "https://carrier.example/TRACK-1",
+                "status": Shipment.STATUS_IN_TRANSIT,
+                "estimated_delivery": "2026-06-30",
+                "note": "",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_DISPATCHED)
 
 
 class CartLineKeyTests(TestCase):
@@ -86,6 +174,33 @@ class CartLineKeyTests(TestCase):
         self.assertEqual(lines[0].variant.pk, v.pk)
         self.assertEqual(lines[0].quantity, 2)
         self.assertEqual(lines[0].unit_price, Decimal("15.00"))
+
+
+class CartInputSecurityTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Safe", slug="safe-cart")
+        self.product = Product.objects.create(
+            category=self.category,
+            name="Safe item",
+            slug="safe-item",
+            price=Decimal("10"),
+            stock_quantity=5,
+        )
+
+    def test_malformed_quantity_does_not_crash(self):
+        response = self.client.post(
+            reverse("cart_add", args=[self.product.pk]),
+            {"quantity": "not-a-number"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session[cart_mod.CART_SESSION_KEY][f"p:{self.product.pk}"], 1)
+
+    def test_external_next_url_is_rejected(self):
+        response = self.client.post(
+            reverse("cart_add", args=[self.product.pk]),
+            {"quantity": "1", "next": "https://evil.example/steal"},
+        )
+        self.assertRedirects(response, self.product.get_absolute_url())
 
 
 class StockDecrementTests(TestCase):
@@ -277,7 +392,7 @@ class CouponTests(TestCase):
         self.assertFalse(self.client.session.get(cart_mod.COUPON_SESSION_KEY))
 
     def test_min_subtotal_enforced(self):
-        self._prime_cart(1)  # subtotal = 100, but min 50 — OK
+        self._prime_cart(1)
         self.client.post(reverse("cart_apply_coupon"), {"code": "OFF20"})
         self.assertEqual(
             self.client.session.get(cart_mod.COUPON_SESSION_KEY), "OFF20"
@@ -289,3 +404,52 @@ class CouponTests(TestCase):
         self._prime_cart(1)
         self.client.post(reverse("cart_apply_coupon"), {"code": "SAVE10"})
         self.assertFalse(self.client.session.get(cart_mod.COUPON_SESSION_KEY))
+
+
+class CustomerReturnTests(TestCase):
+    def test_restock_return_creates_movement(self):
+        from django.contrib.auth.models import User
+
+        from inventory.models import StockMovement
+
+        category = Category.objects.create(name="Returns", slug="returns")
+        product = Product.objects.create(
+            category=category,
+            name="Returned item",
+            slug="returned-item",
+            price=Decimal("10"),
+            stock_quantity=0,
+        )
+        customer = Customer.objects.create(name="Buyer", email="return@example.com")
+        order = Order.objects.create(
+            reference="ORD-RETURN",
+            customer=customer,
+            contact_name="Buyer",
+            contact_email=customer.email,
+            total=Decimal("20"),
+        )
+        line = order.lines.create(
+            product=product,
+            description=product.name,
+            quantity=2,
+            unit_price=Decimal("10"),
+        )
+        user = User.objects.create_user("returns", password="pw", is_staff=True)
+        self.client.force_login(user)
+        response = self.client.post(
+            reverse("staff_order_return", args=[order.pk]),
+            {
+                "order_line": line.pk,
+                "quantity": 1,
+                "reason": "Changed mind",
+                "disposition": CustomerReturn.DISPOSITION_RESTOCK,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        product.refresh_from_db()
+        self.assertEqual(product.stock_quantity, 1)
+        self.assertTrue(
+            StockMovement.objects.filter(
+                movement_type=StockMovement.TYPE_CUSTOMER_RETURN
+            ).exists()
+        )

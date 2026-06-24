@@ -1,10 +1,14 @@
+import json
+
 from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 
 from catalog.models import Category, Product, ProductReview, product_review_summary
+from core.models import CompanySettings
 
 
 class ProductListView(ListView):
@@ -62,14 +66,68 @@ class ProductDetailView(DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         product = ctx["product"]
-        ctx["review_summary"] = product_review_summary(product)
+        review_summary = product_review_summary(product)
+        ctx["review_summary"] = review_summary
         ctx["reviews"] = (
             product.reviews.filter(is_published=True)
             .select_related("customer")
             .order_by("-created_at")[:20]
         )
         ctx["rating_stars"] = range(1, 6)
+        ctx["product_schema_json"] = self._product_schema_json(
+            product, review_summary
+        )
         return ctx
+
+    def _product_schema_json(self, product, review_summary):
+        image = product.primary_display_image
+        company = CompanySettings.load()
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "Product" if product.kind == Product.KIND_PHYSICAL else "Service",
+            "name": product.name,
+            "description": product.short_description or product.description,
+            "category": product.category.name,
+            "url": self.request.build_absolute_uri(product.get_absolute_url()),
+        }
+        if product.sku:
+            schema["sku"] = product.sku
+        if image:
+            schema["image"] = [self.request.build_absolute_uri(image.url)]
+        if review_summary["count"]:
+            schema["aggregateRating"] = {
+                "@type": "AggregateRating",
+                "ratingValue": review_summary["avg"],
+                "reviewCount": review_summary["count"],
+            }
+        if product.kind == Product.KIND_PHYSICAL and product.has_sellable_variants():
+            prices = [
+                variant.price
+                for variant in product.variants.all()
+                if variant.is_active and variant.available_to_sell
+            ]
+            if prices:
+                schema["offers"] = {
+                    "@type": "AggregateOffer",
+                    "priceCurrency": company.currency_code,
+                    "lowPrice": str(min(prices)),
+                    "highPrice": str(max(prices)),
+                    "offerCount": len(prices),
+                    "availability": "https://schema.org/InStock",
+                }
+        else:
+            schema["offers"] = {
+                "@type": "Offer",
+                "priceCurrency": company.currency_code,
+                "price": str(product.price),
+                "availability": (
+                    "https://schema.org/InStock"
+                    if product.available_to_sell
+                    else "https://schema.org/OutOfStock"
+                ),
+                "url": self.request.build_absolute_uri(product.get_absolute_url()),
+            }
+        return mark_safe(json.dumps(schema).replace("</", "<\\/"))
 
 
 @require_POST

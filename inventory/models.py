@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -64,20 +65,97 @@ class StockAdjustment(models.Model):
         bits.append(f"{self.quantity_delta:+d}")
         return " · ".join(bits)
 
+    def clean(self) -> None:
+        super().clean()
+        if (
+            self.product_variant_id
+            and self.product_id
+            and self.product_variant.product_id != self.product_id
+        ):
+            raise ValidationError("The variant must belong to the selected product.")
+
     @transaction.atomic
     def apply(self) -> None:
         from catalog.models import Product, ProductVariant
 
+        delta = int(self.quantity_delta)
         if self.product_variant_id:
-            ProductVariant.objects.select_for_update().filter(
+            qs = ProductVariant.objects.select_for_update().filter(
                 pk=self.product_variant_id
-            ).update(
-                stock_quantity=models.F("stock_quantity") + int(self.quantity_delta)
             )
         else:
-            Product.objects.select_for_update().filter(pk=self.product_id).update(
-                stock_quantity=models.F("stock_quantity") + int(self.quantity_delta)
-            )
+            qs = Product.objects.select_for_update().filter(pk=self.product_id)
+        if delta < 0:
+            qs = qs.filter(stock_quantity__gte=-delta)
+        updated = qs.update(stock_quantity=models.F("stock_quantity") + delta)
+        if updated != 1:
+            raise ValidationError("This adjustment would make stock negative.")
+        from inventory.services import record_stock_movement
+
+        record_stock_movement(
+            product=self.product,
+            product_variant=self.product_variant,
+            quantity_delta=delta,
+            movement_type=StockMovement.TYPE_ADJUSTMENT,
+            reference=f"ADJ-{self.pk}",
+            note=self.note or self.get_reason_display(),
+            actor=self.created_by,
+            adjustment=self,
+        )
+
+
+class StockMovement(models.Model):
+    TYPE_SALE = "sale"
+    TYPE_PURCHASE = "purchase"
+    TYPE_ADJUSTMENT = "adjustment"
+    TYPE_CUSTOMER_RETURN = "customer_return"
+    TYPE_SUPPLIER_RETURN = "supplier_return"
+    TYPE_CANCELLATION = "cancellation"
+    TYPE_CHOICES = [
+        (TYPE_SALE, "Sale"),
+        (TYPE_PURCHASE, "Purchase receipt"),
+        (TYPE_ADJUSTMENT, "Adjustment"),
+        (TYPE_CUSTOMER_RETURN, "Customer return"),
+        (TYPE_SUPPLIER_RETURN, "Supplier return"),
+        (TYPE_CANCELLATION, "Order cancellation"),
+    ]
+
+    product = models.ForeignKey(
+        "catalog.Product", on_delete=models.PROTECT, related_name="stock_movements"
+    )
+    product_variant = models.ForeignKey(
+        "catalog.ProductVariant",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_movements",
+    )
+    quantity_delta = models.IntegerField()
+    balance_after = models.PositiveIntegerField()
+    movement_type = models.CharField(max_length=24, choices=TYPE_CHOICES)
+    reference = models.CharField(max_length=64, blank=True, db_index=True)
+    note = models.CharField(max_length=255, blank=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stock_movements_recorded",
+    )
+    adjustment = models.OneToOneField(
+        StockAdjustment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movements",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.reference or self.get_movement_type_display()} {self.quantity_delta:+d}"
 
 
 class StockTake(models.Model):
@@ -170,7 +248,7 @@ class StockTakeLine(models.Model):
     system_quantity = models.IntegerField(
         default=0, help_text="Snapshot of on-hand when the line was added."
     )
-    counted_quantity = models.IntegerField(
+    counted_quantity = models.PositiveIntegerField(
         default=0, help_text="Actual count from the floor."
     )
     note = models.CharField(max_length=255, blank=True)

@@ -7,9 +7,11 @@ from core.models import (
     CompanySettings,
     ContactMessage,
     KnowledgeArticle,
+    LoginAttempt,
     StaffNotification,
     StaffNotificationPreference,
     StaffSavedSearch,
+    StaffTwoFactor,
     SupportTicket,
     TicketComment,
 )
@@ -105,3 +107,7 @@ class AuditEventAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+
+admin.site.register(StaffTwoFactor)
+admin.site.register(LoginAttempt)

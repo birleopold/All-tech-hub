@@ -6,6 +6,7 @@ from purchasing.models import (
     StockReceipt,
     StockReceiptLine,
     Supplier,
+    SupplierReturn,
 )
 
 
@@ -47,3 +48,6 @@ class StockReceiptAdmin(admin.ModelAdmin):
 class StockReceiptLineAdmin(admin.ModelAdmin):
     list_display = ("receipt", "purchase_line", "quantity_received")
     raw_id_fields = ("receipt", "purchase_line")
+
+
+admin.site.register(SupplierReturn)

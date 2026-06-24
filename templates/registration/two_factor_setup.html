@@ -1,0 +1,20 @@
+{% extends "staff_base.html" %}
+{% block title %}Two-factor authentication{% endblock %}
+{% block staff_content %}
+<h1 class="h3 mb-3">Two-factor authentication</h1>
+<div class="card border-0 shadow-sm"><div class="card-body col-lg-7">
+  {% if profile.enabled %}
+  <div class="alert alert-success">Two-factor authentication is enabled.</div>
+  <form method="post" action="{% url 'staff_two_factor_disable' %}">{% csrf_token %}<button class="btn btn-outline-danger">Disable 2FA</button></form>
+  {% else %}
+  <p>Add an account manually in Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.</p>
+  <p><strong>Secret:</strong> <code class="user-select-all">{{ profile.secret }}</code></p>
+  <details class="mb-3"><summary>Show provisioning URI</summary><code class="user-select-all text-break">{{ provisioning_uri }}</code></details>
+  <form method="post" action="{% url 'staff_two_factor_confirm' %}">{% csrf_token %}
+    <label class="form-label">Enter the current six-digit code</label>
+    <input name="otp" class="form-control mb-2" inputmode="numeric" maxlength="6" required>
+    <button class="btn btn-primary">Verify and enable</button>
+  </form>
+  {% endif %}
+</div></div>
+{% endblock %}

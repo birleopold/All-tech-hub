@@ -3,12 +3,13 @@
 {% block staff_content %}
 <h1 class="h3 mb-3">Commercial documents</h1>
 <form method="get" class="row g-2 mb-3">
+  <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ request.GET.q }}" placeholder="Number, customer, title or reference"></div>
   <div class="col-auto">
     <select name="type" class="form-select">
       <option value="">All types</option>
-      <option value="quote" {% if request.GET.type == 'quote' %}selected{% endif %}>Quotations</option>
-      <option value="proforma" {% if request.GET.type == 'proforma' %}selected{% endif %}>Proformas</option>
-      <option value="invoice" {% if request.GET.type == 'invoice' %}selected{% endif %}>Invoices</option>
+      {% for value,label in document_type_choices %}
+      <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
     </select>
   </div>
   <div class="col-auto">
@@ -30,7 +31,7 @@
       <tr>
         <td><a href="{% url 'staff_document_edit' d.pk %}">{{ d.number }}</a></td>
         <td>{{ d.get_doc_type_display }}</td>
-        <td>{{ d.customer.name }}</td>
+        <td>{{ d.display_customer_name }}</td>
         <td>{{ d.get_status_display }}</td>
         <td>{{ company.currency_code }} {{ d.total }}</td>
         <td>{{ d.issue_date }}</td>

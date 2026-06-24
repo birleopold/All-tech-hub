@@ -4,13 +4,14 @@
 <div class="container py-4 col-lg-8">
   <p class="text-muted small mb-1">{{ company.company_name }}</p>
   <h1 class="h3 mb-2">Quotation {{ document.number }}</h1>
-  <p class="text-muted">Prepared for {{ document.customer.name }}</p>
+  <p class="text-muted">Prepared for {{ document.display_customer_name }}</p>
 
   {% if document.quote_customer_accepted is True %}
   <div class="alert alert-success" role="status">
     <strong>Accepted</strong>
     {% if document.quote_customer_signature_name %} by {{ document.quote_customer_signature_name }}{% endif %}
     {% if document.quote_customer_responded_at %} on {{ document.quote_customer_responded_at|date:"Y-m-d H:i" }}{% endif %}
+    <p class="small mb-0 mt-2">Our team will follow up with a proforma or invoice and Mobile Money payment reference where applicable.</p>
   </div>
   {% elif document.quote_customer_accepted is False %}
   <div class="alert alert-secondary" role="status">

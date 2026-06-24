@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.forms import inlineformset_factory
@@ -10,12 +11,13 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
-from catalog.models import Product, ProductImage, ProductVariant
+from catalog.models import Product, ProductImage, ProductSerial, ProductVariant
 from catalog.stock_alerts import low_stock_products
-from core.mixins import StaffRequiredMixin
 from core.audit import log_audit_event
+from core.barcodes import label_payload, repeated_labels
+from core.mixins import StaffRequiredMixin
 from inventory.forms import JobStockUseForm, StockAdjustmentForm
-from inventory.models import StockAdjustment, StockTake, StockTakeLine
+from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
 from operations.models import JobCard
 
 
@@ -85,8 +87,23 @@ class InventoryHomeView(StaffRequiredMixin, TemplateView):
                 "product", "product_variant", "created_by"
             )[:12]
         )
+        ctx["recent_movements"] = StockMovement.objects.select_related(
+            "product", "product_variant", "actor"
+        )[:25]
         ctx["low_stock_items"] = low_stock_products(limit=15)
         return ctx
+
+
+class StockMovementListView(StaffRequiredMixin, ListView):
+    model = StockMovement
+    template_name = "inventory/movement_list.html"
+    context_object_name = "movements"
+    paginate_by = 50
+
+    def get_queryset(self):
+        return StockMovement.objects.select_related(
+            "product", "product_variant", "actor"
+        )
 
 
 class ProductManageListView(StaffRequiredMixin, ListView):
@@ -192,6 +209,84 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
         return reverse("staff_product_edit", kwargs={"pk": self.object.pk})
 
 
+def _label_copies(request) -> int:
+    try:
+        return int(request.GET.get("copies") or 1)
+    except ValueError:
+        return 1
+
+
+def product_label_sheet(request, pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    product = get_object_or_404(
+        Product.objects.select_related("category").prefetch_related("variants"), pk=pk
+    )
+    labels = []
+    active_variants = [v for v in product.variants.all() if v.is_active]
+    if active_variants:
+        for variant in active_variants:
+            labels.append(
+                label_payload(
+                    "Product option",
+                    product.name,
+                    variant.sku or f"V-{variant.pk}",
+                    subtitle=variant.name,
+                    meta=f"{product.category.name} / Product #{product.pk} / Variant #{variant.pk}",
+                )
+            )
+    else:
+        labels.append(
+            label_payload(
+                "Product",
+                product.name,
+                product.sku or f"P-{product.pk}",
+                subtitle=product.category.name,
+                meta=f"Product #{product.pk}",
+            )
+        )
+    return render(
+        request,
+        "core/label_sheet.html",
+        {
+            "title": f"Product labels - {product.name}",
+            "labels": repeated_labels(labels, _label_copies(request)),
+            "back_url": reverse("staff_product_edit", kwargs={"pk": product.pk}),
+        },
+    )
+
+
+def serial_label_sheet(request, pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    serial = get_object_or_404(
+        ProductSerial.objects.select_related("product", "product_variant", "sold_to"),
+        pk=pk,
+    )
+    labels = [
+        label_payload(
+            "Serial",
+            serial.product.name,
+            serial.serial_number,
+            subtitle=serial.product_variant.name if serial.product_variant else "",
+            meta=(
+                f"{serial.get_status_display()}"
+                + (f" / {serial.sold_to.name}" if serial.sold_to else "")
+                + (f" / Warranty until {serial.warranty_expires_on}" if serial.warranty_expires_on else "")
+            ),
+        )
+    ]
+    return render(
+        request,
+        "core/label_sheet.html",
+        {
+            "title": f"Serial label - {serial.serial_number}",
+            "labels": repeated_labels(labels, _label_copies(request)),
+            "back_url": reverse("staff_search") + f"?q={serial.serial_number}",
+        },
+    )
+
+
 def create_stock_adjustment(request):
     if not request.user.is_staff:
         raise Http404
@@ -202,7 +297,12 @@ def create_stock_adjustment(request):
         adj = form.save(commit=False)
         adj.created_by = request.user
         adj.save()
-        adj.apply()
+        try:
+            adj.apply()
+        except ValidationError as exc:
+            adj.delete()
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("staff_inventory")
 
         label = adj.product.name
         if adj.product_variant_id:
@@ -240,6 +340,44 @@ class StockTakeDetailView(StaffRequiredMixin, DetailView):
             "product", "product_variant"
         ).all()
         return ctx
+
+
+def stocktake_label_sheet(request, pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    take = get_object_or_404(
+        StockTake.objects.prefetch_related("lines__product", "lines__product_variant"),
+        pk=pk,
+    )
+    labels = [
+        label_payload(
+            "Stock take",
+            take.reference,
+            take.reference,
+            subtitle=take.name,
+            meta=take.get_status_display(),
+        )
+    ]
+    for line in take.lines.all():
+        code = line.product_variant.sku if line.product_variant else line.product.sku
+        labels.append(
+            label_payload(
+                "Count line",
+                line.product.name,
+                code or f"P-{line.product_id}",
+                subtitle=line.product_variant.name if line.product_variant else "",
+                meta=f"{take.reference} / System {line.system_quantity} / Line #{line.pk}",
+            )
+        )
+    return render(
+        request,
+        "core/label_sheet.html",
+        {
+            "title": f"Stock take labels - {take.reference}",
+            "labels": repeated_labels(labels, _label_copies(request)),
+            "back_url": reverse("staff_stocktake_detail", kwargs={"pk": take.pk}),
+        },
+    )
 
 
 @require_POST
@@ -321,7 +459,12 @@ def job_record_part_usage(request, job_pk: int):
         adj.created_by = request.user
         adj.reason = StockAdjustment.REASON_JOB
         adj.save()
-        adj.apply()
+        try:
+            adj.apply()
+        except ValidationError as exc:
+            adj.delete()
+            messages.error(request, "; ".join(exc.messages))
+            return redirect("staff_job_detail", pk=job_pk)
 
         label = adj.product.name
         if adj.product_variant_id:

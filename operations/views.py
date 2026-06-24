@@ -11,12 +11,13 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
+from core.barcodes import label_payload, repeated_labels
 from core.filters import apply_job_filters
 from core.mixins import StaffRequiredMixin
 from core.models import StaffSavedSearch
 from inventory.forms import JobStockUseForm
 from operations.forms import JobAttachmentForm, JobCardForm, JobNoteForm, TimeEntryForm
-from operations.models import JobCard, JobNote, TimeEntry
+from operations.models import JobCard
 from operations.pdf import pdf_response
 
 
@@ -129,6 +130,36 @@ def job_pdf_view(request, pk: int):
     return pdf_response(job, inline=True)
 
 
+def job_label_sheet(request, pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    job = get_object_or_404(JobCard.objects.select_related("customer", "assigned_to"), pk=pk)
+    try:
+        copies = int(request.GET.get("copies") or 1)
+    except ValueError:
+        copies = 1
+    label = label_payload(
+        "Job card",
+        job.number,
+        job.number,
+        subtitle=job.title,
+        meta=(
+            f"{job.customer.name}"
+            + (f" / {job.device_make} {job.device_model}".strip() if job.device_make or job.device_model else "")
+            + (f" / SN {job.serial_number}" if job.serial_number else "")
+        ),
+    )
+    return render(
+        request,
+        "core/label_sheet.html",
+        {
+            "title": f"Job labels - {job.number}",
+            "labels": repeated_labels([label], copies),
+            "back_url": reverse_lazy("staff_job_detail", kwargs={"pk": job.pk}),
+        },
+    )
+
+
 def job_add_time(request, pk: int):
     if not request.user.is_staff:
         raise Http404
@@ -199,7 +230,6 @@ class JobScheduleCalendarView(StaffRequiredMixin, ListView):
         days = [week_start + timedelta(days=i) for i in range(7)]
         User = get_user_model()
         technicians = list(User.objects.filter(is_staff=True).order_by("username"))
-        techs_by_id = {u.id: u for u in technicians}
 
         jobs = (
             JobCard.objects.filter(

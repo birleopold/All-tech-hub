@@ -3,9 +3,9 @@ from urllib.parse import parse_qs
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.http import Http404, HttpResponseForbidden
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
+from django.http import HttpResponseForbidden
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
@@ -20,7 +20,6 @@ from core.models import (
     StaffNotification,
     StaffSavedSearch,
     SupportTicket,
-    TicketComment,
     hours_summary,
 )
 
@@ -37,6 +36,73 @@ KNOWN_AUDIT_VERBS = (
     "inventory.job_part_use",
     "catalog.product_saved",
 )
+
+
+class StaffGlobalSearchView(StaffRequiredMixin, View):
+    template_name = "core/staff_search.html"
+
+    def get(self, request):
+        q = (request.GET.get("q") or "").strip()
+        results = {}
+        if q:
+            from billing.models import CommercialDocument
+            from catalog.models import Product, ProductSerial
+            from commerce.models import Order
+            from crm.models import Customer
+            from operations.models import JobCard
+
+            results["customers"] = Customer.objects.filter(
+                Q(name__icontains=q)
+                | Q(company_name__icontains=q)
+                | Q(email__icontains=q)
+                | Q(phone__icontains=q)
+                | Q(tax_reference__icontains=q)
+            ).order_by("name")[:8]
+            results["documents"] = CommercialDocument.objects.filter(
+                Q(number__icontains=q)
+                | Q(customer_name__icontains=q)
+                | Q(customer_company__icontains=q)
+                | Q(customer_email__icontains=q)
+                | Q(title__icontains=q)
+                | Q(contact_reference__icontains=q)
+            ).order_by("-issue_date", "-id")[:8]
+            results["orders"] = Order.objects.select_related("customer").filter(
+                Q(reference__icontains=q)
+                | Q(contact_name__icontains=q)
+                | Q(contact_email__icontains=q)
+                | Q(contact_phone__icontains=q)
+                | Q(customer__name__icontains=q)
+            ).order_by("-placed_at")[:8]
+            results["jobs"] = JobCard.objects.select_related("customer").filter(
+                Q(number__icontains=q)
+                | Q(title__icontains=q)
+                | Q(device_make__icontains=q)
+                | Q(device_model__icontains=q)
+                | Q(serial_number__icontains=q)
+                | Q(customer__name__icontains=q)
+            ).order_by("-received_on")[:8]
+            results["tickets"] = SupportTicket.objects.select_related("customer").filter(
+                Q(reference__icontains=q)
+                | Q(subject__icontains=q)
+                | Q(description__icontains=q)
+                | Q(customer__name__icontains=q)
+            ).order_by("-updated_at")[:8]
+            results["products"] = Product.objects.select_related("category").filter(
+                Q(name__icontains=q)
+                | Q(sku__icontains=q)
+                | Q(short_description__icontains=q)
+                | Q(variants__sku__icontains=q)
+            ).distinct().order_by("name")[:8]
+            results["serials"] = ProductSerial.objects.select_related(
+                "product", "sold_to"
+            ).filter(
+                Q(serial_number__icontains=q)
+                | Q(imei__icontains=q)
+                | Q(mac_address__icontains=q)
+                | Q(product__name__icontains=q)
+                | Q(sold_to__name__icontains=q)
+            ).order_by("product__name", "serial_number")[:8]
+        return render(request, self.template_name, {"search_q": q, "results": results})
 
 
 class AuditEventListView(StaffRequiredMixin, ListView):

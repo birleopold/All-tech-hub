@@ -1,10 +1,10 @@
 import secrets
 import uuid
-from decimal import Decimal
 
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from billing.models import allocate_document_number
@@ -16,6 +16,28 @@ from commerce.stock import InsufficientStock, decrement_line_stock
 from core.models import CompanySettings
 
 SESSION_CHECKOUT_TOKEN = "checkout_submit_token"
+
+
+class CouponUnavailable(Exception):
+    pass
+
+
+def _safe_next_url(request, candidate: str | None, fallback: str) -> str:
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    return fallback
+
+
+def _positive_int(raw, default: int = 1, maximum: int = 999) -> int:
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(value, maximum))
 
 
 def _qty_field_to_row_key(field_name: str) -> str | None:
@@ -88,7 +110,7 @@ def cart_remove_coupon(request):
 @require_POST
 def cart_add(request, product_id: int):
     product = get_object_or_404(Product, pk=product_id, is_published=True)
-    qty = int(request.POST.get("quantity") or 1)
+    qty = _positive_int(request.POST.get("quantity"), default=1)
     variant_id = request.POST.get("variant_id")
 
     if product.has_sellable_variants():
@@ -115,7 +137,9 @@ def cart_add(request, product_id: int):
             return redirect("product_detail", slug=product.slug)
         cart_mod.add_product(request.session, product.pk, qty)
         messages.success(request, f"Added “{product.name}” to cart.")
-    next_url = request.POST.get("next") or product.get_absolute_url()
+    next_url = _safe_next_url(
+        request, request.POST.get("next"), product.get_absolute_url()
+    )
     return redirect(next_url)
 
 
@@ -129,7 +153,12 @@ def cart_update(request):
     for key, val in request.POST.items():
         row_key = _qty_field_to_row_key(key)
         if row_key:
-            cart_mod.set_quantity(request.session, row_key, int(val or 0))
+            try:
+                quantity = int(val or 0)
+            except (TypeError, ValueError):
+                messages.error(request, "Quantities must be whole numbers.")
+                return redirect("cart")
+            cart_mod.set_quantity(request.session, row_key, min(quantity, 999))
     messages.success(request, "Cart updated.")
     return redirect("cart")
 
@@ -175,6 +204,17 @@ def checkout_view(request):
         if form.is_valid():
             try:
                 with transaction.atomic():
+                    locked_coupon = None
+                    if coupon is not None:
+                        from commerce.models import Coupon
+
+                        locked_coupon = Coupon.objects.select_for_update().get(
+                            pk=coupon.pk
+                        )
+                        if not locked_coupon.is_currently_active():
+                            raise CouponUnavailable(
+                                "That discount code has reached its usage limit or expired."
+                            )
                     customer = form.save_customer()
                     ref = allocate_document_number("ORD")
                     order = Order.objects.create(
@@ -193,14 +233,16 @@ def checkout_view(request):
                         tax_rate=tax_rate,
                         tax_amount=tax,
                         discount_amount=discount,
-                        coupon=coupon,
-                        coupon_code_applied=coupon.code if coupon else "",
+                        coupon=locked_coupon,
+                        coupon_code_applied=locked_coupon.code if locked_coupon else "",
                         total=total,
                     )
-                    if coupon is not None:
+                    if locked_coupon is not None:
                         from django.db.models import F as _F
 
-                        type(coupon).objects.filter(pk=coupon.pk).update(
+                        type(locked_coupon).objects.filter(
+                            pk=locked_coupon.pk
+                        ).update(
                             times_used=_F("times_used") + 1
                         )
                     for ln in lines:
@@ -222,11 +264,16 @@ def checkout_view(request):
                             product=ln.product,
                             variant=ln.variant,
                             qty=ln.quantity,
+                            reference=order.reference,
                         )
                     cart_mod.clear(request.session)
             except InsufficientStock as exc:
                 messages.error(request, str(exc))
                 return redirect("checkout")
+            except CouponUnavailable as exc:
+                cart_mod.clear_coupon(request.session)
+                messages.error(request, str(exc))
+                return redirect("cart")
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
             messages.success(
                 request,

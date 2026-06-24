@@ -68,6 +68,12 @@ class Product(models.Model):
 
     class Meta:
         ordering = ["category__sort_order", "name"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(stock_quantity__gte=0),
+                name="product_stock_nonnegative",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -191,6 +197,12 @@ class ProductVariant(models.Model):
 
     class Meta:
         ordering = ["sort_order", "id"]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(stock_quantity__gte=0),
+                name="variant_stock_nonnegative",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.product.name} — {self.name}"
