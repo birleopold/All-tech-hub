@@ -1,0 +1,55 @@
+{% extends "staff_base.html" %}
+{% block title %}Technician bench{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Technician bench</h1>
+    <p class="text-muted mb-0">Focused repair queue for active job cards.</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'staff_jobs' %}">Full job list</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">My open jobs</div><div class="display-6">{{ mine_count }}</div></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">Unassigned</div><div class="display-6">{{ unassigned_count }}</div></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="small text-muted">All open</div><div class="display-6">{{ all_open_count }}</div></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm {% if overdue_count %}border-danger{% endif %}"><div class="card-body"><div class="small text-muted">Overdue SLA</div><div class="display-6 {% if overdue_count %}text-danger{% endif %}">{{ overdue_count }}</div></div></div></div>
+</div>
+
+<div class="btn-group mb-3" role="group" aria-label="Bench queue">
+  <a class="btn {% if view_mode == 'mine' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_job_bench' %}">Mine</a>
+  <a class="btn {% if view_mode == 'unassigned' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_job_bench' %}?view=unassigned">Unassigned</a>
+  <a class="btn {% if view_mode == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_job_bench' %}?view=all">All open</a>
+</div>
+
+<div class="row g-3">
+  {% for job in jobs %}
+  <div class="col-xl-6">
+    <div class="card border-0 shadow-sm h-100 {% if job.is_overdue %}border-danger{% endif %}">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+          <div>
+            <h2 class="h5 mb-1"><a href="{% url 'staff_job_bench_detail' job.pk %}">{{ job.number }}</a></h2>
+            <p class="mb-1">{{ job.title }}</p>
+            <p class="small text-muted mb-0">{{ job.customer.name }}{% if job.device_make or job.device_model %} / {{ job.device_make }} {{ job.device_model }}{% endif %}</p>
+          </div>
+          <span class="badge text-bg-light border">{{ job.get_status_display }}</span>
+        </div>
+        <hr>
+        <div class="row g-2 small">
+          <div class="col-sm-4"><span class="text-muted d-block">Priority</span><strong>{{ job.get_priority_display }}</strong></div>
+          <div class="col-sm-4"><span class="text-muted d-block">Assigned</span><strong>{% if job.assigned_to %}{{ job.assigned_to.get_username }}{% else %}Unassigned{% endif %}</strong></div>
+          <div class="col-sm-4"><span class="text-muted d-block">SLA</span>{% if job.due_in_label %}<span class="badge {% if job.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ job.due_in_label }}</span>{% else %}<span class="text-muted">-</span>{% endif %}</div>
+          <div class="col-sm-6"><span class="text-muted d-block">Received</span>{{ job.received_on|date:"Y-m-d H:i" }}</div>
+          <div class="col-sm-6"><span class="text-muted d-block">Scheduled</span>{% if job.scheduled_for %}{{ job.scheduled_for|date:"Y-m-d H:i" }}{% else %}-{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="alert alert-light border shadow-sm">No jobs in this bench queue.</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

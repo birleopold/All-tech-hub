@@ -216,6 +216,13 @@ def _label_copies(request) -> int:
         return 1
 
 
+def _safe_redirect_target(request, fallback: str):
+    nxt = request.POST.get("next") or request.GET.get("next")
+    if nxt and nxt.startswith("/") and not nxt.startswith("//"):
+        return nxt
+    return fallback
+
+
 def product_label_sheet(request, pk: int):
     if not request.user.is_staff:
         raise Http404
@@ -450,7 +457,7 @@ def job_record_part_usage(request, job_pk: int):
     if not request.user.is_staff:
         raise Http404
     if request.method != "POST":
-        return redirect("staff_job_detail", pk=job_pk)
+        return redirect(_safe_redirect_target(request, reverse("staff_job_detail", kwargs={"pk": job_pk})))
     job = get_object_or_404(JobCard, pk=job_pk)
     form = JobStockUseForm(request.POST)
     if form.is_valid():
@@ -464,7 +471,7 @@ def job_record_part_usage(request, job_pk: int):
         except ValidationError as exc:
             adj.delete()
             messages.error(request, "; ".join(exc.messages))
-            return redirect("staff_job_detail", pk=job_pk)
+            return redirect(_safe_redirect_target(request, reverse("staff_job_detail", kwargs={"pk": job_pk})))
 
         label = adj.product.name
         if adj.product_variant_id:
@@ -478,4 +485,4 @@ def job_record_part_usage(request, job_pk: int):
         messages.success(request, "Parts usage recorded and stock updated.")
     else:
         messages.error(request, "Could not record parts — check product, variant, and quantity.")
-    return redirect("staff_job_detail", pk=job_pk)
+    return redirect(_safe_redirect_target(request, reverse("staff_job_detail", kwargs={"pk": job_pk})))

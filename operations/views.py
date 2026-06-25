@@ -11,14 +11,23 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
+from core.audit import log_audit_event
 from core.barcodes import label_payload, repeated_labels
 from core.filters import apply_job_filters
 from core.mixins import StaffRequiredMixin
 from core.models import StaffSavedSearch
 from inventory.forms import JobStockUseForm
 from operations.forms import JobAttachmentForm, JobCardForm, JobNoteForm, TimeEntryForm
+from operations.job_status import allowed_next_statuses
 from operations.models import JobCard
 from operations.pdf import pdf_response
+
+
+def _safe_redirect_target(request, fallback: str):
+    nxt = request.POST.get("next") or request.GET.get("next")
+    if nxt and nxt.startswith("/") and not nxt.startswith("//"):
+        return nxt
+    return fallback
 
 
 class JobCardListView(StaffRequiredMixin, ListView):
@@ -46,6 +55,38 @@ class JobCardListView(StaffRequiredMixin, ListView):
             user=self.request.user, scope=StaffSavedSearch.SCOPE_JOBS
         )
         ctx["saved_search_scope"] = StaffSavedSearch.SCOPE_JOBS
+        return ctx
+
+
+class TechnicianBenchView(StaffRequiredMixin, ListView):
+    model = JobCard
+    template_name = "operations/bench.html"
+    context_object_name = "jobs"
+    paginate_by = 30
+
+    def get_queryset(self):
+        qs = (
+            JobCard.objects.select_related("customer", "assigned_to")
+            .exclude(status__in=[JobCard.STATUS_COMPLETED, JobCard.STATUS_CANCELLED])
+            .order_by("scheduled_for", "-priority", "-received_on")
+        )
+        view = self.request.GET.get("view") or "mine"
+        if view == "unassigned":
+            return qs.filter(assigned_to__isnull=True)
+        if view == "all":
+            return qs
+        return qs.filter(assigned_to=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        base = JobCard.objects.exclude(
+            status__in=[JobCard.STATUS_COMPLETED, JobCard.STATUS_CANCELLED]
+        )
+        ctx["view_mode"] = self.request.GET.get("view") or "mine"
+        ctx["mine_count"] = base.filter(assigned_to=self.request.user).count()
+        ctx["unassigned_count"] = base.filter(assigned_to__isnull=True).count()
+        ctx["all_open_count"] = base.count()
+        ctx["overdue_count"] = sum(1 for job in base if job.is_overdue)
         return ctx
 
 
@@ -105,6 +146,51 @@ class JobCardDetailView(StaffRequiredMixin, DetailView):
         return ctx
 
 
+class JobBenchDetailView(JobCardDetailView):
+    template_name = "operations/job_bench.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        allowed = allowed_next_statuses(self.object.status)
+        ctx["next_status_choices"] = [
+            (value, label)
+            for value, label in JobCard.STATUS_CHOICES
+            if value in allowed
+        ]
+        return ctx
+
+
+@require_POST
+def job_bench_status(request, pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    job = get_object_or_404(JobCard, pk=pk)
+    new_status = request.POST.get("status")
+    note = (request.POST.get("note") or "").strip()
+    valid_statuses = dict(JobCard.STATUS_CHOICES)
+    if new_status not in valid_statuses:
+        messages.error(request, "Choose a valid next status.")
+        return redirect("staff_job_bench_detail", pk=job.pk)
+    old_status = job.status
+    job.status = new_status
+    job._status_actor = request.user
+    job._status_note = note
+    try:
+        job.full_clean()
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        return redirect("staff_job_bench_detail", pk=job.pk)
+    job.save()
+    log_audit_event(
+        actor=request.user,
+        verb="job.status_change",
+        summary=f"{job.number}: {old_status} -> {new_status}",
+        target=job,
+    )
+    messages.success(request, f"Moved {job.number} to {valid_statuses[new_status]}.")
+    return redirect("staff_job_bench_detail", pk=job.pk)
+
+
 def job_add_note(request, pk: int):
     if not request.user.is_staff:
         raise Http404
@@ -118,7 +204,7 @@ def job_add_note(request, pk: int):
         messages.success(request, "Note added.")
     else:
         messages.error(request, "Could not save note.")
-    return redirect("staff_job_detail", pk=pk)
+    return redirect(_safe_redirect_target(request, reverse_lazy("staff_job_detail", kwargs={"pk": pk})))
 
 
 def job_pdf_view(request, pk: int):
@@ -165,7 +251,7 @@ def job_add_time(request, pk: int):
         raise Http404
     job = get_object_or_404(JobCard, pk=pk)
     if request.method != "POST":
-        return redirect("staff_job_detail", pk=pk)
+        return redirect(_safe_redirect_target(request, reverse_lazy("staff_job_detail", kwargs={"pk": pk})))
     form = TimeEntryForm(request.POST)
     if form.is_valid():
         te = form.save(commit=False)
@@ -176,7 +262,7 @@ def job_add_time(request, pk: int):
         messages.success(request, "Time entry added.")
     else:
         messages.error(request, "Could not save time entry.")
-    return redirect("staff_job_detail", pk=pk)
+    return redirect(_safe_redirect_target(request, reverse_lazy("staff_job_detail", kwargs={"pk": pk})))
 
 
 def job_add_attachment(request, pk: int):
@@ -184,7 +270,7 @@ def job_add_attachment(request, pk: int):
         raise Http404
     job = get_object_or_404(JobCard, pk=pk)
     if request.method != "POST":
-        return redirect("staff_job_detail", pk=pk)
+        return redirect(_safe_redirect_target(request, reverse_lazy("staff_job_detail", kwargs={"pk": pk})))
     form = JobAttachmentForm(request.POST, request.FILES)
     if form.is_valid():
         att = form.save(commit=False)
@@ -193,7 +279,7 @@ def job_add_attachment(request, pk: int):
         messages.success(request, "Photo uploaded.")
     else:
         messages.error(request, "Could not save the upload — check the file and try again.")
-    return redirect("staff_job_detail", pk=pk)
+    return redirect(_safe_redirect_target(request, reverse_lazy("staff_job_detail", kwargs={"pk": pk})))
 
 
 class JobScheduleCalendarView(StaffRequiredMixin, ListView):

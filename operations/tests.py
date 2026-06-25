@@ -117,6 +117,49 @@ class JobLabelViewTests(TestCase):
         self.assertContains(response, "PR-123")
 
 
+class TechnicianBenchTests(TestCase):
+    def setUp(self):
+        self.customer = Customer.objects.create(name="Bench", email="bench@example.com")
+        self.tech = User.objects.create_user(
+            "bench-tech", "bench@example.com", "pw", is_staff=True
+        )
+        self.job = JobCard.objects.create(
+            customer=self.customer,
+            title="Bench repair",
+            status=JobCard.STATUS_INTAKE,
+            assigned_to=self.tech,
+        )
+        self.client.force_login(self.tech)
+
+    def test_bench_lists_assigned_open_job(self):
+        response = self.client.get(reverse("staff_job_bench"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.job.number)
+        self.assertContains(response, "Bench repair")
+
+    def test_bench_detail_shows_next_status(self):
+        response = self.client.get(reverse("staff_job_bench_detail", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Diagnosing")
+        self.assertContains(response, "Move workflow")
+
+    def test_bench_status_action_moves_job(self):
+        response = self.client.post(
+            reverse("staff_job_bench_status", args=[self.job.pk]),
+            {"status": JobCard.STATUS_DIAGNOSING, "note": "Started diagnosis"},
+        )
+        self.assertRedirects(
+            response, reverse("staff_job_bench_detail", args=[self.job.pk])
+        )
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.status, JobCard.STATUS_DIAGNOSING)
+        self.assertTrue(
+            AuditEvent.objects.filter(
+                verb="job.status_change", target_id=self.job.pk
+            ).exists()
+        )
+
+
 class JobScheduleOverlapTests(TestCase):
     def setUp(self):
         self.customer = Customer.objects.create(name="Sched", email="sched@example.com")

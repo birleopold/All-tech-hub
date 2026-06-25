@@ -132,4 +132,98 @@
     </div>
   </div>
 </div>
+<div class="row g-3 mt-4 mb-4">
+  <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Gross profit (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ document_margin_30.profit|floatformat:2 }}</p><p class="small text-muted mb-0">{{ document_margin_30.margin }}% margin</p></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Discount leakage (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ discount_leakage_30.amount|floatformat:2 }}</p><p class="small text-muted mb-0">{{ discount_leakage_30.rate }}% of gross</p></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm h-100 {% if payment_exceptions.unreconciled_count or payment_exceptions.unallocated_count %}border-warning{% endif %}"><div class="card-body"><p class="text-muted small mb-1">Payment exceptions</p><p class="h3 mb-0">{{ payment_exceptions.unreconciled_count|add:payment_exceptions.unallocated_count }}</p><p class="small text-muted mb-0">{{ company.currency_code }} {{ payment_exceptions.unreconciled_amount|add:payment_exceptions.unallocated_amount|floatformat:2 }} to review</p></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm h-100 {% if sla_summary.overdue_jobs or sla_summary.overdue_tickets %}border-danger{% endif %}"><div class="card-body"><p class="text-muted small mb-1">SLA overdue</p><p class="h3 mb-0 {% if sla_summary.overdue_jobs or sla_summary.overdue_tickets %}text-danger{% endif %}">{{ sla_summary.overdue_jobs|add:sla_summary.overdue_tickets }}</p><p class="small text-muted mb-0">Jobs {{ sla_summary.overdue_jobs }} / tickets {{ sla_summary.overdue_tickets }}</p></div></div></div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase mb-3">SLA and repair flow</h2>
+        <div class="row g-3 mb-3">
+          <div class="col-6"><div class="border rounded p-2"><div class="small text-muted">Open jobs</div><strong>{{ sla_summary.open_jobs }}</strong></div></div>
+          <div class="col-6"><div class="border rounded p-2"><div class="small text-muted">Completed 90d</div><strong>{{ sla_summary.completed_jobs }}</strong></div></div>
+          <div class="col-6"><div class="border rounded p-2"><div class="small text-muted">Avg cycle</div><strong>{% if sla_summary.avg_cycle_days is not None %}{{ sla_summary.avg_cycle_days }} days{% else %}—{% endif %}</strong></div></div>
+          <div class="col-6"><div class="border rounded p-2"><div class="small text-muted">Open tickets</div><strong>{{ sla_summary.open_tickets }}</strong></div></div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Status</th><th class="text-end">Open</th><th class="text-end">Avg days</th></tr></thead>
+            <tbody>
+              {% for row in job_status_aging %}
+              <tr><td>{{ row.status }}</td><td class="text-end">{{ row.count }}</td><td class="text-end">{{ row.avg_days }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted text-uppercase mb-3">Payment exceptions</h2>
+        <div class="row g-3">
+          <div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">Unreconciled</div><strong>{{ payment_exceptions.unreconciled_count }}</strong><div class="small">{{ company.currency_code }} {{ payment_exceptions.unreconciled_amount|floatformat:2 }}</div></div></div>
+          <div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">Unallocated</div><strong>{{ payment_exceptions.unallocated_count }}</strong><div class="small">{{ company.currency_code }} {{ payment_exceptions.unallocated_amount|floatformat:2 }}</div></div></div>
+          <div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">Overdue invoices</div><strong>{{ payment_exceptions.overdue_invoice_count }}</strong><div class="small">{{ company.currency_code }} {{ payment_exceptions.overdue_invoice_amount|floatformat:2 }}</div></div></div>
+        </div>
+        <a class="btn btn-sm btn-outline-primary mt-3" href="{% url 'staff_payment_reconciliation' %}">Open reconciliation</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-1">
+  <div class="col-lg-6">
+    <h2 class="h6 text-muted text-uppercase mb-2">Stock velocity (last 30 days)</h2>
+    <div class="table-responsive card border-0 shadow-sm">
+      <table class="table table-sm mb-0">
+        <thead class="table-light"><tr><th>Item</th><th class="text-end">Sold</th><th class="text-end">On hand</th><th class="text-end">Days cover</th></tr></thead>
+        <tbody>
+          {% for row in stock_velocity_30 %}
+          <tr><td>{{ row.description }}</td><td class="text-end">{{ row.qty }}</td><td class="text-end">{% if row.on_hand is None %}—{% else %}{{ row.on_hand }}{% endif %}</td><td class="text-end">{% if row.days_cover is None %}—{% else %}{{ row.days_cover }}{% endif %}</td></tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-muted">No sales velocity yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <h2 class="h6 text-muted text-uppercase mb-2">Top customers (last 90 days)</h2>
+    <div class="table-responsive card border-0 shadow-sm">
+      <table class="table table-sm mb-0">
+        <thead class="table-light"><tr><th>Customer</th><th class="text-end">Docs</th><th class="text-end">Revenue</th><th class="text-end">Balance</th></tr></thead>
+        <tbody>
+          {% for row in top_customers_90 %}
+          <tr><td>{{ row.customer }}</td><td class="text-end">{{ row.documents }}</td><td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.balance|floatformat:2 }}</td></tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-muted">No customer revenue in this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4">
+  <h2 class="h6 text-muted text-uppercase mb-2">Highest gross-profit lines (last 30 days)</h2>
+  <div class="table-responsive card border-0 shadow-sm">
+    <table class="table table-sm mb-0">
+      <thead class="table-light"><tr><th>Line</th><th>Document</th><th class="text-end">Revenue</th><th class="text-end">Cost</th><th class="text-end">Profit</th><th class="text-end">Margin</th></tr></thead>
+      <tbody>
+        {% for row in top_margin_lines_30 %}
+        <tr><td>{{ row.description }}</td><td>{{ row.document }}</td><td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.cost|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.profit|floatformat:2 }}</td><td class="text-end">{{ row.margin }}%</td></tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-muted">No margin lines in this period.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

@@ -1,0 +1,196 @@
+{% extends "staff_base.html" %}
+{% block title %}Bench {{ job.number }}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ job.number }}</h1>
+    <p class="text-muted mb-0">{{ job.title }}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'staff_job_bench' %}">Bench</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_job_labels' job.pk %}" target="_blank" rel="noopener noreferrer">Labels</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_job_pdf' job.pk %}" target="_blank" rel="noopener noreferrer">PDF</a>
+    <a class="btn btn-primary" href="{% url 'staff_job_edit' job.pk %}">Edit full card</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Customer</h2>
+        <p class="mb-1">{{ job.customer.name }}</p>
+        <p class="small text-muted mb-0">{{ job.customer.email }}{% if job.customer.phone %} / {{ job.customer.phone }}{% endif %}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Device</h2>
+        <p class="mb-1">{{ job.device_type|default:"Device" }}{% if job.device_make or job.device_model %} / {{ job.device_make }} {{ job.device_model }}{% endif %}</p>
+        <p class="small text-muted mb-0">SN {{ job.serial_number|default:"-" }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100 {% if job.is_overdue %}border-danger{% endif %}">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Status</h2>
+        <p class="mb-1">{{ job.get_status_display }} / {{ job.get_priority_display }}</p>
+        <p class="small mb-0">{% if job.due_in_label %}<span class="badge {% if job.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ job.due_in_label }}</span>{% else %}<span class="text-muted">No SLA target</span>{% endif %}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Move workflow</h2>
+    {% if next_status_choices %}
+    <div class="d-flex flex-wrap gap-2">
+      {% for value,label in next_status_choices %}
+      <form method="post" action="{% url 'staff_job_bench_status' job.pk %}" class="d-flex gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="{{ value }}">
+        <input type="hidden" name="note" value="Bench quick action">
+        <button class="btn btn-outline-primary" type="submit">{{ label }}</button>
+      </form>
+      {% endfor %}
+    </div>
+    <details class="mt-3">
+      <summary class="btn btn-sm btn-outline-secondary">Move with note</summary>
+      <form method="post" action="{% url 'staff_job_bench_status' job.pk %}" class="row g-2 mt-2">
+        {% csrf_token %}
+        <div class="col-md-4">
+          <label class="form-label small">Next status</label>
+          <select class="form-select" name="status" required>
+            {% for value,label in next_status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Status note</label>
+          <input class="form-control" name="note" maxlength="300">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-primary w-100">Move</button>
+        </div>
+      </form>
+    </details>
+    {% else %}
+    <p class="text-muted mb-0">This job has reached a terminal status.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Work notes</h2>
+        <p class="small text-muted mb-1">Reported</p>
+        <p>{{ job.problem_reported|default:"-"|linebreaks }}</p>
+        <p class="small text-muted mb-1">Diagnosis</p>
+        <p>{{ job.diagnosis|default:"-"|linebreaks }}</p>
+        <p class="small text-muted mb-1">Resolution</p>
+        <p>{{ job.resolution|default:"-"|linebreaks }}</p>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Add note</h2>
+        <form method="post" action="{% url 'staff_job_note' job.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'staff_job_bench_detail' job.pk %}">
+          <div class="mb-2">{{ note_form.body }}</div>
+          <div class="form-check mb-2">{{ note_form.is_internal }} {{ note_form.is_internal.label_tag }}</div>
+          <button class="btn btn-primary">Add note</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Timeline</h2>
+        {% for ev in status_events %}
+        <div class="border-bottom pb-2 mb-2">
+          <strong>{{ ev.to_status|title }}</strong>
+          <span class="small text-muted">{{ ev.created_at|date:"Y-m-d H:i" }}{% if ev.actor %} / {{ ev.actor.get_username }}{% endif %}</span>
+          {% if ev.note %}<div class="small text-muted">{{ ev.note }}</div>{% endif %}
+        </div>
+        {% empty %}
+        <p class="text-muted mb-0">No status events yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Parts used</h2>
+        <div class="table-responsive mb-3">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Item</th><th class="text-end">Qty</th><th>Note</th></tr></thead>
+            <tbody>
+              {% for u in job.inventory_adjustments.all %}
+              <tr><td>{% if u.product_variant %}{{ u.product_variant }}{% else %}{{ u.product }}{% endif %}</td><td class="text-end">{{ u.quantity_delta }}</td><td class="small">{{ u.note|default:"-" }}</td></tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-muted">No parts recorded.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <form method="post" action="{% url 'staff_job_stock_use' job.pk %}" class="row g-2 align-items-end">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'staff_job_bench_detail' job.pk %}">
+          <div class="col-md-5"><label class="form-label small">Product</label>{{ job_stock_form.product }}</div>
+          <div class="col-md-4"><label class="form-label small">Option</label>{{ job_stock_form.product_variant }}</div>
+          <div class="col-md-3"><label class="form-label small">Qty</label>{{ job_stock_form.quantity_delta }}</div>
+          <div class="col-12"><label class="form-label small">Note</label>{{ job_stock_form.note }}</div>
+          <div class="col-12"><button class="btn btn-primary">Record part</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Time entry</h2>
+        <form method="post" action="{% url 'staff_job_time' job.pk %}" class="row g-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'staff_job_bench_detail' job.pk %}">
+          <div class="col-md-6"><label class="form-label small">Technician</label>{{ time_form.technician }}</div>
+          <div class="col-md-6"><label class="form-label small">Minutes</label>{{ time_form.minutes }}</div>
+          <div class="col-md-6"><label class="form-label small">Started</label>{{ time_form.started_at }}</div>
+          <div class="col-md-6"><label class="form-label small">Ended</label>{{ time_form.ended_at }}</div>
+          <div class="col-12"><label class="form-label small">Note</label>{{ time_form.note }}</div>
+          <div class="col-12"><div class="form-check">{{ time_form.is_billable }} <label class="form-check-label small" for="{{ time_form.is_billable.id_for_label }}">Billable</label></div></div>
+          <div class="col-12"><button class="btn btn-primary">Add time</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Photos</h2>
+        <div class="row g-2 mb-3">
+          {% for a in job.attachments.all %}
+          <div class="col-6"><img class="img-fluid rounded border" src="{{ a.image.url }}" alt="{{ a.caption|default:job.number }}"></div>
+          {% empty %}
+          <p class="text-muted small mb-0">No photos yet.</p>
+          {% endfor %}
+        </div>
+        <form method="post" action="{% url 'staff_job_attachment' job.pk %}" enctype="multipart/form-data" class="row g-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'staff_job_bench_detail' job.pk %}">
+          <div class="col-md-6"><label class="form-label small">Image</label>{{ attachment_form.image }}</div>
+          <div class="col-md-6"><label class="form-label small">Caption</label>{{ attachment_form.caption }}</div>
+          <div class="col-12"><div class="form-check">{{ attachment_form.show_to_customer }} <label class="form-check-label small" for="{{ attachment_form.show_to_customer.id_for_label }}">Show in customer portal</label></div></div>
+          <div class="col-12"><button class="btn btn-primary">Upload photo</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
