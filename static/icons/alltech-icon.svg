@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ALLTECH Hub">
+  <rect width="512" height="512" rx="96" fill="#0b1f33"/>
+  <path fill="#8ec5ff" d="M256 64 72 432h80l32-72h144l32 72h80L256 64Zm-44 232 44-100 44 100h-88Z"/>
+  <path fill="#ffffff" d="M176 424h160v32H176z"/>
+</svg>

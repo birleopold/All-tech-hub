@@ -5,8 +5,9 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
+from billing.models import CommercialDocument, CommercialLine
 from catalog.models import Category, Product, ProductSerial, ProductVariant
-from core.models import AuditEvent
+from core.models import AuditEvent, SupportTicket
 from crm.models import Customer
 from inventory.forms import JobStockUseForm
 from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
@@ -152,6 +153,80 @@ class LabelSheetViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, take.reference)
         self.assertContains(response, "LP-100-USB")
+
+
+class WarrantyCenterViewTests(TestCase):
+    def setUp(self):
+        self.cat = Category.objects.create(name="Warranty", slug="warranty")
+        self.customer = Customer.objects.create(
+            name="Ada Client",
+            email="ada@example.com",
+            phone="+254700000001",
+        )
+        self.product = Product.objects.create(
+            category=self.cat,
+            name="Business laptop",
+            slug="business-laptop",
+            sku="BL-14",
+            price=Decimal("1200"),
+            kind=Product.KIND_PHYSICAL,
+            stock_quantity=1,
+        )
+        self.serial = ProductSerial.objects.create(
+            product=self.product,
+            serial_number="SN-RMA-900",
+            imei="IMEI-RMA-900",
+            status=ProductSerial.STATUS_SOLD,
+            sold_to=self.customer,
+            sold_at="2026-01-15",
+            warranty_months=12,
+        )
+        self.job = JobCard.objects.create(
+            customer=self.customer,
+            title="Intermittent display fault",
+            status=JobCard.STATUS_DIAGNOSING,
+            serial_number="SN-RMA-900",
+            device_make="Lenovo",
+            device_model="T14",
+        )
+        self.ticket = SupportTicket.objects.create(
+            customer=self.customer,
+            subject="Warranty claim for display",
+            description="Customer reports a display issue.",
+            category=SupportTicket.CATEGORY_WARRANTY,
+            related_serial=self.serial,
+        )
+        self.document = CommercialDocument.objects.create(
+            doc_type=CommercialDocument.TYPE_INVOICE,
+            number="INV-RMA-900",
+            customer=self.customer,
+        )
+        CommercialLine.objects.create(
+            document=self.document,
+            product=self.product,
+            description="Business laptop",
+            sku="BL-14",
+            serial_number="SN-RMA-900",
+            warranty="12 months",
+            quantity=1,
+            unit_price=Decimal("1200"),
+        )
+        self.user = User.objects.create_user(
+            "warranty-user", "warranty@example.com", "pw", is_staff=True
+        )
+
+    def test_lookup_connects_serial_ticket_job_and_document_line(self):
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("staff_warranty_center"), {"q": "SN-RMA-900"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Business laptop")
+        self.assertContains(response, "Under warranty")
+        self.assertContains(response, self.ticket.reference)
+        self.assertContains(response, "Intermittent display fault")
+        self.assertContains(response, "INV-RMA-900")
+        self.assertContains(response, "12 months")
 
 
 class StockTakeTests(TestCase):

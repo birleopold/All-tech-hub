@@ -207,6 +207,120 @@ def staff_export_documents_csv(request):
     return response
 
 
+def staff_export_stock_velocity_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    today = timezone.localdate()
+    start_30 = today - timedelta(days=30)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="stock_velocity_30d.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["description", "sold_30d", "orders", "on_hand", "days_cover"])
+    for row in ReportsHomeView._stock_velocity(start_30):
+        writer.writerow(
+            [
+                row["description"],
+                row["qty"],
+                row["orders"],
+                "" if row["on_hand"] is None else row["on_hand"],
+                "" if row["days_cover"] is None else row["days_cover"],
+            ]
+        )
+    return response
+
+
+def staff_export_payment_exceptions_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="payment_exceptions.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["kind", "reference", "customer", "amount", "method", "date"])
+    for payment in DocumentPayment.objects.filter(reconciled=False).select_related(
+        "document"
+    ):
+        writer.writerow(
+            [
+                "unreconciled_payment",
+                payment.reference or payment.document.number,
+                payment.document.display_customer_name,
+                payment.amount,
+                payment.get_method_display(),
+                payment.recorded_at.date().isoformat(),
+            ]
+        )
+    for payment in AccountPayment.objects.select_related("customer"):
+        if payment.unallocated_amount <= 0:
+            continue
+        writer.writerow(
+            [
+                "unallocated_account_payment",
+                payment.reference,
+                payment.customer_name,
+                payment.unallocated_amount,
+                payment.get_method_display(),
+                payment.recorded_at.date().isoformat(),
+            ]
+        )
+    for doc in CommercialDocument.objects.filter(
+        doc_type=CommercialDocument.TYPE_INVOICE,
+        due_date__lt=timezone.localdate(),
+    ).exclude(
+        status__in=[
+            CommercialDocument.STATUS_PAID,
+            CommercialDocument.STATUS_CANCELLED,
+        ]
+    ):
+        if doc.balance_due <= 0:
+            continue
+        writer.writerow(
+            [
+                "overdue_invoice",
+                doc.number,
+                doc.display_customer_name,
+                doc.balance_due,
+                "",
+                doc.due_date.isoformat() if doc.due_date else "",
+            ]
+        )
+    return response
+
+
+def staff_export_customer_value_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    start_90 = timezone.localdate() - timedelta(days=90)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="customer_value_90d.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["customer", "documents", "revenue", "balance"])
+    for row in ReportsHomeView._top_customers(start_90):
+        writer.writerow([row["customer"], row["documents"], row["revenue"], row["balance"]])
+    return response
+
+
+def staff_export_margin_lines_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    start_30 = timezone.localdate() - timedelta(days=30)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="margin_lines_30d.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["description", "document", "revenue", "cost", "profit", "margin_percent"])
+    for row in ReportsHomeView._top_margin_lines(start_30):
+        writer.writerow(
+            [
+                row["description"],
+                row["document"],
+                row["revenue"],
+                row["cost"],
+                row["profit"],
+                row["margin"],
+            ]
+        )
+    return response
+
+
 class ReportsHomeView(StaffRequiredMixin, TemplateView):
     template_name = "reports/home.html"
 

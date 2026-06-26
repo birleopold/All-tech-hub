@@ -41,6 +41,7 @@
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_account_payment_create' %}" data-bs-dismiss="offcanvas">Account payment</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_payment_reconciliation' %}" data-bs-dismiss="offcanvas">Payment reconciliation</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_inventory' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_inventory' or 'staff_product' in u %}aria-current="page"{% endif %}>Inventory</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_warranty_center' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_warranty_center' %}aria-current="page"{% endif %}>Warranty / RMA</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_stocktakes' %}" data-bs-dismiss="offcanvas" {% if 'staff_stocktake' in u %}aria-current="page"{% endif %}>Stock takes</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_purchasing' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_purchasing' or 'staff_po' in u %}aria-current="page"{% endif %}>Purchasing</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_job_bench' %}" data-bs-dismiss="offcanvas" {% if 'staff_job_bench' in u %}aria-current="page"{% endif %}>Technician bench</a></li>
@@ -83,6 +84,7 @@
         <li><a class="nav-link px-0" href="{% url 'staff_account_payment_create' %}">Account payment</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_payment_reconciliation' %}">Payment reconciliation</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_inventory' %}" {% if resolve_url_name == 'staff_inventory' or 'staff_product' in resolve_url_name %}aria-current="page"{% endif %}>Inventory</a></li>
+        <li><a class="nav-link px-0" href="{% url 'staff_warranty_center' %}" {% if resolve_url_name == 'staff_warranty_center' %}aria-current="page"{% endif %}>Warranty / RMA</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_stocktakes' %}" {% if 'staff_stocktake' in resolve_url_name %}aria-current="page"{% endif %}>Stock takes</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_purchasing' %}" {% if resolve_url_name == 'staff_purchasing' or 'staff_po' in resolve_url_name %}aria-current="page"{% endif %}>Purchasing</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_job_bench' %}" {% if 'staff_job_bench' in resolve_url_name %}aria-current="page"{% endif %}>Technician bench</a></li>

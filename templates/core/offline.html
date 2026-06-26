@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Offline{% endblock %}
+{% block content %}
+<div class="container py-5 col-lg-8">
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <p class="text-uppercase small text-muted mb-2">Offline mode</p>
+      <h1 class="h3 mb-3">You are offline</h1>
+      <p class="mb-3">ALLTECH Hub could not reach the network. Recently opened pages may still be available from this device.</p>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="/">Try home</a>
+        <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Customer portal</a>
+        {% if user.is_staff %}<a class="btn btn-outline-secondary" href="{% url 'staff_dashboard' %}">Staff dashboard</a>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -29,5 +29,25 @@ urlpatterns = [
         views.staff_export_documents_csv,
         name="staff_export_documents_csv",
     ),
+    path(
+        "reports/export/stock-velocity.csv",
+        views.staff_export_stock_velocity_csv,
+        name="staff_export_stock_velocity_csv",
+    ),
+    path(
+        "reports/export/payment-exceptions.csv",
+        views.staff_export_payment_exceptions_csv,
+        name="staff_export_payment_exceptions_csv",
+    ),
+    path(
+        "reports/export/customer-value.csv",
+        views.staff_export_customer_value_csv,
+        name="staff_export_customer_value_csv",
+    ),
+    path(
+        "reports/export/margin-lines.csv",
+        views.staff_export_margin_lines_csv,
+        name="staff_export_margin_lines_csv",
+    ),
 ]
 

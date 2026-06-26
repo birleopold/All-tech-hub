@@ -11,11 +11,13 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from billing.models import CommercialLine
 from catalog.models import Product, ProductImage, ProductSerial, ProductVariant
 from catalog.stock_alerts import low_stock_products
 from core.audit import log_audit_event
 from core.barcodes import label_payload, repeated_labels
 from core.mixins import StaffRequiredMixin
+from core.models import SupportTicket
 from inventory.forms import JobStockUseForm, StockAdjustmentForm
 from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
 from operations.models import JobCard
@@ -104,6 +106,96 @@ class StockMovementListView(StaffRequiredMixin, ListView):
         return StockMovement.objects.select_related(
             "product", "product_variant", "actor"
         )
+
+
+class WarrantyCenterView(StaffRequiredMixin, TemplateView):
+    template_name = "inventory/warranty_center.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        q = (self.request.GET.get("q") or "").strip()
+        ctx["q"] = q
+        ctx["serials"] = []
+        ctx["jobs"] = []
+        ctx["tickets"] = []
+        ctx["document_lines"] = []
+        if not q:
+            return ctx
+
+        serials = (
+            ProductSerial.objects.select_related("product", "product_variant", "sold_to")
+            .prefetch_related("support_tickets")
+            .filter(
+                Q(serial_number__icontains=q)
+                | Q(imei__icontains=q)
+                | Q(mac_address__icontains=q)
+                | Q(product__name__icontains=q)
+                | Q(product__sku__icontains=q)
+                | Q(product_variant__sku__icontains=q)
+                | Q(sold_to__name__icontains=q)
+                | Q(sold_to__email__icontains=q)
+                | Q(sold_to__phone__icontains=q)
+            )
+            .distinct()[:25]
+        )
+        ctx["serials"] = serials
+        ctx["jobs"] = (
+            JobCard.objects.select_related("customer", "assigned_to")
+            .filter(
+                Q(number__icontains=q)
+                | Q(title__icontains=q)
+                | Q(device_make__icontains=q)
+                | Q(device_model__icontains=q)
+                | Q(serial_number__icontains=q)
+                | Q(customer__name__icontains=q)
+                | Q(customer__email__icontains=q)
+                | Q(customer__phone__icontains=q)
+            )
+            .distinct()[:25]
+        )
+        ctx["tickets"] = (
+            SupportTicket.objects.select_related(
+                "customer",
+                "related_serial",
+                "related_serial__product",
+                "assigned_to",
+            )
+            .filter(
+                Q(reference__icontains=q)
+                | Q(subject__icontains=q)
+                | Q(category__icontains=q)
+                | Q(customer__name__icontains=q)
+                | Q(customer__email__icontains=q)
+                | Q(customer__phone__icontains=q)
+                | Q(related_serial__serial_number__icontains=q)
+                | Q(related_serial__imei__icontains=q)
+                | Q(related_serial__mac_address__icontains=q)
+            )
+            .distinct()[:25]
+        )
+        ctx["document_lines"] = (
+            CommercialLine.objects.select_related(
+                "document",
+                "document__customer",
+                "product",
+                "product_variant",
+            )
+            .filter(
+                Q(serial_number__icontains=q)
+                | Q(description__icontains=q)
+                | Q(sku__icontains=q)
+                | Q(warranty__icontains=q)
+                | Q(document__number__icontains=q)
+                | Q(document__customer_name__icontains=q)
+                | Q(document__customer_email__icontains=q)
+                | Q(document__customer_phone__icontains=q)
+                | Q(document__customer__name__icontains=q)
+                | Q(document__customer__email__icontains=q)
+                | Q(document__customer__phone__icontains=q)
+            )
+            .distinct()[:25]
+        )
+        return ctx
 
 
 class ProductManageListView(StaffRequiredMixin, ListView):

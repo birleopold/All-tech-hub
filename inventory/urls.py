@@ -9,6 +9,11 @@ urlpatterns = [
         views.StockMovementListView.as_view(),
         name="staff_stock_movements",
     ),
+    path(
+        "inventory/warranty/",
+        views.WarrantyCenterView.as_view(),
+        name="staff_warranty_center",
+    ),
     path("inventory/adjust/", views.create_stock_adjustment, name="staff_stock_adjust"),
     path(
         "inventory/jobs/<int:job_pk>/part/",

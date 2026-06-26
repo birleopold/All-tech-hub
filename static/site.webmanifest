@@ -1,10 +1,44 @@
 {
   "name": "ALLTECH Hub",
   "short_name": "ALLTECH",
-  "description": "IT & retail — shop, services, and customer portal.",
+  "description": "IT and retail operations, shop, services, and customer portal.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0b1f33",
   "theme_color": "#0b1f33",
-  "lang": "en"
+  "lang": "en",
+  "categories": ["business", "productivity", "shopping"],
+  "icons": [
+    {
+      "src": "/static/icons/alltech-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/alltech-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Customer portal",
+      "short_name": "Portal",
+      "url": "/portal/"
+    },
+    {
+      "name": "Staff dashboard",
+      "short_name": "Staff",
+      "url": "/staff/"
+    },
+    {
+      "name": "Technician bench",
+      "short_name": "Bench",
+      "url": "/staff/jobs/bench/"
+    }
+  ]
 }

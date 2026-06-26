@@ -27,6 +27,20 @@ class ReportAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response["Content-Type"].startswith("text/csv"))
 
+    def test_phase_three_exports_are_csv(self):
+        user = User.objects.create_user("report-exporter", password="pw", is_staff=True)
+        self.client.force_login(user)
+        names = [
+            "staff_export_stock_velocity_csv",
+            "staff_export_payment_exceptions_csv",
+            "staff_export_customer_value_csv",
+            "staff_export_margin_lines_csv",
+        ]
+        for name in names:
+            response = self.client.get(reverse(name))
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response["Content-Type"].startswith("text/csv"))
+
     def test_report_contains_fulfillment_summary(self):
         user = User.objects.create_user("analyst", password="pw", is_staff=True)
         self.client.force_login(user)

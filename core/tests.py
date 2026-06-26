@@ -1,15 +1,20 @@
 from datetime import time
+from decimal import Decimal
 
 from django.contrib.auth.models import Permission, User
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
+from billing.models import CommercialDocument, DocumentPayment, allocate_document_number
 from catalog.models import Category, Product
 from core.barcodes import normalize_code39
 from core.filters import apply_job_filters, apply_ticket_filters
 from core.models import (
     BusinessHours,
     CompanySettings,
+    StaffNotification,
     StaffSavedSearch,
     StaffTwoFactor,
     SupportTicket,
@@ -82,6 +87,78 @@ class CompanyCurrencyTests(TestCase):
     def test_singleton_loads_ugx(self):
         company = CompanySettings.load()
         self.assertEqual(company.currency_code, "UGX")
+
+
+class PlatformMaturityTests(TestCase):
+    def test_healthz_returns_ok(self):
+        response = self.client.get(reverse("healthz"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+
+    def test_service_worker_is_root_scoped_javascript(self):
+        response = self.client.get(reverse("service_worker"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Service-Worker-Allowed"], "/")
+        self.assertIn("application/javascript", response["Content-Type"])
+        self.assertContains(response, "CACHE_NAME")
+
+    def test_offline_page_renders(self):
+        response = self.client.get(reverse("offline"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "You are offline")
+
+
+class OperationsMonitorCommandTests(TestCase):
+    def setUp(self):
+        self.manager = User.objects.create_user(
+            "ops-manager", password="pw", is_staff=True, is_superuser=True
+        )
+        self.customer = Customer.objects.create(name="Monitor", email="monitor@example.com")
+        self.category = Category.objects.create(name="Monitor", slug="monitor")
+
+    def test_monitor_creates_and_deduplicates_notifications(self):
+        from datetime import timedelta
+
+        Product.objects.create(
+            category=self.category,
+            name="Low cable",
+            slug="low-cable-monitor",
+            price=Decimal("10.00"),
+            stock_quantity=1,
+            reorder_level=5,
+        )
+        job = JobCard.objects.create(
+            customer=self.customer,
+            title="Overdue repair",
+            priority=JobCard.PRIORITY_URGENT,
+            assigned_to=self.manager,
+        )
+        JobCard.objects.filter(pk=job.pk).update(
+            received_on=timezone.now() - timedelta(hours=24)
+        )
+        doc = CommercialDocument.objects.create(
+            doc_type=CommercialDocument.TYPE_INVOICE,
+            number=allocate_document_number("INV"),
+            customer=self.customer,
+            status=CommercialDocument.STATUS_ISSUED,
+            issue_date=timezone.localdate() - timedelta(days=10),
+            due_date=timezone.localdate() - timedelta(days=1),
+            total=Decimal("100.00"),
+        )
+        DocumentPayment.objects.create(
+            document=doc,
+            amount=Decimal("25.00"),
+            method=DocumentPayment.METHOD_CASH,
+            recorded_by=self.manager,
+        )
+
+        call_command("monitor_operations")
+        first_count = StaffNotification.objects.filter(recipient=self.manager).count()
+        self.assertGreaterEqual(first_count, 3)
+
+        call_command("monitor_operations")
+        second_count = StaffNotification.objects.filter(recipient=self.manager).count()
+        self.assertEqual(second_count, first_count)
 
 
 class ListFilterTests(TestCase):

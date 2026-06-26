@@ -1,0 +1,175 @@
+{% extends "staff_base.html" %}
+{% block title %}Warranty / RMA center - {{ block.super }}{% endblock %}
+{% block staff_content %}
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Warranty / RMA center</h1>
+    <p class="text-muted mb-0">Lookup serials, customers, repair jobs, tickets, and sales documents.</p>
+  </div>
+  <form class="d-flex gap-2" method="get" role="search">
+    <label class="visually-hidden" for="warranty-q">Search warranty records</label>
+    <input class="form-control" id="warranty-q" name="q" value="{{ q }}" placeholder="Serial, IMEI, MAC, customer, document">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </form>
+</div>
+
+{% if not q %}
+  <div class="alert alert-info mb-0">
+    Start with a serial number, IMEI, MAC address, customer name, phone, email, job number, ticket reference, SKU, or document number.
+  </div>
+{% else %}
+  <div class="row g-3 mb-3">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Serial matches</p>
+          <p class="display-6 mb-0">{{ serials|length }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Tickets</p>
+          <p class="display-6 mb-0">{{ tickets|length }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Jobs</p>
+          <p class="display-6 mb-0">{{ jobs|length }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <p class="text-muted small text-uppercase mb-1">Document lines</p>
+          <p class="display-6 mb-0">{{ document_lines|length }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h2 class="h5 mb-0">Serial case files</h2>
+    </div>
+    <div class="row g-3">
+      {% for serial in serials %}
+        <div class="col-xl-6">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                  <h3 class="h6 mb-1">{{ serial.product.name }}</h3>
+                  <p class="mb-1">
+                    <span class="fw-semibold">SN:</span> {{ serial.serial_number }}
+                    {% if serial.imei %}<span class="text-muted">/ IMEI {{ serial.imei }}</span>{% endif %}
+                    {% if serial.mac_address %}<span class="text-muted">/ MAC {{ serial.mac_address }}</span>{% endif %}
+                  </p>
+                  <p class="text-muted small mb-0">
+                    {{ serial.product_variant.name|default:"Base product" }} · {{ serial.get_status_display }}
+                  </p>
+                </div>
+                <span class="badge {% if serial.is_under_warranty %}text-bg-success{% elif serial.warranty_expires_on %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+                  {% if serial.is_under_warranty %}Under warranty{% elif serial.warranty_expires_on %}Expired{% else %}No warranty{% endif %}
+                </span>
+              </div>
+              <dl class="row small mt-3 mb-0">
+                <dt class="col-sm-4">Customer</dt>
+                <dd class="col-sm-8">{{ serial.sold_to.name|default:"Not sold" }}</dd>
+                <dt class="col-sm-4">Sold</dt>
+                <dd class="col-sm-8">{{ serial.sold_at|default:"-" }}</dd>
+                <dt class="col-sm-4">Warranty until</dt>
+                <dd class="col-sm-8">{{ serial.warranty_expires_on|default:"-" }}</dd>
+                <dt class="col-sm-4">Tickets</dt>
+                <dd class="col-sm-8">{{ serial.support_tickets.count }}</dd>
+              </dl>
+              <div class="mt-3 d-flex gap-2 flex-wrap">
+                <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_serial_labels' serial.pk %}">Labels</a>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_search' %}?q={{ serial.serial_number|urlencode }}">Global search</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <div class="col-12">
+          <div class="alert alert-light border mb-0">No matching serials.</div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h5">Support tickets</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Ticket</th><th>Customer</th><th>Category</th><th>Status</th><th>Serial</th><th>Owner</th></tr></thead>
+        <tbody>
+          {% for ticket in tickets %}
+            <tr>
+              <td><a href="{% url 'staff_ticket_detail' ticket.pk %}">{{ ticket.reference }}</a><br><span class="text-muted small">{{ ticket.subject }}</span></td>
+              <td>{{ ticket.customer.name }}</td>
+              <td>{{ ticket.get_category_display }}</td>
+              <td>{{ ticket.get_status_display }}</td>
+              <td>{{ ticket.related_serial.serial_number|default:"-" }}</td>
+              <td>{% if ticket.assigned_to %}{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}{% else %}-{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-muted">No matching tickets.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h5">Repair jobs</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Job</th><th>Customer</th><th>Device</th><th>Serial</th><th>Status</th><th>Priority</th></tr></thead>
+        <tbody>
+          {% for job in jobs %}
+            <tr>
+              <td><a href="{% url 'staff_job_detail' job.pk %}">{{ job.number }}</a><br><span class="text-muted small">{{ job.title }}</span></td>
+              <td>{{ job.customer.name }}</td>
+              <td>{{ job.device_make }} {{ job.device_model }}</td>
+              <td>{{ job.serial_number|default:"-" }}</td>
+              <td>{{ job.get_status_display }}</td>
+              <td>{{ job.get_priority_display }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-muted">No matching jobs.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h5">Sales and warranty documents</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Document</th><th>Customer</th><th>Line</th><th>SKU</th><th>Serial</th><th>Warranty</th></tr></thead>
+        <tbody>
+          {% for line in document_lines %}
+            <tr>
+              <td><a href="{% url 'staff_document_view' line.document.pk %}">{{ line.document.number }}</a><br><span class="text-muted small">{{ line.document.get_doc_type_display }}</span></td>
+              <td>{{ line.document.display_customer_name }}</td>
+              <td>{{ line.description }}</td>
+              <td>{{ line.sku|default:"-" }}</td>
+              <td>{{ line.serial_number|default:"-" }}</td>
+              <td>{{ line.warranty|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="text-muted">No matching document lines.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}
