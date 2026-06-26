@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
-from billing import views as billing_views
+from billing import customer_portal_actions, views as billing_views
 from core import api_views as core_api
 from core import auth_views as core_auth
 
@@ -14,13 +14,18 @@ urlpatterns = [
     path("api/v1/orders/lookup/", core_api.api_order_lookup, name="api_order_lookup"),
     path(
         "quote/<uuid:token>/",
-        billing_views.quote_customer_portal,
+        customer_portal_actions.customer_quote_action_center,
         name="quote_customer_portal",
     ),
     path(
         "pay/<uuid:token>/",
-        billing_views.payment_request_portal,
+        customer_portal_actions.customer_payment_action_center,
         name="payment_request_portal",
+    ),
+    path(
+        "public/document/<uuid:token>/pdf/",
+        customer_portal_actions.customer_document_pdf,
+        name="customer_document_pdf",
     ),
     path("admin/", admin.site.urls),
     path(
