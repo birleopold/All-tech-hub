@@ -1,7 +1,120 @@
 {% extends "base.html" %}
-{% block title %}Customer action center{% endblock %}
+{% block title %}{{ document.get_doc_type_display }} {{ document.number }}{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <h1>Customer action center</h1>
-</div>
+<section class="py-4 py-lg-5">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <p class="text-primary small fw-semibold text-uppercase mb-1">Customer action center</p>
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+              <div>
+                <h1 class="h3 mb-1">{{ document.get_doc_type_display }} {{ document.number }}</h1>
+                <p class="text-muted mb-0">{{ document.display_customer_name }}{% if document.display_customer_company %} — {{ document.display_customer_company }}{% endif %}</p>
+              </div>
+              <span class="badge rounded-pill text-bg-primary px-3 py-2">{{ document.get_status_display }}</span>
+            </div>
+            <div class="row g-3 mt-3 small">
+              <div class="col-sm-4"><span class="text-muted d-block">Issue date</span><strong>{{ document.issue_date }}</strong></div>
+              {% if document.due_date %}<div class="col-sm-4"><span class="text-muted d-block">Due / valid until</span><strong>{{ document.due_date }}</strong></div>{% endif %}
+              <div class="col-sm-4"><span class="text-muted d-block">Total</span><strong>{{ company.currency_code }} {{ document.total|floatformat:2 }}</strong></div>
+              {% if document.supports_payment_request %}
+              <div class="col-sm-4"><span class="text-muted d-block">Paid</span><strong>{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</strong></div>
+              <div class="col-sm-4"><span class="text-muted d-block">Balance</span><strong>{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</strong></div>
+              {% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+              <a class="btn btn-outline-primary" href="{% url 'customer_document_pdf' public_token %}" target="_blank" rel="noopener noreferrer">Open PDF</a>
+              <a class="btn btn-primary" href="{% url 'customer_document_pdf' public_token %}?download=1">Download PDF</a>
+            </div>
+          </div>
+        </div>
+
+        {% if document.doc_type == 'quote' %}
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h2 class="h5 mb-3">Quotation response</h2>
+            {% if document.quote_customer_accepted is True %}
+              <div class="alert alert-success mb-0">Accepted{% if document.quote_customer_signature_name %} by {{ document.quote_customer_signature_name }}{% endif %}.</div>
+            {% elif document.quote_customer_accepted is False %}
+              <div class="alert alert-secondary mb-0">Declined{% if document.quote_customer_decline_reason %}: {{ document.quote_customer_decline_reason }}{% endif %}</div>
+            {% else %}
+              <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-8">
+                  <label class="form-label" for="signature_name">Your full name</label>
+                  <input class="form-control" id="signature_name" name="signature_name" placeholder="Name of approving customer">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <button class="btn btn-success w-100" type="submit" name="action" value="accept">Accept quotation</button>
+                </div>
+              </form>
+              <form method="post" class="row g-3 mt-2">
+                {% csrf_token %}
+                <div class="col-md-8"><input class="form-control" name="decline_reason" placeholder="Optional decline reason"></div>
+                <div class="col-md-4"><button class="btn btn-outline-secondary w-100" type="submit" name="action" value="decline">Decline</button></div>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm">
+          <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+              <thead class="table-light"><tr><th>Description</th><th class="text-end">Qty</th>{% if not document.hide_prices %}<th class="text-end">Unit</th><th class="text-end">Total</th>{% endif %}</tr></thead>
+              <tbody>
+                {% for line in document.lines.all %}
+                <tr>
+                  <td>{{ line.description }}{% if line.line_note %}<div class="small text-muted">{{ line.line_note }}</div>{% endif %}</td>
+                  <td class="text-end">{{ line.quantity }}</td>
+                  {% if not document.hide_prices %}<td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>{% endif %}
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-muted">No line items.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        {% if can_pay %}
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-body p-4">
+            <h2 class="h5 mb-2">Submit payment reference</h2>
+            <p class="small text-muted">Staff will verify the reference{% if gateway.auto_capture_enabled %}; sandbox auto-recording is enabled{% endif %}.</p>
+            <form method="post" class="vstack gap-3">
+              {% csrf_token %}
+              <div><label class="form-label" for="amount">Amount</label><input class="form-control" id="amount" name="amount" type="number" step="0.01" min="0.01" value="{{ document.balance_due|floatformat:2 }}"></div>
+              <div><label class="form-label" for="method">Method</label><select class="form-select" id="method" name="method">{% for value,label in payment_methods %}<option value="{{ value }}" {% if value == 'mobile_money' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div><label class="form-label" for="reference">Transaction reference</label><input class="form-control" id="reference" name="reference" required></div>
+              <div><label class="form-label" for="payer_name">Your name</label><input class="form-control" id="payer_name" name="payer_name" value="{{ document.display_customer_name }}"></div>
+              <div><label class="form-label" for="payer_phone">Phone</label><input class="form-control" id="payer_phone" name="payer_phone" value="{{ document.display_customer_phone }}"></div>
+              <div><label class="form-label" for="payer_email">Email</label><input class="form-control" id="payer_email" name="payer_email" type="email" value="{{ document.display_customer_email }}"></div>
+              <button class="btn btn-success" type="submit" name="action" value="pay">Submit reference</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if document.payments.count %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-4">
+            <h2 class="h5 mb-3">Payment history</h2>
+            {% for payment in document.payments.all %}
+            <div class="border rounded p-2 small mb-2">
+              <div class="d-flex justify-content-between"><strong>{{ company.currency_code }} {{ payment.amount|floatformat:2 }}</strong><span>{{ payment.recorded_at|date:"Y-m-d H:i" }}</span></div>
+              <div class="text-muted">{{ payment.get_method_display }}{% if payment.reference %} · {{ payment.reference }}{% endif %}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}
