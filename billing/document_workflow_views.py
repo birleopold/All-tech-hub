@@ -1,10 +1,28 @@
+from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 
 from billing import views
+from billing.forms import CommercialDocumentForm
 from billing.models import CommercialDocument
+
+
+class WalkInCommercialDocumentForm(CommercialDocumentForm):
+    def __init__(self, *args, **kwargs):
+        args = list(args)
+        if args and hasattr(args[0], "copy"):
+            data = args[0].copy()
+            if not data.get("customer") and not (data.get("customer_name") or "").strip():
+                data["customer_name"] = "Walk-in customer"
+            args[0] = data
+        elif kwargs.get("data") is not None and hasattr(kwargs["data"], "copy"):
+            data = kwargs["data"].copy()
+            if not data.get("customer") and not (data.get("customer_name") or "").strip():
+                data["customer_name"] = "Walk-in customer"
+            kwargs["data"] = data
+        super().__init__(*args, **kwargs)
 
 
 class CommercialDocumentListView(views.CommercialDocumentListView):
@@ -38,6 +56,15 @@ class CommercialDocumentListView(views.CommercialDocumentListView):
 
 
 class CommercialDocumentCreateView(views.CommercialDocumentCreateView):
+    form_class = WalkInCommercialDocumentForm
+
+    def form_invalid(self, form):
+        messages.error(
+            self.request,
+            "The document was not saved. Check the highlighted fields and line items, then try again.",
+        )
+        return super().form_invalid(form)
+
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.POST.get("save_action") == "pdf" and self.object:
@@ -46,6 +73,15 @@ class CommercialDocumentCreateView(views.CommercialDocumentCreateView):
 
 
 class CommercialDocumentUpdateView(views.CommercialDocumentUpdateView):
+    form_class = WalkInCommercialDocumentForm
+
+    def form_invalid(self, form):
+        messages.error(
+            self.request,
+            "The document was not saved. Check the highlighted fields and line items, then try again.",
+        )
+        return super().form_invalid(form)
+
     def form_valid(self, form):
         response = super().form_valid(form)
         if self.request.POST.get("save_action") == "pdf" and self.object:
