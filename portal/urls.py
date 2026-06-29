@@ -22,6 +22,7 @@ urlpatterns = [
     path("orders/<int:pk>/", views.my_order_detail, name="portal_order_detail"),
     path("documents/", views.MyDocumentsView.as_view(), name="portal_documents"),
     path("documents/<int:pk>/pdf/", views.my_document_pdf, name="portal_document_pdf"),
+    path("equipment/", views.MyEquipmentView.as_view(), name="portal_equipment"),
     path("tickets/", views.MyTicketsView.as_view(), name="portal_tickets"),
     path("tickets/new/", views.PortalTicketCreateView.as_view(), name="portal_ticket_create"),
     path("tickets/<int:pk>/", views.my_ticket_detail, name="portal_ticket_detail"),
@@ -31,4 +32,3 @@ urlpatterns = [
     path("wishlist/add/<int:product_id>/", views.wishlist_add, name="portal_wishlist_add"),
     path("wishlist/remove/<int:product_id>/", views.wishlist_remove, name="portal_wishlist_remove"),
 ]
-
