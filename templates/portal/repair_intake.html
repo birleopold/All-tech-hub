@@ -1,16 +1,44 @@
 {% extends "base.html" %}
 {% block title %}Request repair{% endblock %}
 {% block content %}
-<div class="container py-4 col-lg-7">
-  <h1 class="h3 mb-2">Request a repair</h1>
-  <p class="text-muted small mb-4">Tell us about your device. We create a job card in intake and email you updates.</p>
-  <form method="post" class="card border-0 shadow-sm">
-    <div class="card-body">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Submit repair request</button>
-      <a class="btn btn-link" href="{% url 'portal_jobs' %}">My jobs</a>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Repair intake</p>
+        <h1 class="display-6 fw-bold mb-2">Request a repair or diagnosis</h1>
+        <p class="text-white-75 mb-0">Tell us about the device and the issue so we can prepare a proper job card.</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'portal_jobs' %}">My jobs</a>
     </div>
-  </form>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row g-4 justify-content-center">
+    <div class="col-lg-7">
+      <form method="post" class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          {% csrf_token %}
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Device details</p>
+          <h2 class="h4 mb-3">What needs attention?</h2>
+          <p class="text-muted">Include device type, model, symptoms, error messages, and any recent changes like drops, updates, spills, or power issues.</p>
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field.errors }}
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary btn-lg w-100">Submit repair request</button>
+        </div>
+      </form>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm mb-3"><div class="card-body p-4"><span class="home-feature-icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span><h3 class="h5 mt-3">What happens next?</h3><p class="text-muted mb-0">The team reviews your request, creates or updates a job card, then shares updates through the portal.</p></div></div>
+      <div class="card border-0 shadow-sm"><div class="card-body p-4"><span class="home-feature-icon"><i class="bi bi-info-circle" aria-hidden="true"></i></span><h3 class="h5 mt-3">Useful details</h3><p class="text-muted mb-0">Bring chargers, passwords, receipts or accessories only when they are needed for diagnosis.</p></div></div>
+    </div>
+  </div>
 </div>
 {% endblock %}
