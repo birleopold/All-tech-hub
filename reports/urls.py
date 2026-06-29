@@ -1,9 +1,9 @@
 from django.urls import path
 
-from reports import views
+from reports import commission_views, views
 
 urlpatterns = [
-    path("reports/", views.ReportsHomeView.as_view(), name="staff_reports"),
+    path("reports/", commission_views.ReportsHomeView.as_view(), name="staff_reports"),
     path(
         "reports/export/orders.csv",
         views.staff_export_orders_csv,
@@ -26,7 +26,7 @@ urlpatterns = [
     ),
     path(
         "reports/export/documents.csv",
-        views.staff_export_documents_csv,
+        commission_views.staff_export_documents_csv,
         name="staff_export_documents_csv",
     ),
     path(
@@ -41,13 +41,12 @@ urlpatterns = [
     ),
     path(
         "reports/export/customer-value.csv",
-        views.staff_export_customer_value_csv,
+        commission_views.staff_export_customer_value_csv,
         name="staff_export_customer_value_csv",
     ),
     path(
         "reports/export/margin-lines.csv",
-        views.staff_export_margin_lines_csv,
+        commission_views.staff_export_margin_lines_csv,
         name="staff_export_margin_lines_csv",
     ),
 ]
-
