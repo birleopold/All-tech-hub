@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Offline{% endblock %}
 {% block content %}
-<div class="container py-5 col-lg-8">
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
-      <p class="text-uppercase small text-muted mb-2">Offline mode</p>
-      <h1 class="h3 mb-3">You are offline</h1>
-      <p class="mb-3">ALLTECH Hub could not reach the network. Recently opened pages may still be available from this device.</p>
-      <div class="d-flex flex-wrap gap-2">
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5 text-center">
+    <p class="text-uppercase small text-white-50 mb-2">Offline mode</p>
+    <h1 class="display-6 fw-bold mb-3">You are currently offline</h1>
+    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 48rem;">ALLTECH Hub could not reach the network. Recently opened pages may still be available on this device.</p>
+  </div>
+</section>
+
+<div class="container pb-5 col-lg-8">
+  <div class="card border-0 shadow-sm text-center">
+    <div class="card-body p-4 p-lg-5">
+      <i class="bi bi-wifi-off display-5 text-primary" aria-hidden="true"></i>
+      <h2 class="h3 mt-3 mb-2">Check your connection</h2>
+      <p class="text-muted mb-4">Reconnect to the internet, then try opening the page again. You can also go back to a saved page.</p>
+      <div class="d-flex justify-content-center flex-wrap gap-2">
         <a class="btn btn-primary" href="/">Try home</a>
+        <a class="btn btn-outline-primary" href="{% url 'product_list' %}">Catalog</a>
         <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Customer portal</a>
         {% if user.is_staff %}<a class="btn btn-outline-secondary" href="{% url 'staff_dashboard' %}">Staff dashboard</a>{% endif %}
       </div>
