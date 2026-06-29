@@ -1,23 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Support requests{% endblock %}
 {% block content %}
-<div class="container py-4 col-lg-8">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">Support requests</h1>
-    <a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">New request</a>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Customer support</p>
+        <h1 class="display-6 fw-bold mb-2">Support requests</h1>
+        <p class="text-white-75 mb-0">Ask for help, follow replies, and keep a record of support conversations.</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'portal_ticket_create' %}">New request</a>
+    </div>
   </div>
+</section>
+
+<div class="container pb-5 col-lg-9">
+  {% if tickets %}
   <div class="list-group shadow-sm">
     {% for t in tickets %}
-    <a class="list-group-item list-group-item-action" href="{% url 'portal_ticket_detail' t.pk %}">
-      <div class="d-flex justify-content-between">
-        <span><strong>{{ t.reference }}</strong> — {{ t.subject }}</span>
+    <a class="list-group-item list-group-item-action p-3" href="{% url 'portal_ticket_detail' t.pk %}">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div><strong>{{ t.reference }}</strong><span class="text-muted"> — {{ t.subject }}</span><div class="small text-muted mt-1">Updated {{ t.updated_at|date:"Y-m-d H:i" }}</div></div>
         <span class="badge text-bg-light border">{{ t.get_status_display }}</span>
       </div>
-      <span class="small text-muted">Updated {{ t.updated_at|date:"Y-m-d H:i" }}</span>
     </a>
-    {% empty %}
-    <p class="text-muted">No support requests yet.</p>
     {% endfor %}
   </div>
+  {% else %}
+  <div class="card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-life-preserver display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No support requests yet</h2><p class="text-muted mb-4">Open a request when you need help with an order, repair, document or technical issue.</p><a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">New support request</a></div></div>
+  {% endif %}
 </div>
 {% endblock %}
