@@ -1,25 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Portal login{% endblock %}
+{% block title %}Customer portal login{% endblock %}
 {% block content %}
-<div class="container py-5 col-md-4">
-  <h1 class="h4 mb-3">Customer portal login</h1>
-  {% if form.errors %}
-  <div class="alert alert-danger">Invalid username or password.</div>
-  {% endif %}
-  <form method="post" class="card border-0 shadow-sm p-4">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label class="form-label" for="id_username">Username</label>
-      <input type="text" name="username" class="form-control" id="id_username" required autofocus>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5 text-center">
+    <p class="text-uppercase small text-white-50 mb-2">Customer portal</p>
+    <h1 class="display-6 fw-bold mb-3">Access your service history</h1>
+    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 42rem;">Track orders, repair jobs, documents, support tickets and saved items in one place.</p>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      {% if form.errors %}<div class="alert alert-danger border-0 shadow-sm">Invalid username or password.</div>{% endif %}
+      <form method="post" class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          {% csrf_token %}
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Sign in</p>
+          <h2 class="h4 mb-3">Welcome back</h2>
+          <div class="mb-3">
+            <label class="form-label" for="id_username">Username</label>
+            <input type="text" name="username" class="form-control form-control-lg" id="id_username" required autofocus autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_password">Password</label>
+            <input type="password" name="password" class="form-control form-control-lg" id="id_password" required autocomplete="current-password">
+          </div>
+          <input type="hidden" name="next" value="{{ next|default:'/portal/' }}">
+          <button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
+          <p class="small text-muted mt-3 mb-0">No account? <a href="{% url 'portal_signup' %}">Create one</a>.</p>
+        </div>
+      </form>
     </div>
-    <div class="mb-3">
-      <label class="form-label" for="id_password">Password</label>
-      <input type="password" name="password" class="form-control" id="id_password" required>
-    </div>
-    <input type="hidden" name="next" value="{{ next|default:'/portal/' }}">
-    <button type="submit" class="btn btn-primary w-100">Sign in</button>
-  </form>
-  <p class="small text-muted mt-3">No account? <a href="{% url 'portal_signup' %}">Create one</a>.</p>
+  </div>
 </div>
 {% endblock %}
-
