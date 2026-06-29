@@ -7,19 +7,176 @@ document.addEventListener('DOMContentLoaded', function () {
     return;
   }
 
-  if (document.getElementById('download-pdf-save-button')) {
-    return;
+  if (!document.getElementById('download-pdf-save-button')) {
+    var downloadButton = document.createElement('button');
+    downloadButton.type = 'submit';
+    downloadButton.name = 'save_action';
+    downloadButton.value = 'pdf';
+    downloadButton.id = 'download-pdf-save-button';
+    downloadButton.className = 'btn btn-success';
+    downloadButton.textContent = primarySave.textContent.indexOf('Create') !== -1
+      ? 'Create and download PDF'
+      : 'Save and download PDF';
+    secondarySave.insertAdjacentElement('afterend', downloadButton);
   }
 
-  var downloadButton = document.createElement('button');
-  downloadButton.type = 'submit';
-  downloadButton.name = 'save_action';
-  downloadButton.value = 'pdf';
-  downloadButton.id = 'download-pdf-save-button';
-  downloadButton.className = 'btn btn-success';
-  downloadButton.textContent = primarySave.textContent.indexOf('Create') !== -1
-    ? 'Create and download PDF'
-    : 'Save and download PDF';
+  var customerSelect = document.getElementById('id_customer');
+  var customerName = document.getElementById('id_customer_name');
+  var errorSummaryId = 'document-client-error-summary';
 
-  secondarySave.insertAdjacentElement('afterend', downloadButton);
+  function activeLineRows() {
+    return Array.prototype.slice.call(form.querySelectorAll('tr.line-form-row')).filter(function (row) {
+      var deleteBox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+      return !(deleteBox && deleteBox.checked);
+    });
+  }
+
+  function fieldValue(row, suffix) {
+    var field = row.querySelector('[name$="-' + suffix + '"]');
+    return field ? field.value.trim() : '';
+  }
+
+  function markInvalid(field, message) {
+    if (!field) {
+      return;
+    }
+    field.classList.add('is-invalid');
+    field.setAttribute('aria-invalid', 'true');
+
+    var feedback = field.parentElement.querySelector('.client-invalid-feedback[data-for="' + field.name + '"]');
+    if (!feedback) {
+      feedback = document.createElement('div');
+      feedback.className = 'invalid-feedback d-block client-invalid-feedback';
+      feedback.dataset.for = field.name;
+      field.insertAdjacentElement('afterend', feedback);
+    }
+    feedback.textContent = message;
+  }
+
+  function clearClientErrors() {
+    var summary = document.getElementById(errorSummaryId);
+    if (summary) {
+      summary.remove();
+    }
+    Array.prototype.forEach.call(form.querySelectorAll('.is-invalid'), function (field) {
+      field.classList.remove('is-invalid');
+      field.removeAttribute('aria-invalid');
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('.client-invalid-feedback'), function (node) {
+      node.remove();
+    });
+  }
+
+  function showErrorSummary(errors) {
+    var existing = document.getElementById(errorSummaryId);
+    if (existing) {
+      existing.remove();
+    }
+
+    var summary = document.createElement('div');
+    summary.id = errorSummaryId;
+    summary.className = 'alert alert-danger border-danger shadow-sm';
+    summary.setAttribute('role', 'alert');
+    summary.setAttribute('tabindex', '-1');
+
+    var title = document.createElement('h2');
+    title.className = 'h5';
+    title.textContent = 'There is a problem';
+    summary.appendChild(title);
+
+    var help = document.createElement('p');
+    help.className = 'mb-2';
+    help.textContent = 'The document has not been saved yet. Correct the items below and press the save button again.';
+    summary.appendChild(help);
+
+    var list = document.createElement('ul');
+    list.className = 'mb-0';
+    errors.forEach(function (error) {
+      var item = document.createElement('li');
+      var link = document.createElement('a');
+      link.href = '#' + error.field.id;
+      link.textContent = error.message;
+      link.addEventListener('click', function (event) {
+        event.preventDefault();
+        error.field.focus({ preventScroll: true });
+        error.field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      item.appendChild(link);
+      list.appendChild(item);
+    });
+    summary.appendChild(list);
+
+    form.insertAdjacentElement('afterbegin', summary);
+    summary.focus({ preventScroll: true });
+    summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function ensureWalkInName() {
+    if (customerSelect && customerName && !customerSelect.value && !customerName.value.trim()) {
+      customerName.value = 'Walk-in customer';
+    }
+  }
+
+  function validateDocumentBeforeSubmit() {
+    clearClientErrors();
+    ensureWalkInName();
+
+    var errors = [];
+    var validLineFound = false;
+
+    activeLineRows().forEach(function (row) {
+      var descriptionField = row.querySelector('[name$="-description"]');
+      var quantityField = row.querySelector('[name$="-quantity"]');
+      var priceField = row.querySelector('[name$="-unit_price"]');
+
+      var description = fieldValue(row, 'description');
+      var quantity = Number(fieldValue(row, 'quantity'));
+      var priceRaw = fieldValue(row, 'unit_price');
+      var price = Number(priceRaw);
+      var hasAnyLineValue = description || fieldValue(row, 'product') || fieldValue(row, 'product_variant') || fieldValue(row, 'quantity') || priceRaw;
+
+      if (description && quantity > 0 && priceRaw !== '' && price >= 0) {
+        validLineFound = true;
+      }
+
+      if (hasAnyLineValue) {
+        if (!description) {
+          errors.push({ field: descriptionField, message: 'Enter an item or service description.' });
+          markInvalid(descriptionField, 'Enter an item or service description.');
+        }
+        if (!(quantity > 0)) {
+          errors.push({ field: quantityField, message: 'Enter a quantity greater than zero.' });
+          markInvalid(quantityField, 'Enter a quantity greater than zero.');
+        }
+        if (priceRaw === '' || !(price >= 0)) {
+          errors.push({ field: priceField, message: 'Enter a unit price of zero or more.' });
+          markInvalid(priceField, 'Enter a unit price of zero or more.');
+        }
+      }
+    });
+
+    if (!validLineFound) {
+      var firstDescription = form.querySelector('[name$="-description"]');
+      var firstQuantity = form.querySelector('[name$="-quantity"]');
+      var firstPrice = form.querySelector('[name$="-unit_price"]');
+      errors.push({ field: firstDescription, message: 'Add at least one complete line item before saving.' });
+      markInvalid(firstDescription, 'Add at least one complete line item before saving.');
+      markInvalid(firstQuantity, 'Quantity is required.');
+      markInvalid(firstPrice, 'Unit price is required.');
+    }
+
+    errors = errors.filter(function (error) { return error.field; });
+    if (errors.length) {
+      showErrorSummary(errors);
+      return false;
+    }
+    return true;
+  }
+
+  form.addEventListener('submit', function (event) {
+    if (!validateDocumentBeforeSubmit()) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  });
 });
