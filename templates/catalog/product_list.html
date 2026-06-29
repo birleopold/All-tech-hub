@@ -1,43 +1,84 @@
 {% extends "base.html" %}
-{% block title %}Shop{% endblock %}
+{% block title %}Catalog — Products and services{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <div class="row">
-    <aside class="col-lg-3 mb-4">
-      <h2 class="h6 text-uppercase text-muted" id="catalog-filters-heading">Filters</h2>
-      <form method="get" class="d-grid gap-2" aria-labelledby="catalog-filters-heading">
-        <input type="search" name="q" value="{{ search_q }}" class="form-control" placeholder="Search…">
-        <select name="kind" class="form-select">
-          <option value="">All types</option>
-          <option value="physical" {% if current_kind == 'physical' %}selected{% endif %}>Products</option>
-          <option value="service" {% if current_kind == 'service' %}selected{% endif %}>Services</option>
-        </select>
-        <select name="category" class="form-select">
-          <option value="">All categories</option>
-          {% for c in categories %}
-          <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-        <button class="btn btn-primary" type="submit">Apply</button>
+<section class="catalog-hero mb-4">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Shop and service catalog</p>
+        <h1 class="display-6 fw-bold mb-2" id="catalog-heading">Find products, services and support</h1>
+        <p class="text-white-75 mb-0">Browse devices, accessories, repairs and IT services with clear pricing and availability.</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'contact' %}">Request a quote</a>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="catalog-toolbar card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end" aria-labelledby="catalog-filters-heading">
+        <div class="col-lg-4">
+          <label class="form-label small text-muted" for="catalog-search">Search catalog</label>
+          <input id="catalog-search" type="search" name="q" value="{{ search_q }}" class="form-control" placeholder="Search laptops, CCTV, repair, software…">
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small text-muted" for="catalog-kind">Type</label>
+          <select id="catalog-kind" name="kind" class="form-select">
+            <option value="">All types</option>
+            <option value="physical" {% if current_kind == 'physical' %}selected{% endif %}>Products</option>
+            <option value="service" {% if current_kind == 'service' %}selected{% endif %}>Services</option>
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small text-muted" for="catalog-category">Category</label>
+          <select id="catalog-category" name="category" class="form-select">
+            <option value="">All categories</option>
+            {% for c in categories %}
+            <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-2 d-grid">
+          <button class="btn btn-primary" type="submit">Apply filters</button>
+        </div>
       </form>
-    </aside>
-    <div class="col-lg-9" role="region" aria-labelledby="catalog-heading">
-      <h1 class="h3 mb-4" id="catalog-heading">Catalog</h1>
-      <div class="row g-3">
-        {% for p in products %}
-        <div class="col-md-4">
-          <div class="card card-product h-100">
-            {% if p.primary_display_image %}
-            <img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover" style="height:160px" alt="{{ p.name }}">
-            {% endif %}
-            <div class="card-body">
-              {% if p.kind == 'service' %}
-              <span class="badge badge-kind-service">Service</span>
-              {% else %}
-              <span class="badge badge-kind-product">Product</span>
-              {% endif %}
-              <h2 class="h6 mt-2">{{ p.name }}</h2>
-              <p class="small text-muted mb-2">{{ p.short_description|truncatewords:16 }}</p>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+        <div class="d-flex flex-wrap gap-2" aria-label="Quick catalog filters">
+          <a class="btn btn-sm {% if not current_kind %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}">All</a>
+          <a class="btn btn-sm {% if current_kind == 'physical' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}?kind=physical">Products</a>
+          <a class="btn btn-sm {% if current_kind == 'service' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}?kind=service">Services</a>
+        </div>
+        {% if search_q or current_kind or current_category %}<a class="small" href="{% url 'product_list' %}">Clear filters</a>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <h2 class="h4 mb-1" id="catalog-filters-heading">Catalog results</h2>
+      <p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="row g-3" role="region" aria-labelledby="catalog-heading">
+    {% for p in products %}
+    <div class="col-sm-6 col-lg-4 col-xl-3">
+      <article class="card card-product catalog-card h-100">
+        <div class="catalog-card-image-wrap">
+          {% if p.primary_display_image %}
+          <img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover catalog-card-image" alt="{{ p.name }}">
+          {% else %}
+          <div class="catalog-card-placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>
+          {% endif %}
+          <span class="catalog-card-badge badge {% if p.kind == 'service' %}badge-kind-service{% else %}badge-kind-product{% endif %}">{% if p.kind == 'service' %}Service{% else %}Product{% endif %}</span>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <p class="small text-muted mb-1">{{ p.category.name }}</p>
+          <h3 class="h6 card-title mb-2"><a class="stretched-link text-decoration-none text-dark" href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+          <p class="small text-muted mb-3">{{ p.short_description|default:p.description|truncatewords:16 }}</p>
+          <div class="mt-auto">
+            <div class="d-flex justify-content-between align-items-end gap-2 mb-2">
               <p class="fw-semibold mb-0">
                 {% if p.has_sellable_variants and p.min_active_variant_price %}
                 From {{ company.currency_code }} {{ p.min_active_variant_price }}
@@ -45,28 +86,46 @@
                 {{ company.currency_code }} {{ p.price }}
                 {% endif %}
               </p>
-              <a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a>
+              {% if p.has_sellable_variants %}<span class="small text-muted">{{ p.active_variant_count }} option{{ p.active_variant_count|pluralize }}</span>{% endif %}
             </div>
+            {% if p.kind == 'service' %}
+            <span class="catalog-stock-pill text-primary bg-primary-subtle">Book service</span>
+            {% elif p.available_to_sell %}
+            <span class="catalog-stock-pill text-success bg-success-subtle">In stock</span>
+            {% else %}
+            <span class="catalog-stock-pill text-secondary bg-light">Ask availability</span>
+            {% endif %}
+            {% if p.is_low_stock %}<span class="catalog-stock-pill text-warning bg-warning-subtle ms-1">Low stock</span>{% endif %}
           </div>
         </div>
-        {% empty %}
-        <p class="text-muted">No items match your filters.</p>
-        {% endfor %}
-      </div>
-      {% if is_paginated %}
-      <nav class="mt-4" aria-label="Catalog pagination">
-        <ul class="pagination">
-          {% if page_obj.has_previous %}
-          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to previous page">Previous</a></li>
-          {% endif %}
-          <li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }}</span></li>
-          {% if page_obj.has_next %}
-          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to next page">Next</a></li>
-          {% endif %}
-        </ul>
-      </nav>
-      {% endif %}
+      </article>
     </div>
+    {% empty %}
+    <div class="col-12">
+      <div class="catalog-empty card border-0 shadow-sm text-center">
+        <div class="card-body py-5">
+          <i class="bi bi-search display-5 text-primary" aria-hidden="true"></i>
+          <h2 class="h4 mt-3">No matching items found</h2>
+          <p class="text-muted mb-4">Try a different search, remove filters, or contact the team for a custom quote.</p>
+          <div class="d-flex justify-content-center gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Clear filters</a><a class="btn btn-primary" href="{% url 'contact' %}">Request support</a></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
+
+  {% if is_paginated %}
+  <nav class="mt-4" aria-label="Catalog pagination">
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to previous page">Previous</a></li>
+      {% endif %}
+      <li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to next page">Next</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
 </div>
 {% endblock %}
