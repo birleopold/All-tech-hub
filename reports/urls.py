@@ -49,4 +49,9 @@ urlpatterns = [
         commission_views.staff_export_margin_lines_csv,
         name="staff_export_margin_lines_csv",
     ),
+    path(
+        "reports/export/partner-payables.csv",
+        commission_views.staff_export_partner_payables_csv,
+        name="staff_export_partner_payables_csv",
+    ),
 ]
