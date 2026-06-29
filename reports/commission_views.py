@@ -1,0 +1,257 @@
+import csv
+from datetime import timedelta
+from decimal import Decimal
+
+from django.http import Http404, HttpResponse
+from django.utils import timezone
+
+from billing.financials import (
+    document_business_cost,
+    document_customer_total,
+    document_owner_payout,
+    document_recognized_income,
+    line_business_cost,
+    line_owner_payout,
+    line_profit,
+    line_recognized_income,
+    line_margin_percent,
+    queryset_financial_summary,
+)
+from billing.models import CommercialDocument, CommercialLine
+from reports import views
+
+
+def recognized_documents(start_date=None, end_date=None):
+    qs = (
+        CommercialDocument.objects.filter(
+            status__in=[
+                CommercialDocument.STATUS_ISSUED,
+                CommercialDocument.STATUS_PARTIALLY_PAID,
+                CommercialDocument.STATUS_PAID,
+            ]
+        )
+        .exclude(doc_type=CommercialDocument.TYPE_CREDIT_NOTE)
+        .select_related("customer", "salesperson")
+        .prefetch_related("lines")
+    )
+    if start_date is not None:
+        qs = qs.filter(issue_date__gte=start_date)
+    if end_date is not None:
+        qs = qs.filter(issue_date__lte=end_date)
+    return qs
+
+
+class ReportsHomeView(views.ReportsHomeView):
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        today_documents = recognized_documents(start_date=today, end_date=today)
+        today_summary = queryset_financial_summary(today_documents)
+        ctx["document_sales_today"] = today_summary["recognized_income"]
+        ctx["document_customer_total_today"] = today_summary["customer_total"]
+        ctx["document_owner_payout_today"] = today_summary["owner_payout"]
+        return ctx
+
+    @staticmethod
+    def _external_item_margin(start_date):
+        lines = (
+            CommercialLine.objects.filter(
+                document__issue_date__gte=start_date,
+                document__status__in=[
+                    CommercialDocument.STATUS_ISSUED,
+                    CommercialDocument.STATUS_PARTIALLY_PAID,
+                    CommercialDocument.STATUS_PAID,
+                ],
+                source_type__in=[
+                    CommercialLine.SOURCE_EXTERNAL,
+                    CommercialLine.SOURCE_CONSIGNMENT,
+                ],
+            )
+            .exclude(document__doc_type=CommercialDocument.TYPE_CREDIT_NOTE)
+            .select_related("document")
+        )
+        customer_total = sum((line.line_total for line in lines), Decimal("0.00"))
+        owner_payout = sum((line_owner_payout(line) for line in lines), Decimal("0.00"))
+        recognized_income = sum((line_recognized_income(line) for line in lines), Decimal("0.00"))
+        return {
+            "customer_total": customer_total.quantize(Decimal("0.01")),
+            "revenue": recognized_income.quantize(Decimal("0.01")),
+            "recognized_income": recognized_income.quantize(Decimal("0.01")),
+            "cost": owner_payout.quantize(Decimal("0.01")),
+            "owner_payout": owner_payout.quantize(Decimal("0.01")),
+            "profit": recognized_income.quantize(Decimal("0.01")),
+        }
+
+    @staticmethod
+    def _document_margin(start_date):
+        docs = recognized_documents(start_date=start_date)
+        return queryset_financial_summary(docs)
+
+    @staticmethod
+    def _top_margin_lines(start_date):
+        rows = []
+        lines = (
+            CommercialLine.objects.filter(
+                document__issue_date__gte=start_date,
+                document__status__in=[
+                    CommercialDocument.STATUS_ISSUED,
+                    CommercialDocument.STATUS_PARTIALLY_PAID,
+                    CommercialDocument.STATUS_PAID,
+                ],
+            )
+            .exclude(document__doc_type=CommercialDocument.TYPE_CREDIT_NOTE)
+            .select_related("document", "product", "product__category")
+        )
+        for line in lines:
+            rows.append(
+                {
+                    "description": line.description,
+                    "document": line.document.number,
+                    "source_type": line.get_source_type_display(),
+                    "customer_total": line.line_total,
+                    "revenue": line_recognized_income(line),
+                    "recognized_income": line_recognized_income(line),
+                    "cost": line_business_cost(line),
+                    "owner_payout": line_owner_payout(line),
+                    "profit": line_profit(line),
+                    "margin": line_margin_percent(line),
+                }
+            )
+        rows.sort(key=lambda row: row["profit"], reverse=True)
+        return rows[:10]
+
+    @staticmethod
+    def _top_customers(start_date):
+        docs = recognized_documents(start_date=start_date).select_related("customer")
+        rows = {}
+        for document in docs:
+            key = document.customer_id or f"walkin:{document.display_customer_name}"
+            row = rows.setdefault(
+                key,
+                {
+                    "customer": document.display_customer_name,
+                    "documents": 0,
+                    "revenue": Decimal("0.00"),
+                    "recognized_income": Decimal("0.00"),
+                    "customer_total": Decimal("0.00"),
+                    "balance": Decimal("0.00"),
+                },
+            )
+            row["documents"] += 1
+            row["revenue"] += document_recognized_income(document)
+            row["recognized_income"] += document_recognized_income(document)
+            row["customer_total"] += document_customer_total(document)
+            row["balance"] += document.balance_due
+        ordered = sorted(rows.values(), key=lambda row: row["recognized_income"], reverse=True)
+        return ordered[:10]
+
+
+def staff_export_documents_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    documents = CommercialDocument.objects.select_related(
+        "customer", "salesperson"
+    ).prefetch_related("lines").order_by("-issue_date", "-id")
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="commercial_documents.csv"'
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "number",
+            "type",
+            "status",
+            "customer",
+            "issue_date",
+            "due_date",
+            "customer_total",
+            "recognized_income",
+            "owner_payout",
+            "business_cost",
+            "business_profit",
+            "tax",
+            "withholding",
+            "paid",
+            "balance",
+            "salesperson",
+        ]
+    )
+    for document in documents[:5000]:
+        writer.writerow(
+            [
+                document.number,
+                document.doc_type,
+                document.status,
+                document.display_customer_name,
+                document.issue_date,
+                document.due_date or "",
+                document_customer_total(document),
+                document_recognized_income(document),
+                document_owner_payout(document),
+                document_business_cost(document),
+                document_recognized_income(document) - document_business_cost(document),
+                document.tax_amount,
+                document.withholding_tax_amount,
+                document.amount_paid,
+                document.balance_due,
+                document.salesperson.get_username() if document.salesperson else "",
+            ]
+        )
+    return response
+
+
+def staff_export_customer_value_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    start_90 = timezone.localdate() - timedelta(days=90)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="customer_value_90d.csv"'
+    writer = csv.writer(response)
+    writer.writerow(["customer", "documents", "recognized_income", "customer_total", "balance"])
+    for row in ReportsHomeView._top_customers(start_90):
+        writer.writerow(
+            [
+                row["customer"],
+                row["documents"],
+                row["recognized_income"],
+                row["customer_total"],
+                row["balance"],
+            ]
+        )
+    return response
+
+
+def staff_export_margin_lines_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    start_30 = timezone.localdate() - timedelta(days=30)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="margin_lines_30d.csv"'
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "description",
+            "document",
+            "source_type",
+            "customer_total",
+            "recognized_income",
+            "owner_payout",
+            "business_cost",
+            "profit",
+            "margin_percent",
+        ]
+    )
+    for row in ReportsHomeView._top_margin_lines(start_30):
+        writer.writerow(
+            [
+                row["description"],
+                row["document"],
+                row["source_type"],
+                row["customer_total"],
+                row["recognized_income"],
+                row["owner_payout"],
+                row["cost"],
+                row["profit"],
+                row["margin"],
+            ]
+        )
+    return response
