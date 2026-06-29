@@ -1,9 +1,9 @@
 from django.urls import path
 
-from billing import document_pdf_views, views
+from billing import document_pdf_views, document_workflow_views, views
 
 urlpatterns = [
-    path("documents/", views.CommercialDocumentListView.as_view(), name="staff_documents"),
+    path("documents/", document_workflow_views.CommercialDocumentListView.as_view(), name="staff_documents"),
     path(
         "documents/<int:pk>/quote-approve/",
         views.quote_internal_approve,
@@ -21,12 +21,12 @@ urlpatterns = [
     ),
     path(
         "documents/new/",
-        views.CommercialDocumentCreateView.as_view(),
+        document_workflow_views.CommercialDocumentCreateView.as_view(),
         name="staff_document_create",
     ),
     path(
         "documents/<int:pk>/",
-        views.CommercialDocumentUpdateView.as_view(),
+        document_workflow_views.CommercialDocumentUpdateView.as_view(),
         name="staff_document_edit",
     ),
     path(
