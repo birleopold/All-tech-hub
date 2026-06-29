@@ -54,5 +54,5 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         )[:8]
         ctx["recent_documents"] = CommercialDocument.objects.select_related(
             "customer"
-        ).order_by("-issue_date", "-id")[:8]
+        ).order_by("-created_at", "-id")[:8]
         return ctx
