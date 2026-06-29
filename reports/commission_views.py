@@ -20,16 +20,23 @@ from billing.financials import (
 from billing.models import CommercialDocument, CommercialLine
 from reports import views
 
+RECOGNIZED_DOCUMENT_STATUSES = (
+    CommercialDocument.STATUS_ISSUED,
+    CommercialDocument.STATUS_PARTIALLY_PAID,
+    CommercialDocument.STATUS_PAID,
+)
+
+
+def is_recognized_document(document):
+    return (
+        document.status in RECOGNIZED_DOCUMENT_STATUSES
+        and document.doc_type != CommercialDocument.TYPE_CREDIT_NOTE
+    )
+
 
 def recognized_documents(start_date=None, end_date=None):
     qs = (
-        CommercialDocument.objects.filter(
-            status__in=[
-                CommercialDocument.STATUS_ISSUED,
-                CommercialDocument.STATUS_PARTIALLY_PAID,
-                CommercialDocument.STATUS_PAID,
-            ]
-        )
+        CommercialDocument.objects.filter(status__in=RECOGNIZED_DOCUMENT_STATUSES)
         .exclude(doc_type=CommercialDocument.TYPE_CREDIT_NOTE)
         .select_related("customer", "salesperson")
         .prefetch_related("lines")
@@ -57,11 +64,7 @@ class ReportsHomeView(views.ReportsHomeView):
         lines = (
             CommercialLine.objects.filter(
                 document__issue_date__gte=start_date,
-                document__status__in=[
-                    CommercialDocument.STATUS_ISSUED,
-                    CommercialDocument.STATUS_PARTIALLY_PAID,
-                    CommercialDocument.STATUS_PAID,
-                ],
+                document__status__in=RECOGNIZED_DOCUMENT_STATUSES,
                 source_type__in=[
                     CommercialLine.SOURCE_EXTERNAL,
                     CommercialLine.SOURCE_CONSIGNMENT,
@@ -93,11 +96,7 @@ class ReportsHomeView(views.ReportsHomeView):
         lines = (
             CommercialLine.objects.filter(
                 document__issue_date__gte=start_date,
-                document__status__in=[
-                    CommercialDocument.STATUS_ISSUED,
-                    CommercialDocument.STATUS_PARTIALLY_PAID,
-                    CommercialDocument.STATUS_PAID,
-                ],
+                document__status__in=RECOGNIZED_DOCUMENT_STATUSES,
             )
             .exclude(document__doc_type=CommercialDocument.TYPE_CREDIT_NOTE)
             .select_related("document", "product", "product__category")
@@ -176,6 +175,16 @@ def staff_export_documents_csv(request):
         ]
     )
     for document in documents[:5000]:
+        if is_recognized_document(document):
+            recognized_income = document_recognized_income(document)
+            owner_payout = document_owner_payout(document)
+            business_cost = document_business_cost(document)
+            business_profit = recognized_income - business_cost
+        else:
+            recognized_income = Decimal("0.00")
+            owner_payout = Decimal("0.00")
+            business_cost = Decimal("0.00")
+            business_profit = Decimal("0.00")
         writer.writerow(
             [
                 document.number,
@@ -185,10 +194,10 @@ def staff_export_documents_csv(request):
                 document.issue_date,
                 document.due_date or "",
                 document_customer_total(document),
-                document_recognized_income(document),
-                document_owner_payout(document),
-                document_business_cost(document),
-                document_recognized_income(document) - document_business_cost(document),
+                recognized_income,
+                owner_payout,
+                business_cost,
+                business_profit,
                 document.tax_amount,
                 document.withholding_tax_amount,
                 document.amount_paid,
