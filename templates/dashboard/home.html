@@ -1,157 +1,177 @@
 {% extends "staff_base.html" %}
 {% block title %}Staff dashboard{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-4">Dashboard</h1>
-<div class="row g-3 mb-4">
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Orders today</p>
-        <p class="display-6 mb-0">{{ orders_today }}</p>
+<section class="staff-dashboard">
+  <div class="staff-dashboard-hero card border-0 shadow-sm mb-4 overflow-hidden">
+    <div class="card-body p-4 p-lg-5">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Staff workspace</p>
+          <h1 class="display-6 fw-semibold mb-2">Good day, {{ request.user.get_short_name|default:request.user.username }}</h1>
+          <p class="text-muted mb-0">A clean control centre for sales, documents, stock, jobs and customer service.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-primary" href="{% url 'staff_document_create' %}"><i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> New document</a>
+          <a class="btn btn-outline-primary" href="{% url 'staff_job_create' %}"><i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i> New job</a>
+          <a class="btn btn-outline-secondary" href="{% url 'staff_reports' %}"><i class="bi bi-graph-up-arrow me-1" aria-hidden="true"></i> Reports</a>
+        </div>
       </div>
     </div>
   </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Open job cards</p>
-        <p class="display-6 mb-0"><a href="{% url 'staff_jobs' %}" class="text-decoration-none text-dark">{{ open_jobs }}</a></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Open tickets</p>
-        <p class="display-6 mb-0"><a href="{% url 'staff_tickets' %}" class="text-decoration-none text-dark">{{ open_tickets }}</a></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Contact inbox</p>
-        <p class="display-6 mb-0"><a href="{% url 'staff_contact_messages' %}?handled=0" class="text-decoration-none text-dark">{{ unhandled_contacts }}</a></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Draft quotes</p>
-        <p class="display-6 mb-0">{{ draft_quotes }}</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100 {% if low_stock_count %}border-warning{% endif %}">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Low stock SKUs</p>
-        <p class="display-6 mb-0"><a href="{% url 'staff_reports' %}" class="text-decoration-none text-dark">{{ low_stock_count }}</a></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100 {% if pending_reviews %}border-info{% endif %}">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Pending reviews</p>
-        <p class="display-6 mb-0"><a href="/admin/catalog/productreview/?is_published__exact=0" class="text-decoration-none text-dark">{{ pending_reviews }}</a></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <p class="text-muted small mb-1">CSAT (avg of recent)</p>
-        <p class="display-6 mb-0">
-          {% if avg_job_rating %}{{ avg_job_rating }}<span class="fs-6 text-muted"> / 5</span>{% else %}<span class="text-muted">—</span>{% endif %}
-        </p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100 {% if overdue_jobs %}border-danger{% endif %}">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Overdue jobs (SLA)</p>
-        <p class="display-6 mb-0"><a href="{% url 'staff_jobs' %}?due=overdue" class="text-decoration-none {% if overdue_jobs %}text-danger{% else %}text-dark{% endif %}">{{ overdue_jobs }}</a></p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-4 col-lg-2">
-    <div class="card border-0 shadow-sm h-100 {% if overdue_tickets %}border-danger{% endif %}">
-      <div class="card-body">
-        <p class="text-muted small mb-1">Overdue tickets (SLA)</p>
-        <p class="display-6 mb-0"><a href="{% url 'staff_tickets' %}?due=overdue" class="text-decoration-none {% if overdue_tickets %}text-danger{% else %}text-dark{% endif %}">{{ overdue_tickets }}</a></p>
-      </div>
-    </div>
-  </div>
-</div>
 
-{% if recent_feedback %}
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body">
-    <h2 class="h6 text-muted text-uppercase mb-3">Recent customer feedback</h2>
-    <ul class="list-unstyled mb-0">
-      {% for f in recent_feedback %}
-      <li class="border-bottom py-2 d-flex justify-content-between gap-3">
-        <span>
-          <span class="text-warning" aria-label="{{ f.rating }} of 5 stars">{% for i in '12345' %}{% if forloop.counter <= f.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span>
-          <a class="ms-2" href="{% url 'staff_job_detail' f.job.pk %}">{{ f.job.number }}</a>
-          <span class="text-muted small">— {{ f.job.customer.name }}</span>
-          {% if f.comment %}<div class="small text-muted">{{ f.comment|truncatewords:20 }}</div>{% endif %}
-        </span>
-        <span class="text-muted small text-nowrap">{{ f.submitted_at|date:"Y-m-d" }}</span>
-      </li>
-      {% endfor %}
-    </ul>
-  </div>
-</div>
-{% endif %}
-<div class="row g-4">
-  <div class="col-lg-6">
-    <h2 class="h6 text-muted text-uppercase">Recent orders</h2>
-    <div class="list-group shadow-sm">
-      {% for o in recent_orders %}
-      <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'staff_order_detail' o.pk %}">
-        <span>{{ o.reference }}</span>
-        <span class="text-muted small">{{ o.customer.name }}</span>
-      </a>
-      {% empty %}
-      <span class="list-group-item text-muted">No orders yet.</span>
-      {% endfor %}
+  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews %}
+  <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3 mb-4" role="status">
+    <i class="bi bi-exclamation-triangle-fill fs-4" aria-hidden="true"></i>
+    <div>
+      <h2 class="h6 mb-1">Attention needed</h2>
+      <p class="mb-0 small">
+        {% if overdue_jobs %}<a href="{% url 'staff_jobs' %}?due=overdue" class="alert-link">{{ overdue_jobs }} overdue job{{ overdue_jobs|pluralize }}</a>{% endif %}
+        {% if overdue_jobs and overdue_tickets %} · {% endif %}
+        {% if overdue_tickets %}<a href="{% url 'staff_tickets' %}?due=overdue" class="alert-link">{{ overdue_tickets }} overdue ticket{{ overdue_tickets|pluralize }}</a>{% endif %}
+        {% if low_stock_count %}{% if overdue_jobs or overdue_tickets %} · {% endif %}<a href="{% url 'staff_reports' %}" class="alert-link">{{ low_stock_count }} low-stock SKU{{ low_stock_count|pluralize }}</a>{% endif %}
+        {% if unhandled_contacts %}{% if overdue_jobs or overdue_tickets or low_stock_count %} · {% endif %}<a href="{% url 'staff_contact_messages' %}?handled=0" class="alert-link">{{ unhandled_contacts }} unhandled contact{{ unhandled_contacts|pluralize }}</a>{% endif %}
+        {% if pending_reviews %}{% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts %} · {% endif %}<a href="/admin/catalog/productreview/?is_published__exact=0" class="alert-link">{{ pending_reviews }} review{{ pending_reviews|pluralize }} pending</a>{% endif %}
+      </p>
     </div>
   </div>
-  <div class="col-lg-6">
-    <h2 class="h6 text-muted text-uppercase">Recent job cards</h2>
-    <div class="list-group shadow-sm">
-      {% for j in recent_jobs %}
-      <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{% url 'staff_job_detail' j.pk %}">
-        <span>{{ j.number }}</span>
-        <span class="text-muted small">{{ j.status }}</span>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <a class="dashboard-metric card border-0 shadow-sm h-100 text-decoration-none" href="{% url 'staff_orders' %}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><p class="text-muted small mb-1">Orders today</p><p class="h2 mb-0 text-dark">{{ orders_today }}</p></div>
+            <span class="dashboard-metric-icon"><i class="bi bi-bag-check" aria-hidden="true"></i></span>
+          </div>
+          <p class="small text-muted mb-0 mt-3">New shop activity</p>
+        </div>
       </a>
-      {% empty %}
-      <span class="list-group-item text-muted">No jobs yet.</span>
-      {% endfor %}
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <a class="dashboard-metric card border-0 shadow-sm h-100 text-decoration-none" href="{% url 'staff_documents' %}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><p class="text-muted small mb-1">Draft quotes</p><p class="h2 mb-0 text-dark">{{ draft_quotes }}</p></div>
+            <span class="dashboard-metric-icon"><i class="bi bi-file-text" aria-hidden="true"></i></span>
+          </div>
+          <p class="small text-muted mb-0 mt-3">Documents to complete</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <a class="dashboard-metric card border-0 shadow-sm h-100 text-decoration-none" href="{% url 'staff_jobs' %}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><p class="text-muted small mb-1">Open jobs</p><p class="h2 mb-0 text-dark">{{ open_jobs }}</p></div>
+            <span class="dashboard-metric-icon"><i class="bi bi-tools" aria-hidden="true"></i></span>
+          </div>
+          <p class="small text-muted mb-0 mt-3">Repair and service work</p>
+        </div>
+      </a>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <a class="dashboard-metric card border-0 shadow-sm h-100 text-decoration-none" href="{% url 'staff_tickets' %}">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><p class="text-muted small mb-1">Open tickets</p><p class="h2 mb-0 text-dark">{{ open_tickets }}</p></div>
+            <span class="dashboard-metric-icon"><i class="bi bi-headset" aria-hidden="true"></i></span>
+          </div>
+          <p class="small text-muted mb-0 mt-3">Customer support queue</p>
+        </div>
+      </a>
     </div>
   </div>
-</div>
-<div class="mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="h6 text-muted text-uppercase mb-0">Recent documents</h2>
-    <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_documents' %}">View all</a>
-  </div>
-  <div class="list-group shadow-sm">
-    {% for d in recent_documents %}
-    <div class="list-group-item d-flex justify-content-between align-items-center gap-3 flex-wrap">
-      <a class="text-decoration-none" href="{% url 'staff_document_view' d.pk %}">
-        <span class="fw-semibold">{{ d.number }} — {{ d.get_doc_type_display }}</span>
-        <span class="text-muted small d-block">{{ d.display_customer_name }}{% if not d.customer_id %} · Walk-in{% endif %}</span>
-      </a>
-      <a class="btn btn-sm btn-success" href="{% url 'staff_document_pdf' d.pk %}?download=1">Download PDF</a>
+
+  <div class="row g-4 mb-4">
+    <div class="col-xl-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              <h2 class="h5 mb-1">Recent documents</h2>
+              <p class="small text-muted mb-0">Newest receipts, quotes, invoices and walk-in documents.</p>
+            </div>
+            <div class="d-flex gap-2"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_documents' %}">View all</a><a class="btn btn-sm btn-primary" href="{% url 'staff_document_create' %}">Create</a></div>
+          </div>
+          <div class="list-group list-group-flush dashboard-list">
+            {% for d in recent_documents %}
+            <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3 flex-wrap">
+              <div>
+                <a class="fw-semibold text-decoration-none" href="{% url 'staff_document_view' d.pk %}">{{ d.number }} — {{ d.get_doc_type_display }}</a>
+                <div class="small text-muted">{{ d.display_customer_name }}{% if not d.customer_id %} · Walk-in{% endif %} · {{ d.created_at|date:"Y-m-d H:i" }}</div>
+              </div>
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_document_view' d.pk %}">Open</a>
+                <a class="btn btn-sm btn-success" href="{% url 'staff_document_pdf' d.pk %}?download=1">PDF</a>
+              </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item px-0 text-muted">No documents yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
-    {% empty %}
-    <span class="list-group-item text-muted">No documents yet.</span>
-    {% endfor %}
+    <div class="col-xl-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Operational health</h2>
+          <div class="dashboard-health-item"><span>Low stock</span><a href="{% url 'staff_reports' %}" class="badge rounded-pill {% if low_stock_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ low_stock_count }}</a></div>
+          <div class="dashboard-health-item"><span>Overdue jobs</span><a href="{% url 'staff_jobs' %}?due=overdue" class="badge rounded-pill {% if overdue_jobs %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_jobs }}</a></div>
+          <div class="dashboard-health-item"><span>Overdue tickets</span><a href="{% url 'staff_tickets' %}?due=overdue" class="badge rounded-pill {% if overdue_tickets %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_tickets }}</a></div>
+          <div class="dashboard-health-item"><span>Contact inbox</span><a href="{% url 'staff_contact_messages' %}?handled=0" class="badge rounded-pill {% if unhandled_contacts %}text-bg-primary{% else %}text-bg-light text-dark{% endif %}">{{ unhandled_contacts }}</a></div>
+          <div class="dashboard-health-item"><span>CSAT average</span><span class="badge rounded-pill text-bg-light text-dark">{% if avg_job_rating %}{{ avg_job_rating }}/5{% else %}—{% endif %}</span></div>
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent orders</h2><a class="small" href="{% url 'staff_orders' %}">All orders</a></div>
+          <div class="list-group list-group-flush dashboard-list">
+            {% for o in recent_orders %}
+            <a class="list-group-item list-group-item-action px-0 d-flex justify-content-between gap-3" href="{% url 'staff_order_detail' o.pk %}"><span class="fw-semibold">{{ o.reference }}</span><span class="text-muted small text-end">{{ o.customer.name }}</span></a>
+            {% empty %}<span class="list-group-item px-0 text-muted">No orders yet.</span>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent job cards</h2><a class="small" href="{% url 'staff_jobs' %}">All jobs</a></div>
+          <div class="list-group list-group-flush dashboard-list">
+            {% for j in recent_jobs %}
+            <a class="list-group-item list-group-item-action px-0 d-flex justify-content-between gap-3" href="{% url 'staff_job_detail' j.pk %}"><span class="fw-semibold">{{ j.number }}</span><span class="text-muted small text-end">{{ j.status }}</span></a>
+            {% empty %}<span class="list-group-item px-0 text-muted">No jobs yet.</span>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Customer feedback</h2><a class="small" href="{% url 'staff_jobs' %}">Jobs</a></div>
+          {% if recent_feedback %}
+          <div class="list-group list-group-flush dashboard-list">
+            {% for f in recent_feedback|slice:":5" %}
+            <div class="list-group-item px-0">
+              <div class="d-flex justify-content-between gap-3"><a class="fw-semibold text-decoration-none" href="{% url 'staff_job_detail' f.job.pk %}">{{ f.job.number }}</a><span class="text-warning" aria-label="{{ f.rating }} of 5 stars">{% for i in '12345' %}{% if forloop.counter <= f.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span></div>
+              <div class="small text-muted">{{ f.job.customer.name }} · {{ f.submitted_at|date:"Y-m-d" }}</div>
+              {% if f.comment %}<div class="small mt-1">{{ f.comment|truncatewords:14 }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">No recent feedback yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}
