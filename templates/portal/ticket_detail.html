@@ -1,55 +1,28 @@
 {% extends "base.html" %}
 {% block title %}{{ ticket.reference }}{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <div class="row justify-content-center">
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Support request</p>
+        <h1 class="display-6 fw-bold mb-2">{{ ticket.subject }}</h1>
+        <p class="text-white-75 mb-0">{{ ticket.reference }} · {{ ticket.get_status_display }} · {{ ticket.get_priority_display }}</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'portal_tickets' %}">All requests</a>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row g-4 justify-content-center">
     <div class="col-lg-8">
-      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-        <div>
-          <h1 class="h3 mb-1">{{ ticket.subject }}</h1>
-          <p class="text-muted small mb-0">
-            {{ ticket.reference }} · {{ ticket.get_status_display }} · {{ ticket.get_priority_display }}
-          </p>
-        </div>
-        <a class="btn btn-outline-secondary" href="{% url 'portal_tickets' %}">All requests</a>
-      </div>
-
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-          <p class="small text-muted mb-1">Submitted {{ ticket.created_at|date:"Y-m-d H:i" }}</p>
-          {{ ticket.description|linebreaksbr }}
-        </div>
-      </div>
-
-      <h2 class="h5 mb-2">Conversation</h2>
-      {% for c in comments %}
-      <div class="mb-3 p-3 rounded bg-light">
-        <div class="d-flex justify-content-between small text-muted mb-1">
-          <strong>{{ c.author.get_username|default:"You" }}</strong>
-          <span>{{ c.created_at|date:"Y-m-d H:i" }}</span>
-        </div>
-        <p class="mb-1">{{ c.body|linebreaksbr }}</p>
-        {% if c.attachment %}
-        <a class="small" href="{{ c.attachment.url }}" target="_blank" rel="noopener">View attachment</a>
-        {% endif %}
-      </div>
-      {% empty %}
-      <p class="text-muted">No replies yet. Our team will get back to you shortly.</p>
-      {% endfor %}
-
+      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><p class="small text-muted mb-1">Submitted {{ ticket.created_at|date:"Y-m-d H:i" }}</p><div>{{ ticket.description|linebreaksbr }}</div></div></div>
+      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5 mb-3">Conversation</h2>{% for c in comments %}<div class="border-bottom pb-3 mb-3"><div class="d-flex justify-content-between small text-muted mb-1"><strong>{{ c.author.get_username|default:"You" }}</strong><span>{{ c.created_at|date:"Y-m-d H:i" }}</span></div><p class="mb-1">{{ c.body|linebreaksbr }}</p>{% if c.attachment %}<a class="small" href="{{ c.attachment.url }}" target="_blank" rel="noopener">View attachment</a>{% endif %}</div>{% empty %}<p class="text-muted mb-0">No replies yet. Our team will get back to you shortly.</p>{% endfor %}</div></div>
       {% if can_reply %}
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h3 class="h6 mb-2">Add a reply</h3>
-          <form method="post">
-            {% csrf_token %}
-            <div class="mb-2">{{ reply_form.body }}</div>
-            <button class="btn btn-primary" type="submit">Send reply</button>
-          </form>
-        </div>
-      </div>
+      <div class="card border-0 shadow-sm"><div class="card-body p-4"><h3 class="h5 mb-3">Add a reply</h3><form method="post">{% csrf_token %}<div class="mb-3">{{ reply_form.body }}</div><button class="btn btn-primary" type="submit">Send reply</button></form></div></div>
       {% else %}
-      <p class="small text-muted">This ticket is closed. <a href="{% url 'portal_ticket_create' %}">Open a new request</a> if you need more help.</p>
+      <div class="alert alert-secondary border-0 shadow-sm">This ticket is closed. <a href="{% url 'portal_ticket_create' %}">Open a new request</a> if you need more help.</div>
       {% endif %}
     </div>
   </div>
