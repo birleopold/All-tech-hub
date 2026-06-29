@@ -125,6 +125,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return sourceType === 'external' || sourceType === 'consignment';
   }
 
+  function isOutsourcedServiceSource(sourceType) {
+    return sourceType === 'service';
+  }
+
   function refreshCommissionHints() {
     activeLineRows().forEach(function (row) {
       var sourceField = fieldBySuffix(row, 'source_type');
@@ -141,9 +145,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!hint) {
           hint = document.createElement('div');
           hint.className = 'small text-success mt-2 commission-line-hint';
-          hint.textContent = 'Commission item: reports count only your markup as business income. Put the neighbor/owner price in Unit cost.';
           sourceField.insertAdjacentElement('afterend', hint);
         }
+        hint.textContent = 'Commission item: reports count only your markup as business income. Put the neighbor/owner price in Unit cost.';
+      } else if (isOutsourcedServiceSource(sourceField.value)) {
+        unitCostField.placeholder = 'Subcontractor fee';
+        supplierField.placeholder = 'Technician / subcontractor name';
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'small text-success mt-2 commission-line-hint';
+          sourceField.insertAdjacentElement('afterend', hint);
+        }
+        hint.textContent = 'Outsourced service: enter the subcontractor name and fee only when someone else will execute this service. Reports will count only your balance as recognised income.';
       } else if (hint) {
         hint.remove();
       }
@@ -175,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var cost = Number(costRaw);
       var supplier = fieldValue(row, 'supplier_name');
       var hasAnyLineValue = description || fieldValue(row, 'product') || fieldValue(row, 'product_variant') || fieldValue(row, 'quantity') || priceRaw;
+      var hasOutsourcedServiceDetails = isOutsourcedServiceSource(sourceType) && (supplier || (costRaw !== '' && cost > 0));
 
       if (description && quantity > 0 && priceRaw !== '' && price >= 0) {
         validLineFound = true;
@@ -205,6 +219,20 @@ document.addEventListener('DOMContentLoaded', function () {
           if (priceRaw !== '' && costRaw !== '' && price < cost) {
             errors.push({ field: priceField, message: 'Selling price is below the neighbor price; this creates a loss.' });
             markInvalid(priceField, 'Selling price is below the neighbor price.');
+          }
+        }
+        if (hasOutsourcedServiceDetails) {
+          if (!supplier) {
+            errors.push({ field: supplierField, message: 'Enter the technician or subcontractor name for outsourced services.' });
+            markInvalid(supplierField, 'Enter the technician or subcontractor name.');
+          }
+          if (costRaw === '' || !(cost > 0)) {
+            errors.push({ field: costField, message: 'Enter the subcontractor fee in Unit cost.' });
+            markInvalid(costField, 'Enter the subcontractor fee.');
+          }
+          if (priceRaw !== '' && costRaw !== '' && price < cost) {
+            errors.push({ field: priceField, message: 'Service charge is below the subcontractor fee; this creates a loss.' });
+            markInvalid(priceField, 'Service charge is below the subcontractor fee.');
           }
         }
       }
