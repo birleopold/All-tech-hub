@@ -25,6 +25,18 @@ class WalkInCommercialDocumentForm(CommercialDocumentForm):
         super().__init__(*args, **kwargs)
 
 
+class DocumentValidationMessageMixin:
+    validation_error_message = (
+        "The document was not saved. Check the highlighted fields and line items, then try again."
+    )
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.method == "POST" and not getattr(self.request, "_document_error_added", False):
+            messages.error(self.request, self.validation_error_message)
+            self.request._document_error_added = True
+        return super().render_to_response(context, **response_kwargs)
+
+
 class CommercialDocumentListView(views.CommercialDocumentListView):
     def get_queryset(self):
         CommercialDocument.objects.filter(
@@ -55,15 +67,8 @@ class CommercialDocumentListView(views.CommercialDocumentListView):
         return qs
 
 
-class CommercialDocumentCreateView(views.CommercialDocumentCreateView):
+class CommercialDocumentCreateView(DocumentValidationMessageMixin, views.CommercialDocumentCreateView):
     form_class = WalkInCommercialDocumentForm
-
-    def form_invalid(self, form):
-        messages.error(
-            self.request,
-            "The document was not saved. Check the highlighted fields and line items, then try again.",
-        )
-        return super().form_invalid(form)
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -72,15 +77,8 @@ class CommercialDocumentCreateView(views.CommercialDocumentCreateView):
         return response
 
 
-class CommercialDocumentUpdateView(views.CommercialDocumentUpdateView):
+class CommercialDocumentUpdateView(DocumentValidationMessageMixin, views.CommercialDocumentUpdateView):
     form_class = WalkInCommercialDocumentForm
-
-    def form_invalid(self, form):
-        messages.error(
-            self.request,
-            "The document was not saved. Check the highlighted fields and line items, then try again.",
-        )
-        return super().form_invalid(form)
 
     def form_valid(self, form):
         response = super().form_valid(form)
