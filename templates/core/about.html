@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}About {{ company.company_name|default:company.name|default:"ALLTECH Hub" }}{% endblock %}
+{% block title %}About {{ company.company_name|default:"ALLTECH Hub" }}{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">
@@ -22,7 +22,7 @@
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body p-4 p-lg-5">
           <p class="text-uppercase small fw-semibold text-primary mb-2">Who we are</p>
-          <h2 class="h3 mb-3">{{ company.company_name|default:company.name|default:"ALLTECH Hub" }} combines IT retail with practical technical service.</h2>
+          <h2 class="h3 mb-3">{{ company.company_name|default:"ALLTECH Hub" }} combines IT retail with practical technical service.</h2>
           <p class="text-muted">We support customers who need devices, accessories, repairs, installations, software help, networking support and proper business documentation.</p>
           <p class="text-muted mb-0">Our work is organised through clear quotations, invoices, receipts, job cards and support records so every customer can understand what was requested, what was delivered and what remains pending.</p>
         </div>
@@ -35,7 +35,7 @@
           <ul class="list-unstyled vstack gap-3 mb-0">
             <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Hardware sales, accessories and warranty follow-up</li>
             <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Workshop and on-site repairs</li>
-            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Software, backups, networking and CCTV support</li>
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Software, backups, networking and installation support</li>
             <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Transparent pricing, documentation and billing</li>
           </ul>
         </div>
