@@ -2,172 +2,223 @@
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
 <script type="application/ld+json">{{ product_schema_json }}</script>
-<div class="container py-4">
-  <div class="row g-4">
-    <div class="col-md-5">
-      <div class="d-flex flex-column gap-2">
-        <div class="border rounded shadow-sm overflow-hidden bg-white" id="pd-main-wrap">
-          {% if product.primary_display_image %}
-          <img src="{{ product.primary_display_image.url }}" class="img-fluid w-100" alt="{{ product.name }}" id="pd-main-img">
-          {% else %}
-          <div class="d-flex align-items-center justify-content-center text-muted" style="min-height:280px" id="pd-main-img">
-            No image
-          </div>
-          {% endif %}
-        </div>
-        {% if product.gallery_images.all %}
-        <div class="d-flex flex-wrap gap-2">
-          {% if product.image %}
-          <button type="button" class="btn btn-light border p-0 pd-thumb" data-src="{{ product.image.url }}" style="width:64px;height:64px;overflow:hidden">
-            <img src="{{ product.image.url }}" class="w-100 h-100 object-fit-cover" alt="">
-          </button>
-          {% endif %}
-          {% for gi in product.gallery_images.all %}
-          {% if gi.image %}
-          <button type="button" class="btn btn-light border p-0 pd-thumb" data-src="{{ gi.image.url }}" style="width:64px;height:64px;overflow:hidden">
-            <img src="{{ gi.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ gi.alt_text }}">
-          </button>
-          {% endif %}
-          {% endfor %}
-        </div>
-        {% endif %}
+
+<section class="catalog-hero mb-4">
+  <div class="container py-4 py-lg-5">
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a class="text-white-75" href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a class="text-white-75" href="{% url 'product_list' %}">Catalog</a></li>
+        <li class="breadcrumb-item active text-white" aria-current="page">{{ product.name|truncatechars:42 }}</li>
+      </ol>
+    </nav>
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        {% if product.kind == 'service' %}<span class="badge badge-kind-service mb-3">Service</span>{% else %}<span class="badge badge-kind-product mb-3">Product</span>{% endif %}
+        <h1 class="display-6 fw-bold mb-2">{{ product.name }}</h1>
+        <p class="text-white-75 mb-0">{{ product.short_description|default:product.category.name }}</p>
       </div>
-    </div>
-    <div class="col-md-7">
-      {% if product.kind == 'service' %}
-      <span class="badge badge-kind-service">Service</span>
-      {% else %}
-      <span class="badge badge-kind-product">Product</span>
-      {% endif %}
-      <h1 class="h2 mt-2">{{ product.name }}</h1>
-      <p class="text-muted">{{ product.category.name }}</p>
-      {% if review_summary.count %}
-      <p class="mb-2">
-        <span class="text-warning" aria-label="{{ review_summary.avg }} of 5 stars">
-          {% for s in rating_stars %}{% if s <= review_summary.avg|floatformat:0|add:0 %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}
-        </span>
-        <a href="#reviews" class="small text-muted ms-1 text-decoration-none">{{ review_summary.avg }} ({{ review_summary.count }} review{{ review_summary.count|pluralize }})</a>
-      </p>
-      {% endif %}
-      {% if product.has_sellable_variants %}
-      <p class="fs-4 fw-semibold mb-1" id="pd-price-label">From {{ company.currency_code }} {{ product.min_active_variant_price }}</p>
-      <p class="small text-muted mb-2">Options and prices below.</p>
-      {% else %}
-      <p class="fs-4 fw-semibold mb-1">{{ company.currency_code }} {{ product.price }}</p>
-      {% if product.compare_at_price %}
-      <p class="small text-muted text-decoration-line-through">{{ company.currency_code }} {{ product.compare_at_price }}</p>
-      {% endif %}
-      {% endif %}
-      {% if product.kind == 'physical' and not product.has_sellable_variants and product.track_inventory %}
-      <p class="small {% if product.stock_quantity %}text-success{% else %}text-danger{% endif %}">
-        {% if product.stock_quantity %}In stock ({{ product.stock_quantity }}){% else %}Out of stock{% endif %}
-      </p>
-      {% endif %}
-      {% if product.service_duration_hours %}
-      <p class="small text-muted">Estimated duration: {{ product.service_duration_hours }} h</p>
-      {% endif %}
-      <div class="prose">{{ product.description|linebreaks }}</div>
-      {% if user.is_authenticated and user.customer_profile %}
-      <form method="post" action="{% url 'portal_wishlist_add' product.id %}" class="mt-3">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.path }}">
-        <button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Save {{ product.name }} to your wishlist">♥ Save to wishlist</button>
-      </form>
-      {% endif %}
-      {% if product.available_to_sell %}
-      <form method="post" action="{% url 'cart_add' product.id %}" class="mt-4">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.path }}">
-        {% if product.has_sellable_variants %}
-        <div class="mb-3">
-          <label class="form-label" for="variant_id">Choose option</label>
-          <select name="variant_id" id="variant_id" class="form-select" required>
-            <option value="" disabled selected>Select…</option>
-            {% for v in product.variants.all %}
-            {% if v.is_active %}
-            <option value="{{ v.id }}" data-price="{{ v.price }}" data-currency="{{ company.currency_code }}" data-stock="{{ v.stock_quantity }}" data-track="{% if v.track_inventory %}1{% else %}0{% endif %}">
-              {{ v.name }} — {{ company.currency_code }} {{ v.price }}{% if v.track_inventory %} ({{ v.stock_quantity }} in stock){% endif %}
-            </option>
-            {% endif %}
-            {% endfor %}
-          </select>
-        </div>
-        {% endif %}
-        <div class="row g-2 align-items-end">
-          <div class="col-auto">
-            <label class="form-label small">Qty</label>
-            <input type="number" name="quantity" value="1" min="1" class="form-control" style="width:5rem">
-          </div>
-          <div class="col-auto">
-            <button type="submit" class="btn btn-primary">Add to cart</button>
-          </div>
-        </div>
-      </form>
-      {% else %}
-      <p class="text-danger mt-3">Currently unavailable.</p>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
-<section class="mt-5" id="reviews">
-  <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
-    <h2 class="h4 mb-0">Customer reviews</h2>
-    {% if review_summary.count %}
-      <span class="text-muted">
-        <strong>{{ review_summary.avg }}</strong> / 5
-        from {{ review_summary.count }} review{{ review_summary.count|pluralize }}
-      </span>
-    {% else %}
-      <span class="text-muted small">No reviews yet — be the first.</span>
-    {% endif %}
-  </div>
-
-  <div class="row g-3">
-    <div class="col-lg-7">
-      {% for r in reviews %}
-        <div class="border-bottom pb-3 mb-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <strong>{{ r.display_name }}</strong>
-            <span class="text-warning" aria-label="{{ r.rating }} of 5 stars">
-              {% for s in rating_stars %}{% if s <= r.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}
-            </span>
-          </div>
-          <p class="small text-muted mb-1">{{ r.created_at|date:"Y-m-d" }}{% if r.is_verified_purchase %} · verified purchase{% endif %}</p>
-          {% if r.title %}<p class="mb-1"><strong>{{ r.title }}</strong></p>{% endif %}
-          <p class="mb-0">{{ r.body|linebreaksbr }}</p>
-        </div>
-      {% empty %}
-        <p class="text-muted">Be the first to share your experience with this product.</p>
-      {% endfor %}
-    </div>
-    <div class="col-lg-5">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h3 class="h6 mb-3">Write a review</h3>
-          <form method="post" action="{% url 'product_review_submit' product.slug %}" class="vstack gap-2">
-            {% csrf_token %}
-            <label class="form-label small text-muted mb-1" for="review-name">Your name</label>
-            <input type="text" name="author_name" id="review-name" class="form-control" maxlength="120" placeholder="How should we list you?">
-            <label class="form-label small text-muted mb-1 mt-2" for="review-rating">Rating</label>
-            <select name="rating" id="review-rating" class="form-select" required>
-              <option value="">Choose…</option>
-              <option value="5">★★★★★ — Excellent</option>
-              <option value="4">★★★★ — Good</option>
-              <option value="3">★★★ — OK</option>
-              <option value="2">★★ — Poor</option>
-              <option value="1">★ — Awful</option>
-            </select>
-            <label class="form-label small text-muted mb-1 mt-2" for="review-body">Your review</label>
-            <textarea name="body" id="review-body" rows="4" class="form-control" required minlength="5" maxlength="1000" placeholder="What did you like or dislike?"></textarea>
-            <button type="submit" class="btn btn-outline-primary mt-2">Submit review</button>
-            <p class="small text-muted mb-0">Reviews are published after a quick moderation check.</p>
-          </form>
-        </div>
+      <div class="col-lg-4 text-lg-end">
+        <a class="btn btn-light" href="{% url 'contact' %}">Request a formal quote</a>
       </div>
     </div>
   </div>
 </section>
+
+<div class="container pb-5 product-detail-page">
+  <div class="row g-4 align-items-start">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm overflow-hidden mb-4">
+        <div class="product-detail-image-wrap bg-white" id="pd-main-wrap">
+          {% if product.primary_display_image %}
+          <img src="{{ product.primary_display_image.url }}" class="img-fluid w-100 product-detail-image" alt="{{ product.name }}" id="pd-main-img">
+          {% else %}
+          <div class="product-detail-placeholder" id="pd-main-img"><i class="bi {% if product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i><span>No image yet</span></div>
+          {% endif %}
+        </div>
+        {% if product.gallery_images.all %}
+        <div class="card-body border-top">
+          <div class="d-flex flex-wrap gap-2" aria-label="Product images">
+            {% if product.image %}
+            <button type="button" class="btn btn-light border p-0 pd-thumb product-detail-thumb" data-src="{{ product.image.url }}">
+              <img src="{{ product.image.url }}" class="w-100 h-100 object-fit-cover" alt="">
+            </button>
+            {% endif %}
+            {% for gi in product.gallery_images.all %}
+            {% if gi.image %}
+            <button type="button" class="btn btn-light border p-0 pd-thumb product-detail-thumb" data-src="{{ gi.image.url }}">
+              <img src="{{ gi.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ gi.alt_text }}">
+            </button>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h2 class="h4 mb-3">Overview</h2>
+          <div class="prose product-description">{{ product.description|linebreaks }}</div>
+          {% if not product.description %}<p class="text-muted mb-0">More details will be added soon. Contact the team for specifications and availability.</p>{% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span><h3 class="h6 mt-3">Clear documents</h3><p class="small text-muted mb-0">Quotes, receipts and invoices can be prepared for accountability.</p></div></div></div>
+        <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><h3 class="h6 mt-3">Guided support</h3><p class="small text-muted mb-0">Ask before buying or booking so you get the right solution.</p></div></div></div>
+        <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><h3 class="h6 mt-3">After-sales care</h3><p class="small text-muted mb-0">The team can help with setup, service follow-up and support.</p></div></div></div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <aside class="card border-0 shadow-sm product-purchase-card mb-4">
+        <div class="card-body p-4">
+          <p class="small text-muted mb-1">{{ product.category.name }}</p>
+          <h2 class="h4 mb-3">{% if product.kind == 'service' %}Book this service{% else %}Buy or enquire{% endif %}</h2>
+
+          {% if review_summary.count %}
+          <p class="mb-3">
+            <span class="text-warning" aria-label="{{ review_summary.avg }} of 5 stars">
+              {% for s in rating_stars %}{% if s <= review_summary.avg|floatformat:0|add:0 %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}
+            </span>
+            <a href="#reviews" class="small text-muted ms-1 text-decoration-none">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a>
+          </p>
+          {% endif %}
+
+          {% if product.has_sellable_variants %}
+          <p class="fs-3 fw-semibold mb-1" id="pd-price-label">From {{ company.currency_code }} {{ product.min_active_variant_price }}</p>
+          <p class="small text-muted mb-3">Choose an option below to confirm price and stock.</p>
+          {% else %}
+          <p class="fs-3 fw-semibold mb-1">{{ company.currency_code }} {{ product.price }}</p>
+          {% if product.compare_at_price %}<p class="small text-muted text-decoration-line-through mb-3">{{ company.currency_code }} {{ product.compare_at_price }}</p>{% endif %}
+          {% endif %}
+
+          <div class="vstack gap-2 mb-3">
+            {% if product.kind == 'service' %}
+            <div class="product-detail-status text-primary bg-primary-subtle"><i class="bi bi-calendar-check" aria-hidden="true"></i> Available for booking</div>
+            {% elif product.available_to_sell %}
+            <div class="product-detail-status text-success bg-success-subtle"><i class="bi bi-check-circle" aria-hidden="true"></i> Available to sell</div>
+            {% else %}
+            <div class="product-detail-status text-secondary bg-light"><i class="bi bi-info-circle" aria-hidden="true"></i> Ask for availability</div>
+            {% endif %}
+            {% if product.is_low_stock %}<div class="product-detail-status text-warning bg-warning-subtle"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Low stock</div>{% endif %}
+            {% if product.kind == 'physical' and not product.has_sellable_variants and product.track_inventory %}<div class="small text-muted">Stock on hand: {{ product.stock_quantity }}</div>{% endif %}
+            {% if product.service_duration_hours %}<div class="small text-muted">Estimated duration: {{ product.service_duration_hours }} hour{{ product.service_duration_hours|pluralize }}</div>{% endif %}
+            {% if product.sku %}<div class="small text-muted">SKU: {{ product.sku }}</div>{% endif %}
+          </div>
+
+          {% if user.is_authenticated and user.customer_profile %}
+          <form method="post" action="{% url 'portal_wishlist_add' product.id %}" class="mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Save {{ product.name }} to your wishlist">♥ Save to wishlist</button>
+          </form>
+          {% endif %}
+
+          {% if product.available_to_sell %}
+          <form method="post" action="{% url 'cart_add' product.id %}" class="vstack gap-3">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            {% if product.has_sellable_variants %}
+            <div>
+              <label class="form-label" for="variant_id">Choose option</label>
+              <select name="variant_id" id="variant_id" class="form-select" required>
+                <option value="" disabled selected>Select…</option>
+                {% for v in product.variants.all %}
+                {% if v.is_active %}
+                <option value="{{ v.id }}" data-price="{{ v.price }}" data-currency="{{ company.currency_code }}" data-stock="{{ v.stock_quantity }}" data-track="{% if v.track_inventory %}1{% else %}0{% endif %}">
+                  {{ v.name }} — {{ company.currency_code }} {{ v.price }}{% if v.track_inventory %} ({{ v.stock_quantity }} in stock){% endif %}
+                </option>
+                {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            {% if product.kind == 'service' %}
+            <input type="hidden" name="quantity" value="1">
+            <button type="submit" class="btn btn-primary btn-lg w-100">Book service</button>
+            {% else %}
+            <div class="row g-2 align-items-end">
+              <div class="col-4">
+                <label class="form-label small" for="quantity">Qty</label>
+                <input id="quantity" type="number" name="quantity" value="1" min="1" class="form-control">
+              </div>
+              <div class="col-8 d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">Add to cart</button>
+              </div>
+            </div>
+            {% endif %}
+          </form>
+          {% else %}
+          <a class="btn btn-primary btn-lg w-100" href="{% url 'contact' %}">Ask for availability</a>
+          {% endif %}
+          <a class="btn btn-outline-secondary w-100 mt-2" href="{% url 'contact' %}">Ask a question</a>
+        </div>
+      </aside>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Why buy through {{ company.name|default:'ALLTECH Hub' }}?</h2>
+          <ul class="list-unstyled vstack gap-2 mb-0 small text-muted">
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Clear pricing and formal documents</li>
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Support for products, repairs and installations</li>
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Help choosing the right option before payment</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="mt-5" id="reviews">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
+      <div><p class="text-uppercase small fw-semibold text-primary mb-1">Customer voice</p><h2 class="h3 mb-0">Reviews</h2></div>
+      {% if review_summary.count %}<span class="text-muted"><strong>{{ review_summary.avg }}</strong> / 5 from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</span>{% else %}<span class="text-muted small">No reviews yet — be the first.</span>{% endif %}
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+          {% for r in reviews %}
+          <div class="border-bottom pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center"><strong>{{ r.display_name }}</strong><span class="text-warning" aria-label="{{ r.rating }} of 5 stars">{% for s in rating_stars %}{% if s <= r.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span></div>
+            <p class="small text-muted mb-1">{{ r.created_at|date:"Y-m-d" }}{% if r.is_verified_purchase %} · verified purchase{% endif %}</p>
+            {% if r.title %}<p class="mb-1"><strong>{{ r.title }}</strong></p>{% endif %}
+            <p class="mb-0">{{ r.body|linebreaksbr }}</p>
+          </div>
+          {% empty %}
+          <p class="text-muted mb-0">Be the first to share your experience with this item or service.</p>
+          {% endfor %}
+        </div></div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4">
+            <h3 class="h5 mb-3">Write a review</h3>
+            <form method="post" action="{% url 'product_review_submit' product.slug %}" class="vstack gap-2">
+              {% csrf_token %}
+              <label class="form-label small text-muted mb-1" for="review-name">Your name</label>
+              <input type="text" name="author_name" id="review-name" class="form-control" maxlength="120" placeholder="How should we list you?">
+              <label class="form-label small text-muted mb-1 mt-2" for="review-rating">Rating</label>
+              <select name="rating" id="review-rating" class="form-select" required>
+                <option value="">Choose…</option>
+                <option value="5">★★★★★ — Excellent</option>
+                <option value="4">★★★★ — Good</option>
+                <option value="3">★★★ — OK</option>
+                <option value="2">★★ — Poor</option>
+                <option value="1">★ — Awful</option>
+              </select>
+              <label class="form-label small text-muted mb-1 mt-2" for="review-body">Your review</label>
+              <textarea name="body" id="review-body" rows="4" class="form-control" required minlength="5" maxlength="1000" placeholder="What did you like or dislike?"></textarea>
+              <button type="submit" class="btn btn-outline-primary mt-2">Submit review</button>
+              <p class="small text-muted mb-0">Reviews are published after a quick moderation check.</p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
 
 {% if product.gallery_images.all or product.has_sellable_variants %}
 <script>
@@ -181,7 +232,7 @@
       else {
         var img = document.createElement('img');
         img.src = src;
-        img.className = 'img-fluid w-100';
+        img.className = 'img-fluid w-100 product-detail-image';
         img.alt = '';
         img.id = 'pd-main-img';
         main.replaceWith(img);
