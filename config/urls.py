@@ -7,8 +7,10 @@ from django.urls import include, path
 from billing import views as billing_views
 from core import api_views as core_api
 from core import auth_views as core_auth
+from core import health as core_health
 
 urlpatterns = [
+    path("healthz/", core_health.healthz, name="healthz"),
     path("api/v1/products/", core_api.api_products, name="api_products"),
     path("api/v1/products/<slug:slug>/", core_api.api_product_detail, name="api_product_detail"),
     path("api/v1/orders/lookup/", core_api.api_order_lookup, name="api_order_lookup"),
