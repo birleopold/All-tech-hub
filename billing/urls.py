@@ -1,6 +1,6 @@
 from django.urls import path
 
-from billing import views
+from billing import document_pdf_views, views
 
 urlpatterns = [
     path("documents/", views.CommercialDocumentListView.as_view(), name="staff_documents"),
@@ -34,7 +34,11 @@ urlpatterns = [
         views.CommercialDocumentDetailView.as_view(),
         name="staff_document_view",
     ),
-    path("documents/<int:pk>/pdf/", views.document_pdf_view, name="staff_document_pdf"),
+    path(
+        "documents/<int:pk>/pdf/",
+        document_pdf_views.document_pdf_response_view,
+        name="staff_document_pdf",
+    ),
     path(
         "documents/<int:pk>/payment/",
         views.document_record_payment,
