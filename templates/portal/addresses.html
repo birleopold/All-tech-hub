@@ -1,58 +1,63 @@
 {% extends "base.html" %}
 {% block title %}My addresses{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0">My addresses</h1>
-    <a class="btn btn-outline-secondary" href="{% url 'portal_home' %}">Back to portal</a>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Saved addresses</p>
+        <h1 class="display-6 fw-bold mb-2">My addresses</h1>
+        <p class="text-white-75 mb-0">Save delivery, billing and pickup addresses for faster checkout and repair handling.</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'portal_home' %}">Portal home</a>
+    </div>
   </div>
-  <p class="text-muted small">Saved addresses speed up checkout and repair pickups.</p>
+</section>
 
-  <div class="row g-3">
+<div class="container pb-5">
+  <div class="row g-4 align-items-start">
     <div class="col-lg-7">
       {% for a in addresses %}
       <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
             <div>
-              <h2 class="h6 mb-1">{{ a.label }}{% if a.is_default %} <span class="badge bg-primary ms-1">Default</span>{% endif %}</h2>
+              <h2 class="h5 mb-1">{{ a.label }}{% if a.is_default %} <span class="badge bg-primary ms-1">Default</span>{% endif %}</h2>
               <p class="small text-muted mb-1">{{ a.get_kind_display }}{% if a.contact_name %} · {{ a.contact_name }}{% endif %}{% if a.contact_phone %} · {{ a.contact_phone }}{% endif %}</p>
               <p class="mb-0">{{ a.as_text|linebreaksbr }}</p>
             </div>
             <div class="d-flex flex-column gap-1">
               <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_address_edit' a.pk %}">Edit</a>
               <form method="post" onsubmit="return confirm('Remove this address?');">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="address_id" value="{{ a.pk }}">
-                <button class="btn btn-sm btn-outline-danger w-100" type="submit">Delete</button>
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="address_id" value="{{ a.pk }}"><button class="btn btn-sm btn-outline-danger w-100" type="submit">Delete</button>
               </form>
             </div>
           </div>
         </div>
       </div>
       {% empty %}
-      <p class="text-muted">You have no saved addresses yet.</p>
+      <div class="card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-geo-alt display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No saved addresses yet</h2><p class="text-muted mb-0">Add an address to make checkout, delivery and repair pickup easier.</p></div></div>
       {% endfor %}
     </div>
 
     <div class="col-lg-5">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h2 class="h5 mb-3">Add new address</h2>
+      <aside class="card border-0 shadow-sm product-purchase-card">
+        <div class="card-body p-4">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Add address</p>
+          <h2 class="h4 mb-3">New saved address</h2>
           <form method="post">
             {% csrf_token %}
             {% for field in form %}
-            <div class="mb-2">
+            <div class="mb-3">
               <label class="form-label small text-muted mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
               {{ field }}
               {% if field.errors %}<div class="small text-danger">{{ field.errors }}</div>{% endif %}
             </div>
             {% endfor %}
-            <button class="btn btn-primary mt-2" type="submit">Save address</button>
+            <button class="btn btn-primary w-100" type="submit">Save address</button>
           </form>
         </div>
-      </div>
+      </aside>
     </div>
   </div>
 </div>
