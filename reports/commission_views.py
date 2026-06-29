@@ -18,6 +18,7 @@ from billing.financials import (
     queryset_financial_summary,
 )
 from billing.models import CommercialDocument, CommercialLine
+from billing.partner_payables import partner_payables_summary
 from reports import views
 
 RECOGNIZED_DOCUMENT_STATUSES = (
@@ -48,15 +49,36 @@ def recognized_documents(start_date=None, end_date=None):
     return qs
 
 
+def payable_lines(start_date=None, end_date=None):
+    qs = (
+        CommercialLine.objects.filter(
+            document__status__in=RECOGNIZED_DOCUMENT_STATUSES,
+        )
+        .exclude(document__doc_type=CommercialDocument.TYPE_CREDIT_NOTE)
+        .select_related("document")
+    )
+    if start_date is not None:
+        qs = qs.filter(document__issue_date__gte=start_date)
+    if end_date is not None:
+        qs = qs.filter(document__issue_date__lte=end_date)
+    return [line for line in qs if line_owner_payout(line) > 0]
+
+
 class ReportsHomeView(views.ReportsHomeView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         today = timezone.localdate()
+        start_30 = today - timedelta(days=30)
         today_documents = recognized_documents(start_date=today, end_date=today)
         today_summary = queryset_financial_summary(today_documents)
+        partner_payables_30 = partner_payables_summary(payable_lines(start_date=start_30))
         ctx["document_sales_today"] = today_summary["recognized_income"]
         ctx["document_customer_total_today"] = today_summary["customer_total"]
         ctx["document_owner_payout_today"] = today_summary["owner_payout"]
+        ctx["partner_payables_30"] = partner_payables_30[:10]
+        ctx["partner_payables_total_30"] = sum(
+            (row["amount_due"] for row in partner_payables_30), Decimal("0.00")
+        )
         return ctx
 
     @staticmethod
@@ -261,6 +283,41 @@ def staff_export_margin_lines_csv(request):
                 row["cost"],
                 row["profit"],
                 row["margin"],
+            ]
+        )
+    return response
+
+
+def staff_export_partner_payables_csv(request):
+    if not request.user.is_staff:
+        raise Http404
+    start_30 = timezone.localdate() - timedelta(days=30)
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="partner_payables_30d.csv"'
+    writer = csv.writer(response)
+    writer.writerow(
+        [
+            "partner_or_technician",
+            "category",
+            "documents",
+            "lines",
+            "customer_total",
+            "amount_due",
+            "recognized_income",
+            "profit",
+        ]
+    )
+    for row in partner_payables_summary(payable_lines(start_date=start_30)):
+        writer.writerow(
+            [
+                row["partner"],
+                row["category"],
+                row["document_count"],
+                row["line_count"],
+                row["customer_total"],
+                row["amount_due"],
+                row["recognized_income"],
+                row["profit"],
             ]
         )
     return response
