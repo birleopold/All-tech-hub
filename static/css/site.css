@@ -63,11 +63,89 @@ body {
   outline-offset: 2px;
 }
 
-.hero {
-  background: linear-gradient(135deg, #0b1f33 0%, #123a5c 100%);
+.hero,
+.home-hero {
+  background: radial-gradient(circle at top right, rgba(13, 110, 253, 0.22), transparent 28%), linear-gradient(135deg, #0b1f33 0%, #123a5c 100%);
   color: #fff;
   border-radius: 0 0 1.5rem 1.5rem;
   padding: clamp(1.75rem, 5vw, 3rem) 0;
+}
+
+.text-white-75 {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.home-hero-panel {
+  border-radius: 1.25rem;
+}
+
+.home-feature-card,
+.home-process,
+.home-cta {
+  border: 1px solid rgba(11, 31, 51, 0.06) !important;
+}
+
+.home-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #0d6efd;
+  background: rgba(13, 110, 253, 0.1);
+  border-radius: 0.9rem;
+  font-size: 1.35rem;
+}
+
+.home-service-card .card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.home-step {
+  height: 100%;
+  padding: 1rem;
+  background: #f8fbff;
+  border: 1px solid rgba(13, 110, 253, 0.1);
+  border-radius: 1rem;
+}
+
+.home-step span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.75rem;
+  color: #fff;
+  background: #0d6efd;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.home-step strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.home-step p {
+  margin-bottom: 0;
+  color: #6c757d;
+  font-size: 0.92rem;
+}
+
+.home-product-image {
+  height: 150px;
+}
+
+.home-product-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  color: #0d6efd;
+  background: linear-gradient(135deg, #eef5ff, #f8fbff);
+  font-size: 2rem;
 }
 
 .card-product {
