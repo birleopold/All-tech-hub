@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Catalog — Products and services{% endblock %}
+{% block title %}{% if current_kind == 'service' %}Services{% elif current_kind == 'physical' %}Products{% else %}Catalog{% endif %} — Products and services{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-4">
   <div class="container py-4 py-lg-5">
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
       <div>
-        <p class="text-uppercase small text-white-50 mb-2">Shop and service catalog</p>
-        <h1 class="display-6 fw-bold mb-2" id="catalog-heading">Find products, services and support</h1>
-        <p class="text-white-75 mb-0">Browse devices, accessories, repairs and IT services with clear pricing and availability.</p>
+        <p class="text-uppercase small text-white-50 mb-2">{% if current_kind == 'service' %}Professional service catalog{% elif current_kind == 'physical' %}Product catalog{% else %}Shop and service catalog{% endif %}</p>
+        <h1 class="display-6 fw-bold mb-2" id="catalog-heading">{% if current_kind == 'service' %}Book repairs, installations and IT support{% elif current_kind == 'physical' %}Browse available products and accessories{% else %}Find products, services and support{% endif %}</h1>
+        <p class="text-white-75 mb-0">{% if current_kind == 'service' %}Choose a service, check the starting price, and request help from the team with clear documentation.{% elif current_kind == 'physical' %}Browse devices and accessories with prices, options and availability signals.{% else %}Browse devices, accessories, repairs and IT services with clear pricing and availability.{% endif %}</p>
       </div>
-      <a class="btn btn-light" href="{% url 'contact' %}">Request a quote</a>
+      <a class="btn btn-light" href="{% url 'contact' %}">{% if current_kind == 'service' %}Book service{% else %}Request a quote{% endif %}</a>
     </div>
   </div>
 </section>
@@ -56,7 +56,7 @@
 
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
-      <h2 class="h4 mb-1" id="catalog-filters-heading">Catalog results</h2>
+      <h2 class="h4 mb-1" id="catalog-filters-heading">{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalog results{% endif %}</h2>
       <p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}</p>
     </div>
   </div>
