@@ -25,19 +25,23 @@
 </form>
 <div class="table-responsive card shadow-sm border-0">
   <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Customer</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
+    <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Customer</th><th>Status</th><th>Total</th><th>Date</th><th class="text-end">Actions</th></tr></thead>
     <tbody>
       {% for d in documents %}
       <tr>
-        <td><a href="{% url 'staff_document_edit' d.pk %}">{{ d.number }}</a></td>
+        <td><a href="{% url 'staff_document_view' d.pk %}">{{ d.number }}</a></td>
         <td>{{ d.get_doc_type_display }}</td>
-        <td>{{ d.display_customer_name }}</td>
+        <td>{{ d.display_customer_name }}{% if not d.customer_id %} <span class="badge text-bg-light border">Walk-in</span>{% endif %}</td>
         <td>{{ d.get_status_display }}</td>
         <td>{{ company.currency_code }} {{ d.total }}</td>
         <td>{{ d.issue_date }}</td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_document_view' d.pk %}">View</a>
+          <a class="btn btn-sm btn-success" href="{% url 'staff_document_pdf' d.pk %}?download=1">Download PDF</a>
+        </td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" class="text-muted">No documents.</td></tr>
+      <tr><td colspan="7" class="text-muted">No documents.</td></tr>
       {% endfor %}
     </tbody>
   </table>
