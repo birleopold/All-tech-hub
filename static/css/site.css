@@ -12,7 +12,6 @@ body {
   background: #f6f8fb;
 }
 
-/* Main content clears fixed mobile tab bar (+ public strip); staff uses shorter bar only */
 @media (max-width: 991.98px) {
   .site-main {
     padding-bottom: calc(var(--at-tabbar-h) + var(--at-tabbar-more) + env(safe-area-inset-bottom, 0px));
@@ -64,7 +63,8 @@ body {
 }
 
 .hero,
-.home-hero {
+.home-hero,
+.catalog-hero {
   background: radial-gradient(circle at top right, rgba(13, 110, 253, 0.22), transparent 28%), linear-gradient(135deg, #0b1f33 0%, #123a5c 100%);
   color: #fff;
   border-radius: 0 0 1.5rem 1.5rem;
@@ -81,7 +81,9 @@ body {
 
 .home-feature-card,
 .home-process,
-.home-cta {
+.home-cta,
+.catalog-toolbar,
+.catalog-empty {
   border: 1px solid rgba(11, 31, 51, 0.06) !important;
 }
 
@@ -146,6 +148,55 @@ body {
   color: #0d6efd;
   background: linear-gradient(135deg, #eef5ff, #f8fbff);
   font-size: 2rem;
+}
+
+.catalog-toolbar {
+  margin-top: -2rem;
+  position: relative;
+  z-index: 2;
+  border-radius: 1rem;
+}
+
+.catalog-card {
+  overflow: hidden;
+  border: 1px solid rgba(11, 31, 51, 0.06) !important;
+}
+
+.catalog-card-image-wrap {
+  position: relative;
+  background: #f8fbff;
+}
+
+.catalog-card-image {
+  width: 100%;
+  height: 180px;
+}
+
+.catalog-card-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 180px;
+  color: #0d6efd;
+  background: linear-gradient(135deg, #eef5ff, #f8fbff);
+  font-size: 2.2rem;
+}
+
+.catalog-card-badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  box-shadow: 0 0.35rem 1rem rgba(11, 31, 51, 0.1);
+}
+
+.catalog-stock-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .card-product {
@@ -256,7 +307,6 @@ body {
   margin-top: 3rem;
 }
 
-/* —— App-style mobile tab bar (thumb zone, WCAG-friendly touch targets) —— */
 .mobile-tabbar {
   position: fixed;
   left: 0;
@@ -366,7 +416,6 @@ body {
   }
 }
 
-/* Readable tables on small screens */
 @media (max-width: 767.98px) {
   .table-responsive {
     font-size: 0.9rem;
@@ -376,9 +425,12 @@ body {
     padding-left: max(0.75rem, env(safe-area-inset-left));
     padding-right: max(0.75rem, env(safe-area-inset-right));
   }
+
+  .catalog-toolbar {
+    margin-top: -1rem;
+  }
 }
 
-/* WCAG: keyboard focus visibility (Phase 8 incremental) */
 a:focus-visible,
 .btn:focus-visible,
 .form-control:focus-visible,
