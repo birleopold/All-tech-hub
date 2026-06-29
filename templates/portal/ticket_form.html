@@ -1,16 +1,41 @@
 {% extends "base.html" %}
 {% block title %}New support request{% endblock %}
 {% block content %}
-<div class="container py-4 col-lg-6">
-  <h1 class="h3 mb-3">New support request</h1>
-  <p class="text-muted small">Describe your issue — we will email you when the status changes.</p>
-  <form method="post" class="card border-0 shadow-sm">
-    <div class="card-body">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Submit</button>
-      <a class="btn btn-link" href="{% url 'portal_tickets' %}">Cancel</a>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Support</p>
+        <h1 class="display-6 fw-bold mb-2">New support request</h1>
+        <p class="text-white-75 mb-0">Describe the issue and the team will reply through your portal record.</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'portal_tickets' %}">All requests</a>
     </div>
-  </form>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row g-4 justify-content-center">
+    <div class="col-lg-7">
+      <form method="post" class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          {% csrf_token %}
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Request details</p>
+          <h2 class="h4 mb-3">How can we help?</h2>
+          <p class="text-muted">Mention the order number, job number, device, document or service issue where applicable.</p>
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field.errors }}
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <div class="d-flex gap-2 flex-wrap"><button type="submit" class="btn btn-primary btn-lg">Submit request</button><a class="btn btn-outline-secondary btn-lg" href="{% url 'portal_tickets' %}">Cancel</a></div>
+        </div>
+      </form>
+    </div>
+    <div class="col-lg-4"><div class="card border-0 shadow-sm"><div class="card-body p-4"><span class="home-feature-icon"><i class="bi bi-chat-dots" aria-hidden="true"></i></span><h3 class="h5 mt-3">Keep it clear</h3><p class="text-muted mb-0">Short, specific details help the team respond faster and avoid repeated questions.</p></div></div></div>
+  </div>
 </div>
 {% endblock %}
