@@ -36,6 +36,10 @@ document.addEventListener('DOMContentLoaded', function () {
     return field ? field.value.trim() : '';
   }
 
+  function fieldBySuffix(row, suffix) {
+    return row.querySelector('[name$="-' + suffix + '"]');
+  }
+
   function markInvalid(field, message) {
     if (!field) {
       return;
@@ -117,22 +121,59 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function isCommissionSource(sourceType) {
+    return sourceType === 'external' || sourceType === 'consignment';
+  }
+
+  function refreshCommissionHints() {
+    activeLineRows().forEach(function (row) {
+      var sourceField = fieldBySuffix(row, 'source_type');
+      var unitCostField = fieldBySuffix(row, 'unit_cost');
+      var supplierField = fieldBySuffix(row, 'supplier_name');
+      if (!sourceField || !unitCostField || !supplierField) {
+        return;
+      }
+
+      var hint = row.querySelector('.commission-line-hint');
+      if (isCommissionSource(sourceField.value)) {
+        unitCostField.placeholder = 'Neighbor / owner price';
+        supplierField.placeholder = 'Neighbor or owner name';
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'small text-success mt-2 commission-line-hint';
+          hint.textContent = 'Commission item: reports count only your markup as business income. Put the neighbor/owner price in Unit cost.';
+          sourceField.insertAdjacentElement('afterend', hint);
+        }
+      } else if (hint) {
+        hint.remove();
+      }
+    });
+  }
+
   function validateDocumentBeforeSubmit() {
     clearClientErrors();
     ensureWalkInName();
+    refreshCommissionHints();
 
     var errors = [];
     var validLineFound = false;
 
     activeLineRows().forEach(function (row) {
-      var descriptionField = row.querySelector('[name$="-description"]');
-      var quantityField = row.querySelector('[name$="-quantity"]');
-      var priceField = row.querySelector('[name$="-unit_price"]');
+      var descriptionField = fieldBySuffix(row, 'description');
+      var quantityField = fieldBySuffix(row, 'quantity');
+      var priceField = fieldBySuffix(row, 'unit_price');
+      var sourceField = fieldBySuffix(row, 'source_type');
+      var costField = fieldBySuffix(row, 'unit_cost');
+      var supplierField = fieldBySuffix(row, 'supplier_name');
 
       var description = fieldValue(row, 'description');
       var quantity = Number(fieldValue(row, 'quantity'));
       var priceRaw = fieldValue(row, 'unit_price');
       var price = Number(priceRaw);
+      var sourceType = sourceField ? sourceField.value : '';
+      var costRaw = fieldValue(row, 'unit_cost');
+      var cost = Number(costRaw);
+      var supplier = fieldValue(row, 'supplier_name');
       var hasAnyLineValue = description || fieldValue(row, 'product') || fieldValue(row, 'product_variant') || fieldValue(row, 'quantity') || priceRaw;
 
       if (description && quantity > 0 && priceRaw !== '' && price >= 0) {
@@ -151,6 +192,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (priceRaw === '' || !(price >= 0)) {
           errors.push({ field: priceField, message: 'Enter a unit price of zero or more.' });
           markInvalid(priceField, 'Enter a unit price of zero or more.');
+        }
+        if (isCommissionSource(sourceType)) {
+          if (!supplier) {
+            errors.push({ field: supplierField, message: 'Enter the neighbor or owner name for commission items.' });
+            markInvalid(supplierField, 'Enter the neighbor or owner name.');
+          }
+          if (costRaw === '' || !(cost >= 0)) {
+            errors.push({ field: costField, message: 'Enter the neighbor or owner price in Unit cost.' });
+            markInvalid(costField, 'Enter the neighbor or owner price.');
+          }
+          if (priceRaw !== '' && costRaw !== '' && price < cost) {
+            errors.push({ field: priceField, message: 'Selling price is below the neighbor price; this creates a loss.' });
+            markInvalid(priceField, 'Selling price is below the neighbor price.');
+          }
         }
       }
     });
@@ -172,6 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return true;
   }
+
+  form.addEventListener('change', refreshCommissionHints);
+  refreshCommissionHints();
 
   form.addEventListener('submit', function (event) {
     if (!validateDocumentBeforeSubmit()) {
