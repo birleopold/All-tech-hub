@@ -7,8 +7,9 @@
     <p class="text-muted mb-0">{{ document.get_doc_type_display }} · {{ document.get_status_display }}</p>
   </div>
   <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_pdf' document.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open document PDF in a new tab">PDF</a>
-    <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' document.pk %}?copy=1" target="_blank" rel="noopener noreferrer">Copy PDF</a>
+    <a class="btn btn-success" href="{% url 'staff_document_pdf' document.pk %}?download=1">Download PDF</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_document_pdf' document.pk %}?inline=1" target="_blank" rel="noopener noreferrer" aria-label="Preview document PDF in a new tab">Preview PDF</a>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' document.pk %}?copy=1&download=1">Copy PDF</a>
     <a class="btn btn-outline-success" href="{% url 'staff_email_document' document.pk %}">Email</a>
     {% if document.display_customer_phone %}<a class="btn btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={{ document.get_doc_type_display|urlencode }}%20{{ document.number|urlencode }}">WhatsApp</a>{% endif %}
     {% if not document.is_locked %}<a class="btn btn-primary" href="{% url 'staff_document_edit' document.pk %}">Edit</a>{% endif %}
@@ -20,7 +21,7 @@
   <div class="card-body row">
     <div class="col-md-6">
       <p class="small text-muted mb-1">Customer</p>
-      <p class="mb-2">{{ document.display_customer_name }}{% if document.display_customer_company %} — {{ document.display_customer_company }}{% endif %}</p>
+      <p class="mb-2">{{ document.display_customer_name }}{% if not document.customer_id %} <span class="badge text-bg-light border">Walk-in</span>{% endif %}{% if document.display_customer_company %} — {{ document.display_customer_company }}{% endif %}</p>
       <p class="small mb-0">{% if document.display_customer_email %}{{ document.display_customer_email }}{% endif %}{% if document.display_customer_email and document.display_customer_phone %} · {% endif %}{% if document.display_customer_phone %}{{ document.display_customer_phone }}{% endif %}</p>
       {% if document.customer_address %}<p class="small text-muted mt-1 mb-0">{{ document.customer_address|linebreaksbr }}</p>{% endif %}
     </div>
@@ -216,7 +217,7 @@
 {% endif %}
 <div class="card border-0 shadow-sm mt-3" id="revision-actions"><div class="card-body">
   <h2 class="h6">Document control</h2>
-  {% if document.customer_id %}<p><a href="{% url 'staff_customer_statement' document.customer_id %}">Open customer statement</a></p>{% endif %}
+  {% if document.customer_id %}<p><a href="{% url 'staff_customer_statement' document.customer_id %}">Open customer statement</a></p>{% else %}<p class="small text-muted">This is a walk-in document and is saved without a customer account.</p>{% endif %}
   {% if document.is_locked %}<p class="small text-muted">Locked {{ document.locked_at|date:"Y-m-d H:i" }}{% if document.locked_by %} by {{ document.locked_by.get_username }}{% endif %}.</p>{% endif %}
   <div class="d-flex flex-wrap gap-3">
     {% if document.is_locked and can_revise and document.status != 'cancelled' %}
