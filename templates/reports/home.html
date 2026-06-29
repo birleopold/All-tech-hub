@@ -5,7 +5,7 @@
 
 <div class="alert alert-info border-0 shadow-sm" role="status">
   <strong>Commission-aware reporting is active.</strong>
-  Neighbor, external, and consignment items still show the full customer price on receipts, but reports count only your markup as recognised income.
+  Neighbor, external, consignment, and outsourced service items still show the full customer price on receipts, but reports count only your markup as recognised income.
 </div>
 
 <div class="row g-3 mb-4">
@@ -35,7 +35,7 @@
       <div class="card-body">
         <p class="text-muted small mb-1">Recognised document income today</p>
         <p class="h3 mb-0">{{ company.currency_code }} {{ document_sales_today|floatformat:2 }}</p>
-        <p class="small text-muted mb-0">Customer total {{ document_customer_total_today|floatformat:2 }} · owner payout {{ document_owner_payout_today|floatformat:2 }}</p>
+        <p class="small text-muted mb-0">Customer total {{ document_customer_total_today|floatformat:2 }} · partner amount due {{ document_owner_payout_today|floatformat:2 }}</p>
       </div>
     </div>
   </div>
@@ -51,9 +51,9 @@
   <div class="col-md-4">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <p class="text-muted small mb-1">Neighbor / consignment commission (30d)</p>
-        <p class="h3 mb-0">{{ company.currency_code }} {{ external_item_margin_30.profit|floatformat:2 }}</p>
-        <p class="small text-muted mb-0">Customer total {{ external_item_margin_30.customer_total|floatformat:2 }} · owner payout {{ external_item_margin_30.owner_payout|floatformat:2 }}</p>
+        <p class="text-muted small mb-1">Partner / technician amounts due (30d)</p>
+        <p class="h3 mb-0">{{ company.currency_code }} {{ partner_payables_total_30|floatformat:2 }}</p>
+        <a class="small" href="{% url 'staff_export_partner_payables_csv' %}">Export payables</a>
       </div>
     </div>
   </div>
@@ -87,7 +87,7 @@
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
         <h2 class="h6 text-muted text-uppercase mb-2">Data export</h2>
-        <p class="small mb-2">CSV downloads (Excel / Sheets). Document exports include recognised income, owner payout, business cost, and profit.</p>
+        <p class="small mb-2">CSV downloads (Excel / Sheets). Document exports include recognised income, partner amount due, business cost, and profit.</p>
         <div class="d-flex flex-wrap gap-2">
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_orders_csv' %}?days=90">Orders (90d)</a>
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_jobs_csv' %}">Job cards</a>
@@ -98,6 +98,7 @@
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_payment_exceptions_csv' %}">Payment exceptions</a>
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_customer_value_csv' %}">Customer value</a>
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_margin_lines_csv' %}">Margin lines</a>
+          <a class="btn btn-outline-success btn-sm" href="{% url 'staff_export_partner_payables_csv' %}">Partner payables</a>
         </div>
       </div>
     </div>
@@ -117,6 +118,30 @@
         {% endif %}
         <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_inventory' %}?low=1">Inventory</a>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+      <div>
+        <h2 class="h6 text-muted text-uppercase mb-1">Partner and subcontractor amounts due (last 30 days)</h2>
+        <p class="small text-muted mb-0">Use this to know which neighbor, consignor, or technician must be paid from issued/paid documents.</p>
+      </div>
+      <a class="btn btn-sm btn-outline-success" href="{% url 'staff_export_partner_payables_csv' %}">Export payables</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 align-middle">
+        <thead class="table-light"><tr><th>Partner / technician</th><th>Category</th><th class="text-end">Docs</th><th class="text-end">Lines</th><th class="text-end">Customer total</th><th class="text-end">Amount due</th><th class="text-end">Recognised income</th></tr></thead>
+        <tbody>
+          {% for row in partner_payables_30 %}
+          <tr><td>{{ row.partner }}</td><td>{{ row.category }}</td><td class="text-end">{{ row.document_count }}</td><td class="text-end">{{ row.line_count }}</td><td class="text-end">{{ company.currency_code }} {{ row.customer_total|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.amount_due|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.recognized_income|floatformat:2 }}</td></tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-muted">No partner or subcontractor payables in the last 30 days.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -221,7 +246,7 @@
   <h2 class="h6 text-muted text-uppercase mb-2">Highest profit lines (last 30 days)</h2>
   <div class="table-responsive card border-0 shadow-sm">
     <table class="table table-sm mb-0">
-      <thead class="table-light"><tr><th>Line</th><th>Document</th><th>Source</th><th class="text-end">Customer total</th><th class="text-end">Recognised income</th><th class="text-end">Owner payout</th><th class="text-end">Business cost</th><th class="text-end">Profit</th><th class="text-end">Margin</th></tr></thead>
+      <thead class="table-light"><tr><th>Line</th><th>Document</th><th>Source</th><th class="text-end">Customer total</th><th class="text-end">Recognised income</th><th class="text-end">Partner due</th><th class="text-end">Business cost</th><th class="text-end">Profit</th><th class="text-end">Margin</th></tr></thead>
       <tbody>
         {% for row in top_margin_lines_30 %}
         <tr><td>{{ row.description }}</td><td>{{ row.document }}</td><td>{{ row.source_type }}</td><td class="text-end">{{ company.currency_code }} {{ row.customer_total|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.recognized_income|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.owner_payout|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.cost|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.profit|floatformat:2 }}</td><td class="text-end">{{ row.margin }}%</td></tr>
