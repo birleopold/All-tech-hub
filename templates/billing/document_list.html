@@ -1,28 +1,48 @@
 {% extends "staff_base.html" %}
 {% block title %}Documents{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">Commercial documents</h1>
-<form method="get" class="row g-2 mb-3">
-  <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ request.GET.q }}" placeholder="Number, customer, title or reference"></div>
-  <div class="col-auto">
-    <select name="type" class="form-select">
-      <option value="">All types</option>
-      {% for value,label in document_type_choices %}
-      <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Commercial documents</h1>
+    <p class="text-muted mb-0">Find receipts, invoices, quotations and walk-in documents. Newest documents appear first.</p>
   </div>
-  <div class="col-auto">
-    <select name="status" class="form-select">
-      <option value="">All statuses</option>
-      {% for val,label in document_status_choices %}
-      <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
+  <a class="btn btn-primary" href="{% url 'staff_document_create' %}">New document</a>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Quick document filters">
+      <a class="btn btn-sm {% if not request.GET.type %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}">All</a>
+      <a class="btn btn-sm {% if request.GET.type == 'receipt' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}?type=receipt">Receipts</a>
+      <a class="btn btn-sm {% if request.GET.type == 'invoice' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}?type=invoice">Invoices</a>
+      <a class="btn btn-sm {% if request.GET.type == 'quote' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}?type=quote">Quotations</a>
+    </div>
+    <form method="get" class="row g-2">
+      <div class="col-md-4"><label class="visually-hidden" for="document-search">Search documents</label><input class="form-control" id="document-search" type="search" name="q" value="{{ request.GET.q }}" placeholder="Search number, walk-in name, phone or reference"></div>
+      <div class="col-auto">
+        <label class="visually-hidden" for="document-type-filter">Document type</label>
+        <select id="document-type-filter" name="type" class="form-select">
+          <option value="">All types</option>
+          {% for value,label in document_type_choices %}
+          <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="visually-hidden" for="document-status-filter">Document status</label>
+        <select id="document-status-filter" name="status" class="form-select">
+          <option value="">All statuses</option>
+          {% for val,label in document_status_choices %}
+          <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Apply filters</button></div>
+      {% if request.GET.q or request.GET.type or request.GET.status %}<div class="col-auto"><a class="btn btn-link" href="{% url 'staff_documents' %}">Clear filters</a></div>{% endif %}
+    </form>
   </div>
-  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
-  <div class="col-auto ms-auto"><a class="btn btn-primary" href="{% url 'staff_document_create' %}">New document</a></div>
-</form>
+</div>
+
 <div class="table-responsive card shadow-sm border-0">
   <table class="table table-hover mb-0 align-middle">
     <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Customer</th><th>Status</th><th>Total</th><th>Date</th><th class="text-end">Actions</th></tr></thead>
@@ -34,14 +54,14 @@
         <td>{{ d.display_customer_name }}{% if not d.customer_id %} <span class="badge text-bg-light border">Walk-in</span>{% endif %}</td>
         <td>{{ d.get_status_display }}</td>
         <td>{{ company.currency_code }} {{ d.total }}</td>
-        <td>{{ d.issue_date }}</td>
+        <td>{{ d.created_at|date:"Y-m-d H:i" }}</td>
         <td class="text-end text-nowrap">
           <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_document_view' d.pk %}">View</a>
           <a class="btn btn-sm btn-success" href="{% url 'staff_document_pdf' d.pk %}?download=1">Download PDF</a>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" class="text-muted">No documents.</td></tr>
+      <tr><td colspan="7" class="text-muted">No documents match your filters. Clear the filters or create a new document.</td></tr>
       {% endfor %}
     </tbody>
   </table>
