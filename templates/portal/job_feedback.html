@@ -1,27 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Feedback for {{ job.number }}{% endblock %}
 {% block content %}
-<div class="container py-4">
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5 text-center">
+    <p class="text-uppercase small text-white-50 mb-2">Service feedback</p>
+    <h1 class="display-6 fw-bold mb-3">How did we do?</h1>
+    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 44rem;">Your feedback helps improve service quality for job {{ job.number }}.</p>
+  </div>
+</section>
+
+<div class="container pb-5">
   <div class="row justify-content-center">
     <div class="col-lg-7">
-      <h1 class="h3 mb-1">How did we do?</h1>
-      <p class="text-muted mb-4">Your honest feedback helps us improve service for {{ job.number }}.</p>
       <form method="post" class="card border-0 shadow-sm">
         {% csrf_token %}
-        <div class="card-body">
-          <fieldset class="mb-3">
+        <div class="card-body p-4 p-lg-5">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Rate the service</p>
+          <fieldset class="mb-4">
             <legend class="form-label">Rating</legend>
-            <div class="d-flex gap-3 flex-wrap">
+            <div class="vstack gap-2">
               {% for value in "54321" %}
-              <label class="form-check d-flex align-items-center gap-2">
+              <label class="form-check d-flex align-items-center gap-2 border rounded px-3 py-2 mb-0">
                 <input class="form-check-input" type="radio" name="rating" value="{{ value }}" required>
-                <span>
-                  {% if value == "5" %}★★★★★ — Excellent{% endif %}
-                  {% if value == "4" %}★★★★ — Good{% endif %}
-                  {% if value == "3" %}★★★ — OK{% endif %}
-                  {% if value == "2" %}★★ — Poor{% endif %}
-                  {% if value == "1" %}★ — Awful{% endif %}
-                </span>
+                <span>{% if value == "5" %}★★★★★ — Excellent{% endif %}{% if value == "4" %}★★★★ — Good{% endif %}{% if value == "3" %}★★★ — OK{% endif %}{% if value == "2" %}★★ — Poor{% endif %}{% if value == "1" %}★ — Awful{% endif %}</span>
               </label>
               {% endfor %}
             </div>
@@ -31,8 +32,8 @@
             <textarea class="form-control" name="comment" id="comment" rows="4" maxlength="2000" placeholder="What went well or could be better?"></textarea>
           </div>
         </div>
-        <div class="card-footer bg-white d-flex justify-content-between">
-          <a class="btn btn-link" href="{% url 'portal_job_detail' job.pk %}">Cancel</a>
+        <div class="card-footer bg-white d-flex justify-content-between flex-wrap gap-2">
+          <a class="btn btn-outline-secondary" href="{% url 'portal_job_detail' job.pk %}">Cancel</a>
           <button class="btn btn-primary" type="submit">Submit feedback</button>
         </div>
       </form>
