@@ -3,11 +3,16 @@
 {% block staff_content %}
 <h1 class="h3 mb-4">Reports &amp; analytics</h1>
 
+<div class="alert alert-info border-0 shadow-sm" role="status">
+  <strong>Commission-aware reporting is active.</strong>
+  Neighbor, external, and consignment items still show the full customer price on receipts, but reports count only your markup as recognised income.
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-md-6">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <p class="text-muted small mb-1">Revenue (last 30 days)</p>
+        <p class="text-muted small mb-1">Online order revenue (last 30 days)</p>
         <p class="display-6 mb-0">{{ company.currency_code }} {{ revenue_30|floatformat:2 }}</p>
         <p class="text-muted small mb-0">From {{ start_30 }} to {{ today }}</p>
       </div>
@@ -16,7 +21,7 @@
   <div class="col-md-6">
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
-        <p class="text-muted small mb-1">Revenue (last 90 days)</p>
+        <p class="text-muted small mb-1">Online order revenue (last 90 days)</p>
         <p class="display-6 mb-0">{{ company.currency_code }} {{ revenue_90|floatformat:2 }}</p>
         <p class="text-muted small mb-0">From {{ start_90 }} to {{ today }}</p>
       </div>
@@ -25,9 +30,33 @@
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Issued document sales today</p><p class="h3 mb-0">{{ company.currency_code }} {{ document_sales_today|floatformat:2 }}</p></div></div></div>
-  <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Cash received today</p><p class="h3 mb-0">{{ company.currency_code }} {{ cash_received_today|floatformat:2 }}</p><a class="small" href="{% url 'staff_payment_reconciliation' %}">Open reconciliation</a></div></div></div>
-  <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">External/consignment profit (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ external_item_margin_30.profit|floatformat:2 }}</p><p class="small text-muted mb-0">Revenue {{ external_item_margin_30.revenue|floatformat:2 }} · cost {{ external_item_margin_30.cost|floatformat:2 }}</p></div></div></div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Recognised document income today</p>
+        <p class="h3 mb-0">{{ company.currency_code }} {{ document_sales_today|floatformat:2 }}</p>
+        <p class="small text-muted mb-0">Customer total {{ document_customer_total_today|floatformat:2 }} · owner payout {{ document_owner_payout_today|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Cash received today</p>
+        <p class="h3 mb-0">{{ company.currency_code }} {{ cash_received_today|floatformat:2 }}</p>
+        <a class="small" href="{% url 'staff_payment_reconciliation' %}">Open reconciliation</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Neighbor / consignment commission (30d)</p>
+        <p class="h3 mb-0">{{ company.currency_code }} {{ external_item_margin_30.profit|floatformat:2 }}</p>
+        <p class="small text-muted mb-0">Customer total {{ external_item_margin_30.customer_total|floatformat:2 }} · owner payout {{ external_item_margin_30.owner_payout|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% if document_sequence_gaps %}
@@ -58,7 +87,7 @@
     <div class="card border-0 shadow-sm h-100">
       <div class="card-body">
         <h2 class="h6 text-muted text-uppercase mb-2">Data export</h2>
-        <p class="small mb-2">CSV downloads (Excel / Sheets).</p>
+        <p class="small mb-2">CSV downloads (Excel / Sheets). Document exports include recognised income, owner payout, business cost, and profit.</p>
         <div class="d-flex flex-wrap gap-2">
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_orders_csv' %}?days=90">Orders (90d)</a>
           <a class="btn btn-outline-primary btn-sm" href="{% url 'staff_export_jobs_csv' %}">Job cards</a>
@@ -97,16 +126,10 @@
     <h2 class="h6 text-muted text-uppercase mb-2">Most selling products (last 30 days)</h2>
     <div class="table-responsive card border-0 shadow-sm">
       <table class="table table-sm mb-0">
-        <thead class="table-light">
-          <tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Revenue</th></tr>
-        </thead>
+        <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Sales</th></tr></thead>
         <tbody>
           {% for row in top_products_30 %}
-          <tr>
-            <td>{{ row.description }}</td>
-            <td class="text-end">{{ row.qty }}</td>
-            <td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td>
-          </tr>
+          <tr><td>{{ row.description }}</td><td class="text-end">{{ row.qty }}</td><td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td></tr>
           {% empty %}
           <tr><td colspan="3" class="text-muted">No product sales in this period.</td></tr>
           {% endfor %}
@@ -118,16 +141,10 @@
     <h2 class="h6 text-muted text-uppercase mb-2">Most selling services (last 30 days)</h2>
     <div class="table-responsive card border-0 shadow-sm">
       <table class="table table-sm mb-0">
-        <thead class="table-light">
-          <tr><th>Service</th><th class="text-end">Qty</th><th class="text-end">Revenue</th></tr>
-        </thead>
+        <thead class="table-light"><tr><th>Service</th><th class="text-end">Qty</th><th class="text-end">Sales</th></tr></thead>
         <tbody>
           {% for row in top_services_30 %}
-          <tr>
-            <td>{{ row.description }}</td>
-            <td class="text-end">{{ row.qty }}</td>
-            <td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td>
-          </tr>
+          <tr><td>{{ row.description }}</td><td class="text-end">{{ row.qty }}</td><td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td></tr>
           {% empty %}
           <tr><td colspan="3" class="text-muted">No service sales in this period.</td></tr>
           {% endfor %}
@@ -136,8 +153,9 @@
     </div>
   </div>
 </div>
+
 <div class="row g-3 mt-4 mb-4">
-  <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Gross profit (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ document_margin_30.profit|floatformat:2 }}</p><p class="small text-muted mb-0">{{ document_margin_30.margin }}% margin</p></div></div></div>
+  <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Document profit (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ document_margin_30.profit|floatformat:2 }}</p><p class="small text-muted mb-0">Income {{ document_margin_30.recognized_income|floatformat:2 }} · {{ document_margin_30.margin }}% margin</p></div></div></div>
   <div class="col-md-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="text-muted small mb-1">Discount leakage (30d)</p><p class="h3 mb-0">{{ company.currency_code }} {{ discount_leakage_30.amount|floatformat:2 }}</p><p class="small text-muted mb-0">{{ discount_leakage_30.rate }}% of gross</p></div></div></div>
   <div class="col-md-3"><div class="card border-0 shadow-sm h-100 {% if payment_exceptions.unreconciled_count or payment_exceptions.unallocated_count %}border-warning{% endif %}"><div class="card-body"><p class="text-muted small mb-1">Payment exceptions</p><p class="h3 mb-0">{{ payment_exceptions.unreconciled_count|add:payment_exceptions.unallocated_count }}</p><p class="small text-muted mb-0">{{ company.currency_code }} {{ payment_exceptions.unreconciled_amount|add:payment_exceptions.unallocated_amount|floatformat:2 }} to review</p></div></div></div>
   <div class="col-md-3"><div class="card border-0 shadow-sm h-100 {% if sla_summary.overdue_jobs or sla_summary.overdue_tickets %}border-danger{% endif %}"><div class="card-body"><p class="text-muted small mb-1">SLA overdue</p><p class="h3 mb-0 {% if sla_summary.overdue_jobs or sla_summary.overdue_tickets %}text-danger{% endif %}">{{ sla_summary.overdue_jobs|add:sla_summary.overdue_tickets }}</p><p class="small text-muted mb-0">Jobs {{ sla_summary.overdue_jobs }} / tickets {{ sla_summary.overdue_tickets }}</p></div></div></div>
@@ -157,11 +175,7 @@
         <div class="table-responsive">
           <table class="table table-sm mb-0">
             <thead><tr><th>Status</th><th class="text-end">Open</th><th class="text-end">Avg days</th></tr></thead>
-            <tbody>
-              {% for row in job_status_aging %}
-              <tr><td>{{ row.status }}</td><td class="text-end">{{ row.count }}</td><td class="text-end">{{ row.avg_days }}</td></tr>
-              {% endfor %}
-            </tbody>
+            <tbody>{% for row in job_status_aging %}<tr><td>{{ row.status }}</td><td class="text-end">{{ row.count }}</td><td class="text-end">{{ row.avg_days }}</td></tr>{% endfor %}</tbody>
           </table>
         </div>
       </div>
@@ -188,13 +202,7 @@
     <div class="table-responsive card border-0 shadow-sm">
       <table class="table table-sm mb-0">
         <thead class="table-light"><tr><th>Item</th><th class="text-end">Sold</th><th class="text-end">On hand</th><th class="text-end">Days cover</th></tr></thead>
-        <tbody>
-          {% for row in stock_velocity_30 %}
-          <tr><td>{{ row.description }}</td><td class="text-end">{{ row.qty }}</td><td class="text-end">{% if row.on_hand is None %}—{% else %}{{ row.on_hand }}{% endif %}</td><td class="text-end">{% if row.days_cover is None %}—{% else %}{{ row.days_cover }}{% endif %}</td></tr>
-          {% empty %}
-          <tr><td colspan="4" class="text-muted">No sales velocity yet.</td></tr>
-          {% endfor %}
-        </tbody>
+        <tbody>{% for row in stock_velocity_30 %}<tr><td>{{ row.description }}</td><td class="text-end">{{ row.qty }}</td><td class="text-end">{% if row.on_hand is None %}—{% else %}{{ row.on_hand }}{% endif %}</td><td class="text-end">{% if row.days_cover is None %}—{% else %}{{ row.days_cover }}{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="text-muted">No sales velocity yet.</td></tr>{% endfor %}</tbody>
       </table>
     </div>
   </div>
@@ -202,29 +210,23 @@
     <h2 class="h6 text-muted text-uppercase mb-2">Top customers (last 90 days)</h2>
     <div class="table-responsive card border-0 shadow-sm">
       <table class="table table-sm mb-0">
-        <thead class="table-light"><tr><th>Customer</th><th class="text-end">Docs</th><th class="text-end">Revenue</th><th class="text-end">Balance</th></tr></thead>
-        <tbody>
-          {% for row in top_customers_90 %}
-          <tr><td>{{ row.customer }}</td><td class="text-end">{{ row.documents }}</td><td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.balance|floatformat:2 }}</td></tr>
-          {% empty %}
-          <tr><td colspan="4" class="text-muted">No customer revenue in this period.</td></tr>
-          {% endfor %}
-        </tbody>
+        <thead class="table-light"><tr><th>Customer</th><th class="text-end">Docs</th><th class="text-end">Recognised income</th><th class="text-end">Customer total</th><th class="text-end">Balance</th></tr></thead>
+        <tbody>{% for row in top_customers_90 %}<tr><td>{{ row.customer }}</td><td class="text-end">{{ row.documents }}</td><td class="text-end">{{ company.currency_code }} {{ row.recognized_income|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.customer_total|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.balance|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No customer revenue in this period.</td></tr>{% endfor %}</tbody>
       </table>
     </div>
   </div>
 </div>
 
 <div class="mt-4">
-  <h2 class="h6 text-muted text-uppercase mb-2">Highest gross-profit lines (last 30 days)</h2>
+  <h2 class="h6 text-muted text-uppercase mb-2">Highest profit lines (last 30 days)</h2>
   <div class="table-responsive card border-0 shadow-sm">
     <table class="table table-sm mb-0">
-      <thead class="table-light"><tr><th>Line</th><th>Document</th><th class="text-end">Revenue</th><th class="text-end">Cost</th><th class="text-end">Profit</th><th class="text-end">Margin</th></tr></thead>
+      <thead class="table-light"><tr><th>Line</th><th>Document</th><th>Source</th><th class="text-end">Customer total</th><th class="text-end">Recognised income</th><th class="text-end">Owner payout</th><th class="text-end">Business cost</th><th class="text-end">Profit</th><th class="text-end">Margin</th></tr></thead>
       <tbody>
         {% for row in top_margin_lines_30 %}
-        <tr><td>{{ row.description }}</td><td>{{ row.document }}</td><td class="text-end">{{ company.currency_code }} {{ row.revenue|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.cost|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.profit|floatformat:2 }}</td><td class="text-end">{{ row.margin }}%</td></tr>
+        <tr><td>{{ row.description }}</td><td>{{ row.document }}</td><td>{{ row.source_type }}</td><td class="text-end">{{ company.currency_code }} {{ row.customer_total|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.recognized_income|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.owner_payout|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.cost|floatformat:2 }}</td><td class="text-end">{{ company.currency_code }} {{ row.profit|floatformat:2 }}</td><td class="text-end">{{ row.margin }}%</td></tr>
         {% empty %}
-        <tr><td colspan="6" class="text-muted">No margin lines in this period.</td></tr>
+        <tr><td colspan="9" class="text-muted">No margin lines in this period.</td></tr>
         {% endfor %}
       </tbody>
     </table>
