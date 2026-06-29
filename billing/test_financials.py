@@ -51,6 +51,47 @@ class CommissionAwareFinancialTests(TestCase):
         self.assertEqual(document_business_cost(document), Decimal("0.00"))
         self.assertEqual(document_profit(document), Decimal("300000.00"))
 
+    def test_outsourced_service_recognizes_only_balance_as_income(self):
+        document = self._document()
+        line = CommercialLine.objects.create(
+            document=document,
+            description="Outsourced CCTV installation",
+            source_type=CommercialLine.SOURCE_SERVICE,
+            supplier_name="External technician",
+            quantity=Decimal("1"),
+            unit_price=Decimal("500000"),
+            unit_cost=Decimal("350000"),
+        )
+        document.recalculate_from_lines()
+        document.save()
+
+        self.assertEqual(line_recognized_income(line), Decimal("150000.00"))
+        self.assertEqual(line_owner_payout(line), Decimal("350000.00"))
+        self.assertEqual(line_business_cost(line), Decimal("0.00"))
+        self.assertEqual(line_profit(line), Decimal("150000.00"))
+        self.assertEqual(document_recognized_income(document), Decimal("150000.00"))
+        self.assertEqual(document_owner_payout(document), Decimal("350000.00"))
+        self.assertEqual(document_business_cost(document), Decimal("0.00"))
+        self.assertEqual(document_profit(document), Decimal("150000.00"))
+
+    def test_own_service_without_subcontractor_keeps_full_income(self):
+        document = self._document()
+        line = CommercialLine.objects.create(
+            document=document,
+            description="In-house software installation",
+            source_type=CommercialLine.SOURCE_SERVICE,
+            quantity=Decimal("1"),
+            unit_price=Decimal("50000"),
+            unit_cost=Decimal("0"),
+        )
+        document.recalculate_from_lines()
+        document.save()
+
+        self.assertEqual(line_recognized_income(line), Decimal("50000.00"))
+        self.assertEqual(line_owner_payout(line), Decimal("0.00"))
+        self.assertEqual(line_business_cost(line), Decimal("0.00"))
+        self.assertEqual(line_profit(line), Decimal("50000.00"))
+
     def test_own_stock_keeps_normal_revenue_and_cost(self):
         document = self._document()
         line = CommercialLine.objects.create(
