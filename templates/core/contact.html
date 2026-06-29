@@ -1,45 +1,76 @@
 {% extends "base.html" %}
-{% block title %}Contact{% endblock %}
+{% block title %}Contact {{ company.company_name|default:company.name|default:"ALLTECH Hub" }}{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <div class="row g-4">
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        <p class="text-uppercase small text-white-50 mb-2">Contact and support</p>
+        <h1 class="display-6 fw-bold mb-3">Tell us what you need.</h1>
+        <p class="lead text-white-75 mb-0">Request a quote, ask about a product, book a repair, or get help with installation and support work.</p>
+      </div>
+      <div class="col-lg-4 text-lg-end">
+        {% if is_open_now %}<span class="badge text-bg-success fs-6">Open now</span>{% else %}<span class="badge text-bg-secondary fs-6">Closed now</span>{% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row g-4 align-items-start">
     <div class="col-lg-7">
-      <h1 class="h2 mb-3">Contact</h1>
-      <p class="text-muted">Tell us what you need — sales, support, or a service visit.</p>
-      <form method="post" class="card shadow-sm border-0 p-4">
-        {% csrf_token %}
-        {% for field in form %}
-        <div class="mb-3">
-          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field.errors }}
-          {{ field }}
-          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Send a message</p>
+          <h2 class="h3 mb-3">How can we help?</h2>
+          <p class="text-muted">Give us the product, service, repair or installation details. The more information you share, the faster we can guide you.</p>
+          <form method="post" class="vstack gap-3">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field.errors }}
+              {{ field }}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary btn-lg">Send message</button>
+          </form>
         </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-primary">Send message</button>
-      </form>
+      </div>
     </div>
     <div class="col-lg-5">
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">Fast request options</h2>
+          <div class="vstack gap-2">
+            <a class="btn btn-outline-primary text-start" href="{% url 'product_list' %}"><i class="bi bi-laptop me-2" aria-hidden="true"></i>Check products</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'product_list' %}?kind=service"><i class="bi bi-tools me-2" aria-hidden="true"></i>Book a service</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'portal_repair_intake' %}"><i class="bi bi-clipboard-plus me-2" aria-hidden="true"></i>Submit repair request</a>
+          </div>
+        </div>
+      </div>
+
       <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h2 class="h5 mb-2">
-            Business hours
-            {% if is_open_now %}
-            <span class="badge bg-success">Open now</span>
-            {% else %}
-            <span class="badge bg-secondary">Closed</span>
-            {% endif %}
-          </h2>
-          <table class="table table-sm mb-0">
-            <tbody>
-              {% for h in business_hours %}
-              <tr>
-                <td class="text-muted">{{ h.get_weekday_display }}</td>
-                <td>{{ h.display_hours }}{% if h.note %} <span class="small text-muted">— {{ h.note }}</span>{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">Business hours</h2>
+            {% if is_open_now %}<span class="badge bg-success">Open</span>{% else %}<span class="badge bg-secondary">Closed</span>{% endif %}
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <tbody>
+                {% for h in business_hours %}
+                <tr>
+                  <td class="text-muted">{{ h.get_weekday_display }}</td>
+                  <td>{{ h.display_hours }}{% if h.note %} <span class="small text-muted">— {{ h.note }}</span>{% endif %}</td>
+                </tr>
+                {% empty %}
+                <tr><td class="text-muted">Business hours will be updated soon.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
