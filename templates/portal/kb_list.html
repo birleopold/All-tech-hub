@@ -1,28 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Help{% endblock %}
+{% block title %}Help articles{% endblock %}
 {% block content %}
-<div class="container py-5 col-lg-8">
-  <h1 class="h2 mb-3">Help articles</h1>
-  <p class="text-muted mb-3"><a href="{% url 'portal_home' %}">← Portal home</a></p>
-  <form method="get" class="mb-4" role="search">
-    <label class="visually-hidden" for="kb-q">Search articles</label>
-    <div class="input-group">
-      <input type="search" class="form-control" id="kb-q" name="q" value="{{ search_q }}" placeholder="Search help articles…">
-      <button class="btn btn-primary" type="submit">Search</button>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div>
+        <p class="text-uppercase small text-white-50 mb-2">Help centre</p>
+        <h1 class="display-6 fw-bold mb-2">Help articles</h1>
+        <p class="text-white-75 mb-0">Find guidance for orders, repair jobs, documents, support and account use.</p>
+      </div>
+      <a class="btn btn-light" href="{% url 'portal_home' %}">Portal home</a>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5 col-lg-9">
+  <form method="get" class="card border-0 shadow-sm mb-4" role="search">
+    <div class="card-body p-3">
+      <label class="visually-hidden" for="kb-q">Search articles</label>
+      <div class="input-group input-group-lg">
+        <input type="search" class="form-control" id="kb-q" name="q" value="{{ search_q }}" placeholder="Search help articles…">
+        <button class="btn btn-primary" type="submit">Search</button>
+      </div>
     </div>
   </form>
   {% if articles %}
-  <ul class="list-group shadow-sm border-0">
+  <div class="list-group shadow-sm">
     {% for article in articles %}
-    <li class="list-group-item d-flex justify-content-between align-items-start">
-      <div>
-        <a class="fw-semibold" href="{% url 'portal_kb_article' article.slug %}">{{ article.title }}</a>
-      </div>
-    </li>
+    <a class="list-group-item list-group-item-action p-3" href="{% url 'portal_kb_article' article.slug %}"><strong>{{ article.title }}</strong><span class="d-block small text-muted mt-1">Open article</span></a>
     {% endfor %}
-  </ul>
+  </div>
   {% else %}
-  <p class="text-muted">No articles published yet.</p>
+  <div class="card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-question-circle display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No help articles found</h2><p class="text-muted mb-4">Try another search or contact support for help.</p><a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">Contact support</a></div></div>
   {% endif %}
 </div>
 {% endblock %}
