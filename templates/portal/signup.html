@@ -1,21 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Create account{% endblock %}
 {% block content %}
-<div class="container py-5 col-lg-6">
-  <h1 class="h4 mb-3">Create customer account</h1>
-  <form method="post" class="card border-0 shadow-sm p-4">
-    {% csrf_token %}
-    {% for field in form %}
-    <div class="mb-3">
-      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field.errors }}
-      {{ field }}
-      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5 text-center">
+    <p class="text-uppercase small text-white-50 mb-2">Customer account</p>
+    <h1 class="display-6 fw-bold mb-3">Create your customer portal account</h1>
+    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 44rem;">Track jobs, orders, documents, support requests, addresses and saved items in one place.</p>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row g-4 justify-content-center">
+    <div class="col-lg-6">
+      <form method="post" class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          {% csrf_token %}
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Sign up</p>
+          <h2 class="h4 mb-3">Your details</h2>
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field.errors }}
+            {{ field }}
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary btn-lg w-100">Create account</button>
+          <p class="small text-muted mt-3 mb-0">Already have an account? <a href="{% url 'portal_login' %}">Sign in</a>.</p>
+        </div>
+      </form>
     </div>
-    {% endfor %}
-    <button type="submit" class="btn btn-primary">Create account</button>
-    <a class="btn btn-link" href="{% url 'portal_login' %}">Already have an account?</a>
-  </form>
+    <div class="col-lg-4"><div class="card border-0 shadow-sm"><div class="card-body p-4"><span class="home-feature-icon"><i class="bi bi-person-check" aria-hidden="true"></i></span><h3 class="h5 mt-3">Use your known email</h3><p class="text-muted mb-0">Sign up with the same email used for your orders or repairs so your history can be linked where possible.</p></div></div></div>
+  </div>
 </div>
 {% endblock %}
-
