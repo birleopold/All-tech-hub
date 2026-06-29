@@ -13,8 +13,16 @@ RECOGNIZED_STATUSES = (
 )
 
 
+def has_outsourced_service_details(line: CommercialLine) -> bool:
+    return (
+        line.source_type == CommercialLine.SOURCE_SERVICE
+        and bool((line.supplier_name or "").strip())
+        and line.total_cost > 0
+    )
+
+
 def is_commission_line(line: CommercialLine) -> bool:
-    return line.source_type in COMMISSION_SOURCE_TYPES
+    return line.source_type in COMMISSION_SOURCE_TYPES or has_outsourced_service_details(line)
 
 
 def document_net_sales(document: CommercialDocument) -> Decimal:
