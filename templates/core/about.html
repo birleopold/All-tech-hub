@@ -1,19 +1,59 @@
 {% extends "base.html" %}
-{% block title %}About{% endblock %}
+{% block title %}About {{ company.company_name|default:company.name|default:"ALLTECH Hub" }}{% endblock %}
 {% block content %}
-<div class="container py-5 col-lg-8">
-  <h1 class="h2 mb-3">About {{ company.company_name }}</h1>
-  <p class="lead text-muted">{{ company.tagline }}</p>
-  <p>
-    We combine retail sales of IT equipment with full-service technical support: diagnostics, repairs,
-    networking, backups, and managed services. Operations are tracked with structured job cards,
-    quotations, proformas, and invoices so you always know where things stand.
-  </p>
-  <ul>
-    <li>Hardware sales and warranties</li>
-    <li>On-site and workshop repairs</li>
-    <li>Business IT contracts and SLAs</li>
-    <li>Transparent documentation and billing</li>
-  </ul>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        <p class="text-uppercase small text-white-50 mb-2">About our work</p>
+        <h1 class="display-6 fw-bold mb-3">Technology support built around accountability.</h1>
+        <p class="lead text-white-75 mb-0">{{ company.tagline|default:"Reliable technology for your business and home." }}</p>
+      </div>
+      <div class="col-lg-4 text-lg-end">
+        <a class="btn btn-light" href="{% url 'contact' %}">Talk to us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row g-4 align-items-start mb-5">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4 p-lg-5">
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Who we are</p>
+          <h2 class="h3 mb-3">{{ company.company_name|default:company.name|default:"ALLTECH Hub" }} combines IT retail with practical technical service.</h2>
+          <p class="text-muted">We support customers who need devices, accessories, repairs, installations, software help, networking support and proper business documentation.</p>
+          <p class="text-muted mb-0">Our work is organised through clear quotations, invoices, receipts, job cards and support records so every customer can understand what was requested, what was delivered and what remains pending.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h2 class="h5 mb-3">What we focus on</h2>
+          <ul class="list-unstyled vstack gap-3 mb-0">
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Hardware sales, accessories and warranty follow-up</li>
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Workshop and on-site repairs</li>
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Software, backups, networking and CCTV support</li>
+            <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Transparent pricing, documentation and billing</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-5">
+    <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span><h3 class="h5 mt-3">Documented service</h3><p class="text-muted mb-0">Customers can receive quotations, receipts, invoices and job records for better accountability.</p></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-tools" aria-hidden="true"></i></span><h3 class="h5 mt-3">Practical solutions</h3><p class="text-muted mb-0">We help with real technology needs, from device upgrades to technical support and installation work.</p></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><h3 class="h5 mt-3">Human guidance</h3><p class="text-muted mb-0">Customers can ask for advice before buying, booking a repair or approving a service quote.</p></div></div></div>
+  </div>
+
+  <section class="home-cta card border-0 shadow-sm">
+    <div class="card-body p-4 p-lg-5 d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div><p class="text-uppercase small fw-semibold text-primary mb-1">Ready to begin?</p><h2 class="h3 mb-1">Tell us what you need and we shall guide you.</h2><p class="text-muted mb-0">Share your product, repair, installation or support request.</p></div>
+      <a class="btn btn-primary btn-lg" href="{% url 'contact' %}">Contact us</a>
+    </div>
+  </section>
 </div>
 {% endblock %}
