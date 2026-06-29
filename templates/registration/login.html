@@ -1,27 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Staff login{% endblock %}
 {% block content %}
-<div class="container py-5 col-md-4">
-  <h1 class="h4 mb-3">Staff login</h1>
-  {% if form.errors %}
-  <div class="alert alert-danger">Invalid username or password.</div>
-  {% endif %}
-  <form method="post" class="card border-0 shadow-sm p-4">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label class="form-label" for="id_username">Username</label>
-      <input type="text" name="username" class="form-control" id="id_username" required autofocus>
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5 text-center">
+    <p class="text-uppercase small text-white-50 mb-2">Secure staff access</p>
+    <h1 class="display-6 fw-bold mb-3">Staff login</h1>
+    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 42rem;">Sign in to manage sales, documents, inventory, jobs, reports and support.</p>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      {% if form.errors %}<div class="alert alert-danger border-0 shadow-sm">Invalid username, password, or authenticator code.</div>{% endif %}
+      <form method="post" class="card border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+          {% csrf_token %}
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Staff workspace</p>
+          <h2 class="h4 mb-3">Welcome back</h2>
+          <div class="mb-3">
+            <label class="form-label" for="id_username">Username</label>
+            <input type="text" name="username" class="form-control form-control-lg" id="id_username" required autofocus autocomplete="username">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_password">Password</label>
+            <input type="password" name="password" class="form-control form-control-lg" id="id_password" required autocomplete="current-password">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="id_otp">Authenticator code</label>
+            <input type="text" name="otp" inputmode="numeric" autocomplete="one-time-code" class="form-control form-control-lg" id="id_otp" maxlength="6" placeholder="Only if 2FA is enabled">
+            <div class="form-text">Leave blank if two-factor authentication is not enabled on your account.</div>
+          </div>
+          <input type="hidden" name="next" value="{{ next }}">
+          <button type="submit" class="btn btn-primary btn-lg w-100">Sign in</button>
+        </div>
+      </form>
     </div>
-    <div class="mb-3">
-      <label class="form-label" for="id_otp">Authenticator code</label>
-      <input type="text" name="otp" inputmode="numeric" autocomplete="one-time-code" class="form-control" id="id_otp" maxlength="6" placeholder="Required only when 2FA is enabled">
-    </div>
-    <div class="mb-3">
-      <label class="form-label" for="id_password">Password</label>
-      <input type="password" name="password" class="form-control" id="id_password" required>
-    </div>
-    <input type="hidden" name="next" value="{{ next }}">
-    <button type="submit" class="btn btn-primary w-100">Sign in</button>
-  </form>
+  </div>
 </div>
 {% endblock %}
