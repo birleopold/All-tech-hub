@@ -59,6 +59,12 @@ gunicorn config.wsgi:application
 Uploaded media must be stored on persistent storage or object storage. Do not
 serve production media directly through Django.
 
+## Health check
+
+Use `/healthz/` for uptime monitoring and deployment checks. It returns a small
+JSON response, confirms database connectivity, and does not expose private
+settings.
+
 ## Quality checks
 
 ```powershell
@@ -86,6 +92,7 @@ result to off-site storage. Test restoration regularly.
 - Run migrations and `bootstrap_roles`.
 - Run `check --deploy`.
 - Configure SMTP and verify delivery.
+- Check `/healthz/` after deployment.
 - Schedule backups and due-reminder commands.
 - Keep secrets outside the repository.
 - Monitor application and reverse-proxy logs.
