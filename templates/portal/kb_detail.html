@@ -1,13 +1,21 @@
 {% extends "base.html" %}
 {% block title %}{{ article.title }}{% endblock %}
 {% block content %}
-<div class="container py-5 col-lg-8">
-  <p class="small text-muted mb-2"><a href="{% url 'portal_kb' %}">← All articles</a> · <a href="{% url 'portal_home' %}">Portal</a></p>
-  <h1 class="h2 mb-3">{{ article.title }}</h1>
-  <div class="card border-0 shadow-sm">
-    <div class="card-body">
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <nav aria-label="breadcrumb" class="mb-3">
+      <ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a class="text-white-75" href="{% url 'portal_home' %}">Portal</a></li><li class="breadcrumb-item"><a class="text-white-75" href="{% url 'portal_kb' %}">Help</a></li><li class="breadcrumb-item active text-white" aria-current="page">{{ article.title|truncatechars:42 }}</li></ol>
+    </nav>
+    <h1 class="display-6 fw-bold mb-0">{{ article.title }}</h1>
+  </div>
+</section>
+
+<div class="container pb-5 col-lg-8">
+  <article class="card border-0 shadow-sm">
+    <div class="card-body p-4 p-lg-5">
       {{ article.body|linebreaks }}
     </div>
-  </div>
+  </article>
+  <div class="d-flex gap-2 flex-wrap mt-4"><a class="btn btn-outline-primary" href="{% url 'portal_kb' %}">All articles</a><a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">Still need help?</a></div>
 </div>
 {% endblock %}
