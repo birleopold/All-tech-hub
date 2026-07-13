@@ -35,7 +35,14 @@
           <select id="catalog-category" name="category" class="form-select">
             <option value="">All categories</option>
             {% for c in categories %}
-            <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+            <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>All {{ c.name }}</option>
+            {% if c.subcategories.all %}
+            <optgroup label="{{ c.name }}">
+              {% for subcategory in c.subcategories.all %}
+              <option value="{{ subcategory.slug }}" {% if current_category == subcategory.slug %}selected{% endif %}>{{ subcategory.name }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endif %}
             {% endfor %}
           </select>
         </div>
