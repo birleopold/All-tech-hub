@@ -54,9 +54,11 @@ fi
 
 "${VENV_DIR}/bin/python" manage.py check
 "${VENV_DIR}/bin/python" manage.py check --deploy
+"${VENV_DIR}/bin/python" manage.py makemigrations --check --dry-run
 "${VENV_DIR}/bin/python" manage.py migrate --noinput
 "${VENV_DIR}/bin/python" manage.py collectstatic --noinput
 "${VENV_DIR}/bin/python" manage.py bootstrap_roles
+"${VENV_DIR}/bin/python" manage.py seed_marketing_templates
 "${VENV_DIR}/bin/python" manage.py configure_company \
     --company-name "LEOSOFT" \
     --legal-name "LEOSOFT UG LTD" \
