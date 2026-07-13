@@ -2,14 +2,33 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
+from django.contrib.sitemaps.views import sitemap as sitemap_view
 from django.urls import include, path
+from django.views.generic import TemplateView
 
 from billing import views as billing_views
+from catalog.sitemaps import ProductSitemap, StaticViewSitemap
 from core import api_views as core_api
 from core import auth_views as core_auth
 from core import health as core_health
 
+site_maps = {
+    "products-and-services": ProductSitemap,
+    "static": StaticViewSitemap,
+}
+
 urlpatterns = [
+    path(
+        "robots.txt",
+        TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
+        name="robots_txt",
+    ),
+    path(
+        "sitemap.xml",
+        sitemap_view,
+        {"sitemaps": site_maps},
+        name="django.contrib.sitemaps.views.sitemap",
+    ),
     path("healthz/", core_health.healthz, name="healthz"),
     path("api/v1/products/", core_api.api_products, name="api_products"),
     path("api/v1/products/<slug:slug>/", core_api.api_product_detail, name="api_product_detail"),
