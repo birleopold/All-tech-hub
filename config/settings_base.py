@@ -24,9 +24,9 @@ CSRF_TRUSTED_ORIGINS = env_list("ALLTECH_CSRF_TRUSTED_ORIGINS")
 INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "django.contrib.humanize", "core", "crm", "catalog", "commerce", "billing",
-    "operations", "dashboard", "reports", "portal", "purchasing", "messaging",
-    "inventory",
+    "django.contrib.humanize", "django.contrib.sitemaps", "core", "crm", "catalog",
+    "commerce", "billing", "operations", "dashboard", "reports", "portal",
+    "purchasing", "messaging", "inventory", "marketing.apps.MarketingConfig",
 ]
 
 MIDDLEWARE = [
@@ -53,6 +53,7 @@ TEMPLATES = [{
         "django.contrib.messages.context_processors.messages",
         "core.context_processors.company",
         "commerce.context_processors.cart_summary",
+        "marketing.context_processors.social_profiles",
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"
