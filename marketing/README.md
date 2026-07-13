@@ -30,13 +30,22 @@ pip install -r requirements.lock
 set -a
 source .env
 set +a
+python manage.py makemigrations --check --dry-run
 python manage.py migrate --noinput
+python manage.py bootstrap_roles
 python manage.py seed_marketing_templates
 python manage.py check --deploy
 python manage.py test marketing.test_automation catalog.test_social_marketing
 python manage.py collectstatic --noinput
 sudo systemctl restart leosoft_gunicorn
 curl -fsS https://leosoftug.com/healthz/
+```
+
+The regular deployment script now performs the migration, role and caption-template steps automatically:
+
+```bash
+cd /home/admin/All-tech-hub
+./deployment/deploy.sh
 ```
 
 ## Scheduling automation
@@ -50,17 +59,39 @@ python manage.py prepare_due_marketing_posts --dry-run
 python manage.py prepare_due_marketing_posts
 ```
 
-Run every 15 minutes with cron:
+### Recommended: systemd timer
+
+```bash
+sudo cp /home/admin/All-tech-hub/deployment/leosoft-marketing-posts.service \
+  /etc/systemd/system/leosoft-marketing-posts.service
+sudo cp /home/admin/All-tech-hub/deployment/leosoft-marketing-posts.timer \
+  /etc/systemd/system/leosoft-marketing-posts.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now leosoft-marketing-posts.timer
+sudo systemctl status leosoft-marketing-posts.timer --no-pager
+sudo systemctl list-timers --all | grep leosoft-marketing
+```
+
+Inspect a run:
+
+```bash
+sudo systemctl start leosoft-marketing-posts.service
+sudo journalctl -u leosoft-marketing-posts.service -n 50 --no-pager
+```
+
+### Cron fallback
 
 ```bash
 crontab -e
 ```
 
-Add:
+Add this as one line so the production environment is loaded:
 
 ```cron
-*/15 * * * * cd /home/admin/All-tech-hub && /home/admin/All-tech-hub/.venv/bin/python manage.py prepare_due_marketing_posts >> /home/admin/All-tech-hub/marketing-automation.log 2>&1
+*/15 * * * * /bin/bash -lc 'cd /home/admin/All-tech-hub && set -a && source .env && set +a && .venv/bin/python manage.py prepare_due_marketing_posts' >> /home/admin/All-tech-hub/marketing-automation.log 2>&1
 ```
+
+Use either the systemd timer or cron, not both.
 
 ## Caption placeholders
 
