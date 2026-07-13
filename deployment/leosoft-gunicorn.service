@@ -3,11 +3,11 @@ Description=LEOSOFT UG LTD Django Gunicorn
 After=network.target
 
 [Service]
-User=leosoft
+User=admin
 Group=www-data
-WorkingDirectory=/home/leosoft/All-tech-hub
-EnvironmentFile=/home/leosoft/All-tech-hub/.env
-ExecStart=/home/leosoft/All-tech-hub/.venv/bin/gunicorn \
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/home/admin/All-tech-hub/.venv/bin/gunicorn \
   --workers 3 \
   --timeout 120 \
   --bind 127.0.0.1:8010 \
