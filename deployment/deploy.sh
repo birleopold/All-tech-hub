@@ -5,9 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="${APP_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 VENV_DIR="${VENV_DIR:-${APP_DIR}/.venv}"
 ENV_FILE="${ENV_FILE:-${APP_DIR}/.env}"
-DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
-SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-leosoft-gunicorn}"
-HEALTHCHECK_URL="${HEALTHCHECK_URL:-https://leosoftug.com/healthz/}"
+SYSTEMD_SERVICE="${SYSTEMD_SERVICE:-leosoft_gunicorn}"
+HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:8010/healthz/}"
 
 cd "${APP_DIR}"
 
@@ -19,12 +18,11 @@ fi
 
 if [[ -d .git && "${SKIP_GIT_PULL:-0}" != "1" ]]; then
     current_branch="$(git branch --show-current)"
-    if [[ "${current_branch}" != "${DEPLOY_BRANCH}" ]]; then
-        echo "Expected branch ${DEPLOY_BRANCH}, but the checkout is on ${current_branch}." >&2
+    if [[ "${current_branch}" != "main" ]]; then
+        echo "Expected the production checkout to remain on main, but it is on ${current_branch}." >&2
         exit 1
     fi
-    git fetch origin "${DEPLOY_BRANCH}"
-    git pull --ff-only origin "${DEPLOY_BRANCH}"
+    git pull --ff-only origin main
 fi
 
 if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
@@ -71,4 +69,4 @@ sudo systemctl is-active --quiet "${SYSTEMD_SERVICE}"
 
 curl --fail --silent --show-error --retry 5 --retry-delay 2 "${HEALTHCHECK_URL}"
 echo
-echo "LEOSOFT UG LTD deployment completed successfully."
+echo "LEOSOFT UG LTD deployment completed successfully from origin/main."
