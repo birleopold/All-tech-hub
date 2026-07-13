@@ -23,7 +23,10 @@ class ProductVariantInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "sort_order", "slug")
+    list_display = ("name", "parent", "sort_order", "slug")
+    list_filter = ("parent",)
+    search_fields = ("name", "description", "slug")
+    ordering = ("sort_order", "name")
     prepopulated_fields = {"slug": ("name",)}
 
 
