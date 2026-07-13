@@ -20,7 +20,7 @@ class ProductListView(ListView):
     def get_queryset(self):
         qs = (
             Product.objects.filter(is_published=True)
-            .select_related("category")
+            .select_related("category", "category__parent")
             .prefetch_related("gallery_images", "variants")
             .order_by("category__sort_order", "name")
         )
@@ -29,7 +29,9 @@ class ProductListView(ListView):
             qs = qs.filter(kind=kind)
         cat = self.request.GET.get("category")
         if cat:
-            qs = qs.filter(category__slug=cat)
+            qs = qs.filter(
+                Q(category__slug=cat) | Q(category__parent__slug=cat)
+            )
         q = self.request.GET.get("q")
         if q:
             qs = qs.filter(
@@ -42,7 +44,11 @@ class ProductListView(ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["categories"] = Category.objects.all().order_by("sort_order", "name")
+        ctx["categories"] = (
+            Category.objects.filter(parent__isnull=True)
+            .prefetch_related("subcategories")
+            .order_by("sort_order", "name")
+        )
         ctx["current_kind"] = self.request.GET.get("kind") or ""
         ctx["current_category"] = self.request.GET.get("category") or ""
         ctx["search_q"] = self.request.GET.get("q") or ""
