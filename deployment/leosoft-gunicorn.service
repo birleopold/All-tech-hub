@@ -4,7 +4,7 @@ After=network.target postgresql.service
 Wants=network-online.target
 
 [Service]
-Type=notify
+Type=simple
 User=__DEPLOY_USER__
 Group=www-data
 WorkingDirectory=__APP_DIR__
@@ -28,7 +28,7 @@ PrivateTmp=true
 NoNewPrivileges=true
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths=__APP_DIR__/media __APP_DIR__/backups
+ReadWritePaths=-__APP_DIR__/media -__APP_DIR__/backups
 
 [Install]
 WantedBy=multi-user.target
