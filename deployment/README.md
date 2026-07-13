@@ -2,9 +2,9 @@
 
 This runbook deploys **LEOSOFT UG LTD** at **https://leosoftug.com** alongside Django projects already running on the same Ubuntu VPS.
 
-It assumes the VPS already has Python, PostgreSQL, Nginx, Git and Certbot. This project currently needs **Django, PostgreSQL, Gunicorn and Nginx only**; it does not use Celery or Redis.
+The VPS account is **`admin`**. The server already has Python, PostgreSQL, Nginx, Git and Certbot, so this guide does not reinstall the existing stack. This project currently needs Django, PostgreSQL, Gunicorn and Nginx only; it does not use Celery or Redis.
 
-The production checkout stays on **`main`**, and future updates use:
+The production checkout stays on **`main`**. Future updates use:
 
 ```bash
 git pull origin main
@@ -15,15 +15,17 @@ The existing `ALLTECH_` environment-variable prefix is retained for compatibilit
 ## Deployment layout
 
 ```text
-Ubuntu user:     admin
-Application:     /home/admin/All-tech-hub
-Virtualenv:      /home/admin/All-tech-hub/.venv
-Environment:     /home/admin/All-tech-hub/.env
-Gunicorn:        127.0.0.1:8010
-Systemd service: leosoft_gunicorn
-Nginx site:      leosoftug.com
-PostgreSQL DB:   leosoft_prod
-PostgreSQL user: leosoft_user
+Ubuntu user:      admin
+Application:      /home/admin/All-tech-hub
+Virtualenv:       /home/admin/All-tech-hub/.venv
+Environment:      /home/admin/All-tech-hub/.env
+Gunicorn:         127.0.0.1:8010
+Systemd service:  leosoft_gunicorn
+Nginx site:       leosoftug.com
+PostgreSQL DB:    leosoft_prod
+PostgreSQL user:  leosoft_user
+Git branch:       origin/main
+Domain registrar: Namecheap
 ```
 
 Confirm port `8010` is free before deployment:
@@ -32,21 +34,57 @@ Confirm port `8010` is free before deployment:
 sudo ss -ltnp | grep ':8010' || echo 'Port 8010 is available'
 ```
 
-## 1. Point the domain to the VPS
+## 1. Point `leosoftug.com` from Namecheap to the VPS
 
-At the domain DNS provider, create:
+The domain must use Namecheap **BasicDNS**, **PremiumDNS**, or **FreeDNS** for Host Records to be editable from Namecheap's Advanced DNS page.
+
+### 1.1 Confirm the Namecheap nameservers
+
+1. Sign in to Namecheap.
+2. Open **Domain List**.
+3. Click **Manage** beside `leosoftug.com`.
+4. Under **Nameservers**, select **Namecheap BasicDNS** unless you intentionally use PremiumDNS or FreeDNS.
+5. Save the setting when it changes.
+
+Do not change the nameservers when the domain deliberately uses another DNS provider. In that case, create the records at that provider instead.
+
+### 1.2 Add the Namecheap Host Records
+
+1. From **Domain List**, click **Manage** beside `leosoftug.com`.
+2. Open the **Advanced DNS** tab.
+3. Find **Host Records**.
+4. Click **Add New Record** and add:
 
 ```text
-A   leosoftug.com       VPS_PUBLIC_IP
-A   www.leosoftug.com   VPS_PUBLIC_IP
+Type       Host    Value             TTL
+A Record   @       VPS_PUBLIC_IP     Automatic
+A Record   www     VPS_PUBLIC_IP     Automatic
 ```
 
-Confirm resolution:
+Replace `VPS_PUBLIC_IP` with the public IPv4 address of the Ubuntu VPS.
+
+5. Save each record using Namecheap's green checkmark.
+6. Remove conflicting records for `@` or `www`, including old A records, CNAME records, URL Redirect records, Masked Redirects, and Permanent Redirects.
+
+Namecheap states that newly created records normally take about 30 minutes to take effect, although cached DNS information can sometimes take longer.
+
+### 1.3 Verify DNS
+
+Run from the VPS:
 
 ```bash
 getent hosts leosoftug.com
 getent hosts www.leosoftug.com
 ```
+
+You can also use:
+
+```bash
+dig +short leosoftug.com A
+dig +short www.leosoftug.com A
+```
+
+Both names must return the VPS public IPv4 address before running Certbot.
 
 ## 2. Clone the private repository on `main`
 
@@ -62,6 +100,14 @@ git pull origin main
 
 The `admin` account must have GitHub access through its SSH key or a repository deploy key.
 
+When the repository already exists, use:
+
+```bash
+cd /home/admin/All-tech-hub
+git checkout main
+git pull origin main
+```
+
 Allow Nginx to traverse the home directory and read collected static and uploaded media files:
 
 ```bash
@@ -69,7 +115,7 @@ sudo chmod 711 /home/admin
 sudo find /home/admin/All-tech-hub -type d -exec chmod 755 {} \;
 ```
 
-Do not make `.env` world-readable; it will remain mode `600`.
+Do not make `.env` world-readable; it must remain mode `600`.
 
 ## 3. Create the PostgreSQL database and user
 
@@ -90,6 +136,14 @@ ALTER ROLE leosoft_user SET timezone TO 'Africa/Kampala';
 GRANT ALL PRIVILEGES ON DATABASE leosoft_prod TO leosoft_user;
 \q
 ```
+
+Test the new role:
+
+```bash
+psql -h 127.0.0.1 -U leosoft_user -d leosoft_prod
+```
+
+Enter the password and run `\q` after a successful connection.
 
 ## 4. Create the virtual environment
 
@@ -123,6 +177,19 @@ ALLTECH_SECRET_KEY
 ALLTECH_DB_PASSWORD
 ```
 
+Confirm these production values remain present:
+
+```text
+ALLTECH_ENV=production
+ALLTECH_ALLOWED_HOSTS=leosoftug.com,www.leosoftug.com
+ALLTECH_CSRF_TRUSTED_ORIGINS=https://leosoftug.com,https://www.leosoftug.com
+ALLTECH_TIME_ZONE=Africa/Kampala
+ALLTECH_DB_NAME=leosoft_prod
+ALLTECH_DB_USER=leosoft_user
+ALLTECH_DB_HOST=127.0.0.1
+ALLTECH_DB_PORT=5432
+```
+
 SMTP is disabled by default. Add the real email host and credentials later when email delivery is required.
 
 ## 6. Run the first Django setup
@@ -150,6 +217,18 @@ python manage.py createsuperuser
 
 ## 7. Create the Gunicorn systemd service
 
+The tracked service file already uses:
+
+```text
+User=admin
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/home/admin/All-tech-hub/.venv/bin/gunicorn
+Bind address=127.0.0.1:8010
+```
+
+Install and start it:
+
 ```bash
 sudo cp /home/admin/All-tech-hub/deployment/leosoft-gunicorn.service \
   /etc/systemd/system/leosoft_gunicorn.service
@@ -172,6 +251,10 @@ sudo journalctl -u leosoft_gunicorn -n 100 --no-pager
 
 ## 8. Add the Nginx site
 
+The tracked Nginx file already serves static and media files from `/home/admin/All-tech-hub` and proxies Django to `127.0.0.1:8010`.
+
+Install it:
+
 ```bash
 sudo cp /home/admin/All-tech-hub/deployment/nginx-leosoftug.com.conf \
   /etc/nginx/sites-available/leosoftug.com
@@ -183,7 +266,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Validate HTTP before requesting the certificate. A redirect to HTTPS is expected because production SSL redirection is enabled:
+Validate HTTP before requesting the certificate. Django may redirect HTTP to HTTPS because production SSL redirection is enabled:
 
 ```bash
 curl -I http://leosoftug.com/healthz/
@@ -191,7 +274,9 @@ curl -I http://leosoftug.com/healthz/
 
 This Nginx server block uses its own domain, internal port, logs, static directory and media directory, so it does not replace existing projects' configurations.
 
-## 9. Enable HTTPS
+## 9. Enable HTTPS after Namecheap DNS resolves
+
+Do not run Certbot until both Namecheap records resolve to the VPS.
 
 ```bash
 sudo certbot --nginx \
@@ -204,6 +289,8 @@ sudo systemctl reload nginx
 sudo certbot renew --dry-run
 curl -fsS https://leosoftug.com/healthz/
 ```
+
+If Certbot fails validation, recheck the Namecheap `@` and `www` records, remove conflicting redirects, and confirm ports 80 and 443 reach the VPS.
 
 ## 10. Routine deployment from `origin/main`
 
@@ -282,3 +369,4 @@ Common checks:
 - Missing CSS: run `collectstatic` and verify the Nginx static alias and `/home/admin` traversal permission.
 - Database authentication failure: verify the role, database, password and `.env` values.
 - Redirect loop after HTTPS: ensure Nginx forwards `X-Forwarded-Proto` and Django uses the production settings.
+- Domain not resolving: check Namecheap **Advanced DNS**, verify `@` and `www` A records, and remove conflicting redirect or CNAME records.
