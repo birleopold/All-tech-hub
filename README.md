@@ -11,6 +11,67 @@ Mobile Money payment recording, and authenticator-app two-factor security.
 The project retains the existing `ALLTECH_` environment-variable names for
 backward compatibility.
 
+## Production target
+
+The current production deployment is configured for:
+
+```text
+Company:            LEOSOFT UG LTD
+Domain:             leosoftug.com
+Domain registrar:   Namecheap
+Ubuntu user:        admin
+Application path:   /home/admin/All-tech-hub
+Virtual environment:/home/admin/All-tech-hub/.venv
+Environment file:   /home/admin/All-tech-hub/.env
+Gunicorn service:   leosoft_gunicorn
+Gunicorn address:   127.0.0.1:8010
+PostgreSQL database:leosoft_prod
+PostgreSQL user:    leosoft_user
+Deployment branch:  origin/main
+```
+
+Future VPS updates use:
+
+```bash
+cd /home/admin/All-tech-hub
+git checkout main
+git pull origin main
+```
+
+The complete server setup guide is in
+[`deployment/README.md`](deployment/README.md).
+
+## Namecheap DNS setup
+
+In Namecheap:
+
+1. Sign in and open **Domain List**.
+2. Click **Manage** beside `leosoftug.com`.
+3. Open **Advanced DNS**.
+4. Under **Host Records**, add these records using the VPS public IPv4 address:
+
+```text
+Type       Host    Value             TTL
+A Record   @       VPS_PUBLIC_IP     Automatic
+A Record   www     VPS_PUBLIC_IP     Automatic
+```
+
+5. Save each record using the green checkmark.
+6. Remove conflicting `A`, `CNAME`, URL Redirect, Masked Redirect, or Permanent
+   Redirect records for `@` or `www`.
+
+The domain must be using Namecheap BasicDNS, PremiumDNS, or FreeDNS for Host
+Records to be managed from the Advanced DNS page.
+
+Check DNS after saving:
+
+```bash
+getent hosts leosoftug.com
+getent hosts www.leosoftug.com
+```
+
+Both names should resolve to the VPS public IP before running Certbot.
+
 ## Local setup
 
 ```powershell
@@ -59,7 +120,7 @@ python manage.py configure_company \
   --currency "UGX"
 ```
 
-## Production
+## Production commands
 
 Set `ALLTECH_ENV=production`, provide a random `ALLTECH_SECRET_KEY` of at least
 50 characters, configure `ALLTECH_ALLOWED_HOSTS`, use PostgreSQL, and terminate
@@ -70,12 +131,8 @@ python manage.py check --deploy
 python manage.py migrate
 python manage.py collectstatic --noinput
 python manage.py bootstrap_roles
-gunicorn config.wsgi:application
+sudo systemctl restart leosoft_gunicorn
 ```
-
-The full Ubuntu VPS instructions for **leosoftug.com** are in
-[`deployment/README.md`](deployment/README.md). The production workflow remains
-on `origin/main`, so future server updates use `git pull origin main`.
 
 Uploaded media must be stored on persistent storage or object storage. Do not
 serve production media directly through Django.
@@ -85,6 +142,10 @@ serve production media directly through Django.
 Use `/healthz/` for uptime monitoring and deployment checks. It returns a small
 JSON response, confirms database connectivity, and does not expose private
 settings.
+
+```bash
+curl -fsS https://leosoftug.com/healthz/
+```
 
 ## Quality checks
 
@@ -109,6 +170,7 @@ storage, and test restoration regularly.
 
 ## Deployment checklist
 
+- Point Namecheap `@` and `www` A records to the VPS public IPv4 address.
 - Use PostgreSQL and persistent media storage.
 - Run migrations, `bootstrap_roles`, and `configure_company`.
 - Run `check --deploy`.
