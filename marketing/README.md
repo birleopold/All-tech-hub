@@ -33,7 +33,7 @@ set +a
 python manage.py migrate --noinput
 python manage.py seed_marketing_templates
 python manage.py check --deploy
-python manage.py test marketing.test_automation marketing.test_social_marketing
+python manage.py test marketing.test_automation catalog.test_social_marketing
 python manage.py collectstatic --noinput
 sudo systemctl restart leosoft_gunicorn
 curl -fsS https://leosoftug.com/healthz/
