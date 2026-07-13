@@ -1,5 +1,22 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ product.name }}{% endblock %}
+{% block meta %}
+<meta name="description" content="{{ meta_description }}">
+<link rel="canonical" href="{{ canonical_url }}">
+<meta property="og:type" content="product">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="{{ share_title }}">
+<meta property="og:description" content="{{ meta_description }}">
+<meta property="og:url" content="{{ canonical_url }}">
+{% if social_image_url %}<meta property="og:image" content="{{ social_image_url }}">{% endif %}
+<meta property="product:price:amount" content="{{ product.price }}">
+<meta property="product:price:currency" content="{{ company.currency_code }}">
+<meta name="twitter:card" content="{% if social_image_url %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ share_title }}">
+<meta name="twitter:description" content="{{ meta_description }}">
+{% if social_image_url %}<meta name="twitter:image" content="{{ social_image_url }}">{% endif %}
+{% endblock %}
 {% block content %}
 <script type="application/ld+json">{{ product_schema_json }}</script>
 
@@ -157,9 +174,29 @@
         </div>
       </aside>
 
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+          <p class="text-uppercase small fw-semibold text-primary mb-1">Help others discover it</p>
+          <h2 class="h5 mb-2">Share this {% if product.kind == 'service' %}service{% else %}product{% endif %}</h2>
+          <p class="small text-muted">Every link includes campaign tags so future analytics can identify the sharing channel.</p>
+          <div class="row g-2" aria-label="Social sharing options">
+            <div class="col-6"><a class="btn btn-success w-100" href="{{ share_links.whatsapp }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>WhatsApp</a></div>
+            <div class="col-6"><a class="btn btn-primary w-100" href="{{ share_links.facebook }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-facebook me-1" aria-hidden="true"></i>Facebook</a></div>
+            <div class="col-6"><a class="btn btn-dark w-100" href="{{ share_links.x }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-twitter-x me-1" aria-hidden="true"></i>X</a></div>
+            <div class="col-6"><a class="btn btn-outline-primary w-100" href="{{ share_links.linkedin }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-linkedin me-1" aria-hidden="true"></i>LinkedIn</a></div>
+            <div class="col-6"><a class="btn btn-outline-primary w-100" href="{{ share_links.telegram }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-telegram me-1" aria-hidden="true"></i>Telegram</a></div>
+            {% if share_links.pinterest %}<div class="col-6"><a class="btn btn-outline-danger w-100" href="{{ share_links.pinterest }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-pinterest me-1" aria-hidden="true"></i>Pinterest</a></div>{% endif %}
+            <div class="col-6"><a class="btn btn-outline-secondary w-100" href="{{ share_links.email }}"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Email</a></div>
+            <div class="col-6"><button class="btn btn-outline-secondary w-100" type="button" data-share-copy data-share-url="{{ copy_share_url }}"><i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Copy link</button></div>
+            <div class="col-12"><button class="btn btn-outline-primary w-100" type="button" data-share-native data-share-title="{{ share_title }}" data-share-text="{{ share_text }}" data-share-url="{{ native_share_url }}"><i class="bi bi-share me-1" aria-hidden="true"></i>Share to Instagram, TikTok or more apps</button></div>
+          </div>
+          <p class="small text-muted mb-0 mt-3" id="share-status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h2 class="h5 mb-3">Why buy through {{ company.name|default:'ALLTECH Hub' }}?</h2>
+          <h2 class="h5 mb-3">Why buy through {{ company.company_name }}?</h2>
           <ul class="list-unstyled vstack gap-2 mb-0 small text-muted">
             <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Clear pricing and formal documents</li>
             <li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Support for products, repairs and installations</li>
@@ -220,4 +257,7 @@
   </section>
 </div>
 
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/social_share.js' %}" defer></script>
 {% endblock %}
