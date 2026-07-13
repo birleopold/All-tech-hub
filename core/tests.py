@@ -1,5 +1,7 @@
+import tempfile
 from datetime import time
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib.auth.models import Permission, User
 from django.core.management import call_command
@@ -53,6 +55,20 @@ class StaffRoleAuthorizationTests(TestCase):
         response = self.client.get(reverse("staff_inventory"))
         self.assertEqual(response.status_code, 200)
 
+    def test_staff_without_audit_permission_cannot_view_security_diagnostics(self):
+        response = self.client.get(reverse("staff_security_diagnostics"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_staff_with_audit_permission_can_view_security_diagnostics(self):
+        permission = Permission.objects.get(
+            content_type__app_label="core",
+            codename="view_auditevent",
+        )
+        self.user.user_permissions.add(permission)
+        response = self.client.get(reverse("staff_security_diagnostics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Security diagnostics")
+
 
 class TwoFactorTests(TestCase):
     def test_totp_round_trip(self):
@@ -105,7 +121,36 @@ class PlatformMaturityTests(TestCase):
     def test_offline_page_renders(self):
         response = self.client.get(reverse("offline"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "You are offline")
+        self.assertContains(response, "You are currently offline")
+
+    def test_security_headers_are_sent_in_report_only_mode(self):
+        response = self.client.get(reverse("home"))
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
+        self.assertIn("camera=()", response["Permissions-Policy"])
+        self.assertIn("default-src 'self'", response["Content-Security-Policy-Report-Only"])
+        self.assertNotIn("Content-Security-Policy", response)
+
+    @override_settings(SECURITY_HEADERS_ENABLED=False)
+    def test_security_headers_can_be_disabled(self):
+        response = self.client.get(reverse("home"))
+        self.assertNotIn("Content-Security-Policy-Report-Only", response)
+        self.assertNotIn("Permissions-Policy", response)
+
+    def test_security_diagnostics_renders_backup_freshness(self):
+        user = User.objects.create_user(
+            "diagnostics", password="pw", is_staff=True, is_superuser=True
+        )
+        self.client.force_login(user)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_dir = Path(tmpdir)
+            backup_dir = base_dir / "backups"
+            backup_dir.mkdir()
+            (backup_dir / "alltech-db-test.sqlite3").write_text("db", encoding="utf-8")
+            with override_settings(BASE_DIR=base_dir):
+                response = self.client.get(reverse("staff_security_diagnostics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Backup freshness")
+        self.assertContains(response, "alltech-db-test.sqlite3")
 
 
 class OperationsMonitorCommandTests(TestCase):

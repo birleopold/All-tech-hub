@@ -52,12 +52,3 @@
     </div>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  var modal = document.getElementById('saveSearchModal');
-  var input = document.getElementById('saved-params-input');
-  function sync() { if (input) input.value = window.location.search || ''; }
-  if (modal) modal.addEventListener('show.bs.modal', sync);
-  sync();
-});
-</script>

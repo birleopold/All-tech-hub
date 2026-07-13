@@ -11,7 +11,7 @@
     <div class="card border-0 shadow-sm"><div class="card-body">
       {{ form.non_field_errors }}
       {% for field in form %}
-      <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>
+      <div class="mb-3" {% if field.name == "customer" %}data-account-payment-field{% endif %}><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>
       {% endfor %}
       <button class="btn btn-primary" type="submit">Record and allocate</button>
     </div></div>
@@ -29,14 +29,4 @@
     </div></div>
   </div>
 </form>
-{% endblock %}
-{% block extra_js %}
-<script>
-(function () {
-  const customer = document.getElementById("id_customer");
-  if (customer) customer.addEventListener("change", function () {
-    if (customer.value) window.location.search = "?customer=" + encodeURIComponent(customer.value);
-  });
-})();
-</script>
 {% endblock %}

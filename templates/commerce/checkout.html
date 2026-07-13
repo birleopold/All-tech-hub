@@ -51,20 +51,6 @@
           <p class="small text-muted mt-3 mb-0">Your order will be recorded and the team will follow up where needed.</p>
         </div>
       </form>
-      <script>
-      (function () {
-        document.querySelectorAll('.fulfillment-option input[type="radio"]').forEach(function (r) {
-          r.addEventListener('change', function () {
-            document.querySelectorAll('.fulfillment-option').forEach(function (lbl) {
-              lbl.classList.remove('border-primary', 'bg-primary-subtle');
-            });
-            if (r.checked) {
-              r.closest('.fulfillment-option').classList.add('border-primary', 'bg-primary-subtle');
-            }
-          });
-        });
-      })();
-      </script>
     </div>
     <div class="col-lg-5">
       <aside class="card border-0 shadow-sm product-purchase-card">

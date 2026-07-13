@@ -1,13 +1,18 @@
+from datetime import datetime
+from datetime import timezone as datetime_timezone
 from urllib.parse import parse_qs
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
 from core.filters import apply_ticket_filters
@@ -36,6 +41,47 @@ KNOWN_AUDIT_VERBS = (
     "inventory.job_part_use",
     "catalog.product_saved",
 )
+
+
+def _latest_backup(pattern: str):
+    backup_dir = settings.BASE_DIR / "backups"
+    if not backup_dir.exists():
+        return None
+    files = [path for path in backup_dir.glob(pattern) if path.is_file()]
+    return max(files, key=lambda path: path.stat().st_mtime) if files else None
+
+
+def _backup_snapshot(pattern: str, label: str) -> dict:
+    path = _latest_backup(pattern)
+    if path is None:
+        return {
+            "label": label,
+            "status": "missing",
+            "status_label": "Missing",
+            "path": "",
+            "age_hours": None,
+            "updated_at": None,
+            "size_mb": None,
+        }
+    updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=datetime_timezone.utc)
+    age_hours = int((timezone.now() - updated_at).total_seconds() // 3600)
+    status = "ok"
+    status_label = "Fresh"
+    if age_hours > 72:
+        status = "stale"
+        status_label = "Stale"
+    elif age_hours > 24:
+        status = "warning"
+        status_label = "Aging"
+    return {
+        "label": label,
+        "status": status,
+        "status_label": status_label,
+        "path": str(path.relative_to(settings.BASE_DIR)),
+        "age_hours": age_hours,
+        "updated_at": updated_at,
+        "size_mb": round(path.stat().st_size / 1024 / 1024, 2),
+    }
 
 
 class StaffGlobalSearchView(StaffRequiredMixin, View):
@@ -103,6 +149,73 @@ class StaffGlobalSearchView(StaffRequiredMixin, View):
                 | Q(sold_to__name__icontains=q)
             ).order_by("product__name", "serial_number")[:8]
         return render(request, self.template_name, {"search_q": q, "results": results})
+
+
+class SecurityDiagnosticsView(StaffRequiredMixin, TemplateView):
+    template_name = "core/security_diagnostics.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        database_status = "ok"
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+        except Exception:
+            database_status = "error"
+
+        ctx["checks"] = [
+            {
+                "label": "Debug mode",
+                "value": "On" if settings.DEBUG else "Off",
+                "status": "warning" if settings.DEBUG else "ok",
+                "detail": "Keep this off outside local development.",
+            },
+            {
+                "label": "Role enforcement",
+                "value": "Enabled" if settings.ENFORCE_STAFF_ROLES else "Disabled",
+                "status": "ok" if settings.ENFORCE_STAFF_ROLES else "warning",
+                "detail": "Restricts staff routes by Django permissions.",
+            },
+            {
+                "label": "Staff 2FA",
+                "value": "Required" if settings.REQUIRE_STAFF_2FA else "Optional",
+                "status": "ok" if settings.REQUIRE_STAFF_2FA else "warning",
+                "detail": "Protects staff accounts with authenticator codes.",
+            },
+            {
+                "label": "CSP mode",
+                "value": "Report-only"
+                if settings.CONTENT_SECURITY_POLICY_REPORT_ONLY
+                else "Enforced",
+                "status": "warning"
+                if settings.CONTENT_SECURITY_POLICY_REPORT_ONLY
+                else "ok",
+                "detail": "Report-only avoids breaking inline scripts while CSP is tuned.",
+            },
+            {
+                "label": "Secure cookies",
+                "value": "Enabled"
+                if settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE
+                else "Disabled",
+                "status": "ok"
+                if settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE
+                else "warning",
+                "detail": "Required for HTTPS production sessions and CSRF tokens.",
+            },
+            {
+                "label": "Database",
+                "value": database_status.upper(),
+                "status": "ok" if database_status == "ok" else "stale",
+                "detail": settings.DATABASES["default"]["ENGINE"].rsplit(".", 1)[-1],
+            },
+        ]
+        ctx["backups"] = [
+            _backup_snapshot("alltech-db-*", "Database backup"),
+            _backup_snapshot("alltech-media-*", "Media backup"),
+        ]
+        ctx["generated_at"] = timezone.now()
+        return ctx
 
 
 class AuditEventListView(StaffRequiredMixin, ListView):

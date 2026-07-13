@@ -35,6 +35,7 @@
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_search' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_reports' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_audit_log' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_security_diagnostics' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_security_diagnostics' %}aria-current="page"{% endif %}>Security diagnostics</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_orders' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_orders' or u == 'staff_order_detail' %}aria-current="page"{% endif %}>Shop orders</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_documents' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_documents' or u != 'staff_document_create' and 'staff_document_' in u %}aria-current="page"{% endif %}>Quotes &amp; invoices</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_document_create' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_document_create' %}aria-current="page"{% endif %}>New document</a></li>
@@ -78,6 +79,7 @@
         <li><a class="nav-link px-0" href="{% url 'staff_search' %}" {% if resolve_url_name == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_reports' %}" {% if resolve_url_name == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_audit_log' %}" {% if resolve_url_name == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
+        <li><a class="nav-link px-0" href="{% url 'staff_security_diagnostics' %}" {% if resolve_url_name == 'staff_security_diagnostics' %}aria-current="page"{% endif %}>Security diagnostics</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_orders' %}" {% if resolve_url_name == 'staff_orders' or resolve_url_name == 'staff_order_detail' %}aria-current="page"{% endif %}>Shop orders</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_documents' %}" {% if resolve_url_name == 'staff_documents' or resolve_url_name != 'staff_document_create' and 'staff_document_' in resolve_url_name %}aria-current="page"{% endif %}>Quotes &amp; invoices</a></li>
         <li><a class="nav-link px-0" href="{% url 'staff_document_create' %}" {% if resolve_url_name == 'staff_document_create' %}aria-current="page"{% endif %}>New document</a></li>

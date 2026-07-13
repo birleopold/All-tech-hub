@@ -220,36 +220,4 @@
   </section>
 </div>
 
-{% if product.gallery_images.all or product.has_sellable_variants %}
-<script>
-(function() {
-  var main = document.getElementById('pd-main-img');
-  document.querySelectorAll('.pd-thumb').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var src = this.getAttribute('data-src');
-      if (!src || !main) return;
-      if (main.tagName === 'IMG') { main.src = src; }
-      else {
-        var img = document.createElement('img');
-        img.src = src;
-        img.className = 'img-fluid w-100 product-detail-image';
-        img.alt = '';
-        img.id = 'pd-main-img';
-        main.replaceWith(img);
-        main = img;
-      }
-    });
-  });
-  var sel = document.getElementById('variant_id');
-  var priceLbl = document.getElementById('pd-price-label');
-  if (sel && priceLbl) {
-    sel.addEventListener('change', function() {
-      var opt = sel.options[sel.selectedIndex];
-      if (!opt || !opt.dataset.price) return;
-      priceLbl.textContent = opt.dataset.currency + ' ' + opt.dataset.price;
-    });
-  }
-})();
-</script>
-{% endif %}
 {% endblock %}

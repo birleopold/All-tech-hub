@@ -1,4 +1,4 @@
-"""Central authorization gate for the staff workspace."""
+"""Cross-cutting request middleware."""
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -20,6 +20,7 @@ URL_PERMISSION_PREFIXES = {
     "staff_reports": "billing.view_commercialdocument",
     "staff_export": "billing.view_commercialdocument",
     "staff_audit": "core.view_auditevent",
+    "staff_security": "core.view_auditevent",
     "staff_business": "core.change_businesshours",
     "staff_email_log": "messaging.view_outboundemail",
     "staff_stock_movements": "inventory.view_stockmovement",
@@ -28,6 +29,38 @@ URL_PERMISSION_PREFIXES = {
     "staff_customer_statement": "billing.view_commercialdocument",
     "staff_apply_customer_credit": "billing.change_customercredit",
 }
+
+
+class SecurityHeadersMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if not getattr(settings, "SECURITY_HEADERS_ENABLED", True):
+            return response
+
+        self._set_header(response, "Referrer-Policy", getattr(settings, "REFERRER_POLICY", ""))
+        self._set_header(
+            response,
+            "Permissions-Policy",
+            getattr(settings, "PERMISSIONS_POLICY", ""),
+        )
+
+        csp = getattr(settings, "CONTENT_SECURITY_POLICY", "")
+        if csp:
+            csp_header = (
+                "Content-Security-Policy-Report-Only"
+                if getattr(settings, "CONTENT_SECURITY_POLICY_REPORT_ONLY", True)
+                else "Content-Security-Policy"
+            )
+            self._set_header(response, csp_header, csp)
+        return response
+
+    @staticmethod
+    def _set_header(response, name: str, value: str):
+        if value and name not in response:
+            response[name] = value
 
 
 class StaffRoleRequiredMiddleware:

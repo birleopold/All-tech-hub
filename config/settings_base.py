@@ -31,6 +31,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -87,6 +88,31 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "staff_dashboard"
 LOGOUT_REDIRECT_URL = "home"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+
+SECURITY_HEADERS_ENABLED = env_bool("ALLTECH_SECURITY_HEADERS_ENABLED", True)
+REFERRER_POLICY = os.getenv("ALLTECH_REFERRER_POLICY", "same-origin")
+PERMISSIONS_POLICY = os.getenv(
+    "ALLTECH_PERMISSIONS_POLICY",
+    "camera=(), microphone=(), geolocation=(), payment=()",
+)
+CONTENT_SECURITY_POLICY_REPORT_ONLY = env_bool("ALLTECH_CSP_REPORT_ONLY", True)
+CONTENT_SECURITY_POLICY = os.getenv(
+    "ALLTECH_CONTENT_SECURITY_POLICY",
+    (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net; "
+        "style-src 'self' https://cdn.jsdelivr.net; "
+        "img-src 'self' data: blob:; "
+        "font-src 'self' https://cdn.jsdelivr.net data:; "
+        "connect-src 'self'; "
+        "manifest-src 'self'; "
+        "worker-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'self'; "
+        "form-action 'self'"
+    ),
+)
 
 EMAIL_BACKEND = os.getenv(
     "ALLTECH_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
