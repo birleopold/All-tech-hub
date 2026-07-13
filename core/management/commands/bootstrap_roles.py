@@ -22,6 +22,15 @@ ROLE_PERMISSIONS = {
         "catalog": {"product", "productvariant", "productreview"},
         "core": {"contactmessage", "supportticket"},
         "messaging": {"outboundemail"},
+        "marketing": {
+            "socialprofilesettings",
+            "marketingcampaign",
+            "captiontemplate",
+            "campaignlink",
+            "campaignclick",
+            "scheduledpost",
+            "marketinglead",
+        },
     },
     "Inventory": {
         "catalog": {"category", "product", "productvariant", "productserial"},
