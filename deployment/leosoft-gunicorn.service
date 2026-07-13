@@ -1,0 +1,34 @@
+[Unit]
+Description=LEOSOFT UG LTD Gunicorn application server
+After=network.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=__DEPLOY_USER__
+Group=www-data
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=__APP_DIR__/.env
+RuntimeDirectory=leosoft
+RuntimeDirectoryMode=0755
+UMask=0007
+ExecStart=__APP_DIR__/.venv/bin/gunicorn \
+    --workers 3 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    --bind unix:/run/leosoft/gunicorn.sock \
+    config.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGQUIT
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=__APP_DIR__/media __APP_DIR__/backups
+
+[Install]
+WantedBy=multi-user.target
