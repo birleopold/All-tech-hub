@@ -120,6 +120,44 @@ python manage.py configure_company \
   --currency "UGX"
 ```
 
+## Social marketing and search discovery
+
+Every published product and service page includes:
+
+- WhatsApp, Facebook, X, LinkedIn, Telegram, Pinterest, and email sharing.
+- Copy-link and native mobile sharing for installed apps such as Instagram,
+  TikTok, messaging apps, and other supported destinations.
+- Open Graph and X/Twitter preview metadata using the product name,
+  description, price, currency, and main image.
+- UTM campaign parameters identifying the sharing source.
+- Canonical URLs and Product or Service structured data.
+- Automatic inclusion in `/sitemap.xml`.
+
+The public site also exposes `/robots.txt` and social-profile links in the
+footer.
+
+After migration, sign in to Django Admin and open:
+
+```text
+Marketing → Social media settings
+```
+
+Enter the official Facebook, Instagram, TikTok, X, LinkedIn, and YouTube URLs.
+For WhatsApp, enter digits with the country code, for example:
+
+```text
+256700000000
+```
+
+You can also set a short default sharing message that will be included whenever
+a visitor shares a product or service.
+
+Run the marketing regression tests with:
+
+```bash
+python manage.py test catalog.test_social_marketing
+```
+
 ## Production commands
 
 Set `ALLTECH_ENV=production`, provide a random `ALLTECH_SECRET_KEY` of at least
@@ -173,6 +211,9 @@ storage, and test restoration regularly.
 - Point Namecheap `@` and `www` A records to the VPS public IPv4 address.
 - Use PostgreSQL and persistent media storage.
 - Run migrations, `bootstrap_roles`, and `configure_company`.
+- Configure official social-profile links in Django Admin.
+- Test a product share on WhatsApp and the native mobile share panel.
+- Verify `/robots.txt` and `/sitemap.xml`.
 - Run `check --deploy`.
 - Configure SMTP and verify delivery.
 - Check `/healthz/` after deployment.
