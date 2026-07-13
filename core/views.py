@@ -112,7 +112,10 @@ def contact_view(request):
     if request.method == "POST":
         form = ContactForm(request.POST)
         if form.is_valid():
-            form.save()
+            contact_message = form.save()
+            from marketing.services import create_lead_from_contact
+
+            create_lead_from_contact(request, contact_message)
             messages.success(request, "Thanks — we will get back to you shortly.")
             return redirect("contact")
     else:
