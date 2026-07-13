@@ -67,6 +67,14 @@ fi
 sudo systemctl restart "${SYSTEMD_SERVICE}"
 sudo systemctl is-active --quiet "${SYSTEMD_SERVICE}"
 
-curl --fail --silent --show-error --retry 5 --retry-delay 2 "${HEALTHCHECK_URL}"
+curl \
+    --fail \
+    --silent \
+    --show-error \
+    --retry 5 \
+    --retry-delay 2 \
+    --header "Host: leosoftug.com" \
+    --header "X-Forwarded-Proto: https" \
+    "${HEALTHCHECK_URL}"
 echo
 echo "LEOSOFT UG LTD deployment completed successfully from origin/main."
