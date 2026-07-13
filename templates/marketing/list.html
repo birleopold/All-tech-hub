@@ -1,0 +1,33 @@
+{% extends "staff_base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block staff_content %}
+<section>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div><p class="text-uppercase small fw-semibold text-primary mb-1">Marketing automation</p><h1 class="h2 mb-1">{{ page_title }}</h1><a class="small" href="{% url 'staff_marketing_dashboard' %}">Back to marketing dashboard</a></div>
+    <a class="btn btn-primary" href="{% url create_url_name %}"><i class="bi bi-plus-lg me-1"></i>Create</a>
+  </div>
+
+  <div class="card border-0 shadow-sm"><div class="card-body"><div class="table-responsive">
+    <table class="table align-middle mb-0">
+      {% if page_kind == 'campaigns' %}
+      <thead><tr><th>Campaign</th><th>Objective</th><th>Status</th><th>Dates</th><th>Budget</th><th></th></tr></thead><tbody>
+      {% for item in object_list %}<tr><td><strong>{{ item.name }}</strong><div class="small text-muted">{{ item.target_audience|truncatewords:10 }}</div></td><td>{{ item.get_objective_display }}</td><td><span class="badge text-bg-light">{{ item.get_status_display }}</span></td><td class="small">{{ item.start_date|default:"—" }} to {{ item.end_date|default:"—" }}</td><td>UGX {{ item.budget }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_campaign_edit' item.pk %}">Edit</a></td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No campaigns yet.</td></tr>{% endfor %}
+      {% elif page_kind == 'captions' %}
+      <thead><tr><th>Template</th><th>Channel</th><th>Preview</th><th>Active</th><th></th></tr></thead><tbody>
+      {% for item in object_list %}<tr><td><strong>{{ item.name }}</strong></td><td>{{ item.get_channel_display }}</td><td class="small">{{ item.body|truncatewords:20 }}</td><td>{{ item.is_active|yesno:"Yes,No" }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_caption_edit' item.pk %}">Edit</a></td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No caption templates yet.</td></tr>{% endfor %}
+      {% elif page_kind == 'links' %}
+      <thead><tr><th>Tracked link</th><th>Campaign</th><th>Source</th><th>Clicks</th><th>Leads</th><th>Actions</th></tr></thead><tbody>
+      {% for item in object_list %}<tr><td><strong>{{ item.name }}</strong><div class="small text-muted">/marketing/r/{{ item.code }}/</div></td><td>{{ item.campaign|default:"—" }}</td><td>{{ item.source }} / {{ item.medium }}</td><td>{{ item.click_count }}</td><td>{{ item.lead_count }}</td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_link_edit' item.pk %}">Edit</a> <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_marketing_link_qr' item.pk %}">QR</a> <a class="btn btn-sm btn-outline-success" href="{% url 'marketing_track' item.code %}" target="_blank" rel="noopener">Open</a></td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No tracked links yet.</td></tr>{% endfor %}
+      {% elif page_kind == 'posts' %}
+      <thead><tr><th>Post</th><th>Channels</th><th>Schedule</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+      {% for item in object_list %}<tr><td><strong>{{ item.title }}</strong>{% if item.product %}<div class="small text-muted">{{ item.product.name }}</div>{% endif %}<div class="small">{{ item.caption|truncatewords:14 }}</div></td><td class="small">{{ item.channels|join:", " }}</td><td class="small">{{ item.scheduled_for|date:"Y-m-d H:i"|default:"—" }}</td><td><span class="badge text-bg-light">{{ item.get_status_display }}</span></td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_post_edit' item.pk %}">Edit</a>{% if item.status != 'published' %} <form method="post" action="{% url 'staff_marketing_post_published' item.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit">Published</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No scheduled posts yet.</td></tr>{% endfor %}
+      {% elif page_kind == 'leads' %}
+      <thead><tr><th>Lead</th><th>Source</th><th>Campaign / product</th><th>Status</th><th>Value</th><th></th></tr></thead><tbody>
+      {% for item in object_list %}<tr><td><strong>{{ item.name }}</strong><div class="small text-muted">{{ item.email }}{% if item.phone %} · {{ item.phone }}{% endif %}</div></td><td>{{ item.source }}{% if item.medium %}<div class="small text-muted">{{ item.medium }}</div>{% endif %}</td><td>{{ item.campaign|default:"—" }}{% if item.product %}<div class="small text-muted">{{ item.product.name }}</div>{% endif %}</td><td><span class="badge text-bg-light">{{ item.get_status_display }}</span></td><td>UGX {{ item.estimated_value }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_lead_edit' item.pk %}">Open</a></td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No marketing leads yet.</td></tr>{% endfor %}
+      {% endif %}
+      </tbody>
+    </table>
+  </div></div></div>
+  {% if is_paginated %}<nav class="mt-3"><ul class="pagination justify-content-center"><li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">{% if page_obj.has_previous %}<a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>{% else %}<span class="page-link">Previous</span>{% endif %}</li><li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li><li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">{% if page_obj.has_next %}<a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>{% else %}<span class="page-link">Next</span>{% endif %}</li></ul></nav>{% endif %}
+</section>
+{% endblock %}
