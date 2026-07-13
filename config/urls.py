@@ -64,5 +64,6 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-admin.site.site_header = "ALLTECH Hub"
-admin.site.site_title = "ALLTECH"
+admin.site.site_header = "LEOSOFT UG LTD Administration"
+admin.site.site_title = "LEOSOFT UG LTD"
+admin.site.index_title = "Business administration"
