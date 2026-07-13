@@ -1,4 +1,5 @@
 import json
+from urllib.parse import quote, urlencode
 
 from django.contrib import messages
 from django.db.models import Q
@@ -9,6 +10,7 @@ from django.views.generic import DetailView, ListView
 
 from catalog.models import Category, Product, ProductReview, product_review_summary
 from core.models import CompanySettings
+from marketing.models import SocialProfileSettings
 
 
 class ProductListView(ListView):
@@ -65,7 +67,7 @@ class ProductDetailView(DetailView):
     def get_queryset(self):
         return (
             Product.objects.filter(is_published=True)
-            .select_related("category")
+            .select_related("category", "category__parent")
             .prefetch_related("gallery_images", "variants")
         )
 
@@ -83,7 +85,103 @@ class ProductDetailView(DetailView):
         ctx["product_schema_json"] = self._product_schema_json(
             product, review_summary
         )
+        ctx.update(self._sharing_context(product))
         return ctx
+
+    def _sharing_context(self, product: Product) -> dict:
+        company = CompanySettings.load()
+        social_settings = SocialProfileSettings.load()
+        canonical_url = self.request.build_absolute_uri(product.get_absolute_url())
+        image = product.primary_display_image
+        social_image_url = (
+            self.request.build_absolute_uri(image.url) if image else ""
+        )
+
+        raw_description = (
+            product.short_description
+            or product.description
+            or f"{product.category.name} available from {company.company_name}."
+        )
+        meta_description = " ".join(raw_description.split())[:160]
+        share_title = f"{product.name} | {company.company_name}"
+        share_parts = [
+            social_settings.default_share_message.strip(),
+            f"{product.name} — {meta_description}",
+        ]
+        share_text = " ".join(part for part in share_parts if part).strip()
+
+        def campaign_url(source: str, medium: str = "social") -> str:
+            params = urlencode(
+                {
+                    "utm_source": source,
+                    "utm_medium": medium,
+                    "utm_campaign": "product_service_share",
+                    "utm_content": product.slug,
+                }
+            )
+            return f"{canonical_url}?{params}"
+
+        whatsapp_url = campaign_url("whatsapp")
+        facebook_url = campaign_url("facebook")
+        x_url = campaign_url("x")
+        linkedin_url = campaign_url("linkedin")
+        telegram_url = campaign_url("telegram")
+        pinterest_url = campaign_url("pinterest")
+        email_url = campaign_url("email", "referral")
+
+        share_links = {
+            "whatsapp": (
+                "https://wa.me/?text="
+                + quote(f"{share_text}\n{whatsapp_url}", safe="")
+            ),
+            "facebook": (
+                "https://www.facebook.com/sharer/sharer.php?u="
+                + quote(facebook_url, safe="")
+            ),
+            "x": (
+                "https://twitter.com/intent/tweet?text="
+                + quote(share_text, safe="")
+                + "&url="
+                + quote(x_url, safe="")
+            ),
+            "linkedin": (
+                "https://www.linkedin.com/sharing/share-offsite/?url="
+                + quote(linkedin_url, safe="")
+            ),
+            "telegram": (
+                "https://t.me/share/url?url="
+                + quote(telegram_url, safe="")
+                + "&text="
+                + quote(share_text, safe="")
+            ),
+            "email": (
+                "mailto:?subject="
+                + quote(share_title, safe="")
+                + "&body="
+                + quote(f"{share_text}\n\n{email_url}", safe="")
+            ),
+            "pinterest": "",
+        }
+        if social_image_url:
+            share_links["pinterest"] = (
+                "https://pinterest.com/pin/create/button/?url="
+                + quote(pinterest_url, safe="")
+                + "&media="
+                + quote(social_image_url, safe="")
+                + "&description="
+                + quote(share_text, safe="")
+            )
+
+        return {
+            "canonical_url": canonical_url,
+            "meta_description": meta_description,
+            "share_title": share_title,
+            "share_text": share_text,
+            "share_links": share_links,
+            "social_image_url": social_image_url,
+            "copy_share_url": campaign_url("copy-link", "referral"),
+            "native_share_url": campaign_url("native-share", "referral"),
+        }
 
     def _product_schema_json(self, product, review_summary):
         image = product.primary_display_image
