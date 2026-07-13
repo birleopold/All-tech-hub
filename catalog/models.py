@@ -8,6 +8,14 @@ from django.utils.text import slugify
 
 
 class Category(models.Model):
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        related_name="subcategories",
+        null=True,
+        blank=True,
+        help_text="Leave blank for a main menu category.",
+    )
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True, max_length=140)
     description = models.TextField(blank=True)
@@ -18,11 +26,28 @@ class Category(models.Model):
         ordering = ["sort_order", "name"]
 
     def __str__(self) -> str:
+        if self.parent_id:
+            return f"{self.parent.name} — {self.name}"
         return self.name
+
+    @property
+    def is_main_category(self) -> bool:
+        return self.parent_id is None
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)[:140]
+            if self.parent_id:
+                base = slugify(f"{self.parent.slug}-{self.name}")[:130]
+            else:
+                base = slugify(self.name)[:130]
+            base = base or "category"
+            candidate = base
+            suffix = 1
+            while Category.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                suffix_text = f"-{suffix}"
+                candidate = f"{base[: 140 - len(suffix_text)]}{suffix_text}"
+                suffix += 1
+            self.slug = candidate
         super().save(*args, **kwargs)
 
 
@@ -327,7 +352,7 @@ class ProductSerial(models.Model):
     @property
     def warranty_expires_on(self):
         from datetime import date
-
+        y = None
         if not self.sold_at or not self.warranty_months:
             return None
         y = self.sold_at.year + (self.sold_at.month - 1 + self.warranty_months) // 12
@@ -338,7 +363,6 @@ class ProductSerial(models.Model):
     @property
     def is_under_warranty(self) -> bool:
         from datetime import date
-
         exp = self.warranty_expires_on
         return exp is not None and exp >= date.today()
 
