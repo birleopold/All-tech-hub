@@ -54,8 +54,10 @@ Skip this section when the `leosoft` user already exists.
 
 ```bash
 sudo adduser leosoft
-sudo usermod -aG www-data leosoft
+sudo usermod -aG sudo,www-data leosoft
 ```
+
+The `sudo` membership allows the deployment script to restart only after you authenticate. For tighter production control, replace this later with a limited sudoers rule for `systemctl restart leosoft_gunicorn`.
 
 ## 3. Clone the private repository on `main`
 
@@ -70,12 +72,21 @@ git pull origin main
 
 The VPS must have GitHub access through an SSH key or deploy key.
 
+Allow Nginx to traverse the deployment user's home directory and read collected static and uploaded media files:
+
+```bash
+exit
+sudo chmod 711 /home/leosoft
+sudo find /home/leosoft/All-tech-hub -type d -exec chmod 755 {} \;
+```
+
+Do not make `.env` world-readable; it will be secured separately with mode `600`.
+
 ## 4. Create the PostgreSQL database and user
 
 PostgreSQL is already installed, so create only a dedicated database and role:
 
 ```bash
-exit
 sudo -u postgres psql
 ```
 
@@ -161,10 +172,14 @@ sudo systemctl enable --now leosoft_gunicorn
 sudo systemctl status leosoft_gunicorn --no-pager
 ```
 
-Validate Gunicorn directly:
+Validate Gunicorn directly while supplying the production host and proxy scheme expected by Django:
 
 ```bash
-curl -fsS http://127.0.0.1:8010/healthz/
+curl -fsS \
+  -H 'Host: leosoftug.com' \
+  -H 'X-Forwarded-Proto: https' \
+  http://127.0.0.1:8010/healthz/
+
 sudo journalctl -u leosoft_gunicorn -n 100 --no-pager
 ```
 
@@ -181,7 +196,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Validate HTTP before requesting a certificate:
+Validate HTTP before requesting a certificate. A redirect to HTTPS is expected because production SSL redirection is enabled:
 
 ```bash
 curl -I http://leosoftug.com/healthz/
@@ -246,7 +261,8 @@ Configure `/home/leosoft/.pgpass` so `pg_dump` can run without exposing the data
 ```
 
 ```bash
-chmod 600 /home/leosoft/.pgpass
+sudo chown leosoft:leosoft /home/leosoft/.pgpass
+sudo chmod 600 /home/leosoft/.pgpass
 ```
 
 Create a database and media backup:
@@ -269,7 +285,7 @@ sudo systemctl status leosoft_gunicorn --no-pager
 sudo journalctl -u leosoft_gunicorn -n 200 --no-pager
 sudo journalctl -u nginx -n 200 --no-pager
 sudo ss -ltnp | grep ':8010'
-curl -v http://127.0.0.1:8010/healthz/
+curl -v -H 'Host: leosoftug.com' -H 'X-Forwarded-Proto: https' http://127.0.0.1:8010/healthz/
 curl -v https://leosoftug.com/healthz/
 ```
 
@@ -278,6 +294,6 @@ Common checks:
 - `DisallowedHost`: verify `ALLTECH_ALLOWED_HOSTS` in `.env`.
 - CSRF failure: verify both HTTPS entries in `ALLTECH_CSRF_TRUSTED_ORIGINS`.
 - 502 Bad Gateway: check `leosoft_gunicorn` and port `8010`.
-- Missing CSS: run `collectstatic` and verify the Nginx static alias.
+- Missing CSS: run `collectstatic` and verify the Nginx static alias and `/home/leosoft` traversal permission.
 - Database authentication failure: verify the role, database, password and `.env` values.
 - Redirect loop after HTTPS: ensure Nginx forwards `X-Forwarded-Proto` and Django uses the provided production settings.
