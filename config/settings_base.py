@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 def env_bool(name: str, default: bool = False) -> bool:
-    return os.getenv("ALLTECH_SECRET_KEY", "1" if default else "0").strip().lower() in {
+    return os.getenv(name, "1" if default else "0").strip().lower() in {
         "1", "true", "yes", "on",
     }
 
