@@ -1,24 +1,24 @@
 # LEOSOFT UG LTD — Ubuntu VPS deployment runbook
 
-This runbook deploys **LEOSOFT UG LTD** at **https://leosoftug.com** alongside Django projects that are already running on the same Ubuntu VPS.
+This runbook deploys **LEOSOFT UG LTD** at **https://leosoftug.com** alongside Django projects already running on the same Ubuntu VPS.
 
-It assumes Python, PostgreSQL, Nginx, Git and Certbot are already installed. This project currently needs **Django, PostgreSQL, Gunicorn and Nginx only**; it does not use Celery or Redis.
+It assumes the VPS already has Python, PostgreSQL, Nginx, Git and Certbot. This project currently needs **Django, PostgreSQL, Gunicorn and Nginx only**; it does not use Celery or Redis.
 
-The production checkout remains on **`main`**. Future updates use:
+The production checkout stays on **`main`**, and future updates use:
 
 ```bash
 git pull origin main
 ```
 
-The code keeps the existing `ALLTECH_` environment-variable prefix for compatibility, while the public company identity is configured as LEOSOFT UG LTD.
+The existing `ALLTECH_` environment-variable prefix is retained for compatibility, while the public company identity is LEOSOFT UG LTD.
 
 ## Deployment layout
 
 ```text
-Linux user:      leosoft
-Application:     /home/leosoft/All-tech-hub
-Virtualenv:      /home/leosoft/All-tech-hub/.venv
-Environment:     /home/leosoft/All-tech-hub/.env
+Ubuntu user:     admin
+Application:     /home/admin/All-tech-hub
+Virtualenv:      /home/admin/All-tech-hub/.venv
+Environment:     /home/admin/All-tech-hub/.env
 Gunicorn:        127.0.0.1:8010
 Systemd service: leosoft_gunicorn
 Nginx site:      leosoftug.com
@@ -26,7 +26,7 @@ PostgreSQL DB:   leosoft_prod
 PostgreSQL user: leosoft_user
 ```
 
-Before using port `8010`, confirm that another project is not using it:
+Confirm port `8010` is free before deployment:
 
 ```bash
 sudo ss -ltnp | grep ':8010' || echo 'Port 8010 is available'
@@ -48,41 +48,30 @@ getent hosts leosoftug.com
 getent hosts www.leosoftug.com
 ```
 
-## 2. Create the deployment user
+## 2. Clone the private repository on `main`
 
-Skip this section when the `leosoft` user already exists.
-
-```bash
-sudo adduser leosoft
-sudo usermod -aG sudo,www-data leosoft
-```
-
-The `sudo` membership allows the deployment script to restart only after you authenticate. For tighter production control, replace this later with a limited sudoers rule for `systemctl restart leosoft_gunicorn`.
-
-## 3. Clone the private repository on `main`
+Log in to the VPS as `admin`, then run:
 
 ```bash
-sudo -i -u leosoft
-cd ~
+cd /home/admin
 git clone git@github.com:birleopold/All-tech-hub.git
-cd All-tech-hub
+cd /home/admin/All-tech-hub
 git checkout main
 git pull origin main
 ```
 
-The VPS must have GitHub access through an SSH key or deploy key.
+The `admin` account must have GitHub access through its SSH key or a repository deploy key.
 
-Allow Nginx to traverse the deployment user's home directory and read collected static and uploaded media files:
+Allow Nginx to traverse the home directory and read collected static and uploaded media files:
 
 ```bash
-exit
-sudo chmod 711 /home/leosoft
-sudo find /home/leosoft/All-tech-hub -type d -exec chmod 755 {} \;
+sudo chmod 711 /home/admin
+sudo find /home/admin/All-tech-hub -type d -exec chmod 755 {} \;
 ```
 
-Do not make `.env` world-readable; it will be secured separately with mode `600`.
+Do not make `.env` world-readable; it will remain mode `600`.
 
-## 4. Create the PostgreSQL database and user
+## 3. Create the PostgreSQL database and user
 
 PostgreSQL is already installed, so create only a dedicated database and role:
 
@@ -102,45 +91,44 @@ GRANT ALL PRIVILEGES ON DATABASE leosoft_prod TO leosoft_user;
 \q
 ```
 
-## 5. Create the virtual environment
+## 4. Create the virtual environment
 
 ```bash
-sudo -i -u leosoft
-cd /home/leosoft/All-tech-hub
+cd /home/admin/All-tech-hub
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## 6. Create the production `.env`
+## 5. Create the production `.env`
 
 ```bash
+cd /home/admin/All-tech-hub
 cp deployment/leosoft.env.example .env
 chmod 600 .env
 nano .env
 ```
 
-Generate the Django secret key:
+Generate a Django secret key:
 
 ```bash
 python -c "import secrets; print(secrets.token_urlsafe(64))"
 ```
 
-At minimum, replace:
+Replace at least:
 
 ```text
 ALLTECH_SECRET_KEY
 ALLTECH_DB_PASSWORD
-ALLTECH_EMAIL_HOST and related SMTP values
 ```
 
-The production hostname, HTTPS origins, Africa/Kampala timezone, PostgreSQL database and secure cookie settings are already represented in the template.
+SMTP is disabled by default. Add the real email host and credentials later when email delivery is required.
 
-## 7. Run the first Django setup
+## 6. Run the first Django setup
 
 ```bash
-cd /home/leosoft/All-tech-hub
+cd /home/admin/All-tech-hub
 source .venv/bin/activate
 set -a
 source .env
@@ -160,11 +148,10 @@ python manage.py configure_company \
 python manage.py createsuperuser
 ```
 
-## 8. Create the Gunicorn systemd service
+## 7. Create the Gunicorn systemd service
 
 ```bash
-exit
-sudo cp /home/leosoft/All-tech-hub/deployment/leosoft-gunicorn.service \
+sudo cp /home/admin/All-tech-hub/deployment/leosoft-gunicorn.service \
   /etc/systemd/system/leosoft_gunicorn.service
 
 sudo systemctl daemon-reload
@@ -172,7 +159,7 @@ sudo systemctl enable --now leosoft_gunicorn
 sudo systemctl status leosoft_gunicorn --no-pager
 ```
 
-Validate Gunicorn directly while supplying the production host and proxy scheme expected by Django:
+Validate Gunicorn directly while supplying the production host and HTTPS proxy scheme expected by Django:
 
 ```bash
 curl -fsS \
@@ -183,10 +170,10 @@ curl -fsS \
 sudo journalctl -u leosoft_gunicorn -n 100 --no-pager
 ```
 
-## 9. Add the Nginx site
+## 8. Add the Nginx site
 
 ```bash
-sudo cp /home/leosoft/All-tech-hub/deployment/nginx-leosoftug.com.conf \
+sudo cp /home/admin/All-tech-hub/deployment/nginx-leosoftug.com.conf \
   /etc/nginx/sites-available/leosoftug.com
 
 sudo ln -sfn /etc/nginx/sites-available/leosoftug.com \
@@ -196,15 +183,15 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Validate HTTP before requesting a certificate. A redirect to HTTPS is expected because production SSL redirection is enabled:
+Validate HTTP before requesting the certificate. A redirect to HTTPS is expected because production SSL redirection is enabled:
 
 ```bash
 curl -I http://leosoftug.com/healthz/
 ```
 
-This Nginx server block uses its own domain, internal port, logs, static directory and media directory, so it does not replace the existing projects' configurations.
+This Nginx server block uses its own domain, internal port, logs, static directory and media directory, so it does not replace existing projects' configurations.
 
-## 10. Enable HTTPS
+## 9. Enable HTTPS
 
 ```bash
 sudo certbot --nginx \
@@ -218,13 +205,12 @@ sudo certbot renew --dry-run
 curl -fsS https://leosoftug.com/healthz/
 ```
 
-## 11. Routine deployment from `origin/main`
+## 10. Routine deployment from `origin/main`
 
-Every future deployment stays on `main`:
+For future updates:
 
 ```bash
-sudo -i -u leosoft
-cd /home/leosoft/All-tech-hub
+cd /home/admin/All-tech-hub
 git checkout main
 git pull origin main
 source .venv/bin/activate
@@ -235,41 +221,40 @@ set +a
 python manage.py check --deploy
 python manage.py migrate
 python manage.py collectstatic --noinput
-exit
 sudo systemctl restart leosoft_gunicorn
 sudo systemctl status leosoft_gunicorn --no-pager
 curl -fsS https://leosoftug.com/healthz/
 ```
 
-Alternatively, after the one-time server setup:
+Alternatively, after the one-time setup:
 
 ```bash
-sudo -i -u leosoft
-cd /home/leosoft/All-tech-hub
+cd /home/admin/All-tech-hub
 chmod +x deployment/deploy.sh
 ./deployment/deploy.sh
 ```
 
-The deployment script performs `git pull --ff-only origin main`, installs requirements, validates production settings, migrates, collects static files, refreshes staff roles, applies the LEOSOFT company profile, restarts Gunicorn and checks `/healthz/`.
+The script pulls `origin/main`, installs requirements, checks production settings, migrates, collects static files, refreshes roles, applies the LEOSOFT company profile, restarts Gunicorn and checks `/healthz/`.
 
-## 12. Backups
+## 11. Backups
 
-Configure `/home/leosoft/.pgpass` so `pg_dump` can run without exposing the database password in commands:
+Create `/home/admin/.pgpass`:
 
 ```text
 127.0.0.1:5432:leosoft_prod:leosoft_user:CHANGE_ME_STRONG_PASSWORD
 ```
 
+Secure it:
+
 ```bash
-sudo chown leosoft:leosoft /home/leosoft/.pgpass
-sudo chmod 600 /home/leosoft/.pgpass
+sudo chown admin:admin /home/admin/.pgpass
+chmod 600 /home/admin/.pgpass
 ```
 
 Create a database and media backup:
 
 ```bash
-sudo -i -u leosoft
-cd /home/leosoft/All-tech-hub
+cd /home/admin/All-tech-hub
 source .venv/bin/activate
 set -a
 source .env
@@ -277,7 +262,7 @@ set +a
 python manage.py backup_alltech --output backups
 ```
 
-## 13. Troubleshooting
+## 12. Troubleshooting
 
 ```bash
 sudo nginx -t
@@ -294,6 +279,6 @@ Common checks:
 - `DisallowedHost`: verify `ALLTECH_ALLOWED_HOSTS` in `.env`.
 - CSRF failure: verify both HTTPS entries in `ALLTECH_CSRF_TRUSTED_ORIGINS`.
 - 502 Bad Gateway: check `leosoft_gunicorn` and port `8010`.
-- Missing CSS: run `collectstatic` and verify the Nginx static alias and `/home/leosoft` traversal permission.
+- Missing CSS: run `collectstatic` and verify the Nginx static alias and `/home/admin` traversal permission.
 - Database authentication failure: verify the role, database, password and `.env` values.
-- Redirect loop after HTTPS: ensure Nginx forwards `X-Forwarded-Proto` and Django uses the provided production settings.
+- Redirect loop after HTTPS: ensure Nginx forwards `X-Forwarded-Proto` and Django uses the production settings.
