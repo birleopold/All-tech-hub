@@ -5,9 +5,10 @@ from tempfile import TemporaryDirectory
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from catalog.models import Category, Product, ProductImage
+from catalog.watermarks import _enhance_image
 
 
 def _uploaded_image(name="laptop.jpg", size=(900, 650), colour=(35, 90, 145)):
@@ -24,10 +25,14 @@ class ProductImageWatermarkTests(TestCase):
             MEDIA_ROOT=self.media_dir.name,
             PRIVATE_MEDIA_ROOT=self.private_dir.name,
             PRODUCT_IMAGE_WATERMARK_ENABLED=True,
+            PRODUCT_IMAGE_ENHANCEMENT_ENABLED=True,
             PRODUCT_IMAGE_ARCHIVE_ORIGINALS=True,
             PRODUCT_IMAGE_WATERMARK_TEXT="LEOSOFT UG LTD • leosoftug.com",
             PRODUCT_IMAGE_WATERMARK_OPACITY=65,
             PRODUCT_IMAGE_WATERMARK_MAX_WIDTH=1200,
+            PRODUCT_IMAGE_MAX_BRIGHTNESS_GAIN=1.06,
+            PRODUCT_IMAGE_MAX_CONTRAST_GAIN=1.04,
+            PRODUCT_IMAGE_SHARPEN_PERCENT=35,
         )
         self.settings_override.enable()
         self.addCleanup(self.settings_override.disable)
@@ -35,13 +40,16 @@ class ProductImageWatermarkTests(TestCase):
         self.addCleanup(self.private_dir.cleanup)
         self.category = Category.objects.create(name="Computers", slug="computers")
 
-    def test_primary_product_upload_is_watermarked_once(self):
+    def test_primary_product_upload_is_processed_once(self):
+        upload = _uploaded_image()
+        original_bytes = upload.read()
+        upload.seek(0)
         product = Product.objects.create(
             category=self.category,
             name="Watermark Test Laptop",
             price="2500000.00",
             stock_quantity=2,
-            image=_uploaded_image(),
+            image=upload,
         )
 
         filename = Path(product.image.name).name
@@ -53,6 +61,7 @@ class ProductImageWatermarkTests(TestCase):
 
         archived = list(Path(self.private_dir.name).rglob("*.jpg"))
         self.assertEqual(len(archived), 1)
+        self.assertEqual(archived[0].read_bytes(), original_bytes)
 
         first_name = product.image.name
         product.price = "2400000.00"
@@ -60,7 +69,7 @@ class ProductImageWatermarkTests(TestCase):
         product.refresh_from_db()
         self.assertEqual(product.image.name, first_name)
 
-    def test_gallery_upload_is_watermarked(self):
+    def test_gallery_upload_is_processed(self):
         product = Product.objects.create(
             category=self.category,
             name="Gallery Laptop",
@@ -75,6 +84,63 @@ class ProductImageWatermarkTests(TestCase):
 
         self.assertTrue(Path(gallery.image.name).name.startswith("wm_"))
         self.assertTrue(Path(gallery.image.path).exists())
+
+    def test_resize_preserves_aspect_ratio_and_never_enlarges(self):
+        product = Product.objects.create(
+            category=self.category,
+            name="Wide Laptop Image",
+            price="2100000.00",
+            stock_quantity=1,
+            image=_uploaded_image("wide.jpg", size=(2400, 1200)),
+        )
+        with Image.open(product.image.path) as image:
+            self.assertEqual(image.size, (1200, 600))
+
+        small = Product.objects.create(
+            category=self.category,
+            name="Small Laptop Image",
+            price="1100000.00",
+            stock_quantity=1,
+            image=_uploaded_image("small.jpg", size=(500, 300)),
+        )
+        with Image.open(small.image.path) as image:
+            self.assertEqual(image.size, (500, 300))
+
+    def test_enhancement_preserves_dimensions_and_alpha(self):
+        image = Image.new("RGBA", (640, 360), (45, 70, 95, 120))
+        enhanced = _enhance_image(image)
+
+        self.assertEqual(enhanced.size, image.size)
+        self.assertEqual(enhanced.getchannel("A").getextrema(), (120, 120))
+
+    def test_balanced_image_colours_are_not_changed(self):
+        image = Image.new("RGBA", (100, 100), (0, 0, 0, 255))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((0, 0, 49, 99), fill=(20, 20, 20, 255))
+        draw.rectangle((50, 0, 99, 99), fill=(240, 240, 240, 255))
+
+        with override_settings(PRODUCT_IMAGE_SHARPEN_PERCENT=0):
+            enhanced = _enhance_image(image)
+
+        self.assertEqual(list(enhanced.getdata()), list(image.getdata()))
+
+    def test_dark_image_brightness_lift_is_gentle_and_capped(self):
+        image = Image.new("RGBA", (100, 100), (40, 50, 60, 255))
+        with override_settings(
+            PRODUCT_IMAGE_MAX_BRIGHTNESS_GAIN=1.06,
+            PRODUCT_IMAGE_MAX_CONTRAST_GAIN=1.0,
+            PRODUCT_IMAGE_SHARPEN_PERCENT=0,
+        ):
+            enhanced = _enhance_image(image)
+
+        red, green, blue, alpha = enhanced.getpixel((50, 50))
+        self.assertGreaterEqual(red, 40)
+        self.assertGreaterEqual(green, 50)
+        self.assertGreaterEqual(blue, 60)
+        self.assertLessEqual(red, 45)
+        self.assertLessEqual(green, 56)
+        self.assertLessEqual(blue, 68)
+        self.assertEqual(alpha, 255)
 
     def test_existing_image_backfill_command(self):
         with override_settings(PRODUCT_IMAGE_WATERMARK_ENABLED=False):
