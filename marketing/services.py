@@ -92,4 +92,8 @@ def create_lead_from_contact(request, contact_message) -> MarketingLead:
     )
     if created and link:
         CampaignLink.objects.filter(pk=link.pk).update(lead_count=F("lead_count") + 1)
+
+    from growth.services import attribute_lead_to_ambassador
+
+    attribute_lead_to_ambassador(request, lead)
     return lead
