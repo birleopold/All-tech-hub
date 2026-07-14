@@ -1,7 +1,11 @@
+from django.contrib.auth.decorators import user_passes_test
 from django.urls import path
 
 from growth import views
 
+staff_only = user_passes_test(
+    lambda user: user.is_authenticated and user.is_staff
+)
 
 urlpatterns = [
     path("", views.GrowthDashboardView.as_view(), name="staff_growth_dashboard"),
@@ -17,7 +21,7 @@ urlpatterns = [
     path("ambassadors/<int:pk>/edit/", views.AmbassadorUpdateView.as_view(), name="staff_growth_ambassador_edit"),
     path("ambassadors/<int:pk>/qr/", views.ambassador_qr, name="staff_growth_ambassador_qr"),
     path("ambassadors/conversions/", views.AmbassadorConversionListView.as_view(), name="staff_growth_ambassador_conversions"),
-    path("content/", views.content_asset_workspace, name="staff_growth_content_assets"),
+    path("content/", staff_only(views.content_asset_workspace), name="staff_growth_content_assets"),
     path("saved-carts/", views.SavedCartListView.as_view(), name="staff_growth_saved_carts"),
     path("stock-alerts/", views.StockAlertListView.as_view(), name="staff_growth_stock_alerts"),
 ]
