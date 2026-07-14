@@ -18,7 +18,6 @@ from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 from catalog.models import Product
 from commerce import cart as cart_mod
 from core.mixins import StaffRequiredMixin
-from growth.feeds import product_feed_csv, product_feed_json, product_feed_xml
 from growth.forms import (
     AmbassadorForm,
     ContentAssetGeneratorForm,
@@ -321,8 +320,6 @@ class AmbassadorConversionListView(StaffRequiredMixin, ListView):
 
 
 def content_asset_workspace(request):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        return redirect(f"{settings.LOGIN_URL}?next={request.path}")
     form = ContentAssetGeneratorForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         assets = generate_content_assets(
@@ -383,11 +380,15 @@ def save_cart(request):
     )
     try:
         send_saved_cart_message(saved, reminder_number=0)
-        messages.success(request, "Your cart was saved and the recovery link was emailed to you.")
+        messages.success(
+            request,
+            "Your cart was saved and the recovery link was emailed to you.",
+        )
     except Exception:
         messages.warning(
             request,
-            "Your cart was saved, but the email could not be sent. Check the website email settings.",
+            "Your cart was saved, but the email could not be sent. "
+            "Check the website email settings.",
         )
     return redirect("cart")
 
@@ -414,15 +415,30 @@ def unsubscribe_saved_cart(request, token):
 
 @require_POST
 def subscribe_stock_alert(request, slug):
-    product = get_object_or_404(Product, slug=slug, is_published=True)
+    product = get_object_or_404(
+        Product,
+        slug=slug,
+        is_published=True,
+        kind=Product.KIND_PHYSICAL,
+    )
+    if not GrowthSettings.load().back_in_stock_enabled:
+        messages.info(request, "Product alerts are not currently enabled.")
+        return redirect(product.get_absolute_url())
     form = StockAlertForm(request.POST)
     if not form.is_valid():
         messages.error(request, "Check the alert details and try again.")
         return redirect(product.get_absolute_url())
+    alert_type = form.cleaned_data["alert_type"]
+    if (
+        alert_type == StockAlertSubscription.ALERT_BACK_IN_STOCK
+        and product.available_to_sell
+    ):
+        messages.info(request, "This product is already available to order.")
+        return redirect(product.get_absolute_url())
     subscription, created = StockAlertSubscription.objects.update_or_create(
         product=product,
         email=form.cleaned_data["email"],
-        alert_type=form.cleaned_data["alert_type"],
+        alert_type=alert_type,
         defaults={
             "phone": form.cleaned_data.get("phone") or "",
             "target_price": form.cleaned_data.get("target_price"),
@@ -468,9 +484,10 @@ def ambassador_referral(request, code):
     Ambassador.objects.filter(pk=ambassador.pk).update(
         click_count=F("click_count") + 1
     )
+    source = f"ambassador:{ambassador.code}"[:60]
     request.session[AMBASSADOR_SESSION_KEY] = ambassador.code
     request.session["marketing_attribution"] = {
-        "source": f"ambassador:{ambassador.code}",
+        "source": source,
         "medium": "referral",
         "campaign": f"ambassador-{ambassador.code}",
         "content": ambassador.code,
