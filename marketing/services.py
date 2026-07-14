@@ -93,7 +93,18 @@ def create_lead_from_contact(request, contact_message) -> MarketingLead:
     if created and link:
         CampaignLink.objects.filter(pk=link.pk).update(lead_count=F("lead_count") + 1)
 
-    from growth.services import attribute_lead_to_ambassador
+    from growth.services import attribute_lead_to_ambassador, queue_analytics_event
 
     attribute_lead_to_ambassador(request, lead)
+    company = CompanySettings.load()
+    queue_analytics_event(
+        request,
+        "generate_lead",
+        {
+            "currency": company.currency_code,
+            "value": float(lead.estimated_value or 0),
+            "lead_source": lead.source,
+            "lead_medium": lead.medium,
+        },
+    )
     return lead
