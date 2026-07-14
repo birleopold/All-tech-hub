@@ -31,6 +31,18 @@ ROLE_PERMISSIONS = {
             "scheduledpost",
             "marketinglead",
         },
+        "growth": {
+            "growthsettings",
+            "productgrowthdata",
+            "stockalertsubscription",
+            "savedcart",
+            "contentasset",
+            "distributiongroup",
+            "ambassador",
+            "ambassadorclick",
+            "ambassadorlead",
+            "ambassadorconversion",
+        },
     },
     "Inventory": {
         "catalog": {"category", "product", "productvariant", "productserial"},
