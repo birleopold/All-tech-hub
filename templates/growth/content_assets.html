@@ -1,0 +1,51 @@
+{% extends "staff_base.html" %}
+{% block title %}Content-asset generator{% endblock %}
+{% block staff_content %}
+<section>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div><p class="text-uppercase small fw-semibold text-primary mb-1">Growth marketing</p><h1 class="h2 mb-1">Content-asset generator</h1><p class="text-muted mb-0">Turn one product record into ready-to-edit copy for social media, short videos, email and posters.</p></div>
+    <a class="btn btn-outline-secondary" href="{% url 'staff_growth_dashboard' %}">Back to growth dashboard</a>
+  </div>
+
+  <div class="row g-4 align-items-start">
+    <div class="col-lg-4">
+      <form method="post" class="card border-0 shadow-sm"><div class="card-body p-4">
+        {% csrf_token %}
+        <h2 class="h5 mb-3">Generate an asset pack</h2>
+        {% for field in form %}
+          {% if field.name == 'asset_types' %}
+          <fieldset class="mb-3"><legend class="form-label">{{ field.label }}</legend>{{ field.errors }}<div class="vstack gap-1">{% for checkbox in field %}<label class="form-check">{{ checkbox.tag }} <span class="form-check-label">{{ checkbox.choice_label }}</span></label>{% endfor %}</div>{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</fieldset>
+          {% else %}
+          <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>
+          {% endif %}
+        {% endfor %}
+        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-stars me-1"></i>Generate content</button>
+      </div></form>
+    </div>
+    <div class="col-lg-8">
+      <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Generated drafts</h2><span class="small text-muted">Copy, review and adapt before publishing.</span></div>
+      <div class="vstack gap-3">
+        {% for asset in assets %}
+        <article class="card border-0 shadow-sm"><div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-2"><div><span class="badge text-bg-light mb-2">{{ asset.get_asset_type_display }}</span><h3 class="h6 mb-0">{{ asset.title }}</h3>{% if asset.product %}<p class="small text-muted mb-0">{{ asset.product.name }}</p>{% endif %}</div><button type="button" class="btn btn-sm btn-outline-secondary" data-copy-asset="asset-{{ asset.pk }}">Copy</button></div>
+          <pre id="asset-{{ asset.pk }}" class="bg-light border rounded p-3 small mb-0 text-wrap" style="white-space:pre-wrap;font-family:inherit;">{{ asset.body }}</pre>
+        </div></article>
+        {% empty %}<div class="card border-0 shadow-sm"><div class="card-body text-muted">Generate your first content pack using a published product or service.</div></div>{% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+document.addEventListener('click', function (event) {
+  const button = event.target.closest('[data-copy-asset]');
+  if (!button) return;
+  const target = document.getElementById(button.dataset.copyAsset);
+  if (!target) return;
+  navigator.clipboard.writeText(target.textContent).then(function () {
+    const old = button.textContent;
+    button.textContent = 'Copied';
+    setTimeout(function () { button.textContent = old; }, 1500);
+  });
+});
+</script>
+{% endblock %}
