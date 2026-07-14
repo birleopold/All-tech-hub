@@ -38,11 +38,16 @@ jobs:
           growth.test_growth
           marketing.test_automation
           catalog.test_social_marketing
+          catalog.test_watermarks
 
       - name: Run Ruff on changed Python scope
         run: >-
           ruff check
           growth
+          catalog/watermarks.py
+          catalog/signals.py
+          catalog/test_watermarks.py
+          catalog/management/commands/watermark_product_images.py
           marketing/services.py
           marketing/public_urls.py
           core/middleware.py
