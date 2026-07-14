@@ -36,19 +36,11 @@
             <option value="">All categories</option>
             {% for c in categories %}
             <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>All {{ c.name }}</option>
-            {% if c.subcategories.all %}
-            <optgroup label="{{ c.name }}">
-              {% for subcategory in c.subcategories.all %}
-              <option value="{{ subcategory.slug }}" {% if current_category == subcategory.slug %}selected{% endif %}>{{ subcategory.name }}</option>
-              {% endfor %}
-            </optgroup>
-            {% endif %}
+            {% if c.subcategories.all %}<optgroup label="{{ c.name }}">{% for subcategory in c.subcategories.all %}<option value="{{ subcategory.slug }}" {% if current_category == subcategory.slug %}selected{% endif %}>{{ subcategory.name }}</option>{% endfor %}</optgroup>{% endif %}
             {% endfor %}
           </select>
         </div>
-        <div class="col-lg-2 d-grid">
-          <button class="btn btn-primary" type="submit">Apply filters</button>
-        </div>
+        <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply filters</button></div>
       </form>
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
         <div class="d-flex flex-wrap gap-2" aria-label="Quick catalog filters">
@@ -62,77 +54,42 @@
   </div>
 
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div>
-      <h2 class="h4 mb-1" id="catalog-filters-heading">{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalog results{% endif %}</h2>
-      <p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}</p>
-    </div>
+    <div><h2 class="h4 mb-1" id="catalog-filters-heading">{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalog results{% endif %}</h2><p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}</p></div>
   </div>
 
   <div class="row g-3" role="region" aria-labelledby="catalog-heading">
     {% for p in products %}
     <div class="col-sm-6 col-lg-4 col-xl-3">
-      <article class="card card-product catalog-card h-100">
+      <article class="card card-product catalog-card h-100"
+               data-analytics-product-card
+               data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}"
+               data-item-name="{{ p.name }}"
+               data-item-category="{{ p.category.name }}"
+               data-item-price="{% if p.has_sellable_variants and p.min_active_variant_price %}{{ p.min_active_variant_price }}{% else %}{{ p.price }}{% endif %}">
         <div class="catalog-card-image-wrap">
-          {% if p.primary_display_image %}
-          <img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover catalog-card-image" alt="{{ p.name }}">
-          {% else %}
-          <div class="catalog-card-placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>
-          {% endif %}
+          {% if p.primary_display_image %}<img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover catalog-card-image" alt="{{ p.name }}">{% else %}<div class="catalog-card-placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>{% endif %}
           <span class="catalog-card-badge badge {% if p.kind == 'service' %}badge-kind-service{% else %}badge-kind-product{% endif %}">{% if p.kind == 'service' %}Service{% else %}Product{% endif %}</span>
         </div>
         <div class="card-body d-flex flex-column">
           <p class="small text-muted mb-1">{{ p.category.name }}</p>
-          <h3 class="h6 card-title mb-2"><a class="stretched-link text-decoration-none text-dark" href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+          <h3 class="h6 card-title mb-2"><a class="stretched-link text-decoration-none text-dark" data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
           <p class="small text-muted mb-3">{{ p.short_description|default:p.description|truncatewords:16 }}</p>
           <div class="mt-auto">
             <div class="d-flex justify-content-between align-items-end gap-2 mb-2">
-              <p class="fw-semibold mb-0">
-                {% if p.has_sellable_variants and p.min_active_variant_price %}
-                From {{ company.currency_code }} {{ p.min_active_variant_price }}
-                {% else %}
-                {{ company.currency_code }} {{ p.price }}
-                {% endif %}
-              </p>
+              <p class="fw-semibold mb-0">{% if p.has_sellable_variants and p.min_active_variant_price %}From {{ company.currency_code }} {{ p.min_active_variant_price }}{% else %}{{ company.currency_code }} {{ p.price }}{% endif %}</p>
               {% if p.has_sellable_variants %}<span class="small text-muted">{{ p.active_variant_count }} option{{ p.active_variant_count|pluralize }}</span>{% endif %}
             </div>
-            {% if p.kind == 'service' %}
-            <span class="catalog-stock-pill text-primary bg-primary-subtle">Book service</span>
-            {% elif p.available_to_sell %}
-            <span class="catalog-stock-pill text-success bg-success-subtle">In stock</span>
-            {% else %}
-            <span class="catalog-stock-pill text-secondary bg-light">Ask availability</span>
-            {% endif %}
+            {% if p.kind == 'service' %}<span class="catalog-stock-pill text-primary bg-primary-subtle">Book service</span>{% elif p.available_to_sell %}<span class="catalog-stock-pill text-success bg-success-subtle">In stock</span>{% else %}<span class="catalog-stock-pill text-secondary bg-light">Ask availability</span>{% endif %}
             {% if p.is_low_stock %}<span class="catalog-stock-pill text-warning bg-warning-subtle ms-1">Low stock</span>{% endif %}
           </div>
         </div>
       </article>
     </div>
     {% empty %}
-    <div class="col-12">
-      <div class="catalog-empty card border-0 shadow-sm text-center">
-        <div class="card-body py-5">
-          <i class="bi bi-search display-5 text-primary" aria-hidden="true"></i>
-          <h2 class="h4 mt-3">No matching items found</h2>
-          <p class="text-muted mb-4">Try a different search, remove filters, or contact the team for a custom quote.</p>
-          <div class="d-flex justify-content-center gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Clear filters</a><a class="btn btn-primary" href="{% url 'contact' %}">Request support</a></div>
-        </div>
-      </div>
-    </div>
+    <div class="col-12"><div class="catalog-empty card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-search display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No matching items found</h2><p class="text-muted mb-4">Try a different search, remove filters, or contact the team for a custom quote.</p><div class="d-flex justify-content-center gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Clear filters</a><a class="btn btn-primary" href="{% url 'contact' %}">Request support</a></div></div></div></div>
     {% endfor %}
   </div>
 
-  {% if is_paginated %}
-  <nav class="mt-4" aria-label="Catalog pagination">
-    <ul class="pagination justify-content-center">
-      {% if page_obj.has_previous %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to previous page">Previous</a></li>
-      {% endif %}
-      <li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
-      {% if page_obj.has_next %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to next page">Next</a></li>
-      {% endif %}
-    </ul>
-  </nav>
-  {% endif %}
+  {% if is_paginated %}<nav class="mt-4" aria-label="Catalog pagination"><ul class="pagination justify-content-center">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to previous page">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to next page">Next</a></li>{% endif %}</ul></nav>{% endif %}
 </div>
 {% endblock %}
