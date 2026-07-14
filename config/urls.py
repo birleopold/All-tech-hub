@@ -66,6 +66,8 @@ urlpatterns = [
         name="staff_two_factor_disable",
     ),
     path("marketing/", include("marketing.public_urls")),
+    path("marketing/", include("growth.public_urls")),
+    path("staff/marketing/growth/", include("growth.staff_urls")),
     path("staff/marketing/", include("marketing.staff_urls")),
     path("", include("core.urls")),
     path("catalog/", include("catalog.urls")),
