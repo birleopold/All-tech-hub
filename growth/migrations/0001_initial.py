@@ -1,0 +1,207 @@
+import uuid
+from decimal import Decimal
+
+import django.db.models.deletion
+import django.utils.timezone
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    initial = True
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("catalog", "0001_initial"),
+        ("commerce", "0001_initial"),
+        ("marketing", "0002_marketing_automation"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="GrowthSettings",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("ga4_measurement_id", models.CharField(blank=True, help_text="Google Analytics 4 measurement ID, for example G-XXXXXXXXXX.", max_length=32)),
+                ("search_console_verification_token", models.CharField(blank=True, help_text="Only the content value supplied by Google Search Console.", max_length=255)),
+                ("clarity_project_id", models.CharField(blank=True, help_text="Microsoft Clarity project ID.", max_length=64)),
+                ("require_analytics_consent", models.BooleanField(default=True, help_text="Show a consent choice before loading Analytics and Clarity.")),
+                ("privacy_policy_url", models.URLField(blank=True)),
+                ("google_business_profile_url", models.URLField(blank=True)),
+                ("google_review_url", models.URLField(blank=True)),
+                ("google_place_id", models.CharField(blank=True, max_length=255)),
+                ("merchant_country", models.CharField(default="UG", max_length=2)),
+                ("merchant_language", models.CharField(default="en", max_length=8)),
+                ("merchant_default_brand", models.CharField(blank=True, help_text="Use only when LEOSOFT is genuinely the product brand.", max_length=120)),
+                ("merchant_shipping_service", models.CharField(default="Standard delivery", max_length=120)),
+                ("merchant_shipping_price", models.DecimalField(decimal_places=2, default=Decimal("0"), max_digits=12)),
+                ("merchant_return_policy_url", models.URLField(blank=True)),
+                ("abandoned_cart_enabled", models.BooleanField(default=True)),
+                ("abandoned_cart_first_delay_hours", models.PositiveIntegerField(default=1)),
+                ("abandoned_cart_second_delay_hours", models.PositiveIntegerField(default=24)),
+                ("back_in_stock_enabled", models.BooleanField(default=True)),
+                ("default_content_hashtags", models.CharField(blank=True, default="#LEOSOFT #TechnologyUganda #ComputersUganda", max_length=400)),
+            ],
+            options={
+                "verbose_name": "Growth integration settings",
+                "verbose_name_plural": "Growth integration settings",
+            },
+        ),
+        migrations.CreateModel(
+            name="Ambassador",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("name", models.CharField(max_length=180)),
+                ("code", models.SlugField(max_length=50, unique=True)),
+                ("email", models.EmailField(blank=True, max_length=254)),
+                ("phone", models.CharField(blank=True, max_length=64)),
+                ("destination_url", models.URLField(blank=True)),
+                ("commission_type", models.CharField(choices=[("percent", "Percentage of order value"), ("fixed", "Fixed amount per order")], default="percent", max_length=12)),
+                ("commission_value", models.DecimalField(decimal_places=2, default=0, max_digits=12)),
+                ("is_active", models.BooleanField(default=True)),
+                ("notes", models.TextField(blank=True)),
+                ("click_count", models.PositiveBigIntegerField(default=0)),
+                ("lead_count", models.PositiveBigIntegerField(default=0)),
+                ("order_count", models.PositiveBigIntegerField(default=0)),
+                ("revenue_total", models.DecimalField(decimal_places=2, default=0, max_digits=16)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("created_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="ambassadors_created", to=settings.AUTH_USER_MODEL)),
+            ],
+            options={"ordering": ["name"]},
+        ),
+        migrations.CreateModel(
+            name="ContentAsset",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("asset_type", models.CharField(choices=[("whatsapp", "WhatsApp / Status caption"), ("social_caption", "Facebook / Instagram caption"), ("tiktok_script", "TikTok / Reels script"), ("linkedin", "LinkedIn business post"), ("email", "Email promotion"), ("poster", "Poster copy")], max_length=30)),
+                ("title", models.CharField(max_length=200)),
+                ("body", models.TextField()),
+                ("status", models.CharField(choices=[("draft", "Draft"), ("approved", "Approved"), ("archived", "Archived")], default="draft", max_length=20)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("campaign", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="growth_content_assets", to="marketing.marketingcampaign")),
+                ("created_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="growth_content_assets_created", to=settings.AUTH_USER_MODEL)),
+                ("product", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="growth_content_assets", to="catalog.product")),
+            ],
+            options={"ordering": ["-created_at", "-id"]},
+        ),
+        migrations.CreateModel(
+            name="DistributionGroup",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("platform", models.CharField(choices=[("facebook", "Facebook group"), ("whatsapp", "WhatsApp group / community"), ("telegram", "Telegram group / channel"), ("linkedin", "LinkedIn group"), ("other", "Other platform")], max_length=20)),
+                ("name", models.CharField(max_length=180)),
+                ("url", models.URLField()),
+                ("audience", models.CharField(blank=True, max_length=240)),
+                ("rules", models.TextField(blank=True)),
+                ("best_posting_times", models.CharField(blank=True, max_length=240)),
+                ("last_posted_at", models.DateTimeField(blank=True, null=True)),
+                ("is_active", models.BooleanField(default=True)),
+                ("notes", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("created_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="distribution_groups_created", to=settings.AUTH_USER_MODEL)),
+                ("tracking_link", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="distribution_groups", to="marketing.campaignlink")),
+            ],
+            options={"ordering": ["platform", "name"]},
+        ),
+        migrations.CreateModel(
+            name="ProductGrowthData",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("brand", models.CharField(blank=True, max_length=120)),
+                ("gtin", models.CharField(blank=True, help_text="UPC, EAN, JAN or ISBN digits when the manufacturer assigned one.", max_length=32)),
+                ("mpn", models.CharField(blank=True, max_length=120, verbose_name="Manufacturer part number")),
+                ("condition", models.CharField(choices=[("new", "New"), ("refurbished", "Refurbished"), ("used", "Used")], default="new", max_length=20)),
+                ("google_product_category", models.CharField(blank=True, max_length=255)),
+                ("custom_label_0", models.CharField(blank=True, max_length=100)),
+                ("shipping_label", models.CharField(blank=True, max_length=100)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("product", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name="growth_data", to="catalog.product")),
+            ],
+            options={
+                "verbose_name": "Product feed metadata",
+                "verbose_name_plural": "Product feed metadata",
+                "ordering": ["product__name"],
+            },
+        ),
+        migrations.CreateModel(
+            name="SavedCart",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("session_key", models.CharField(db_index=True, max_length=64)),
+                ("customer_name", models.CharField(blank=True, max_length=160)),
+                ("email", models.EmailField(max_length=254)),
+                ("phone", models.CharField(blank=True, max_length=64)),
+                ("cart_data", models.JSONField(default=dict)),
+                ("subtotal", models.DecimalField(decimal_places=2, default=0, max_digits=14)),
+                ("recovery_token", models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
+                ("status", models.CharField(choices=[("active", "Active"), ("recovered", "Recovered"), ("unsubscribed", "Unsubscribed"), ("expired", "Expired")], db_index=True, default="active", max_length=20)),
+                ("consent_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("last_activity", models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
+                ("first_reminder_sent_at", models.DateTimeField(blank=True, null=True)),
+                ("second_reminder_sent_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("recovered_order", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="recovered_saved_carts", to="commerce.order")),
+            ],
+            options={"ordering": ["-last_activity", "-id"]},
+        ),
+        migrations.CreateModel(
+            name="StockAlertSubscription",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("email", models.EmailField(max_length=254)),
+                ("phone", models.CharField(blank=True, max_length=64)),
+                ("alert_type", models.CharField(choices=[("back_in_stock", "Back in stock"), ("price_drop", "Price drop")], default="back_in_stock", max_length=20)),
+                ("target_price", models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True)),
+                ("token", models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
+                ("is_active", models.BooleanField(default=True)),
+                ("notified_at", models.DateTimeField(blank=True, null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("product", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="growth_stock_alerts", to="catalog.product")),
+            ],
+            options={"ordering": ["-created_at"]},
+        ),
+        migrations.CreateModel(
+            name="AmbassadorClick",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("occurred_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("session_key", models.CharField(blank=True, max_length=64)),
+                ("ip_hash", models.CharField(blank=True, max_length=64)),
+                ("user_agent", models.CharField(blank=True, max_length=300)),
+                ("referrer", models.TextField(blank=True)),
+                ("ambassador", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="clicks", to="growth.ambassador")),
+            ],
+            options={"ordering": ["-occurred_at", "-id"]},
+        ),
+        migrations.CreateModel(
+            name="AmbassadorLead",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("ambassador", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="attributed_leads", to="growth.ambassador")),
+                ("lead", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name="ambassador_attribution", to="marketing.marketinglead")),
+            ],
+        ),
+        migrations.CreateModel(
+            name="AmbassadorConversion",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("revenue", models.DecimalField(decimal_places=2, max_digits=16)),
+                ("commission_amount", models.DecimalField(decimal_places=2, max_digits=14)),
+                ("status", models.CharField(choices=[("pending", "Pending"), ("approved", "Approved"), ("paid", "Paid"), ("cancelled", "Cancelled")], default="pending", max_length=20)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("ambassador", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="conversions", to="growth.ambassador")),
+                ("order", models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name="ambassador_conversion", to="commerce.order")),
+            ],
+            options={"ordering": ["-created_at", "-id"]},
+        ),
+        migrations.AddConstraint(
+            model_name="stockalertsubscription",
+            constraint=models.UniqueConstraint(fields=("product", "email", "alert_type"), name="unique_growth_product_email_alert"),
+        ),
+    ]
