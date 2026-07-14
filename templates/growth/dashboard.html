@@ -1,0 +1,98 @@
+{% extends "staff_base.html" %}
+{% block title %}Growth marketing{% endblock %}
+{% block staff_content %}
+<section>
+  <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+    <div class="card-body p-4 p-lg-5">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+          <p class="text-uppercase small fw-semibold text-primary mb-2">Marketing growth stack</p>
+          <h1 class="display-6 fw-semibold mb-2">Analytics, discovery and customer recovery</h1>
+          <p class="text-muted mb-0">Measure shopping behaviour, strengthen Google visibility, improve product feeds, recover interested buyers and track referrals.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-primary" href="{% url 'staff_growth_settings' %}"><i class="bi bi-sliders me-1"></i> Integration settings</a>
+          <a class="btn btn-outline-primary" href="{% url 'staff_growth_content_assets' %}"><i class="bi bi-stars me-1"></i> Generate content</a>
+          <a class="btn btn-outline-secondary" href="{% url 'staff_marketing_dashboard' %}">Marketing dashboard</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Active saved carts</p><p class="h2 mb-0">{{ active_saved_carts }}</p><p class="small text-muted mt-2 mb-0">{{ recovered_carts }} recovered</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Active product alerts</p><p class="h2 mb-0">{{ active_stock_alerts }}</p><p class="small text-muted mt-2 mb-0">Back-in-stock and price-drop requests</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Distribution groups</p><p class="h2 mb-0">{{ distribution_groups }}</p><p class="small text-muted mt-2 mb-0">Active community channels</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Referral ambassadors</p><p class="h2 mb-0">{{ active_ambassadors }}</p><p class="small text-muted mt-2 mb-0">UGX {{ ambassador_revenue }} attributed revenue</p></div></div></div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-xl-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div><h2 class="h5 mb-1">Integration readiness</h2><p class="small text-muted mb-0">Enter identifiers only after creating and verifying each external account.</p></div>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_growth_settings' %}">Configure</a>
+          </div>
+          <div class="list-group list-group-flush">
+            <div class="list-group-item px-0 d-flex justify-content-between gap-3"><span><strong>Google Analytics 4</strong><span class="d-block small text-muted">Ecommerce events and conversions</span></span><span class="badge {% if growth_settings.ga4_measurement_id %}text-bg-success{% else %}text-bg-warning{% endif %} align-self-center">{% if growth_settings.ga4_measurement_id %}Configured{% else %}Needs ID{% endif %}</span></div>
+            <div class="list-group-item px-0 d-flex justify-content-between gap-3"><span><strong>Google Search Console</strong><span class="d-block small text-muted">HTML verification meta tag and sitemap</span></span><span class="badge {% if growth_settings.search_console_verification_token %}text-bg-success{% else %}text-bg-warning{% endif %} align-self-center">{% if growth_settings.search_console_verification_token %}Token installed{% else %}Needs token{% endif %}</span></div>
+            <div class="list-group-item px-0 d-flex justify-content-between gap-3"><span><strong>Microsoft Clarity</strong><span class="d-block small text-muted">Heatmaps and session recordings after consent</span></span><span class="badge {% if growth_settings.clarity_project_id %}text-bg-success{% else %}text-bg-warning{% endif %} align-self-center">{% if growth_settings.clarity_project_id %}Configured{% else %}Needs project ID{% endif %}</span></div>
+            <div class="list-group-item px-0 d-flex justify-content-between gap-3"><span><strong>Google Business Profile</strong><span class="d-block small text-muted">Maps profile, reviews and local structured data</span></span><span class="badge {% if growth_settings.google_business_profile_url %}text-bg-success{% else %}text-bg-warning{% endif %} align-self-center">{% if growth_settings.google_business_profile_url %}Linked{% else %}Needs profile URL{% endif %}</span></div>
+          </div>
+          <div class="alert alert-info small mt-3 mb-0"><strong>Search Console submission:</strong> after verification, submit <code>https://leosoftug.com/sitemap.xml</code> in the Sitemaps report.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Growth tools</h2>
+          <div class="d-grid gap-2">
+            <a class="btn btn-outline-primary text-start" href="{% url 'staff_growth_product_metadata' %}"><i class="bi bi-google me-2"></i>Merchant feed metadata</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'staff_growth_saved_carts' %}"><i class="bi bi-cart-check me-2"></i>Saved and abandoned carts</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'staff_growth_stock_alerts' %}"><i class="bi bi-bell me-2"></i>Stock and price alerts</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'staff_growth_content_assets' %}"><i class="bi bi-magic me-2"></i>Content-asset generator</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'staff_growth_distribution_groups' %}"><i class="bi bi-people me-2"></i>Distribution groups</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'staff_growth_ambassadors' %}"><i class="bi bi-person-badge me-2"></i>Referral ambassadors</a>
+            <a class="btn btn-outline-secondary text-start" href="{% url 'staff_growth_ambassador_conversions' %}"><i class="bi bi-cash-coin me-2"></i>Commissions and conversions</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Merchant feed quality</h2><a class="small" href="{% url 'staff_growth_product_metadata' %}">Manage</a></div>
+        <p class="display-6 mb-1">{{ feed_products_total }}</p><p class="text-muted">Published physical products eligible for export</p>
+        {% if feed_products_missing_metadata %}<div class="alert alert-warning mb-0"><strong>{{ feed_products_missing_metadata }}</strong> product{{ feed_products_missing_metadata|pluralize }} need brand, condition or identifier metadata.</div>{% else %}<div class="alert alert-success mb-0">Every published physical product has a metadata record.</div>{% endif %}
+      </div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100"><div class="card-body">
+        <h2 class="h5 mb-3">Google Business Profile checklist</h2>
+        <ol class="small text-muted mb-0">
+          <li>Use the exact business name <strong>LEOSOFT UG LTD</strong>.</li>
+          <li>Select Computer store as the primary category and add only genuine service categories.</li>
+          <li>Complete address/service area, phone, website, hours, logo and storefront photographs.</li>
+          <li>Add products and services, publish updates and request reviews using the configured review link.</li>
+          <li>Keep website, profile and social contact information consistent.</li>
+        </ol>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent generated content</h2><a class="small" href="{% url 'staff_growth_content_assets' %}">Open generator</a></div>
+      {% for asset in recent_assets %}<div class="border-bottom py-2"><strong>{{ asset.title }}</strong><span class="badge text-bg-light ms-2">{{ asset.get_asset_type_display }}</span>{% if asset.product %}<div class="small text-muted">{{ asset.product.name }}</div>{% endif %}</div>{% empty %}<p class="text-muted mb-0">No generated assets yet.</p>{% endfor %}
+    </div></div></div>
+    <div class="col-lg-5"><div class="card border-0 shadow-sm h-100"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent referral orders</h2><a class="small" href="{% url 'staff_growth_ambassador_conversions' %}">View all</a></div>
+      {% for conversion in recent_conversions %}<div class="d-flex justify-content-between border-bottom py-2"><span><strong>{{ conversion.ambassador.name }}</strong><span class="d-block small text-muted">{{ conversion.order.reference }}</span></span><span class="text-end">UGX {{ conversion.revenue }}<span class="d-block small text-muted">Commission {{ conversion.commission_amount }}</span></span></div>{% empty %}<p class="text-muted mb-0">No attributed orders yet.</p>{% endfor %}
+    </div></div></div>
+  </div>
+</section>
+{% endblock %}
