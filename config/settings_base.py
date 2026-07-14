@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize", "django.contrib.sitemaps", "core", "crm", "catalog",
     "commerce", "billing", "operations", "dashboard", "reports", "portal",
     "purchasing", "messaging", "inventory", "marketing.apps.MarketingConfig",
+    "growth.apps.GrowthConfig",
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,7 @@ TEMPLATES = [{
         "core.context_processors.company",
         "commerce.context_processors.cart_summary",
         "marketing.context_processors.social_profiles",
+        "growth.context_processors.growth_context",
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"
@@ -102,11 +104,11 @@ CONTENT_SECURITY_POLICY = os.getenv(
     "ALLTECH_CONTENT_SECURITY_POLICY",
     (
         "default-src 'self'; "
-        "script-src 'self' https://cdn.jsdelivr.net; "
+        "script-src 'self' https://cdn.jsdelivr.net https://www.googletagmanager.com https://www.clarity.ms; "
         "style-src 'self' https://cdn.jsdelivr.net; "
-        "img-src 'self' data: blob:; "
+        "img-src 'self' data: blob: https://www.google-analytics.com https://*.google-analytics.com https://c.bing.com; "
         "font-src 'self' https://cdn.jsdelivr.net data:; "
-        "connect-src 'self'; "
+        "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com; "
         "manifest-src 'self'; "
         "worker-src 'self'; "
         "object-src 'none'; "
