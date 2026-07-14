@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from growth.forms import AmbassadorConversionForm
 from growth.models import (
     Ambassador,
     AmbassadorClick,
@@ -12,6 +13,7 @@ from growth.models import (
     SavedCart,
     StockAlertSubscription,
 )
+from growth.services import recalculate_ambassador_totals
 
 
 @admin.register(GrowthSettings)
@@ -83,7 +85,14 @@ class ProductGrowthDataAdmin(admin.ModelAdmin):
 
 @admin.register(StockAlertSubscription)
 class StockAlertSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("email", "product", "alert_type", "target_price", "is_active", "notified_at")
+    list_display = (
+        "email",
+        "product",
+        "alert_type",
+        "target_price",
+        "is_active",
+        "notified_at",
+    )
     list_filter = ("alert_type", "is_active", "notified_at")
     search_fields = ("email", "phone", "product__name")
     raw_id_fields = ("product",)
@@ -91,15 +100,34 @@ class StockAlertSubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(SavedCart)
 class SavedCartAdmin(admin.ModelAdmin):
-    list_display = ("email", "subtotal", "status", "last_activity", "first_reminder_sent_at", "second_reminder_sent_at")
+    list_display = (
+        "email",
+        "subtotal",
+        "status",
+        "last_activity",
+        "first_reminder_sent_at",
+        "second_reminder_sent_at",
+    )
     list_filter = ("status", "last_activity")
     search_fields = ("email", "phone", "customer_name", "session_key")
-    readonly_fields = ("recovery_token", "consent_at", "created_at", "updated_at")
+    readonly_fields = (
+        "recovery_token",
+        "consent_at",
+        "created_at",
+        "updated_at",
+    )
 
 
 @admin.register(ContentAsset)
 class ContentAssetAdmin(admin.ModelAdmin):
-    list_display = ("title", "asset_type", "product", "campaign", "status", "created_at")
+    list_display = (
+        "title",
+        "asset_type",
+        "product",
+        "campaign",
+        "status",
+        "created_at",
+    )
     list_filter = ("asset_type", "status", "campaign")
     search_fields = ("title", "body", "product__name")
     raw_id_fields = ("product", "campaign", "created_by")
@@ -107,7 +135,14 @@ class ContentAssetAdmin(admin.ModelAdmin):
 
 @admin.register(DistributionGroup)
 class DistributionGroupAdmin(admin.ModelAdmin):
-    list_display = ("name", "platform", "audience", "is_active", "last_posted_at", "tracking_link")
+    list_display = (
+        "name",
+        "platform",
+        "audience",
+        "is_active",
+        "last_posted_at",
+        "tracking_link",
+    )
     list_filter = ("platform", "is_active")
     search_fields = ("name", "audience", "rules", "notes")
     raw_id_fields = ("tracking_link", "created_by")
@@ -115,25 +150,63 @@ class DistributionGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Ambassador)
 class AmbassadorAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "is_active", "click_count", "lead_count", "order_count", "revenue_total")
+    list_display = (
+        "name",
+        "code",
+        "is_active",
+        "click_count",
+        "lead_count",
+        "order_count",
+        "revenue_total",
+    )
     list_filter = ("is_active", "commission_type")
     search_fields = ("name", "code", "email", "phone")
-    readonly_fields = ("click_count", "lead_count", "order_count", "revenue_total", "created_at", "updated_at")
+    readonly_fields = (
+        "click_count",
+        "lead_count",
+        "order_count",
+        "revenue_total",
+        "created_at",
+        "updated_at",
+    )
 
 
 @admin.register(AmbassadorConversion)
 class AmbassadorConversionAdmin(admin.ModelAdmin):
-    list_display = ("ambassador", "order", "revenue", "commission_amount", "status", "created_at")
+    form = AmbassadorConversionForm
+    list_display = (
+        "ambassador",
+        "order",
+        "revenue",
+        "commission_amount",
+        "status",
+        "created_at",
+    )
     list_filter = ("status", "ambassador")
-    search_fields = ("ambassador__name", "ambassador__code", "order__reference")
-    raw_id_fields = ("ambassador", "order")
+    search_fields = (
+        "ambassador__name",
+        "ambassador__code",
+        "order__reference",
+    )
+    readonly_fields = ("ambassador", "order", "revenue", "created_at", "updated_at")
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        recalculate_ambassador_totals(obj.ambassador)
 
 
 @admin.register(AmbassadorClick)
 class AmbassadorClickAdmin(admin.ModelAdmin):
     list_display = ("ambassador", "occurred_at", "session_key")
     list_filter = ("ambassador", "occurred_at")
-    readonly_fields = ("ambassador", "occurred_at", "session_key", "ip_hash", "user_agent", "referrer")
+    readonly_fields = (
+        "ambassador",
+        "occurred_at",
+        "session_key",
+        "ip_hash",
+        "user_agent",
+        "referrer",
+    )
 
     def has_add_permission(self, request):
         return False
