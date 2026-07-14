@@ -35,6 +35,7 @@ MIDDLEWARE = [
     "core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "marketing.middleware.CampaignAttributionMiddleware",
+    "growth.middleware.GrowthCommerceMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
