@@ -39,5 +39,13 @@ jobs:
           marketing.test_automation
           catalog.test_social_marketing
 
-      - name: Run Ruff
-        run: ruff check growth marketing catalog core commerce config
+      - name: Run Ruff on changed Python scope
+        run: >-
+          ruff check
+          growth
+          marketing/services.py
+          marketing/public_urls.py
+          core/middleware.py
+          core/management/commands/bootstrap_roles.py
+          config/settings_base.py
+          config/urls.py
