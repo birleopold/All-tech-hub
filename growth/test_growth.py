@@ -242,9 +242,12 @@ class GrowthMarketingTests(TestCase):
         self.assertEqual(ambassador.click_count, 1)
 
         self.add_product_to_cart()
+        self.client.get(reverse("checkout"))
+        checkout_token = self.client.session["checkout_submit_token"]
         checkout_response = self.client.post(
             reverse("checkout"),
             {
+                "checkout_token": checkout_token,
                 "name": "Referral Buyer",
                 "email": "referral@example.com",
                 "phone": "256700000002",
