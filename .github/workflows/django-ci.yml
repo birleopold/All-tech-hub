@@ -1,0 +1,43 @@
+name: Django CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.lock
+
+      - name: Check migration drift
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run Django checks
+        run: python manage.py check
+
+      - name: Run marketing and growth tests
+        run: >-
+          python manage.py test
+          growth.test_growth
+          marketing.test_automation
+          catalog.test_social_marketing
+
+      - name: Run Ruff
+        run: ruff check growth marketing catalog core commerce config
