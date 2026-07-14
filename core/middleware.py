@@ -19,6 +19,7 @@ URL_PERMISSION_PREFIXES = {
     "staff_contact": "core.view_contactmessage",
     "staff_reports": "billing.view_commercialdocument",
     "staff_marketing": "marketing.view_marketingcampaign",
+    "staff_growth": "growth.view_growthsettings",
     "staff_export": "billing.view_commercialdocument",
     "staff_audit": "core.view_auditevent",
     "staff_security": "core.view_auditevent",
