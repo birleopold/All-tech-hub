@@ -32,7 +32,7 @@ jobs:
       - name: Run Django checks
         run: python manage.py check
 
-      - name: Run marketing and growth tests
+      - name: Run marketing, growth and image tests
         run: >-
           python manage.py test
           growth.test_growth
@@ -48,6 +48,7 @@ jobs:
           catalog/signals.py
           catalog/test_watermarks.py
           catalog/management/commands/watermark_product_images.py
+          catalog/management/commands/reprocess_product_images.py
           marketing/services.py
           marketing/public_urls.py
           core/middleware.py
