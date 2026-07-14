@@ -49,8 +49,8 @@ class Command(BaseCommand):
         due_second = SavedCart.objects.filter(
             status=SavedCart.STATUS_ACTIVE,
             first_reminder_sent_at__isnull=False,
+            first_reminder_sent_at__lte=second_cutoff,
             second_reminder_sent_at__isnull=True,
-            last_activity__lte=second_cutoff,
         ).count()
         active_alerts = StockAlertSubscription.objects.filter(is_active=True).count()
 
