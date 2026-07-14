@@ -1,5 +1,5 @@
 [Unit]
-Description=Run LEOSOFT marketing queue every 15 minutes
+Description=Run LEOSOFT growth marketing automation every 15 minutes
 
 [Timer]
 OnBootSec=5min
