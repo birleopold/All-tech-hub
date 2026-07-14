@@ -33,7 +33,7 @@ def absolute_public_url(path: str) -> str:
     return urljoin(company_base_url(), path.lstrip("/"))
 
 
-def _product_growth_data(product: Product):
+def _growth_data(product: Product):
     try:
         return product.growth_data
     except Exception:
@@ -57,7 +57,7 @@ def analytics_item(
         "price": float(price),
         "quantity": int(quantity),
     }
-    metadata = _product_growth_data(product)
+    metadata = _growth_data(product)
     if metadata and metadata.brand:
         item["item_brand"] = metadata.brand
     if index is not None:
@@ -80,23 +80,29 @@ def queue_analytics_event(request, name: str, params: dict) -> None:
 
 def purchase_event(order) -> dict:
     company = CompanySettings.load()
-    items = [
-        analytics_item(
-            line.product,
-            variant=line.product_variant,
-            quantity=line.quantity,
-        )
-        if line.product
-        else {
-            "item_id": line.sku or str(line.pk),
-            "item_name": line.description,
-            "price": float(line.unit_price),
-            "quantity": line.quantity,
-        }
-        for line in order.lines.select_related(
-            "product", "product__category", "product_variant"
-        )
-    ]
+    items = []
+    for line in order.lines.select_related(
+        "product",
+        "product__category",
+        "product_variant",
+    ):
+        if line.product:
+            items.append(
+                analytics_item(
+                    line.product,
+                    variant=line.product_variant,
+                    quantity=line.quantity,
+                )
+            )
+        else:
+            items.append(
+                {
+                    "item_id": line.sku or str(line.pk),
+                    "item_name": line.description,
+                    "price": float(line.unit_price),
+                    "quantity": line.quantity,
+                }
+            )
     return analytics_event(
         "purchase",
         {
@@ -115,7 +121,8 @@ def cart_snapshot(session) -> tuple[dict, Decimal]:
     data = cart_mod.get_cart(session)
     company = CompanySettings.load()
     subtotal, _tax, _total = cart_mod.cart_totals(
-        session, company.default_tax_rate
+        session,
+        company.default_tax_rate,
     )
     return data, subtotal
 
@@ -138,12 +145,10 @@ def save_cart_for_recovery(
         )
         .order_by("-created_at")
         .first()
+    ) or SavedCart(
+        session_key=request.session.session_key,
+        email=email,
     )
-    if saved is None:
-        saved = SavedCart(
-            session_key=request.session.session_key,
-            email=email,
-        )
     saved.customer_name = name
     saved.phone = phone
     saved.cart_data = data
@@ -190,8 +195,6 @@ def send_saved_cart_message(
     reminder_number: int = 0,
 ) -> int:
     company = CompanySettings.load()
-    url = saved_cart_recovery_url(saved)
-    unsubscribe_url = saved_cart_unsubscribe_url(saved)
     if reminder_number == 0:
         subject = f"Your {company.company_name} cart has been saved"
         opening = "Your selected items have been saved."
@@ -204,11 +207,11 @@ def send_saved_cart_message(
     body = (
         f"Hello {saved.customer_name or 'there'},\n\n"
         f"{opening}\n\n"
-        f"Resume your cart: {url}\n\n"
+        f"Resume your cart: {saved_cart_recovery_url(saved)}\n\n"
         f"Saved subtotal: {company.currency_code} {saved.subtotal:.2f}\n\n"
-        "Availability and prices may change before checkout. "
-        "You received this because you asked LEOSOFT to save and remind you "
-        f"about the cart.\n\nStop reminders: {unsubscribe_url}"
+        "Availability and prices may change before checkout. You received this "
+        "because you asked LEOSOFT to save and remind you about the cart.\n\n"
+        f"Stop reminders: {saved_cart_unsubscribe_url(saved)}"
     )
     return send_mail(
         subject,
@@ -226,10 +229,9 @@ def restore_saved_cart(request, saved: SavedCart) -> None:
 
 
 def mark_order_growth_attribution(request, order) -> None:
-    session_key = request.session.session_key
-    if session_key:
+    if request.session.session_key:
         SavedCart.objects.filter(
-            session_key=session_key,
+            session_key=request.session.session_key,
             status=SavedCart.STATUS_ACTIVE,
         ).update(
             status=SavedCart.STATUS_RECOVERED,
@@ -238,37 +240,36 @@ def mark_order_growth_attribution(request, order) -> None:
         )
 
     ambassador_code = request.session.get(AMBASSADOR_SESSION_KEY)
-    if ambassador_code:
-        ambassador = Ambassador.objects.filter(
-            code=ambassador_code,
-            is_active=True,
-        ).first()
-        if ambassador:
-            _conversion, created = AmbassadorConversion.objects.get_or_create(
-                order=order,
-                defaults={
-                    "ambassador": ambassador,
-                    "revenue": order.total,
-                    "commission_amount": ambassador.calculate_commission(order.total),
-                },
+    ambassador = (
+        Ambassador.objects.filter(code=ambassador_code, is_active=True).first()
+        if ambassador_code
+        else None
+    )
+    if ambassador:
+        _conversion, created = AmbassadorConversion.objects.get_or_create(
+            order=order,
+            defaults={
+                "ambassador": ambassador,
+                "revenue": order.total,
+                "commission_amount": ambassador.calculate_commission(order.total),
+            },
+        )
+        if created:
+            Ambassador.objects.filter(pk=ambassador.pk).update(
+                order_count=F("order_count") + 1,
+                revenue_total=F("revenue_total") + order.total,
             )
-            if created:
-                Ambassador.objects.filter(pk=ambassador.pk).update(
-                    order_count=F("order_count") + 1,
-                    revenue_total=F("revenue_total") + order.total,
-                )
     request.session[PURCHASE_SESSION_KEY] = order.reference
     request.session.modified = True
 
 
 def attribute_lead_to_ambassador(request, lead) -> None:
     ambassador_code = request.session.get(AMBASSADOR_SESSION_KEY)
-    if not ambassador_code:
-        return
-    ambassador = Ambassador.objects.filter(
-        code=ambassador_code,
-        is_active=True,
-    ).first()
+    ambassador = (
+        Ambassador.objects.filter(code=ambassador_code, is_active=True).first()
+        if ambassador_code
+        else None
+    )
     if not ambassador:
         return
     _row, created = AmbassadorLead.objects.get_or_create(
@@ -304,31 +305,28 @@ def generate_content_assets(
         "Available now" if product.available_to_sell else "Ask for availability"
     )
     currency = company.currency_code
-
     drafts = [
         (
             ContentAsset.TYPE_WHATSAPP,
             f"WhatsApp — {product.name}",
-            f"{product.name}\n{description}\n{availability} · "
-            f"{currency} {price}\n{url}\n{hashtags}",
+            f"{product.name}\n{description}\n{availability} · {currency} "
+            f"{price}\n{url}\n{hashtags}",
         ),
         (
             ContentAsset.TYPE_SOCIAL_CAPTION,
             f"Social caption — {product.name}",
-            f"Looking for {product.name}? {description} {availability}. "
-            f"Price: {currency} {price}. View details or order from "
-            f"LEOSOFT UG LTD: {url}\n\n{hashtags}",
+            f"Looking for {product.name}? {description} {availability}. Price: "
+            f"{currency} {price}. View details or order from LEOSOFT UG LTD: "
+            f"{url}\n\n{hashtags}",
         ),
         (
             ContentAsset.TYPE_TIKTOK_SCRIPT,
             f"Short-video script — {product.name}",
             f"HOOK: Before you buy your next {product.category.name.lower()}, "
-            "look at this.\n"
-            f"SHOW: Display {product.name} from several angles and demonstrate "
-            "one useful feature.\n"
-            f"VALUE: {description}\nPRICE: {currency} {price}.\n"
-            "CTA: Visit leosoftug.com or contact LEOSOFT UG LTD for "
-            f"availability, warranty and delivery.\nON-SCREEN: {url}",
+            f"look at this.\nSHOW: Display {product.name} from several angles "
+            f"and demonstrate one useful feature.\nVALUE: {description}\nPRICE: "
+            f"{currency} {price}.\nCTA: Visit leosoftug.com or contact LEOSOFT "
+            f"UG LTD for availability, warranty and delivery.\nON-SCREEN: {url}",
         ),
         (
             ContentAsset.TYPE_LINKEDIN,
@@ -341,17 +339,17 @@ def generate_content_assets(
         (
             ContentAsset.TYPE_EMAIL,
             f"Email — {product.name}",
-            f"Subject: Discover {product.name} from LEOSOFT UG LTD\n\n"
-            f"Hello,\n\n{description}\n\nPrice: {currency} {price}\n"
-            f"Status: {availability}\n\nView the product and request "
-            f"assistance: {url}\n\nRegards,\nLEOSOFT UG LTD",
+            f"Subject: Discover {product.name} from LEOSOFT UG LTD\n\nHello,"
+            f"\n\n{description}\n\nPrice: {currency} {price}\nStatus: "
+            f"{availability}\n\nView the product and request assistance: {url}"
+            "\n\nRegards,\nLEOSOFT UG LTD",
         ),
         (
             ContentAsset.TYPE_POSTER,
             f"Poster copy — {product.name}",
             f"{product.name.upper()}\n{description}\n{currency} {price}\n"
-            f"{availability.upper()}\nSHOP OR ENQUIRE: {url}\n"
-            "LEOSOFT UG LTD — Reliable technology and support.",
+            f"{availability.upper()}\nSHOP OR ENQUIRE: {url}\nLEOSOFT UG LTD "
+            "— Reliable technology and support.",
         ),
     ]
     return [
@@ -397,9 +395,9 @@ def process_saved_cart_reminders(*, limit: int = 100) -> dict:
     second_rows = SavedCart.objects.filter(
         status=SavedCart.STATUS_ACTIVE,
         first_reminder_sent_at__isnull=False,
+        first_reminder_sent_at__lte=second_cutoff,
         second_reminder_sent_at__isnull=True,
-        last_activity__lte=second_cutoff,
-    ).order_by("last_activity")[:limit]
+    ).order_by("first_reminder_sent_at")[:limit]
     for saved in second_rows:
         try:
             send_saved_cart_message(saved, reminder_number=2)
@@ -441,7 +439,6 @@ def process_stock_alerts(*, limit: int = 100) -> dict:
             reason = f"is now {company.currency_code} {price}"
         if not triggered:
             continue
-        url = absolute_public_url(product.get_absolute_url())
         unsubscribe_url = absolute_public_url(
             f"/marketing/alerts/unsubscribe/{subscription.token}/"
         )
@@ -449,8 +446,8 @@ def process_stock_alerts(*, limit: int = 100) -> dict:
             send_mail(
                 f"{product.name} update from {company.company_name}",
                 (
-                    f"Hello,\n\n{product.name} {reason}.\n\n"
-                    f"View it here: {url}\n\n"
+                    f"Hello,\n\n{product.name} {reason}.\n\nView it here: "
+                    f"{absolute_public_url(product.get_absolute_url())}\n\n"
                     "Availability can change quickly, so please confirm before "
                     f"payment.\n\nStop this alert: {unsubscribe_url}"
                 ),
