@@ -157,3 +157,25 @@ class ProductImageWatermarkTests(TestCase):
         product.refresh_from_db()
         self.assertTrue(Path(product.image.name).name.startswith("wm_"))
         self.assertTrue(Path(product.image.path).exists())
+
+    def test_watermarked_image_can_be_rebuilt_from_private_original(self):
+        product = Product.objects.create(
+            category=self.category,
+            name="Reprocess Laptop",
+            price="1900000.00",
+            stock_quantity=1,
+            image=_uploaded_image("reprocess.jpg"),
+        )
+        old_name = product.image.name
+        old_path = Path(product.image.path)
+        self.assertTrue(old_path.exists())
+        self.assertEqual(len(list(Path(self.private_dir.name).rglob("*.jpg"))), 1)
+
+        call_command("reprocess_product_images")
+        product.refresh_from_db()
+
+        self.assertTrue(Path(product.image.name).name.startswith("wm_"))
+        self.assertTrue(Path(product.image.path).exists())
+        self.assertNotEqual(product.image.name, old_name)
+        self.assertFalse(old_path.exists())
+        self.assertEqual(len(list(Path(self.private_dir.name).rglob("*.jpg"))), 1)
