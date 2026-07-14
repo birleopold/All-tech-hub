@@ -1,11 +1,9 @@
-import json
 from decimal import Decimal
 from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import F
-from django.urls import reverse
 from django.utils import timezone
 
 from catalog.models import Product, ProductVariant
@@ -35,39 +33,6 @@ def absolute_public_url(path: str) -> str:
     return urljoin(company_base_url(), path.lstrip("/"))
 
 
-def analytics_item(
-    product: Product,
-    *,
-    variant: ProductVariant | None = None,
-    quantity: int = 1,
-    index: int | None = None,
-) -> dict:
-    price = variant.price if variant else (product.min_active_variant_price or product.price)
-    item = {
-        "item_id": (variant.sku if variant and variant.sku else product.sku) or str(
-            variant.pk if variant else product.pk
-        ),
-        "item_name": product.name,
-        "item_category": product.category.name,
-        "item_variant": variant.name if variant else "",
-        "price": float(price),
-        "quantity": int(quantity),
-    }
-    try:
-        metadata = product.growth_data
-    except ProductGrowthDataMissing:
-        metadata = None
-    if metadata and metadata.brand:
-        item["item_brand"] = metadata.brand
-    if index is not None:
-        item["index"] = int(index)
-    return item
-
-
-class ProductGrowthDataMissing(Exception):
-    pass
-
-
 def _product_growth_data(product: Product):
     try:
         return product.growth_data
@@ -84,9 +49,8 @@ def analytics_item(
 ) -> dict:
     price = variant.price if variant else (product.min_active_variant_price or product.price)
     item = {
-        "item_id": (variant.sku if variant and variant.sku else product.sku) or str(
-            variant.pk if variant else product.pk
-        ),
+        "item_id": (variant.sku if variant and variant.sku else product.sku)
+        or str(variant.pk if variant else product.pk),
         "item_name": product.name,
         "item_category": product.category.name,
         "item_variant": variant.name if variant else "",
@@ -103,10 +67,6 @@ def analytics_item(
 
 def analytics_event(name: str, params: dict) -> dict:
     return {"name": name, "params": params}
-
-
-def analytics_event_json(name: str, params: dict) -> str:
-    return json.dumps(analytics_event(name, params), separators=(",", ":"))
 
 
 def queue_analytics_event(request, name: str, params: dict) -> None:
@@ -160,7 +120,13 @@ def cart_snapshot(session) -> tuple[dict, Decimal]:
     return data, subtotal
 
 
-def save_cart_for_recovery(request, *, name: str, email: str, phone: str = "") -> SavedCart:
+def save_cart_for_recovery(
+    request,
+    *,
+    name: str,
+    email: str,
+    phone: str = "",
+) -> SavedCart:
     if not request.session.session_key:
         request.session.create()
     data, subtotal = cart_snapshot(request.session)
@@ -212,9 +178,20 @@ def saved_cart_recovery_url(saved: SavedCart) -> str:
     return absolute_public_url(saved.get_recovery_path())
 
 
-def send_saved_cart_message(saved: SavedCart, *, reminder_number: int = 0) -> int:
+def saved_cart_unsubscribe_url(saved: SavedCart) -> str:
+    return absolute_public_url(
+        f"/marketing/cart/unsubscribe/{saved.recovery_token}/"
+    )
+
+
+def send_saved_cart_message(
+    saved: SavedCart,
+    *,
+    reminder_number: int = 0,
+) -> int:
     company = CompanySettings.load()
     url = saved_cart_recovery_url(saved)
+    unsubscribe_url = saved_cart_unsubscribe_url(saved)
     if reminder_number == 0:
         subject = f"Your {company.company_name} cart has been saved"
         opening = "Your selected items have been saved."
@@ -230,7 +207,8 @@ def send_saved_cart_message(saved: SavedCart, *, reminder_number: int = 0) -> in
         f"Resume your cart: {url}\n\n"
         f"Saved subtotal: {company.currency_code} {saved.subtotal:.2f}\n\n"
         "Availability and prices may change before checkout. "
-        "You received this because you asked LEOSOFT to save and remind you about the cart."
+        "You received this because you asked LEOSOFT to save and remind you "
+        f"about the cart.\n\nStop reminders: {unsubscribe_url}"
     )
     return send_mail(
         subject,
@@ -266,7 +244,7 @@ def mark_order_growth_attribution(request, order) -> None:
             is_active=True,
         ).first()
         if ambassador:
-            conversion, created = AmbassadorConversion.objects.get_or_create(
+            _conversion, created = AmbassadorConversion.objects.get_or_create(
                 order=order,
                 defaults={
                     "ambassador": ambassador,
@@ -306,7 +284,12 @@ def attribute_lead_to_ambassador(request, lead) -> None:
         lead.save(update_fields=["source", "medium", "updated_at"])
 
 
-def generate_content_assets(*, product, campaign=None, created_by=None) -> list[ContentAsset]:
+def generate_content_assets(
+    *,
+    product,
+    campaign=None,
+    created_by=None,
+) -> list[ContentAsset]:
     company = CompanySettings.load()
     growth = GrowthSettings.load()
     price = product.min_active_variant_price or product.price
@@ -317,54 +300,71 @@ def generate_content_assets(*, product, campaign=None, created_by=None) -> list[
         or product.category.name
     )
     hashtags = growth.default_content_hashtags.strip()
-    availability = "Available now" if product.available_to_sell else "Ask for availability"
+    availability = (
+        "Available now" if product.available_to_sell else "Ask for availability"
+    )
     currency = company.currency_code
 
     drafts = [
         (
             ContentAsset.TYPE_WHATSAPP,
             f"WhatsApp — {product.name}",
-            f"{product.name}\n{description}\n{availability} · {currency} {price}\n{url}\n{hashtags}",
+            f"{product.name}\n{description}\n{availability} · "
+            f"{currency} {price}\n{url}\n{hashtags}",
         ),
         (
             ContentAsset.TYPE_SOCIAL_CAPTION,
             f"Social caption — {product.name}",
-            f"Looking for {product.name}? {description} {availability}. Price: {currency} {price}. View details or order from LEOSOFT UG LTD: {url}\n\n{hashtags}",
+            f"Looking for {product.name}? {description} {availability}. "
+            f"Price: {currency} {price}. View details or order from "
+            f"LEOSOFT UG LTD: {url}\n\n{hashtags}",
         ),
         (
             ContentAsset.TYPE_TIKTOK_SCRIPT,
             f"Short-video script — {product.name}",
-            f"HOOK: Before you buy your next {product.category.name.lower()}, look at this.\nSHOW: Display {product.name} from several angles and demonstrate one useful feature.\nVALUE: {description}\nPRICE: {currency} {price}.\nCTA: Visit leosoftug.com or contact LEOSOFT UG LTD for availability, warranty and delivery.\nON-SCREEN: {url}",
+            f"HOOK: Before you buy your next {product.category.name.lower()}, "
+            "look at this.\n"
+            f"SHOW: Display {product.name} from several angles and demonstrate "
+            "one useful feature.\n"
+            f"VALUE: {description}\nPRICE: {currency} {price}.\n"
+            "CTA: Visit leosoftug.com or contact LEOSOFT UG LTD for "
+            f"availability, warranty and delivery.\nON-SCREEN: {url}",
         ),
         (
             ContentAsset.TYPE_LINKEDIN,
             f"LinkedIn — {product.name}",
-            f"LEOSOFT UG LTD is offering {product.name} for professionals, businesses and institutions that need dependable technology. {description} Pricing starts at {currency} {price}. Product details and enquiries: {url}\n\n{hashtags}",
+            f"LEOSOFT UG LTD is offering {product.name} for professionals, "
+            f"businesses and institutions that need dependable technology. "
+            f"{description} Pricing starts at {currency} {price}. Product "
+            f"details and enquiries: {url}\n\n{hashtags}",
         ),
         (
             ContentAsset.TYPE_EMAIL,
             f"Email — {product.name}",
-            f"Subject: Discover {product.name} from LEOSOFT UG LTD\n\nHello,\n\n{description}\n\nPrice: {currency} {price}\nStatus: {availability}\n\nView the product and request assistance: {url}\n\nRegards,\nLEOSOFT UG LTD",
+            f"Subject: Discover {product.name} from LEOSOFT UG LTD\n\n"
+            f"Hello,\n\n{description}\n\nPrice: {currency} {price}\n"
+            f"Status: {availability}\n\nView the product and request "
+            f"assistance: {url}\n\nRegards,\nLEOSOFT UG LTD",
         ),
         (
             ContentAsset.TYPE_POSTER,
             f"Poster copy — {product.name}",
-            f"{product.name.upper()}\n{description}\n{currency} {price}\n{availability.upper()}\nSHOP OR ENQUIRE: {url}\nLEOSOFT UG LTD — Reliable technology and support.",
+            f"{product.name.upper()}\n{description}\n{currency} {price}\n"
+            f"{availability.upper()}\nSHOP OR ENQUIRE: {url}\n"
+            "LEOSOFT UG LTD — Reliable technology and support.",
         ),
     ]
-    assets = []
-    for asset_type, title, body in drafts:
-        assets.append(
-            ContentAsset.objects.create(
-                product=product,
-                campaign=campaign,
-                asset_type=asset_type,
-                title=title,
-                body=body,
-                created_by=created_by,
-            )
+    return [
+        ContentAsset.objects.create(
+            product=product,
+            campaign=campaign,
+            asset_type=asset_type,
+            title=title,
+            body=body,
+            created_by=created_by,
         )
-    return assets
+        for asset_type, title, body in drafts
+    ]
 
 
 def process_saved_cart_reminders(*, limit: int = 100) -> dict:
@@ -426,7 +426,8 @@ def process_stock_alerts(*, limit: int = 100) -> dict:
         triggered = False
         reason = ""
         if (
-            subscription.alert_type == StockAlertSubscription.ALERT_BACK_IN_STOCK
+            subscription.alert_type
+            == StockAlertSubscription.ALERT_BACK_IN_STOCK
             and product.available_to_sell
         ):
             triggered = True
@@ -441,13 +442,17 @@ def process_stock_alerts(*, limit: int = 100) -> dict:
         if not triggered:
             continue
         url = absolute_public_url(product.get_absolute_url())
+        unsubscribe_url = absolute_public_url(
+            f"/marketing/alerts/unsubscribe/{subscription.token}/"
+        )
         try:
             send_mail(
                 f"{product.name} update from {company.company_name}",
                 (
                     f"Hello,\n\n{product.name} {reason}.\n\n"
                     f"View it here: {url}\n\n"
-                    "Availability can change quickly, so please confirm before payment."
+                    "Availability can change quickly, so please confirm before "
+                    f"payment.\n\nStop this alert: {unsubscribe_url}"
                 ),
                 settings.DEFAULT_FROM_EMAIL,
                 [subscription.email],
@@ -455,9 +460,7 @@ def process_stock_alerts(*, limit: int = 100) -> dict:
             )
             subscription.is_active = False
             subscription.notified_at = timezone.now()
-            subscription.save(
-                update_fields=["is_active", "notified_at"]
-            )
+            subscription.save(update_fields=["is_active", "notified_at"])
             sent += 1
         except Exception:
             errors += 1
