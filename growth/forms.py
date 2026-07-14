@@ -32,6 +32,20 @@ class GrowthSettingsForm(BootstrapModelForm):
         model = GrowthSettings
         exclude = ()
 
+    def clean_ga4_measurement_id(self):
+        value = (self.cleaned_data.get("ga4_measurement_id") or "").strip().upper()
+        if value and not value.startswith("G-"):
+            raise forms.ValidationError("A GA4 measurement ID must begin with G-.")
+        return value
+
+    def clean_search_console_verification_token(self):
+        value = (self.cleaned_data.get("search_console_verification_token") or "").strip()
+        if "<meta" in value.lower() or "content=" in value.lower():
+            raise forms.ValidationError(
+                "Paste only the content token, not the complete HTML meta tag."
+            )
+        return value
+
 
 class ProductGrowthDataForm(BootstrapModelForm):
     class Meta:
@@ -61,6 +75,12 @@ class ProductGrowthDataForm(BootstrapModelForm):
             queryset = queryset.filter(growth_data__isnull=True)
         self.fields["product"].queryset = queryset.distinct()
 
+    def clean_gtin(self):
+        value = "".join(ch for ch in (self.cleaned_data.get("gtin") or "") if ch.isdigit())
+        if value and len(value) not in {8, 12, 13, 14}:
+            raise forms.ValidationError("GTIN must contain 8, 12, 13 or 14 digits.")
+        return value
+
 
 class SavedCartOptInForm(forms.Form):
     name = forms.CharField(
@@ -80,6 +100,9 @@ class SavedCartOptInForm(forms.Form):
         label="Save this cart and send me reminder emails.",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
 
 
 class StockAlertForm(forms.Form):
@@ -102,6 +125,9 @@ class StockAlertForm(forms.Form):
         min_value=0,
         widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
     )
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
 
     def clean(self):
         cleaned = super().clean()
@@ -153,6 +179,23 @@ class AmbassadorForm(BootstrapModelForm):
             "notes",
         )
         widgets = {"notes": forms.Textarea(attrs={"rows": 4})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["code"].required = False
+        self.fields["code"].help_text = (
+            "Optional. Leave blank to generate a code from the ambassador name."
+        )
+
+    def clean(self):
+        cleaned = super().clean()
+        commission_type = cleaned.get("commission_type")
+        value = cleaned.get("commission_value")
+        if value is not None and value < 0:
+            self.add_error("commission_value", "Commission cannot be negative.")
+        if commission_type == Ambassador.COMMISSION_PERCENT and value is not None and value > 100:
+            self.add_error("commission_value", "Percentage commission cannot exceed 100%.")
+        return cleaned
 
 
 class ContentAssetGeneratorForm(forms.Form):
