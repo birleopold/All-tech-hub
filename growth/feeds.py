@@ -4,6 +4,7 @@ from xml.etree import ElementTree as ET
 from django.http import HttpResponse, JsonResponse
 
 from catalog.models import Product
+from core.models import CompanySettings
 from growth.models import GrowthSettings
 
 GOOGLE_NS = "http://base.google.com/ns/1.0"
@@ -32,8 +33,14 @@ def _base_product_data(request, product, config):
     gtin = metadata.gtin if metadata else ""
     mpn = metadata.mpn if metadata else ""
     identifier_exists = "yes" if gtin or (brand and mpn) else "no"
+    description = _clean(
+        product.short_description
+        or product.description
+        or f"{product.name} from LEOSOFT UG LTD.",
+        5000,
+    )
     return {
-        "description": _clean(product.short_description or product.description, 5000),
+        "description": description,
         "link": request.build_absolute_uri(product.get_absolute_url()),
         "image_link": request.build_absolute_uri(image.url) if image else "",
         "additional_image_link": additional_images,
@@ -51,16 +58,17 @@ def _base_product_data(request, product, config):
 
 def merchant_rows(request):
     config = GrowthSettings.load()
+    company = CompanySettings.load()
     products = (
         Product.objects.filter(
             is_published=True,
             kind=Product.KIND_PHYSICAL,
         )
-        .select_related("category")
-        .prefetch_related("gallery_images", "variants", "growth_data")
+        .select_related("category", "growth_data")
+        .prefetch_related("gallery_images", "variants")
         .order_by("name")
     )
-    currency = "UGX"
+    currency = company.currency_code
     for product in products:
         base = _base_product_data(request, product, config)
         active_variants = [v for v in product.variants.all() if v.is_active]
@@ -68,30 +76,44 @@ def merchant_rows(request):
             group_id = product.sku or f"product-{product.pk}"
             for variant in active_variants:
                 current = variant.price
-                regular = variant.compare_at_price if variant.compare_at_price and variant.compare_at_price > current else current
-                row = {
+                regular = (
+                    variant.compare_at_price
+                    if variant.compare_at_price and variant.compare_at_price > current
+                    else current
+                )
+                yield {
                     **base,
                     "id": variant.sku or f"variant-{variant.pk}",
                     "item_group_id": group_id,
                     "title": _clean(f"{product.name} — {variant.name}", 150),
-                    "availability": "in_stock" if variant.available_to_sell else "out_of_stock",
+                    "availability": (
+                        "in_stock" if variant.available_to_sell else "out_of_stock"
+                    ),
                     "price": f"{regular:.2f} {currency}",
-                    "sale_price": f"{current:.2f} {currency}" if regular > current else "",
+                    "sale_price": (
+                        f"{current:.2f} {currency}" if regular > current else ""
+                    ),
                 }
-                yield row
         else:
             current = product.price
-            regular = product.compare_at_price if product.compare_at_price and product.compare_at_price > current else current
-            row = {
+            regular = (
+                product.compare_at_price
+                if product.compare_at_price and product.compare_at_price > current
+                else current
+            )
+            yield {
                 **base,
                 "id": product.sku or f"product-{product.pk}",
                 "item_group_id": "",
                 "title": _clean(product.name, 150),
-                "availability": "in_stock" if product.available_to_sell else "out_of_stock",
+                "availability": (
+                    "in_stock" if product.available_to_sell else "out_of_stock"
+                ),
                 "price": f"{regular:.2f} {currency}",
-                "sale_price": f"{current:.2f} {currency}" if regular > current else "",
+                "sale_price": (
+                    f"{current:.2f} {currency}" if regular > current else ""
+                ),
             }
-            yield row
 
 
 FEED_FIELDS = [
@@ -119,7 +141,9 @@ FEED_FIELDS = [
 
 def product_feed_csv(request):
     response = HttpResponse(content_type="text/csv")
-    response["Content-Disposition"] = 'attachment; filename="leosoft-merchant-products.csv"'
+    response["Content-Disposition"] = (
+        'attachment; filename="leosoft-merchant-products.csv"'
+    )
     writer = csv.DictWriter(response, fieldnames=FEED_FIELDS)
     writer.writeheader()
     for row in merchant_rows(request):
@@ -143,12 +167,15 @@ def product_feed_json(request):
 
 def product_feed_xml(request):
     config = GrowthSettings.load()
+    company = CompanySettings.load()
     ET.register_namespace("g", GOOGLE_NS)
     rss = ET.Element("rss", {"version": "2.0"})
     channel = ET.SubElement(rss, "channel")
     ET.SubElement(channel, "title").text = "LEOSOFT UG LTD Merchant Center feed"
     ET.SubElement(channel, "link").text = request.build_absolute_uri("/")
-    ET.SubElement(channel, "description").text = "Published physical products from LEOSOFT UG LTD"
+    ET.SubElement(channel, "description").text = (
+        "Published physical products from LEOSOFT UG LTD"
+    )
     ns = f"{{{GOOGLE_NS}}}"
 
     for row in merchant_rows(request):
@@ -165,9 +192,11 @@ def product_feed_xml(request):
 
         shipping = ET.SubElement(item, f"{ns}shipping")
         ET.SubElement(shipping, f"{ns}country").text = config.merchant_country
-        ET.SubElement(shipping, f"{ns}service").text = config.merchant_shipping_service
+        ET.SubElement(shipping, f"{ns}service").text = (
+            config.merchant_shipping_service
+        )
         ET.SubElement(shipping, f"{ns}price").text = (
-            f"{config.merchant_shipping_price:.2f} UGX"
+            f"{config.merchant_shipping_price:.2f} {company.currency_code}"
         )
 
     return HttpResponse(
