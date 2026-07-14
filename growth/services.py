@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models import F
+from django.db.models import Count, F, Sum
 from django.utils import timezone
 
 from catalog.models import Product, ProductVariant
@@ -150,6 +150,7 @@ def save_cart_for_recovery(
         email=email,
     )
     saved.customer_name = name
+    saved.email = email.strip().lower()
     saved.phone = phone
     saved.cart_data = data
     saved.subtotal = subtotal
@@ -228,6 +229,20 @@ def restore_saved_cart(request, saved: SavedCart) -> None:
     request.session.modified = True
 
 
+def recalculate_ambassador_totals(ambassador: Ambassador) -> None:
+    click_count = ambassador.clicks.count()
+    lead_count = ambassador.attributed_leads.count()
+    conversion_summary = ambassador.conversions.exclude(
+        status=AmbassadorConversion.STATUS_CANCELLED
+    ).aggregate(order_count=Count("id"), revenue_total=Sum("revenue"))
+    Ambassador.objects.filter(pk=ambassador.pk).update(
+        click_count=click_count,
+        lead_count=lead_count,
+        order_count=conversion_summary["order_count"] or 0,
+        revenue_total=conversion_summary["revenue_total"] or Decimal("0"),
+    )
+
+
 def mark_order_growth_attribution(request, order) -> None:
     if request.session.session_key:
         SavedCart.objects.filter(
@@ -255,10 +270,7 @@ def mark_order_growth_attribution(request, order) -> None:
             },
         )
         if created:
-            Ambassador.objects.filter(pk=ambassador.pk).update(
-                order_count=F("order_count") + 1,
-                revenue_total=F("revenue_total") + order.total,
-            )
+            recalculate_ambassador_totals(ambassador)
     request.session[PURCHASE_SESSION_KEY] = order.reference
     request.session.modified = True
 
@@ -277,9 +289,7 @@ def attribute_lead_to_ambassador(request, lead) -> None:
         defaults={"ambassador": ambassador},
     )
     if created:
-        Ambassador.objects.filter(pk=ambassador.pk).update(
-            lead_count=F("lead_count") + 1
-        )
+        recalculate_ambassador_totals(ambassador)
         lead.source = f"ambassador:{ambassador.code}"[:60]
         lead.medium = "referral"
         lead.save(update_fields=["source", "medium", "updated_at"])
