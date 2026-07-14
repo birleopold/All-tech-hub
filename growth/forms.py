@@ -3,6 +3,7 @@ from django import forms
 from catalog.models import Product
 from growth.models import (
     Ambassador,
+    AmbassadorConversion,
     ContentAsset,
     DistributionGroup,
     GrowthSettings,
@@ -196,6 +197,25 @@ class AmbassadorForm(BootstrapModelForm):
         if commission_type == Ambassador.COMMISSION_PERCENT and value is not None and value > 100:
             self.add_error("commission_value", "Percentage commission cannot exceed 100%.")
         return cleaned
+
+
+class AmbassadorConversionForm(BootstrapModelForm):
+    class Meta:
+        model = AmbassadorConversion
+        fields = ("status", "commission_amount")
+        help_texts = {
+            "status": (
+                "Approve only after confirming the order and payment. Mark Paid "
+                "after commission settlement, or Cancelled for invalid/refunded orders."
+            ),
+            "commission_amount": "Adjust only when an authorised exception applies.",
+        }
+
+    def clean_commission_amount(self):
+        value = self.cleaned_data["commission_amount"]
+        if value < 0:
+            raise forms.ValidationError("Commission cannot be negative.")
+        return value
 
 
 class ContentAssetGeneratorForm(forms.Form):
