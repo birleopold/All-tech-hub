@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 
+from catalog.discovery import discovery_seed_for_request, order_for_discovery
 from catalog.models import Category, Product, ProductReview, product_review_summary
 from core.models import CompanySettings
 from marketing.models import SocialProfileSettings
@@ -19,12 +20,18 @@ class ProductListView(ListView):
     context_object_name = "products"
     paginate_by = 12
 
+    SORT_OPTIONS = {
+        "newest": ("-created_at", "-pk"),
+        "price_low": ("price", "name", "pk"),
+        "price_high": ("-price", "name", "pk"),
+        "name": ("name", "pk"),
+    }
+
     def get_queryset(self):
         qs = (
             Product.objects.filter(is_published=True)
             .select_related("category", "category__parent")
             .prefetch_related("gallery_images", "variants")
-            .order_by("category__sort_order", "name")
         )
         kind = self.request.GET.get("kind")
         if kind in (Product.KIND_PHYSICAL, Product.KIND_SERVICE):
@@ -42,7 +49,17 @@ class ProductListView(ListView):
                 | Q(sku__icontains=q)
                 | Q(variants__sku__icontains=q)
             ).distinct()
-        return qs
+
+        requested_sort = (self.request.GET.get("sort") or "").strip()
+        ordering = self.SORT_OPTIONS.get(requested_sort)
+        if ordering:
+            self.current_sort = requested_sort
+            self.rotation_seed = ""
+            return qs.order_by(*ordering)
+
+        self.current_sort = ""
+        self.rotation_seed = discovery_seed_for_request(self.request, "catalog")
+        return order_for_discovery(qs, self.rotation_seed)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -54,6 +71,8 @@ class ProductListView(ListView):
         ctx["current_kind"] = self.request.GET.get("kind") or ""
         ctx["current_category"] = self.request.GET.get("category") or ""
         ctx["search_q"] = self.request.GET.get("q") or ""
+        ctx["current_sort"] = getattr(self, "current_sort", "")
+        ctx["rotation_seed"] = getattr(self, "rotation_seed", "")
         return ctx
 
 
