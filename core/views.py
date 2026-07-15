@@ -11,17 +11,33 @@ class HomeView(TemplateView):
     template_name = "core/home.html"
 
     def get_context_data(self, **kwargs):
+        from catalog.discovery import new_rotation_seed, order_for_discovery
         from catalog.models import Product
 
         ctx = super().get_context_data(**kwargs)
-        ctx["featured_products"] = (
-            Product.objects.filter(is_published=True, is_featured=True)
+        featured_products = (
+            Product.objects.filter(
+                is_published=True,
+                is_featured=True,
+                kind=Product.KIND_PHYSICAL,
+            )
             .select_related("category")
-            .prefetch_related("gallery_images", "variants")[:8]
+            .prefetch_related("gallery_images", "variants")
         )
-        ctx["featured_services"] = Product.objects.filter(
-            is_published=True, kind=Product.KIND_SERVICE, is_featured=True
-        ).select_related("category")[:6]
+        featured_services = Product.objects.filter(
+            is_published=True,
+            kind=Product.KIND_SERVICE,
+            is_featured=True,
+        ).select_related("category")
+
+        ctx["featured_products"] = order_for_discovery(
+            featured_products,
+            new_rotation_seed(),
+        )[:8]
+        ctx["featured_services"] = order_for_discovery(
+            featured_services,
+            new_rotation_seed(),
+        )[:6]
         return ctx
 
 
