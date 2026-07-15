@@ -18,11 +18,11 @@
   <div class="catalog-toolbar card border-0 shadow-sm mb-4">
     <div class="card-body">
       <form method="get" class="row g-2 align-items-end" aria-labelledby="catalog-filters-heading">
-        <div class="col-lg-4">
+        <div class="col-lg-3">
           <label class="form-label small text-muted" for="catalog-search">Search catalog</label>
           <input id="catalog-search" type="search" name="q" value="{{ search_q }}" class="form-control" placeholder="Search laptops, CCTV, repair, software…">
         </div>
-        <div class="col-sm-6 col-lg-3">
+        <div class="col-sm-6 col-lg-2">
           <label class="form-label small text-muted" for="catalog-kind">Type</label>
           <select id="catalog-kind" name="kind" class="form-select">
             <option value="">All types</option>
@@ -40,7 +40,17 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply filters</button></div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label small text-muted" for="catalog-sort">Sort</label>
+          <select id="catalog-sort" name="sort" class="form-select">
+            <option value="" {% if not current_sort %}selected{% endif %}>Fresh discovery</option>
+            <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest first</option>
+            <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
+            <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
+            <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name: A–Z</option>
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply</button></div>
       </form>
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
         <div class="d-flex flex-wrap gap-2" aria-label="Quick catalog filters">
@@ -48,13 +58,16 @@
           <a class="btn btn-sm {% if current_kind == 'physical' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}?kind=physical">Products</a>
           <a class="btn btn-sm {% if current_kind == 'service' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}?kind=service">Services</a>
         </div>
-        {% if search_q or current_kind or current_category %}<a class="small" href="{% url 'product_list' %}">Clear filters</a>{% endif %}
+        {% if search_q or current_kind or current_category or current_sort %}<a class="small" href="{% url 'product_list' %}">Clear filters and sorting</a>{% endif %}
       </div>
     </div>
   </div>
 
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div><h2 class="h4 mb-1" id="catalog-filters-heading">{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalog results{% endif %}</h2><p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}</p></div>
+    <div>
+      <h2 class="h4 mb-1" id="catalog-filters-heading">{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalog results{% endif %}</h2>
+      <p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}{% if not current_sort %} · Freshly rotated for discovery{% endif %}</p>
+    </div>
   </div>
 
   <div class="row g-3" role="region" aria-labelledby="catalog-heading">
@@ -90,6 +103,6 @@
     {% endfor %}
   </div>
 
-  {% if is_paginated %}<nav class="mt-4" aria-label="Catalog pagination"><ul class="pagination justify-content-center">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to previous page">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind }}&category={{ current_category }}&q={{ search_q }}" aria-label="Go to next page">Next</a></li>{% endif %}</ul></nav>{% endif %}
+  {% if is_paginated %}<nav class="mt-4" aria-label="Catalog pagination"><ul class="pagination justify-content-center">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind|urlencode }}&category={{ current_category|urlencode }}&q={{ search_q|urlencode }}&sort={{ current_sort|urlencode }}{% if rotation_seed %}&view={{ rotation_seed }}{% endif %}" aria-label="Go to previous page">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind|urlencode }}&category={{ current_category|urlencode }}&q={{ search_q|urlencode }}&sort={{ current_sort|urlencode }}{% if rotation_seed %}&view={{ rotation_seed }}{% endif %}" aria-label="Go to next page">Next</a></li>{% endif %}</ul></nav>{% endif %}
 </div>
 {% endblock %}
