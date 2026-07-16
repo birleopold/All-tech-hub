@@ -73,16 +73,34 @@ def transition_order(order: Order, new_status: str, actor=None, note: str = ""):
         )
 
     if new_status == Order.STATUS_CANCELLED:
+        cancellation_reason = (note or "").strip()
+        if not cancellation_reason:
+            raise ValidationError("A cancellation reason is required.")
+        from reliability.order_payments import (
+            cancel_open_payment_attempts,
+            has_unsettled_successful_payment,
+        )
+
+        if has_unsettled_successful_payment(order):
+            raise ValidationError(
+                "This order has a successful payment that is not fully refunded. "
+                "Record the refund before cancelling the order."
+            )
         restore_cancelled_order_stock(order, actor=actor)
-        order.cancellation_reason = note[:255]
+        cancel_open_payment_attempts(
+            order,
+            actor=actor,
+            reason=cancellation_reason,
+        )
+        order.cancellation_reason = cancellation_reason[:255]
         order.cancelled_at = timezone.now()
         from reliability.services import close_order_reservation
 
         close_order_reservation(
             order,
             actor=actor,
-            reason=note or "Order cancelled",
-            expired=(note or "").lower().startswith("reservation expired"),
+            reason=cancellation_reason,
+            expired=cancellation_reason.lower().startswith("reservation expired"),
         )
     elif new_status in {
         Order.STATUS_CONFIRMED,
