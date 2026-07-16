@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import Context, Template
 from django.test import TransactionTestCase, override_settings
+from django.urls import reverse
 from PIL import Image
 
 from catalog.models import Category, Product
@@ -86,3 +87,18 @@ class ResponsiveProductImageTests(TransactionTestCase):
         self.assertIn('height="400"', rendered)
         self.assertIn('loading="lazy"', rendered)
         self.assertIn(product.image.url, rendered)
+
+    def test_homepage_featured_products_use_responsive_picture_markup(self):
+        Product.objects.create(
+            category=self.category,
+            name="Featured responsive laptop",
+            slug="featured-responsive-laptop",
+            price="900000.00",
+            image=uploaded_image("featured.jpg"),
+            is_featured=True,
+        )
+        response = self.client.get(reverse("home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Featured responsive laptop")
+        self.assertContains(response, 'type="image/webp"')
+        self.assertContains(response, "320w")
