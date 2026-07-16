@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% load static catalog_images %}
+{% load catalog_images %}
 {% block title %}Compare products{% endblock %}
 {% block meta %}
 <meta name="description" content="Compare selected LEOSOFT products side by side by price, availability, category and options.">
 <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'product_compare' %}">
-<link href="{% static 'css/customer_experience.css' %}" rel="stylesheet">
 <meta name="robots" content="noindex,follow">
 {% endblock %}
 {% block content %}
