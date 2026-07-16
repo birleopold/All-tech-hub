@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import os
 
@@ -42,8 +43,10 @@ def protect_totp_secret(secret: str) -> str:
         return secret
     try:
         raw_secret = _decode_base32(secret)
-    except (ValueError, TypeError):
-        raise ImproperlyConfigured("The stored TOTP secret is not valid base32 data.")
+    except (binascii.Error, ValueError, TypeError) as exc:
+        raise ImproperlyConfigured(
+            "The stored TOTP secret is not valid base32 data."
+        ) from exc
 
     nonce = os.urandom(_NONCE_BYTES)
     ciphertext = AESGCM(_encryption_key()).encrypt(nonce, raw_secret, _TOTP_AAD)
@@ -68,7 +71,7 @@ def reveal_totp_secret(value: str) -> str:
         nonce = payload[:_NONCE_BYTES]
         ciphertext = payload[_NONCE_BYTES:]
         raw_secret = AESGCM(_encryption_key()).decrypt(nonce, ciphertext, _TOTP_AAD)
-    except (ValueError, InvalidTag, UnicodeError) as exc:
+    except (binascii.Error, ValueError, InvalidTag, UnicodeError) as exc:
         raise ImproperlyConfigured(
             "A staff TOTP secret could not be decrypted. Check the field encryption key."
         ) from exc
