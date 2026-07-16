@@ -1,0 +1,16 @@
+[Unit]
+Description=Create and verify LEOSOFT production backups
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=admin
+Group=www-data
+UMask=0077
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/bin/bash /home/admin/All-tech-hub/deployment/run-backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
