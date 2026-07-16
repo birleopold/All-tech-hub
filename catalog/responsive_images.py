@@ -108,13 +108,12 @@ def generate_responsive_variants(field_file, *, force: bool = False) -> list[str
     return generated
 
 
-def purge_responsive_variants(field_file) -> int:
-    if not field_file or not field_file.name:
+def purge_responsive_name(storage, source_name: str) -> int:
+    if not source_name:
         return 0
     deleted = 0
-    storage = field_file.storage
     for width in responsive_widths():
-        name = variant_name(field_file.name, width)
+        name = variant_name(source_name, width)
         try:
             if storage.exists(name):
                 storage.delete(name)
@@ -122,6 +121,12 @@ def purge_responsive_variants(field_file) -> int:
         except Exception:
             logger.debug("Could not delete responsive derivative %s", name, exc_info=True)
     return deleted
+
+
+def purge_responsive_variants(field_file) -> int:
+    if not field_file or not field_file.name:
+        return 0
+    return purge_responsive_name(field_file.storage, field_file.name)
 
 
 def source_dimensions(field_file) -> tuple[int | None, int | None]:
