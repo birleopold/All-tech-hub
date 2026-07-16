@@ -1,0 +1,125 @@
+"""Production health checks suitable for systemd timers and monitoring agents."""
+
+from __future__ import annotations
+
+import json
+import shutil
+from datetime import datetime, timezone
+from pathlib import Path
+
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
+
+
+class Command(BaseCommand):
+    help = "Check database, disk space, backup freshness and private-media permissions."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--json", action="store_true", dest="as_json")
+        parser.add_argument(
+            "--max-backup-age-hours",
+            type=int,
+            default=30,
+        )
+        parser.add_argument(
+            "--minimum-free-disk-percent",
+            type=float,
+            default=15.0,
+        )
+
+    def handle(self, *args, **options):
+        checks = []
+        failures = []
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+            checks.append({"name": "database", "status": "ok"})
+        except Exception as exc:
+            failures.append(f"database: {exc}")
+            checks.append({"name": "database", "status": "error"})
+
+        disk = shutil.disk_usage(settings.BASE_DIR)
+        free_percent = (disk.free / disk.total * 100) if disk.total else 0
+        disk_status = (
+            "ok"
+            if free_percent >= options["minimum_free_disk_percent"]
+            else "error"
+        )
+        checks.append(
+            {
+                "name": "disk",
+                "status": disk_status,
+                "free_percent": round(free_percent, 2),
+            }
+        )
+        if disk_status == "error":
+            failures.append(f"disk: only {free_percent:.1f}% free")
+
+        backup_root = Path(
+            getattr(settings, "BACKUP_ROOT", settings.BASE_DIR / "backups")
+        )
+        manifests = sorted(
+            backup_root.glob("alltech-backup-*.json") if backup_root.exists() else [],
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if not manifests:
+            checks.append({"name": "backup", "status": "error", "detail": "missing"})
+            failures.append("backup: no integrity manifest found")
+        else:
+            latest = manifests[0]
+            modified = datetime.fromtimestamp(latest.stat().st_mtime, tz=timezone.utc)
+            age_hours = (datetime.now(timezone.utc) - modified).total_seconds() / 3600
+            backup_status = (
+                "ok" if age_hours <= options["max_backup_age_hours"] else "error"
+            )
+            checks.append(
+                {
+                    "name": "backup",
+                    "status": backup_status,
+                    "age_hours": round(age_hours, 2),
+                    "manifest": latest.name,
+                }
+            )
+            if backup_status == "error":
+                failures.append(f"backup: newest manifest is {age_hours:.1f}h old")
+
+        private_root = Path(settings.PRIVATE_MEDIA_ROOT)
+        if not private_root.exists():
+            checks.append(
+                {"name": "private_media", "status": "warning", "detail": "not created"}
+            )
+        else:
+            mode = private_root.stat().st_mode & 0o777
+            private_status = "ok" if mode & 0o007 == 0 else "error"
+            checks.append(
+                {
+                    "name": "private_media",
+                    "status": private_status,
+                    "mode": oct(mode),
+                }
+            )
+            if private_status == "error":
+                failures.append(
+                    f"private_media: directory is accessible to other users ({oct(mode)})"
+                )
+
+        payload = {
+            "status": "error" if failures else "ok",
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "checks": checks,
+        }
+        if options["as_json"]:
+            self.stdout.write(json.dumps(payload, sort_keys=True))
+        else:
+            for check in checks:
+                self.stdout.write(
+                    f"{check['name']}: {check['status']}"
+                    + (f" ({check.get('detail')})" if check.get("detail") else "")
+                )
+
+        if failures:
+            raise CommandError("Operational health check failed — " + "; ".join(failures))
