@@ -1,7 +1,6 @@
 {% extends "base.html" %}
-{% load static %}
 {% block title %}Order {{ order.reference }}{% endblock %}
-{% block meta %}<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="same-origin"><link href="{% static 'css/customer_experience.css' %}" rel="stylesheet">{% endblock %}
+{% block meta %}<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="same-origin">{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">
