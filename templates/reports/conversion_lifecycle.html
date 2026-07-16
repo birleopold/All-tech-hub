@@ -15,7 +15,9 @@
   </div>
 </div>
 
-{% if conversion.failed_order_emails or conversion.missing_confirmation_emails or conversion.pending_older_than_24h %}
+{% if conversion.order_emails_enabled and not conversion.email_delivery_ready %}
+<div class="alert alert-danger border-0 shadow-sm" role="alert"><strong>Customer order emails cannot be delivered.</strong> The feature is enabled, but the configured Django mail backend is the non-delivering console backend. Configure and test SMTP before relying on confirmations.</div>
+{% elif conversion.failed_order_emails or conversion.missing_confirmation_emails or conversion.pending_older_than_24h %}
 <div class="alert alert-warning border-0 shadow-sm" role="alert">
   <strong>Lifecycle attention required.</strong>
   Failed order emails: {{ conversion.failed_order_emails }} · orders missing a sent confirmation record: {{ conversion.missing_confirmation_emails }} · pending over 24 hours: {{ conversion.pending_older_than_24h }}.
@@ -48,6 +50,8 @@
   <div class="col-lg-5">
     <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
       <p class="text-uppercase small fw-semibold text-primary mb-1">Customer communication</p><h2 class="h5 mb-3">Email delivery health</h2>
+      <div class="d-flex justify-content-between border-bottom py-2"><span>Feature enabled</span><strong>{{ conversion.order_emails_enabled|yesno:"Yes,No" }}</strong></div>
+      <div class="d-flex justify-content-between border-bottom py-2"><span>Delivery backend ready</span><strong class="{% if not conversion.email_delivery_ready %}text-danger{% endif %}">{{ conversion.email_delivery_ready|yesno:"Yes,No" }}</strong></div>
       <div class="d-flex justify-content-between border-bottom py-2"><span>Failed order emails</span><strong class="{% if conversion.failed_order_emails %}text-danger{% endif %}">{{ conversion.failed_order_emails }}</strong></div>
       <div class="d-flex justify-content-between border-bottom py-2"><span>Missing confirmation records</span><strong class="{% if conversion.missing_confirmation_emails %}text-warning{% endif %}">{{ conversion.missing_confirmation_emails }}</strong></div>
       <div class="d-flex justify-content-between border-bottom py-2"><span>Status emails sent</span><strong>{{ conversion.status_emails_sent }}</strong></div>
