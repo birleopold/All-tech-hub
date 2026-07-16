@@ -1,5 +1,6 @@
 from django.urls import path
 
+from core import private_views
 from operations import views
 
 urlpatterns = [
@@ -17,4 +18,14 @@ urlpatterns = [
     path("jobs/<int:pk>/labels/", views.job_label_sheet, name="staff_job_labels"),
     path("jobs/<int:pk>/time/", views.job_add_time, name="staff_job_time"),
     path("jobs/<int:pk>/attachment/", views.job_add_attachment, name="staff_job_attachment"),
+    path(
+        "jobs/attachments/<int:pk>/file/",
+        private_views.staff_job_attachment,
+        name="staff_job_attachment_file",
+    ),
+    path(
+        "jobs/<int:pk>/signature/",
+        private_views.staff_job_signature,
+        name="staff_job_signature",
+    ),
 ]
