@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "django.contrib.humanize", "django.contrib.sitemaps", "core", "crm", "catalog",
-    "commerce", "reliability.apps.ReliabilityConfig", "billing", "operations",
+    "commerce.apps.CommerceConfig", "reliability.apps.ReliabilityConfig", "billing", "operations",
     "dashboard", "reports", "portal", "purchasing", "messaging", "inventory",
     "marketing.apps.MarketingConfig", "growth.apps.GrowthConfig",
     "automation.apps.AutomationConfig",
@@ -108,6 +108,14 @@ BACKUP_ROOT = Path(os.getenv("ALLTECH_BACKUP_ROOT", str(BASE_DIR / "backups")))
 ORDER_RESERVATION_MINUTES = max(
     5,
     int(os.getenv("ALLTECH_ORDER_RESERVATION_MINUTES", "1440")),
+)
+ORDER_CUSTOMER_EMAILS_ENABLED = env_bool(
+    "ALLTECH_ORDER_CUSTOMER_EMAILS_ENABLED",
+    True,
+)
+ORDER_STATUS_EMAILS_ENABLED = env_bool(
+    "ALLTECH_ORDER_STATUS_EMAILS_ENABLED",
+    True,
 )
 PRODUCT_IMAGE_RESPONSIVE_ENABLED = env_bool(
     "ALLTECH_PRODUCT_IMAGE_RESPONSIVE_ENABLED",
