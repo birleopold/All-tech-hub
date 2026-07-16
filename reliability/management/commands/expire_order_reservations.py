@@ -44,17 +44,20 @@ class Command(BaseCommand):
         for reservation_id in due_ids:
             try:
                 with transaction.atomic():
-                    reservation = (
-                        OrderReservation.objects.select_for_update()
-                        .select_related("order")
-                        .get(pk=reservation_id)
+                    order_id = OrderReservation.objects.values_list(
+                        "order_id",
+                        flat=True,
+                    ).get(pk=reservation_id)
+                    order = Order.objects.select_for_update().get(pk=order_id)
+                    reservation = OrderReservation.objects.select_for_update().get(
+                        pk=reservation_id
                     )
                     if reservation.status != OrderReservation.STATUS_RESERVED:
                         already_closed += 1
                         continue
-                    order = Order.objects.select_for_update().get(
-                        pk=reservation.order_id
-                    )
+                    if reservation.expires_at > timezone.now():
+                        already_closed += 1
+                        continue
                     if order.status == Order.STATUS_PENDING:
                         transition_order(
                             order,
