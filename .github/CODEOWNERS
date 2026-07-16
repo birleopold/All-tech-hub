@@ -1,0 +1,12 @@
+# Require the repository owner to review all production changes.
+* @birleopold
+
+# Extra-sensitive areas
+/config/ @birleopold
+/deployment/ @birleopold
+/core/auth_views.py @birleopold
+/core/field_encryption.py @birleopold
+/billing/ @birleopold
+/commerce/ @birleopold
+/inventory/ @birleopold
+/.github/workflows/ @birleopold
