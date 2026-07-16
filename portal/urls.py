@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from core import private_views
-from portal import views
+from portal import views, warranty_views
 
 urlpatterns = [
     path("", views.PortalHomeView.as_view(), name="portal_home"),
@@ -26,6 +26,7 @@ urlpatterns = [
     ),
     path("orders/", views.MyOrdersView.as_view(), name="portal_orders"),
     path("orders/<int:pk>/", views.my_order_detail, name="portal_order_detail"),
+    path("warranties/", warranty_views.customer_warranties, name="portal_warranties"),
     path("documents/", views.MyDocumentsView.as_view(), name="portal_documents"),
     path("documents/<int:pk>/pdf/", views.my_document_pdf, name="portal_document_pdf"),
     path("tickets/", views.MyTicketsView.as_view(), name="portal_tickets"),
