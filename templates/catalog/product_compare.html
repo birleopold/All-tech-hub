@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% load catalog_images %}
+{% load static catalog_images %}
 {% block title %}Compare products{% endblock %}
 {% block meta %}
 <meta name="description" content="Compare selected LEOSOFT products side by side by price, availability, category and options.">
 <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'product_compare' %}">
+<link href="{% static 'css/customer_experience.css' %}" rel="stylesheet">
 <meta name="robots" content="noindex,follow">
 {% endblock %}
 {% block content %}
@@ -30,7 +31,7 @@
         <tr>
           <th scope="col">Feature</th>
           {% for product in products %}
-          <th scope="col" class="text-center" style="min-width:220px">
+          <th scope="col" class="text-center product-compare-column">
             {% if product.primary_display_image %}
             <div class="compare-image-wrap mx-auto mb-2">{% responsive_image product.primary_display_image product.name "img-fluid compare-image" "(max-width: 767px) 180px, 240px" "lazy" "low" %}</div>
             {% endif %}
