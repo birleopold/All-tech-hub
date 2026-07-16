@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}My warranties{% endblock %}
+{% block meta %}<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="same-origin">{% endblock %}
+{% block content %}
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div><p class="text-uppercase small text-white-50 mb-2">Customer portal</p><h1 class="display-6 fw-bold mb-2">My warranties</h1><p class="text-white-75 mb-0">Review registered serial numbers, sale dates and available warranty coverage.</p></div>
+      <a class="btn btn-light" href="{% url 'portal_home' %}">Back to portal</a>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5 col-xl-10">
+  <div class="row g-3 mb-4">
+    <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Active warranties</p><p class="display-6 text-success mb-0">{{ active_warranty_count }}</p></div></div></div>
+    <div class="col-md-6"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Expired or no coverage</p><p class="display-6 mb-0">{{ expired_warranty_count }}</p></div></div></div>
+  </div>
+
+  {% if warranties %}
+  <div class="row g-4">
+    {% for item in warranties %}
+    <div class="col-lg-6">
+      <article class="card border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><div><p class="small text-muted mb-1">{{ item.product.category.name }}</p><h2 class="h5 mb-0"><a class="text-decoration-none" href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></h2>{% if item.product_variant %}<p class="small text-muted mb-0">{{ item.product_variant.name }}</p>{% endif %}</div>{% if item.is_under_warranty %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Expired</span>{% endif %}</div>
+          <dl class="row small mb-3">
+            <dt class="col-5">Serial number</dt><dd class="col-7"><code>{{ item.serial_number }}</code></dd>
+            {% if item.imei %}<dt class="col-5">IMEI</dt><dd class="col-7"><code>{{ item.imei }}</code></dd>{% endif %}
+            <dt class="col-5">Sold on</dt><dd class="col-7">{{ item.sold_at|default:"Not recorded" }}</dd>
+            <dt class="col-5">Warranty period</dt><dd class="col-7">{{ item.warranty_months }} month{{ item.warranty_months|pluralize }}</dd>
+            <dt class="col-5">Coverage ends</dt><dd class="col-7">{{ item.warranty_expires_on|default:"No expiry recorded" }}</dd>
+          </dl>
+          {% if item.is_under_warranty %}<div class="alert alert-success small"><strong>Coverage appears active.</strong> Final eligibility depends on the warranty terms, product condition and inspection.</div>{% else %}<div class="alert alert-light small"><strong>Standard coverage is not active.</strong> LEOSOFT may still provide paid diagnostic or repair support.</div>{% endif %}
+          <a class="btn btn-outline-primary" href="{% url 'portal_ticket_create' %}">Ask about this product</a>
+        </div>
+      </article>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm text-center"><div class="card-body p-5"><i class="bi bi-shield-check display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No registered warranties yet</h2><p class="text-muted">Products appear here after a serialized unit is linked to your customer account.</p><a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">Ask LEOSOFT for help</a></div></div>
+  {% endif %}
+
+  <div class="alert alert-info mt-4 mb-0"><strong>Keep proof of purchase.</strong> Warranty duration shown here is a service record and does not replace the written warranty terms, receipt or manufacturer conditions.</div>
+</div>
+{% endblock %}
