@@ -72,6 +72,14 @@ class CustomerOrderEmailTests(TestCase):
         self.assertIn("Mobile Money", mail.outbox[0].body)
         self.assertIn(str(self.order.view_key), mail.outbox[0].body)
 
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend")
+    def test_console_backend_is_not_treated_as_customer_delivery(self):
+        row = send_order_confirmation(self.order)
+
+        self.assertIsNone(row)
+        self.assertFalse(OutboundEmail.objects.exists())
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_customer_visible_status_event_sends_after_commit(self):
         with self.captureOnCommitCallbacks(execute=True):
             OrderStatusEvent.objects.create(
