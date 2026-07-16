@@ -6,15 +6,17 @@ import base64
 import binascii
 import hashlib
 import os
+import re
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-_ENCRYPTED_PREFIX = "~"
 _TOTP_AAD = b"leosoft:staff-totp:v1"
-_NONCE_BYTES = 8
+_NONCE_BYTES = 12
+_PROTECTED_LENGTH = 64
+_PROTECTED_PATTERN = re.compile(r"^[A-Za-z0-9_-]{64}$")
 
 
 def _encryption_key() -> bytes:
@@ -27,7 +29,9 @@ def _encryption_key() -> bytes:
 
 
 def is_protected_secret(value: str) -> bool:
-    return bool(value and value.startswith(_ENCRYPTED_PREFIX))
+    """Encrypted tokens are fixed-length URL-safe base64; plaintext TOTP is 32 chars."""
+
+    return bool(value and _PROTECTED_PATTERN.fullmatch(value))
 
 
 def _decode_base32(value: str) -> bytes:
@@ -50,11 +54,10 @@ def protect_totp_secret(secret: str) -> str:
 
     nonce = os.urandom(_NONCE_BYTES)
     ciphertext = AESGCM(_encryption_key()).encrypt(nonce, raw_secret, _TOTP_AAD)
-    encoded = base64.urlsafe_b64encode(nonce + ciphertext).rstrip(b"=").decode("ascii")
-    protected = _ENCRYPTED_PREFIX + encoded
-    if len(protected) > 64:
+    protected = base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
+    if len(protected) != _PROTECTED_LENGTH:
         raise ImproperlyConfigured(
-            "The encrypted TOTP token exceeds StaffTwoFactor.secret capacity."
+            "The encrypted TOTP token does not match StaffTwoFactor.secret capacity."
         )
     return protected
 
@@ -64,10 +67,8 @@ def reveal_totp_secret(value: str) -> str:
 
     if not value or not is_protected_secret(value):
         return value
-    token = value[len(_ENCRYPTED_PREFIX) :]
-    padded = token + ("=" * ((4 - len(token) % 4) % 4))
     try:
-        payload = base64.urlsafe_b64decode(padded.encode("ascii"))
+        payload = base64.urlsafe_b64decode(value.encode("ascii"))
         nonce = payload[:_NONCE_BYTES]
         ciphertext = payload[_NONCE_BYTES:]
         raw_secret = AESGCM(_encryption_key()).decrypt(nonce, ciphertext, _TOTP_AAD)
