@@ -24,7 +24,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--strict",
             action="store_true",
-            help="Exit with failure when customer order emails remain failed.",
+            help="Exit with failure for failed emails or an enabled non-delivering backend.",
         )
 
     def handle(self, *args, **options):
@@ -55,6 +55,11 @@ class Command(BaseCommand):
                 f"Checkout conversion proxy: {summary['checkout_conversion_proxy']}%"
             )
             self.stdout.write(
+                "Customer order emails: "
+                f"{'enabled' if summary['order_emails_enabled'] else 'disabled'}; "
+                f"delivery backend ready: {summary['email_delivery_ready']}"
+            )
+            self.stdout.write(
                 f"Failed order emails: {summary['failed_order_emails']}"
             )
             self.stdout.write(
@@ -65,7 +70,16 @@ class Command(BaseCommand):
                 f"Pending orders older than 24h: {summary['pending_older_than_24h']}"
             )
 
-        if options["strict"] and summary["failed_order_emails"]:
-            raise CommandError(
-                f"{summary['failed_order_emails']} customer order email(s) remain failed."
+        if not options["strict"]:
+            return
+        failures = []
+        if summary["order_emails_enabled"] and not summary["email_delivery_ready"]:
+            failures.append(
+                "customer order emails are enabled but the configured mail backend does not deliver"
             )
+        if summary["failed_order_emails"]:
+            failures.append(
+                f"{summary['failed_order_emails']} customer order email(s) remain failed"
+            )
+        if failures:
+            raise CommandError("; ".join(failures) + ".")
