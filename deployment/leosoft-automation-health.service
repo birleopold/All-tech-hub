@@ -1,0 +1,13 @@
+[Unit]
+Description=Check LEOSOFT durable automation health
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=admin
+Group=www-data
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py check_automation_health --json
+NoNewPrivileges=true
+PrivateTmp=true
