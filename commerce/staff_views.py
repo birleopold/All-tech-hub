@@ -12,7 +12,7 @@ from django.views.generic import DetailView, ListView
 from billing.models import CommercialDocument, CommercialLine, allocate_document_number
 from commerce.fulfillment import transition_order
 from commerce.fulfillment_forms import OrderStatusForm, ShipmentForm
-from commerce.models import CustomerReturn, Order
+from commerce.models import CustomerReturn, Order, Shipment
 from commerce.return_forms import CustomerReturnForm
 from core.audit import log_audit_event
 from core.mixins import StaffRequiredMixin
@@ -214,16 +214,22 @@ def staff_order_transition(request, pk: int):
 def staff_order_shipment(request, pk: int):
     if not request.user.is_staff:
         raise Http404
-    current_order = get_object_or_404(Order, pk=pk)
-    current_shipment = getattr(current_order, "shipment", None)
-    form = ShipmentForm(request.POST, instance=current_shipment)
-    if not form.is_valid():
-        messages.error(request, "Check the shipment details.")
-        return redirect("staff_order_detail", pk=pk)
 
     try:
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=pk)
+            current_shipment = (
+                Shipment.objects.select_for_update().filter(order=order).first()
+            )
+            form = ShipmentForm(request.POST, instance=current_shipment)
+            if not form.is_valid():
+                errors = [
+                    str(error)
+                    for field_errors in form.errors.values()
+                    for error in field_errors
+                ]
+                raise ValidationError(errors or ["Check the shipment details."])
+
             shipment = form.save(commit=False)
             shipment.order = order
             if (
@@ -260,6 +266,8 @@ def staff_order_shipment(request, pk: int):
                 ),
                 target=shipment,
             )
+    except Order.DoesNotExist as exc:
+        raise Http404 from exc
     except ValidationError as exc:
         messages.error(
             request,
