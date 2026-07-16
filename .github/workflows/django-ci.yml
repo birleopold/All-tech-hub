@@ -58,6 +58,9 @@ jobs:
           catalog.test_responsive_images
           catalog.test_experience
           commerce.test_progress
+          commerce.test_customer_messages
+          commerce.test_recommendations
+          reports.test_conversion
           portal.test_warranties
           core.test_api_experience
           core.test_phase1_security
@@ -77,12 +80,24 @@ jobs:
             growth \
             reliability \
             marketing/forms.py \
+            commerce/apps.py \
             commerce/views.py \
             commerce/fulfillment.py \
             commerce/staff_views.py \
             commerce/progress.py \
+            commerce/customer_messages.py \
+            commerce/recommendations.py \
+            commerce/signals.py \
+            commerce/management/commands \
             commerce/templatetags \
             commerce/test_progress.py \
+            commerce/test_customer_messages.py \
+            commerce/test_recommendations.py \
+            reports/conversion.py \
+            reports/conversion_views.py \
+            reports/management/commands \
+            reports/templatetags \
+            reports/test_conversion.py \
             catalog/discovery.py \
             catalog/experience.py \
             catalog/responsive_images.py \
@@ -166,12 +181,13 @@ jobs:
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
 
-      - name: Run transaction and customer experience tests on PostgreSQL
+      - name: Run transaction and customer lifecycle tests on PostgreSQL
         run: >-
           python manage.py test
           reliability
           automation
           commerce
+          reports.test_conversion
           catalog.test_experience
           portal.test_warranties
           core.test_api_experience
