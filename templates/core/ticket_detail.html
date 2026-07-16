@@ -41,7 +41,7 @@
       </div>
       <p class="mb-1">{{ c.body|linebreaksbr }}</p>
       {% if c.attachment %}
-      <a class="small" href="{{ c.attachment.url }}" target="_blank" rel="noopener">View attachment</a>
+      <a class="small" href="{% url 'staff_ticket_attachment' c.pk %}" target="_blank" rel="noopener">View protected attachment</a>
       {% endif %}
     </div>
     {% empty %}
