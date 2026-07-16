@@ -50,6 +50,7 @@ class OrderExperienceApiTests(TestCase):
         self.assertEqual(payload["shipment"]["tracking_number"], "TRACK-001")
         self.assertIn("private", response.headers["Cache-Control"])
         self.assertIn("no-store", response.headers["Cache-Control"])
+        self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
 
     def test_order_lookup_still_requires_both_secret_parts(self):
         response = self.client.get(
@@ -57,3 +58,4 @@ class OrderExperienceApiTests(TestCase):
             {"reference": self.order.reference},
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
