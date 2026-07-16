@@ -5,6 +5,17 @@
 <div class="container pb-5"><div class="row g-4 align-items-start">
   <div class="col-lg-8">
     <div class="alert alert-info border-0 shadow-sm" role="status"><strong>Keep this page safe.</strong> The web address includes a private key and is not listed publicly.</div>
+    {% with reservation=order.stock_reservation %}
+      {% if reservation.status == 'reserved' %}
+      <div class="alert alert-warning border-0 shadow-sm" role="status"><strong>Your items are temporarily reserved.</strong> Please complete payment or confirm the order with LEOSOFT before {{ reservation.expires_at|date:"Y-m-d H:i" }}. Unconfirmed reservations may expire automatically so the stock can become available again.</div>
+      {% elif reservation.status == 'committed' %}
+      <div class="alert alert-success border-0 shadow-sm" role="status"><strong>Stock confirmed.</strong> Your reserved items have been committed to this order.</div>
+      {% elif reservation.status == 'expired' %}
+      <div class="alert alert-secondary border-0 shadow-sm" role="status"><strong>Reservation expired.</strong> The held stock has been released. Contact LEOSOFT to confirm current availability before paying.</div>
+      {% elif reservation.status == 'released' %}
+      <div class="alert alert-secondary border-0 shadow-sm" role="status"><strong>Reservation released.</strong> The held stock is no longer assigned to this order.</div>
+      {% endif %}
+    {% endwith %}
     <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Contact details</p><p class="mb-0">{{ order.contact_name }} · {{ order.contact_email }}{% if order.contact_phone %} · {{ order.contact_phone }}{% endif %}</p></div></div>
     <div class="table-responsive card border-0 shadow-sm overflow-hidden"><table class="table mb-0 align-middle"><caption class="visually-hidden">Line items and totals for order {{ order.reference }}</caption><thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th></tr></thead><tbody>{% for line in order.lines.all %}<tr><td>{{ line.description }}</td><td class="text-end">{{ line.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody></table></div>
     {% if order.customer_note %}<div class="card border-0 shadow-sm mt-4"><div class="card-body"><p class="small text-muted mb-1">Your note</p><p class="mb-0">{{ order.customer_note }}</p></div></div>{% endif %}
