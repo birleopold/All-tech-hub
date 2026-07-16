@@ -17,6 +17,7 @@ def env_list(name: str, default: str = "") -> list[str]:
 
 
 SECRET_KEY = os.getenv("ALLTECH_SECRET_KEY", "django-insecure-local-development-only")
+FIELD_ENCRYPTION_KEY = os.getenv("ALLTECH_FIELD_ENCRYPTION_KEY", SECRET_KEY)
 DEBUG = False
 ALLOWED_HOSTS = env_list("ALLTECH_ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env_list("ALLTECH_CSRF_TRUSTED_ORIGINS")
@@ -88,11 +89,19 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+PRIVATE_MEDIA_ROOT = Path(
+    os.getenv("ALLTECH_PRIVATE_MEDIA_ROOT", str(BASE_DIR / "private_media"))
+)
+PRIVATE_MEDIA_USE_X_ACCEL = env_bool("ALLTECH_PRIVATE_MEDIA_USE_X_ACCEL", False)
+BACKUP_ROOT = Path(os.getenv("ALLTECH_BACKUP_ROOT", str(BASE_DIR / "backups")))
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "staff_dashboard"
 LOGOUT_REDIRECT_URL = "home"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 SECURITY_HEADERS_ENABLED = env_bool("ALLTECH_SECURITY_HEADERS_ENABLED", True)
 REFERRER_POLICY = os.getenv("ALLTECH_REFERRER_POLICY", "same-origin")
