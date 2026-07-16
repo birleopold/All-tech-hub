@@ -1,8 +1,8 @@
 {% extends "staff_base.html" %}
 {% load automation_tags %}
-{% automation_summary as automation %}
 {% block title %}Marketing automation{% endblock %}
 {% block staff_content %}
+{% automation_summary as automation %}
 <section>
   <div class="card border-0 shadow-sm mb-4 overflow-hidden"><div class="card-body p-4 p-lg-5"><div class="d-flex justify-content-between align-items-start flex-wrap gap-3"><div><p class="text-uppercase small fw-semibold text-primary mb-2">Growth workspace</p><h1 class="display-6 fw-semibold mb-2">Marketing automation</h1><p class="text-muted mb-0">Plan campaigns, publish through approved connectors, retry failed work, measure traffic and track leads from one place.</p></div><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{% url 'staff_marketing_post_create' %}"><i class="bi bi-calendar-plus me-1"></i> Schedule post</a><a class="btn btn-outline-primary" href="{% url 'staff_marketing_link_create' %}"><i class="bi bi-link-45deg me-1"></i> Create tracked link</a><a class="btn btn-outline-secondary" href="{% url 'staff_growth_dashboard' %}"><i class="bi bi-graph-up-arrow me-1"></i> Growth &amp; analytics</a></div></div></div></div>
 
