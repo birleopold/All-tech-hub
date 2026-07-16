@@ -1,0 +1,19 @@
+{% load order_progress %}
+{% order_progress_data order as progress %}
+<section class="card border-0 shadow-sm mb-4" aria-labelledby="order-progress-heading">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+      <div><p class="text-uppercase small fw-semibold text-primary mb-1">Order progress</p><h2 class="h5 mb-0" id="order-progress-heading">{{ progress.current_label }}</h2></div>
+      {% if progress.cancelled %}<span class="badge text-bg-danger">Cancelled</span>{% else %}<span class="badge text-bg-light">{{ order.get_fulfillment_type_display }}</span>{% endif %}
+    </div>
+    <ol class="order-progress list-unstyled mb-0" aria-label="Order status progress">
+      {% for step in progress.steps %}
+      <li class="order-progress__step is-{{ step.state }}" {% if step.state == 'current' %}aria-current="step"{% endif %}>
+        <span class="order-progress__marker" aria-hidden="true">{% if step.state == 'complete' %}<i class="bi bi-check-lg"></i>{% elif step.state == 'current' %}<i class="bi bi-circle-fill"></i>{% else %}<i class="bi bi-circle"></i>{% endif %}</span>
+        <div><strong>{{ step.label }}</strong>{% if step.occurred_at %}<div class="small text-muted">{{ step.occurred_at|date:"Y-m-d H:i" }}</div>{% endif %}{% if step.note %}<div class="small text-muted">{{ step.note }}</div>{% endif %}</div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% if progress.cancelled %}<div class="alert alert-danger mt-4 mb-0"><strong>This order was cancelled.</strong>{% if progress.cancellation_reason %} {{ progress.cancellation_reason }}{% endif %}</div>{% endif %}
+  </div>
+</section>
