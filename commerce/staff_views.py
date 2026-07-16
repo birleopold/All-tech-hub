@@ -214,45 +214,61 @@ def staff_order_transition(request, pk: int):
 def staff_order_shipment(request, pk: int):
     if not request.user.is_staff:
         raise Http404
-    order = get_object_or_404(Order, pk=pk)
-    shipment = getattr(order, "shipment", None)
-    form = ShipmentForm(request.POST, instance=shipment)
+    current_order = get_object_or_404(Order, pk=pk)
+    current_shipment = getattr(current_order, "shipment", None)
+    form = ShipmentForm(request.POST, instance=current_shipment)
     if not form.is_valid():
         messages.error(request, "Check the shipment details.")
         return redirect("staff_order_detail", pk=pk)
-    shipment = form.save(commit=False)
-    shipment.order = order
-    if shipment.status == shipment.STATUS_IN_TRANSIT and not shipment.dispatched_at:
-        shipment.dispatched_at = timezone.now()
-    if shipment.status == shipment.STATUS_DELIVERED and not shipment.delivered_at:
-        shipment.delivered_at = timezone.now()
-    shipment.save()
-    target_status = None
-    if shipment.status == shipment.STATUS_IN_TRANSIT:
-        target_status = Order.STATUS_DISPATCHED
-    elif shipment.status == shipment.STATUS_DELIVERED:
-        target_status = Order.STATUS_DELIVERED
-    if target_status and order.status != target_status:
-        try:
-            order = transition_order(
-                order,
-                target_status,
+
+    try:
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=pk)
+            shipment = form.save(commit=False)
+            shipment.order = order
+            if (
+                shipment.status == shipment.STATUS_IN_TRANSIT
+                and not shipment.dispatched_at
+            ):
+                shipment.dispatched_at = timezone.now()
+            if (
+                shipment.status == shipment.STATUS_DELIVERED
+                and not shipment.delivered_at
+            ):
+                shipment.delivered_at = timezone.now()
+
+            target_status = None
+            if shipment.status == shipment.STATUS_IN_TRANSIT:
+                target_status = Order.STATUS_DISPATCHED
+            elif shipment.status == shipment.STATUS_DELIVERED:
+                target_status = Order.STATUS_DELIVERED
+            if target_status and order.status != target_status:
+                order = transition_order(
+                    order,
+                    target_status,
+                    actor=request.user,
+                    note=f"Shipment updated: {shipment.get_status_display()}",
+                )
+
+            shipment.save()
+            log_audit_event(
                 actor=request.user,
-                note=f"Shipment updated: {shipment.get_status_display()}",
+                verb="commerce.shipment_updated",
+                summary=(
+                    f"Shipment for {order.reference} updated to "
+                    f"{shipment.get_status_display()}"
+                ),
+                target=shipment,
             )
-        except ValidationError:
-            pass
-    log_audit_event(
-        actor=request.user,
-        verb="commerce.shipment_updated",
-        summary=(
-            f"Shipment for {order.reference} updated to "
-            f"{shipment.get_status_display()}"
-        ),
-        target=shipment,
-    )
+    except ValidationError as exc:
+        messages.error(
+            request,
+            "Shipment was not changed. " + "; ".join(exc.messages),
+        )
+        return redirect("staff_order_detail", pk=pk)
+
     from commerce.notifications import notify_order_status
 
     notify_order_status(order)
-    messages.success(request, "Shipment details updated.")
+    messages.success(request, "Shipment and order status updated together.")
     return redirect("staff_order_detail", pk=pk)
