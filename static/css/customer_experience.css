@@ -23,6 +23,10 @@
   background: #f8f9fa;
 }
 
+.product-compare-column {
+  min-width: 220px;
+}
+
 .product-compare-table th,
 .product-compare-table td {
   vertical-align: top;
