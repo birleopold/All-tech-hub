@@ -1,9 +1,10 @@
 [Unit]
-Description=Run LEOSOFT growth marketing automation every 15 minutes
+Description=Run LEOSOFT durable automation every minute
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=15min
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
 Persistent=true
 Unit=leosoft-marketing-posts.service
 
