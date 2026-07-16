@@ -115,9 +115,10 @@ def _graph_request(
     data: dict | None = None,
     query: dict | None = None,
 ) -> dict:
+    method = method.upper()
     query_data = dict(query or {})
     body_data = dict(data or {})
-    if method.upper() == "GET":
+    if method == "GET":
         query_data["access_token"] = config.access_token
     else:
         body_data["access_token"] = config.access_token
@@ -129,7 +130,7 @@ def _graph_request(
     request = Request(
         url,
         data=encoded,
-        method=method.upper(),
+        method=method,
         headers={
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
@@ -143,17 +144,29 @@ def _graph_request(
         raw = exc.read() if hasattr(exc, "read") else b""
         raise _parse_graph_error(raw, exc.code) from exc
     except (URLError, TimeoutError, OSError) as exc:
+        is_read_only = method == "GET"
         raise ConnectorError(
-            "Meta API could not be reached. The delivery outcome may be unknown; verify the platform before manually requeuing this job.",
-            retryable=True,
+            (
+                "Meta API could not be reached. The read-only request will retry."
+                if is_read_only
+                else "The Meta POST outcome is unknown because the connection failed. Verify the platform before requeuing to avoid a duplicate post."
+            ),
+            retryable=is_read_only,
+            code="transport_unknown" if not is_read_only else "transport_retry",
         ) from exc
 
     try:
         payload = json.loads(raw.decode("utf-8")) if raw else {}
     except Exception as exc:
+        is_read_only = method == "GET"
         raise ConnectorError(
-            "Meta API returned an unreadable response. Verify the platform before manually requeuing if the final outcome is uncertain.",
-            retryable=True,
+            (
+                "Meta API returned an unreadable read-only response."
+                if is_read_only
+                else "The Meta POST returned an unreadable response. Verify the platform before requeuing to avoid a duplicate post."
+            ),
+            retryable=is_read_only,
+            code="unreadable_response",
         ) from exc
     if isinstance(payload, dict) and payload.get("error"):
         raise _parse_graph_error(raw, 400)
