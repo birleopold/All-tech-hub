@@ -121,6 +121,12 @@ class PaymentAttempt(models.Model):
             models.Index(fields=["order", "status"], name="payment_order_status_idx"),
             models.Index(fields=["provider", "external_reference"], name="payment_provider_ref_idx"),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="payment_attempt_amount_positive",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.order.reference} — {self.provider} — {self.get_status_display()}"
@@ -168,6 +174,12 @@ class PaymentRefund(models.Model):
 
     class Meta:
         ordering = ["-processed_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="payment_refund_amount_positive",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"Refund {self.amount} for {self.payment_attempt.order.reference}"
