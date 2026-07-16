@@ -57,7 +57,7 @@
           {% if attachments %}
           <div class="row g-2">
             {% for a in attachments %}
-            <div class="col-6 col-md-4"><a href="{{ a.image.url }}" target="_blank" rel="noopener noreferrer" aria-label="View full-size photo{% if a.caption %}: {{ a.caption }}{% endif %}"><img src="{{ a.image.url }}" alt="{{ a.caption|default:job.number }}" class="img-fluid rounded border" loading="lazy"></a>{% if a.caption %}<p class="small text-muted mb-0">{{ a.caption }}</p>{% endif %}</div>
+            <div class="col-6 col-md-4"><a href="{% url 'portal_job_attachment_file' a.pk %}" target="_blank" rel="noopener noreferrer" aria-label="View full-size photo{% if a.caption %}: {{ a.caption }}{% endif %}"><img src="{% url 'portal_job_attachment_file' a.pk %}" alt="{{ a.caption|default:job.number }}" class="img-fluid rounded border" loading="lazy"></a>{% if a.caption %}<p class="small text-muted mb-0">{{ a.caption }}</p>{% endif %}</div>
             {% endfor %}
           </div>
           {% else %}<p class="text-muted small mb-0">No photos shared yet.</p>{% endif %}
