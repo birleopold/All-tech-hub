@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -89,12 +89,11 @@ class Command(BaseCommand):
                     )
                 )
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                "Reservation expiry complete — "
-                f"expired: {expired}; committed: {committed}; "
-                f"already closed: {already_closed}; failed: {failed}."
-            )
+        summary = (
+            "Reservation expiry complete — "
+            f"expired: {expired}; committed: {committed}; "
+            f"already closed: {already_closed}; failed: {failed}."
         )
         if failed:
-            raise SystemExit(1)
+            raise CommandError(summary)
+        self.stdout.write(self.style.SUCCESS(summary))
