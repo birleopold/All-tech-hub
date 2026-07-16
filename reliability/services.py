@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from commerce.models import Order
@@ -91,33 +91,28 @@ def create_order_reservation(
     if not key:
         raise ValidationError("A checkout idempotency key is required.")
     expires_at = expires_at or (timezone.now() + reservation_duration())
-    try:
-        reservation = OrderReservation.objects.create(
-            order=order,
-            idempotency_key=key,
-            expires_at=expires_at,
-            created_by=actor,
-        )
-    except IntegrityError as exc:
-        existing = (
-            OrderReservation.objects.select_related("order")
-            .filter(idempotency_key=key)
-            .first()
-        )
-        if existing and existing.order_id == order.pk:
-            return existing
+    reservation, created = OrderReservation.objects.get_or_create(
+        idempotency_key=key,
+        defaults={
+            "order": order,
+            "expires_at": expires_at,
+            "created_by": actor,
+        },
+    )
+    if reservation.order_id != order.pk:
         raise ValidationError(
             "This checkout request has already been used for another order."
-        ) from exc
-    log_audit_event(
-        actor=actor,
-        verb="commerce.stock_reserved",
-        summary=(
-            f"Stock reserved for {order.reference} until "
-            f"{timezone.localtime(expires_at):%Y-%m-%d %H:%M}"
-        ),
-        target=reservation,
-    )
+        )
+    if created:
+        log_audit_event(
+            actor=actor,
+            verb="commerce.stock_reserved",
+            summary=(
+                f"Stock reserved for {order.reference} until "
+                f"{timezone.localtime(expires_at):%Y-%m-%d %H:%M}"
+            ),
+            target=reservation,
+        )
     return reservation
 
 
@@ -218,40 +213,38 @@ def create_payment_attempt(
     normalised_amount = _normalise_money(amount)
     provider = (provider or "manual").strip().lower()[:64]
     currency = (currency or "UGX").strip().upper()[:8]
-    existing = PaymentAttempt.objects.select_for_update().filter(
-        idempotency_key=key
-    ).first()
-    if existing:
-        if (
-            existing.order_id != order.pk
-            or existing.amount != normalised_amount
-            or existing.provider != provider
-            or existing.currency != currency
-        ):
-            raise ValidationError(
-                "The payment idempotency key was already used with different details."
-            )
-        return existing, False
-    attempt = PaymentAttempt.objects.create(
-        order=order,
+    attempt, created = PaymentAttempt.objects.get_or_create(
         idempotency_key=key,
-        provider=provider,
-        external_reference=(external_reference or "")[:160],
-        amount=normalised_amount,
-        currency=currency,
-        safe_metadata=safe_metadata or {},
-        request_fingerprint=(request_fingerprint or "")[:64],
+        defaults={
+            "order": order,
+            "provider": provider,
+            "external_reference": (external_reference or "")[:160],
+            "amount": normalised_amount,
+            "currency": currency,
+            "safe_metadata": safe_metadata or {},
+            "request_fingerprint": (request_fingerprint or "")[:64],
+        },
     )
-    log_audit_event(
-        actor=actor,
-        verb="billing.payment_attempt_created",
-        summary=(
-            f"Payment attempt created for {order.reference}: "
-            f"{currency} {normalised_amount} via {provider}"
-        ),
-        target=attempt,
-    )
-    return attempt, True
+    if (
+        attempt.order_id != order.pk
+        or attempt.amount != normalised_amount
+        or attempt.provider != provider
+        or attempt.currency != currency
+    ):
+        raise ValidationError(
+            "The payment idempotency key was already used with different details."
+        )
+    if created:
+        log_audit_event(
+            actor=actor,
+            verb="billing.payment_attempt_created",
+            summary=(
+                f"Payment attempt created for {order.reference}: "
+                f"{currency} {normalised_amount} via {provider}"
+            ),
+            target=attempt,
+        )
+    return attempt, created
 
 
 @transaction.atomic
@@ -342,26 +335,33 @@ def record_payment_refund(
     payment_attempt = PaymentAttempt.objects.select_for_update().get(
         pk=payment_attempt.pk
     )
-    existing = PaymentRefund.objects.filter(idempotency_key=key).first()
-    if existing:
-        if (
-            existing.payment_attempt_id != payment_attempt.pk
-            or existing.amount != normalised_amount
-        ):
-            raise ValidationError(
-                "The refund idempotency key was already used with different details."
-            )
-        return existing, False
     if normalised_amount > payment_attempt.refundable_amount:
+        existing = PaymentRefund.objects.filter(idempotency_key=key).first()
+        if existing and (
+            existing.payment_attempt_id == payment_attempt.pk
+            and existing.amount == normalised_amount
+        ):
+            return existing, False
         raise ValidationError("Refund exceeds the remaining refundable amount.")
-    refund = PaymentRefund.objects.create(
-        payment_attempt=payment_attempt,
+    refund, created = PaymentRefund.objects.get_or_create(
         idempotency_key=key,
-        amount=normalised_amount,
-        reason=(reason or "Refund")[:255],
-        external_reference=(external_reference or "")[:160],
-        processed_by=actor,
+        defaults={
+            "payment_attempt": payment_attempt,
+            "amount": normalised_amount,
+            "reason": (reason or "Refund")[:255],
+            "external_reference": (external_reference or "")[:160],
+            "processed_by": actor,
+        },
     )
+    if (
+        refund.payment_attempt_id != payment_attempt.pk
+        or refund.amount != normalised_amount
+    ):
+        raise ValidationError(
+            "The refund idempotency key was already used with different details."
+        )
+    if not created:
+        return refund, False
     remaining = payment_attempt.refundable_amount
     target_status = (
         PaymentAttempt.STATUS_REFUNDED
@@ -414,22 +414,16 @@ def register_webhook_event(
     if not provider or not event_id:
         raise ValidationError("Webhook provider and event ID are required.")
     digest = payload_fingerprint(payload)
-    event = PaymentWebhookEvent.objects.select_for_update().filter(
+    event, created = PaymentWebhookEvent.objects.get_or_create(
         provider=provider,
         event_id=event_id,
-    ).first()
-    if event:
-        if event.payload_sha256 != digest:
-            raise ValidationError(
-                "A webhook event ID was reused with a different payload."
-            )
-        return event, False
-    event = PaymentWebhookEvent.objects.create(
-        provider=provider,
-        event_id=event_id,
-        payload_sha256=digest,
+        defaults={"payload_sha256": digest},
     )
-    return event, True
+    if event.payload_sha256 != digest:
+        raise ValidationError(
+            "A webhook event ID was reused with a different payload."
+        )
+    return event, created
 
 
 @transaction.atomic
