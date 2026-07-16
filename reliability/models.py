@@ -125,7 +125,12 @@ class PaymentAttempt(models.Model):
             models.CheckConstraint(
                 condition=models.Q(amount__gt=0),
                 name="payment_attempt_amount_positive",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["provider", "external_reference"],
+                condition=~models.Q(external_reference=""),
+                name="unique_provider_payment_reference",
+            ),
         ]
 
     def __str__(self) -> str:
