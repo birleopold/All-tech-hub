@@ -345,6 +345,13 @@ def transition_payment_attempt(
             f"Cannot move payment from {attempt.get_status_display()} to "
             f"{dict(PaymentAttempt.STATUS_CHOICES).get(new_status, new_status)}."
         )
+    if (
+        new_status == PaymentAttempt.STATUS_PAID
+        and locked_order.status == Order.STATUS_CANCELLED
+    ):
+        raise ValidationError(
+            f"Order {locked_order.reference} is cancelled and cannot accept a paid payment."
+        )
 
     projected_paid_total = None
     if new_status == PaymentAttempt.STATUS_PAID:
@@ -354,7 +361,7 @@ def transition_payment_attempt(
                 exclude_attempt_id=attempt.pk,
                 lock_attempts=True,
             )
-            + attempt.amount
+            + _attempt_net_amount(attempt)
         ).quantize(Decimal("0.01"))
         if projected_paid_total > locked_order.total:
             raise ValidationError(
