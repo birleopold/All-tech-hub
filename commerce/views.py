@@ -2,7 +2,8 @@ import secrets
 import uuid
 
 from django.contrib import messages
-from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
@@ -14,6 +15,7 @@ from commerce.forms import CheckoutForm
 from commerce.models import Order, OrderLine
 from commerce.stock import InsufficientStock, decrement_line_stock
 from core.models import CompanySettings
+from reliability.services import create_order_reservation, order_for_idempotency_key
 
 SESSION_CHECKOUT_TOKEN = "checkout_submit_token"
 
@@ -192,7 +194,21 @@ def checkout_view(request):
     if request.method == "GET":
         request.session[SESSION_CHECKOUT_TOKEN] = secrets.token_urlsafe(32)
     elif request.method == "POST":
-        posted = request.POST.get("checkout_token", "")
+        posted = (request.POST.get("checkout_token") or "").strip()
+        existing_order = order_for_idempotency_key(posted)
+        if existing_order is not None:
+            cart_mod.clear(request.session)
+            request.session.pop(SESSION_CHECKOUT_TOKEN, None)
+            messages.info(
+                request,
+                f"Order {existing_order.reference} was already received. No duplicate order was created.",
+            )
+            return redirect(
+                "order_detail",
+                reference=existing_order.reference,
+                view_key=existing_order.view_key,
+            )
+
         expected = request.session.get(SESSION_CHECKOUT_TOKEN)
         if not expected or posted != expected:
             messages.error(
@@ -202,6 +218,7 @@ def checkout_view(request):
             return redirect("checkout")
         form = CheckoutForm(request.POST)
         if form.is_valid():
+            reused_order = False
             try:
                 with transaction.atomic():
                     locked_coupon = None
@@ -242,9 +259,7 @@ def checkout_view(request):
 
                         type(locked_coupon).objects.filter(
                             pk=locked_coupon.pk
-                        ).update(
-                            times_used=_F("times_used") + 1
-                        )
+                        ).update(times_used=_F("times_used") + 1)
                     for ln in lines:
                         desc = ln.label
                         sku = (
@@ -266,6 +281,11 @@ def checkout_view(request):
                             qty=ln.quantity,
                             reference=order.reference,
                         )
+                    create_order_reservation(
+                        order,
+                        posted,
+                        actor=request.user if request.user.is_authenticated else None,
+                    )
                     cart_mod.clear(request.session)
             except InsufficientStock as exc:
                 messages.error(request, str(exc))
@@ -274,11 +294,24 @@ def checkout_view(request):
                 cart_mod.clear_coupon(request.session)
                 messages.error(request, str(exc))
                 return redirect("cart")
+            except (IntegrityError, ValidationError):
+                order = order_for_idempotency_key(posted)
+                if order is None:
+                    raise
+                reused_order = True
+                cart_mod.clear(request.session)
+
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
-            messages.success(
-                request,
-                f"Order placed — reference {order.reference}. We will contact you to confirm payment and delivery.",
-            )
+            if reused_order:
+                messages.info(
+                    request,
+                    f"Order {order.reference} was already received. No duplicate order was created.",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Order placed — reference {order.reference}. Stock is reserved while payment and delivery are confirmed.",
+                )
             return redirect(
                 "order_detail",
                 reference=order.reference,
