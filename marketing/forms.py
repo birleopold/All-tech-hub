@@ -1,5 +1,7 @@
 from django import forms
 
+from automation.models import PostAutomationPlan
+from automation.services import configure_post_plan
 from marketing.models import (
     CampaignLink,
     CaptionTemplate,
@@ -110,7 +112,25 @@ class ScheduledPostForm(BootstrapModelForm):
     channels = forms.MultipleChoiceField(
         choices=CHANNEL_CHOICES,
         widget=forms.CheckboxSelectMultiple,
-        help_text="Select every platform where this content should be published.",
+        help_text=(
+            "Facebook and Instagram can publish automatically after official Meta "
+            "credentials are connected. Other selected channels remain manual."
+        ),
+    )
+    publish_mode = forms.ChoiceField(
+        choices=PostAutomationPlan.MODE_CHOICES,
+        initial=PostAutomationPlan.MODE_MANUAL,
+        help_text=(
+            "Automatic mode is an approval to publish through configured official "
+            "connectors when the scheduled time arrives."
+        ),
+    )
+    media_url = forms.URLField(
+        required=False,
+        help_text=(
+            "Optional public HTTPS image URL. When blank, the selected product's "
+            "public image is used. Instagram requires an image."
+        ),
     )
     caption_template = forms.ModelChoiceField(
         queryset=CaptionTemplate.objects.filter(is_active=True),
@@ -127,9 +147,10 @@ class ScheduledPostForm(BootstrapModelForm):
             "caption_template",
             "caption",
             "channels",
+            "publish_mode",
+            "media_url",
             "status",
             "scheduled_for",
-            "external_url",
             "notes",
         )
         widgets = {
@@ -145,6 +166,13 @@ class ScheduledPostForm(BootstrapModelForm):
         self.fields["caption"].required = False
         if self.instance and self.instance.pk:
             self.initial["channels"] = self.instance.channels
+            try:
+                plan = self.instance.automation_plan
+            except PostAutomationPlan.DoesNotExist:
+                plan = None
+            if plan:
+                self.initial["publish_mode"] = plan.mode
+                self.initial["media_url"] = plan.media_url
 
     def clean(self):
         cleaned = super().clean()
@@ -153,6 +181,9 @@ class ScheduledPostForm(BootstrapModelForm):
         product = cleaned.get("product")
         template = cleaned.get("caption_template")
         caption = (cleaned.get("caption") or "").strip()
+        channels = set(cleaned.get("channels") or [])
+        publish_mode = cleaned.get("publish_mode")
+        media_url = (cleaned.get("media_url") or "").strip()
 
         if status == ScheduledPost.STATUS_SCHEDULED and not scheduled_for:
             self.add_error("scheduled_for", "Choose a publishing date and time.")
@@ -161,6 +192,20 @@ class ScheduledPostForm(BootstrapModelForm):
             cleaned["caption"] = caption
         if not caption:
             self.add_error("caption", "Enter a caption or select a caption template.")
+
+        has_product_image = bool(product and product.primary_display_image)
+        if (
+            publish_mode == PostAutomationPlan.MODE_AUTOMATIC
+            and "instagram" in channels
+            and not media_url
+            and not has_product_image
+        ):
+            self.add_error(
+                "media_url",
+                "Instagram automatic publishing requires a public image URL or a product image.",
+            )
+        if media_url and not media_url.lower().startswith("https://"):
+            self.add_error("media_url", "Use a public HTTPS image URL.")
         return cleaned
 
     def save(self, commit=True):
@@ -169,6 +214,11 @@ class ScheduledPostForm(BootstrapModelForm):
         instance.caption = self.cleaned_data.get("caption", "")
         if commit:
             instance.save()
+            configure_post_plan(
+                instance,
+                mode=self.cleaned_data.get("publish_mode"),
+                media_url=self.cleaned_data.get("media_url") or "",
+            )
         return instance
 
 
