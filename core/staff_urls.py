@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core import staff_views
+from core import private_views, staff_views
 
 urlpatterns = [
     path("search/", staff_views.StaffGlobalSearchView.as_view(), name="staff_search"),
@@ -18,6 +18,11 @@ urlpatterns = [
         "tickets/<int:pk>/comments/",
         staff_views.TicketCommentCreateView.as_view(),
         name="staff_ticket_comment_create",
+    ),
+    path(
+        "tickets/comments/<int:pk>/attachment/",
+        private_views.staff_ticket_attachment,
+        name="staff_ticket_attachment",
     ),
     path("notifications/", staff_views.StaffNotificationListView.as_view(), name="staff_notifications"),
     path(
