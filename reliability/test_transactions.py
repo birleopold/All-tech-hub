@@ -87,6 +87,18 @@ class TransactionReliabilityTests(TestCase):
         self.assertIsNotNone(reservation.committed_at)
         self.assertEqual(self.product.stock_quantity, 3)
 
+    def test_cancellation_requires_reason(self):
+        order = self.make_order()
+        create_order_reservation(order, "checkout-key-reason")
+
+        with self.assertRaises(ValidationError):
+            transition_order(order, Order.STATUS_CANCELLED, note="")
+
+        order.refresh_from_db()
+        self.product.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_PENDING)
+        self.assertEqual(self.product.stock_quantity, 3)
+
     def test_cancellation_releases_reservation_and_restores_stock_once(self):
         order = self.make_order()
         reservation = create_order_reservation(order, "checkout-key-4")
@@ -99,6 +111,65 @@ class TransactionReliabilityTests(TestCase):
 
         transition_order(order, Order.STATUS_CANCELLED, note="Repeated request")
         self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 5)
+
+    def test_cancellation_closes_open_payment_attempts(self):
+        order = self.make_order()
+        create_order_reservation(order, "checkout-key-open-payment")
+        attempt, _ = create_payment_attempt(
+            order=order,
+            idempotency_key="payment-key-open",
+            amount=order.total,
+            provider="testpay",
+        )
+        attempt = transition_payment_attempt(
+            attempt,
+            PaymentAttempt.STATUS_PENDING,
+            auto_confirm_order=False,
+        )
+
+        transition_order(order, Order.STATUS_CANCELLED, note="Customer cancelled")
+
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.status, PaymentAttempt.STATUS_CANCELLED)
+
+    def test_paid_order_requires_full_refund_before_cancellation(self):
+        order = self.make_order()
+        reservation = create_order_reservation(order, "checkout-key-paid-cancel")
+        attempt, _ = create_payment_attempt(
+            order=order,
+            idempotency_key="payment-key-paid-cancel",
+            amount=order.total,
+            provider="testpay",
+        )
+        attempt = transition_payment_attempt(
+            attempt,
+            PaymentAttempt.STATUS_PAID,
+        )
+
+        with self.assertRaises(ValidationError):
+            transition_order(order, Order.STATUS_CANCELLED, note="Customer cancelled")
+
+        order.refresh_from_db()
+        reservation.refresh_from_db()
+        self.product.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_CONFIRMED)
+        self.assertEqual(reservation.status, OrderReservation.STATUS_COMMITTED)
+        self.assertEqual(self.product.stock_quantity, 3)
+
+        record_payment_refund(
+            payment_attempt=attempt,
+            idempotency_key="refund-key-paid-cancel",
+            amount=order.total,
+            reason="Full refund before cancellation",
+        )
+        transition_order(order, Order.STATUS_CANCELLED, note="Refunded and cancelled")
+
+        order.refresh_from_db()
+        reservation.refresh_from_db()
+        self.product.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_CANCELLED)
+        self.assertEqual(reservation.status, OrderReservation.STATUS_RELEASED)
         self.assertEqual(self.product.stock_quantity, 5)
 
     def test_expiry_command_cancels_pending_order_and_restores_stock(self):
