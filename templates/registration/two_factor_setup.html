@@ -5,14 +5,26 @@
 <div class="card border-0 shadow-sm"><div class="card-body col-lg-7">
   {% if profile.enabled %}
   <div class="alert alert-success">Two-factor authentication is enabled.</div>
-  <form method="post" action="{% url 'staff_two_factor_disable' %}">{% csrf_token %}<button class="btn btn-outline-danger">Disable 2FA</button></form>
+  <p class="text-muted">For your protection, disabling it requires both your current password and a fresh authenticator code.</p>
+  <form method="post" action="{% url 'staff_two_factor_disable' %}" class="border rounded p-3">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label" for="disable-2fa-password">Current password</label>
+      <input id="disable-2fa-password" type="password" name="password" class="form-control" autocomplete="current-password" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="disable-2fa-otp">Current six-digit authenticator code</label>
+      <input id="disable-2fa-otp" name="otp" class="form-control" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+    </div>
+    <button class="btn btn-outline-danger" type="submit">Disable 2FA</button>
+  </form>
   {% else %}
   <p>Add an account manually in Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.</p>
-  <p><strong>Secret:</strong> <code class="user-select-all">{{ profile.secret }}</code></p>
+  <p><strong>Secret:</strong> <code class="user-select-all">{{ display_secret }}</code></p>
   <details class="mb-3"><summary>Show provisioning URI</summary><code class="user-select-all text-break">{{ provisioning_uri }}</code></details>
   <form method="post" action="{% url 'staff_two_factor_confirm' %}">{% csrf_token %}
     <label class="form-label">Enter the current six-digit code</label>
-    <input name="otp" class="form-control mb-2" inputmode="numeric" maxlength="6" required>
+    <input name="otp" class="form-control mb-2" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
     <button class="btn btn-primary">Verify and enable</button>
   </form>
   {% endif %}
