@@ -1,9 +1,14 @@
 from django.urls import path
 
-from reports import commission_views, views
+from reports import commission_views, conversion_views, views
 
 urlpatterns = [
     path("reports/", commission_views.ReportsHomeView.as_view(), name="staff_reports"),
+    path(
+        "reports/conversion/",
+        conversion_views.ConversionLifecycleView.as_view(),
+        name="staff_conversion_lifecycle",
+    ),
     path(
         "reports/export/orders.csv",
         views.staff_export_orders_csv,
