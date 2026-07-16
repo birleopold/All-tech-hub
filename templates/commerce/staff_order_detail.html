@@ -15,6 +15,61 @@
     </form>
   </div>
 </div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <h2 class="h6 text-muted mb-1">Stock reservation</h2>
+            {% if reservation %}
+            <p class="mb-1"><strong>{{ reservation.get_status_display }}</strong></p>
+            <p class="small text-muted mb-0">
+              Reserved {{ reservation.reserved_at|date:"Y-m-d H:i" }}
+              {% if reservation.status == 'reserved' %}<br>Expires {{ reservation.expires_at|date:"Y-m-d H:i" }}{% endif %}
+              {% if reservation.committed_at %}<br>Committed {{ reservation.committed_at|date:"Y-m-d H:i" }}{% endif %}
+              {% if reservation.released_at %}<br>Closed {{ reservation.released_at|date:"Y-m-d H:i" }}{% endif %}
+            </p>
+            {% if reservation.release_reason %}<p class="small mb-0 mt-2">{{ reservation.release_reason }}</p>{% endif %}
+            {% else %}
+            <p class="text-muted small mb-0">Legacy or staff-created order without a tracked reservation.</p>
+            {% endif %}
+          </div>
+          {% if reservation %}<span class="badge {% if reservation.status == 'reserved' %}text-bg-warning{% elif reservation.status == 'committed' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ reservation.get_status_display }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Payment attempts</h2>
+        {% if payment_attempts %}
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Provider</th><th>Status</th><th>Amount</th><th>Reference</th><th>Updated</th></tr></thead>
+            <tbody>
+              {% for payment in payment_attempts %}
+              <tr>
+                <td>{{ payment.provider|title }}</td>
+                <td><span class="badge {% if payment.status == 'paid' %}text-bg-success{% elif payment.status == 'failed' or payment.status == 'expired' or payment.status == 'cancelled' %}text-bg-danger{% elif payment.status == 'refunded' or payment.status == 'partial_refund' %}text-bg-secondary{% else %}text-bg-warning{% endif %}">{{ payment.get_status_display }}</span></td>
+                <td>{{ payment.currency }} {{ payment.amount|floatformat:2 }}</td>
+                <td>{{ payment.external_reference|default:"—" }}</td>
+                <td>{{ payment.updated_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted small mb-0">No payment attempt has been recorded for this order.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body">
     <h2 class="h6">Customer return</h2>
