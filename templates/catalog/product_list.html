@@ -1,5 +1,11 @@
 {% extends "base.html" %}
+{% load catalog_images %}
 {% block title %}{% if current_kind == 'service' %}Services{% elif current_kind == 'physical' %}Products{% else %}Catalog{% endif %} — Products and services{% endblock %}
+{% block meta %}
+<meta name="description" content="{% if current_kind == 'service' %}Book repairs, installations and professional IT support from LEOSOFT UG LTD.{% elif current_kind == 'physical' %}Browse computers, accessories and technology products available from LEOSOFT UG LTD.{% else %}Browse LEOSOFT products, services, repairs and IT support solutions.{% endif %}">
+<link rel="canonical" href="{{ catalog_canonical_url }}">
+{% if catalog_noindex %}<meta name="robots" content="noindex,follow">{% endif %}
+{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-4">
   <div class="container py-4 py-lg-5">
@@ -9,7 +15,7 @@
         <h1 class="display-6 fw-bold mb-2" id="catalog-heading">{% if current_kind == 'service' %}Book repairs, installations and IT support{% elif current_kind == 'physical' %}Browse available products and accessories{% else %}Find products, services and support{% endif %}</h1>
         <p class="text-white-75 mb-0">{% if current_kind == 'service' %}Choose a service, check the starting price, and request help from the team with clear documentation.{% elif current_kind == 'physical' %}Browse devices and accessories with prices, options and availability signals.{% else %}Browse devices, accessories, repairs and IT services with clear pricing and availability.{% endif %}</p>
       </div>
-      <a class="btn btn-light" href="{% url 'contact' %}">{% if current_kind == 'service' %}Book service{% else %}Request a quote{% endif %}</a>
+      <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-light" href="{% url 'product_compare' %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>Compare{% if compare_count %} ({{ compare_count }}){% endif %}</a><a class="btn btn-light" href="{% url 'contact' %}">{% if current_kind == 'service' %}Book service{% else %}Request a quote{% endif %}</a></div>
     </div>
   </div>
 </section>
@@ -80,7 +86,7 @@
                data-item-category="{{ p.category.name }}"
                data-item-price="{% if p.has_sellable_variants and p.min_active_variant_price %}{{ p.min_active_variant_price }}{% else %}{{ p.price }}{% endif %}">
         <div class="catalog-card-image-wrap">
-          {% if p.primary_display_image %}<img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover catalog-card-image" alt="{{ p.name }}">{% else %}<div class="catalog-card-placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>{% endif %}
+          {% if p.primary_display_image %}{% responsive_image p.primary_display_image p.name "card-img-top object-fit-cover catalog-card-image" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 33vw, 25vw" "lazy" "low" %}{% else %}<div class="catalog-card-placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>{% endif %}
           <span class="catalog-card-badge badge {% if p.kind == 'service' %}badge-kind-service{% else %}badge-kind-product{% endif %}">{% if p.kind == 'service' %}Service{% else %}Product{% endif %}</span>
         </div>
         <div class="card-body d-flex flex-column">
@@ -94,6 +100,7 @@
             </div>
             {% if p.kind == 'service' %}<span class="catalog-stock-pill text-primary bg-primary-subtle">Book service</span>{% elif p.available_to_sell %}<span class="catalog-stock-pill text-success bg-success-subtle">In stock</span>{% else %}<span class="catalog-stock-pill text-secondary bg-light">Ask availability</span>{% endif %}
             {% if p.is_low_stock %}<span class="catalog-stock-pill text-warning bg-warning-subtle ms-1">Low stock</span>{% endif %}
+            {% if p.kind == 'physical' %}<form method="post" action="{% url 'product_compare_toggle' p.pk %}" class="position-relative z-2 mt-3">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-sm {% if p.pk in compare_product_ids %}btn-primary{% else %}btn-outline-primary{% endif %} w-100" aria-pressed="{% if p.pk in compare_product_ids %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>{% if p.pk in compare_product_ids %}Selected for comparison{% else %}Compare{% endif %}</button></form>{% endif %}
           </div>
         </div>
       </article>
