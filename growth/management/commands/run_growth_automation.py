@@ -1,76 +1,55 @@
-from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.core.management.base import BaseCommand, CommandError
 
-from growth.models import GrowthSettings, SavedCart, StockAlertSubscription
-from growth.services import process_saved_cart_reminders, process_stock_alerts
-from marketing.models import ScheduledPost
+from automation.services import (
+    process_automation_jobs,
+    queue_due_growth_jobs,
+    queue_due_posts,
+)
 
 
 class Command(BaseCommand):
     help = (
-        "Prepare due marketing posts, send consented saved-cart reminders, "
-        "and process back-in-stock or price-drop alerts."
+        "Queue and process durable marketing, saved-cart and stock-alert jobs. "
+        "Kept for compatibility with the existing systemd service."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Show due work without changing records or sending email.",
+            help="Show due work without changing records or sending anything.",
         )
         parser.add_argument(
             "--limit",
             type=int,
             default=100,
-            help="Maximum reminder or alert records processed per category.",
+            help="Maximum records queued or processed per category.",
         )
 
     def handle(self, *args, **options):
-        now = timezone.now()
-        limit = max(1, options["limit"])
-        due_posts = ScheduledPost.objects.filter(
-            status=ScheduledPost.STATUS_SCHEDULED,
-            scheduled_for__isnull=False,
-            scheduled_for__lte=now,
+        limit = max(1, min(int(options["limit"] or 100), 2000))
+        dry_run = options["dry_run"]
+        posts = queue_due_posts(limit=limit, dry_run=dry_run)
+        growth = queue_due_growth_jobs(limit=limit, dry_run=dry_run)
+        jobs = (
+            {"succeeded": 0, "retried": 0, "failed": 0}
+            if dry_run
+            else process_automation_jobs(limit=limit)
         )
-
-        config = GrowthSettings.load()
-        first_cutoff = now - timezone.timedelta(
-            hours=config.abandoned_cart_first_delay_hours
-        )
-        second_cutoff = now - timezone.timedelta(
-            hours=config.abandoned_cart_second_delay_hours
-        )
-        due_first = SavedCart.objects.filter(
-            status=SavedCart.STATUS_ACTIVE,
-            first_reminder_sent_at__isnull=True,
-            last_activity__lte=first_cutoff,
-        ).count()
-        due_second = SavedCart.objects.filter(
-            status=SavedCart.STATUS_ACTIVE,
-            first_reminder_sent_at__isnull=False,
-            first_reminder_sent_at__lte=second_cutoff,
-            second_reminder_sent_at__isnull=True,
-        ).count()
-        active_alerts = StockAlertSubscription.objects.filter(is_active=True).count()
-
-        if options["dry_run"]:
-            self.stdout.write(f"Due scheduled posts: {due_posts.count()}")
-            self.stdout.write(f"Due first cart reminders: {due_first}")
-            self.stdout.write(f"Due second cart reminders: {due_second}")
-            self.stdout.write(f"Active stock/price alerts to evaluate: {active_alerts}")
-            return
-
-        posts_updated = due_posts.update(status=ScheduledPost.STATUS_READY)
-        carts = process_saved_cart_reminders(limit=limit)
-        alerts = process_stock_alerts(limit=limit)
         self.stdout.write(
             self.style.SUCCESS(
                 "Growth automation complete — "
-                f"posts ready: {posts_updated}; "
-                f"first reminders: {carts['first']}; "
-                f"second reminders: {carts['second']}; "
-                f"product alerts: {alerts['sent']}; "
-                f"email errors: {carts['errors'] + alerts['errors']}."
+                f"due posts: {posts['due']}; "
+                f"social jobs queued: {posts['queued']}; "
+                f"manual channels: {posts['manual']}; "
+                f"due cart reminders: {growth['due_cart']}; "
+                f"due product alerts: {growth['due_alerts']}; "
+                f"jobs succeeded: {jobs['succeeded']}; "
+                f"jobs retrying: {jobs['retried']}; "
+                f"jobs failed: {jobs['failed']}."
             )
         )
+        if jobs["failed"]:
+            raise CommandError(
+                f"{jobs['failed']} automation job(s) reached permanent failure."
+            )
