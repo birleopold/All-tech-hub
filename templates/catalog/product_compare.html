@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load catalog_images %}
+{% block title %}Compare products{% endblock %}
+{% block meta %}
+<meta name="description" content="Compare selected LEOSOFT products side by side by price, availability, category and options.">
+<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'product_compare' %}">
+<meta name="robots" content="noindex,follow">
+{% endblock %}
+{% block content %}
+<section class="catalog-hero mb-5">
+  <div class="container py-4 py-lg-5">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+      <div><p class="text-uppercase small text-white-50 mb-2">Product comparison</p><h1 class="display-6 fw-bold mb-2">Compare up to four products</h1><p class="text-white-75 mb-0">Review prices, availability and important details without losing your place in the shop.</p></div>
+      <a class="btn btn-light" href="{% url 'product_list' %}?kind=physical">Add products</a>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <p class="text-muted mb-0">{{ compare_count }} product{{ compare_count|pluralize }} selected</p>
+    {% if products %}<form method="post" action="{% url 'product_compare_clear' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" type="submit">Clear comparison</button></form>{% endif %}
+  </div>
+
+  {% if products %}
+  <div class="table-responsive card border-0 shadow-sm overflow-hidden">
+    <table class="table align-middle mb-0 product-compare-table">
+      <caption class="visually-hidden">Comparison of {{ compare_count }} selected products</caption>
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Feature</th>
+          {% for product in products %}
+          <th scope="col" class="text-center" style="min-width:220px">
+            {% if product.primary_display_image %}
+            <div class="compare-image-wrap mx-auto mb-2">{% responsive_image product.primary_display_image product.name "img-fluid compare-image" "(max-width: 767px) 180px, 240px" "lazy" "low" %}</div>
+            {% endif %}
+            <a class="text-decoration-none fw-semibold" href="{{ product.get_absolute_url }}">{{ product.name }}</a>
+            <form method="post" action="{% url 'product_compare_toggle' product.pk %}" class="mt-2">{% csrf_token %}<input type="hidden" name="next" value="{% url 'product_compare' %}"><button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Remove {{ product.name }} from comparison">Remove</button></form>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Category</th>{% for product in products %}<td>{{ product.category.name }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Price</th>{% for product in products %}<td class="fw-semibold">{% if product.has_sellable_variants and product.min_active_variant_price %}From {% endif %}{{ company.currency_code }} {% if product.has_sellable_variants and product.min_active_variant_price %}{{ product.min_active_variant_price }}{% else %}{{ product.price }}{% endif %}</td>{% endfor %}</tr>
+        <tr><th scope="row">Availability</th>{% for product in products %}<td>{% if product.available_to_sell %}<span class="badge text-bg-success">In stock</span>{% else %}<span class="badge text-bg-secondary">Ask availability</span>{% endif %}{% if product.is_low_stock %} <span class="badge text-bg-warning">Low stock</span>{% endif %}</td>{% endfor %}</tr>
+        <tr><th scope="row">Options</th>{% for product in products %}<td>{% if product.has_sellable_variants %}{{ product.active_variant_count }} option{{ product.active_variant_count|pluralize }}{% else %}Standard item{% endif %}</td>{% endfor %}</tr>
+        <tr><th scope="row">Summary</th>{% for product in products %}<td>{{ product.short_description|default:product.description|truncatewords:28 }}</td>{% endfor %}</tr>
+        <tr><th scope="row">Action</th>{% for product in products %}<td><a class="btn btn-primary w-100" href="{{ product.get_absolute_url }}">View product</a></td>{% endfor %}</tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-columns-gap display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No products selected</h2><p class="text-muted">Open the shop and use “Compare” on up to four physical products.</p><a class="btn btn-primary" href="{% url 'product_list' %}?kind=physical">Browse products</a></div></div>
+  {% endif %}
+</div>
+{% endblock %}
