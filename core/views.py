@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.templatetags.static import static
 from django.views.generic import TemplateView
 
 from core.forms import ContactForm
@@ -55,70 +56,82 @@ def healthz(request):
 
 
 def service_worker(request):
-    body = """
-const CACHE_NAME = "alltech-hub-v1";
+    """Serve a privacy-safe service worker.
+
+    Navigation responses are never written to the browser cache. This prevents
+    staff, portal, order, quote, payment and customer pages from being retained
+    on shared devices. Only versioned static assets and the generic offline page
+    are cached.
+    """
+
+    offline_url = "/offline/"
+    stylesheet_url = static("css/site.css")
+    manifest_url = static("site.webmanifest")
+    body = f"""
+const CACHE_NAME = "leosoft-public-assets-v2";
 const PRECACHE_URLS = [
-  "/",
-  "/offline/",
-  "/static/css/site.css",
-  "/static/site.webmanifest"
+  "{offline_url}",
+  "{stylesheet_url}",
+  "{manifest_url}"
 ];
 
-self.addEventListener("install", event => {
+self.addEventListener("install", event => {{
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(PRECACHE_URLS))
       .then(() => self.skipWaiting())
   );
-});
+}});
 
-self.addEventListener("activate", event => {
+self.addEventListener("activate", event => {{
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.map(key => {
+      .then(keys => Promise.all(keys.map(key => {{
         if (key !== CACHE_NAME) return caches.delete(key);
         return Promise.resolve();
-      })))
+      }})))
       .then(() => self.clients.claim())
   );
-});
+}});
 
-self.addEventListener("fetch", event => {
+self.addEventListener("fetch", event => {{
   const request = event.request;
   if (request.method !== "GET") return;
+
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (request.mode === "navigate") {
+  // Never cache HTML/navigation responses. Online requests go directly to the
+  // server; offline requests receive only the generic offline page.
+  if (request.mode === "navigate") {{
     event.respondWith(
-      fetch(request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => caches.match(request).then(cached => cached || caches.match("/offline/")))
+      fetch(request, {{ cache: "no-store" }})
+        .catch(() => caches.match("{offline_url}"))
     );
     return;
-  }
+  }}
+
+  // Cache only public static assets. Media, API, portal, payment and staff
+  // responses always remain network-only.
+  if (!url.pathname.startsWith("/static/")) return;
 
   event.respondWith(
-    caches.match(request).then(cached => {
+    caches.match(request).then(cached => {{
       if (cached) return cached;
-      return fetch(request).then(response => {
-        if (response.ok) {
+      return fetch(request).then(response => {{
+        if (response.ok && response.type === "basic") {{
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
+        }}
         return response;
-      });
-    })
+      }});
+    }})
   );
-});
+}});
 """.strip()
     response = HttpResponse(body, content_type="application/javascript")
     response["Service-Worker-Allowed"] = "/"
-    response["Cache-Control"] = "no-cache"
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 
 
