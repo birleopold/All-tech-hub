@@ -149,6 +149,7 @@ class PaymentAttempt(models.Model):
         if self.status not in {
             self.STATUS_PAID,
             self.STATUS_PARTIALLY_REFUNDED,
+            self.STATUS_DISPUTED,
         }:
             return Decimal("0")
         refunded = sum(
