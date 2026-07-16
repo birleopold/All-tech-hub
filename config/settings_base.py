@@ -16,6 +16,16 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def env_int_list(name: str, default: str) -> tuple[int, ...]:
+    values = []
+    for item in env_list(name, default):
+        try:
+            values.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return tuple(values)
+
+
 SECRET_KEY = os.getenv("ALLTECH_SECRET_KEY", "django-insecure-local-development-only")
 FIELD_ENCRYPTION_KEY = os.getenv("ALLTECH_FIELD_ENCRYPTION_KEY", SECRET_KEY)
 DEBUG = False
@@ -98,6 +108,18 @@ BACKUP_ROOT = Path(os.getenv("ALLTECH_BACKUP_ROOT", str(BASE_DIR / "backups")))
 ORDER_RESERVATION_MINUTES = max(
     5,
     int(os.getenv("ALLTECH_ORDER_RESERVATION_MINUTES", "1440")),
+)
+PRODUCT_IMAGE_RESPONSIVE_ENABLED = env_bool(
+    "ALLTECH_PRODUCT_IMAGE_RESPONSIVE_ENABLED",
+    True,
+)
+PRODUCT_IMAGE_RESPONSIVE_WIDTHS = env_int_list(
+    "ALLTECH_PRODUCT_IMAGE_RESPONSIVE_WIDTHS",
+    "320,640,960,1280",
+)
+PRODUCT_IMAGE_RESPONSIVE_QUALITY = max(
+    60,
+    min(95, int(os.getenv("ALLTECH_PRODUCT_IMAGE_RESPONSIVE_QUALITY", "84"))),
 )
 
 AUTOMATION_JOB_MAX_ATTEMPTS = max(
