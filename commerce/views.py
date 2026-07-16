@@ -174,6 +174,23 @@ def cart_remove(request, product_id: int):
 
 
 def checkout_view(request):
+    posted = ""
+    if request.method == "POST":
+        posted = (request.POST.get("checkout_token") or "").strip()
+        existing_order = order_for_idempotency_key(posted)
+        if existing_order is not None:
+            cart_mod.clear(request.session)
+            request.session.pop(SESSION_CHECKOUT_TOKEN, None)
+            messages.info(
+                request,
+                f"Order {existing_order.reference} was already received. No duplicate order was created.",
+            )
+            return redirect(
+                "order_detail",
+                reference=existing_order.reference,
+                view_key=existing_order.view_key,
+            )
+
     lines = list(cart_mod.iter_cart_lines(request.session))
     if not lines:
         messages.warning(request, "Your cart is empty.")
@@ -194,21 +211,6 @@ def checkout_view(request):
     if request.method == "GET":
         request.session[SESSION_CHECKOUT_TOKEN] = secrets.token_urlsafe(32)
     elif request.method == "POST":
-        posted = (request.POST.get("checkout_token") or "").strip()
-        existing_order = order_for_idempotency_key(posted)
-        if existing_order is not None:
-            cart_mod.clear(request.session)
-            request.session.pop(SESSION_CHECKOUT_TOKEN, None)
-            messages.info(
-                request,
-                f"Order {existing_order.reference} was already received. No duplicate order was created.",
-            )
-            return redirect(
-                "order_detail",
-                reference=existing_order.reference,
-                view_key=existing_order.view_key,
-            )
-
         expected = request.session.get(SESSION_CHECKOUT_TOKEN)
         if not expected or posted != expected:
             messages.error(
@@ -350,7 +352,7 @@ def checkout_view(request):
 
 def order_detail(request, reference: str, view_key: uuid.UUID):
     order = get_object_or_404(
-        Order.objects.select_related("customer").prefetch_related(
+        Order.objects.select_related("customer", "stock_reservation").prefetch_related(
             "lines__product", "lines__product_variant"
         ),
         reference=reference,
