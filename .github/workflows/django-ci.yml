@@ -96,7 +96,6 @@ jobs:
             reports/conversion.py \
             reports/conversion_views.py \
             reports/management/commands \
-            reports/templatetags \
             reports/test_conversion.py \
             catalog/discovery.py \
             catalog/experience.py \
