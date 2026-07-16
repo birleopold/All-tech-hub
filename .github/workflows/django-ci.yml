@@ -45,7 +45,7 @@ jobs:
           python manage.py check --deploy
           python manage.py collectstatic --noinput
 
-      - name: Run marketing, growth, image, discovery and Phase 1 tests
+      - name: Run focused application tests
         run: >-
           python manage.py test
           growth.test_growth
@@ -54,11 +54,16 @@ jobs:
           catalog.test_watermarks
           catalog.test_discovery
           core.test_phase1_security
+          reliability.test_transactions
 
       - name: Run Ruff on changed Python scope
         run: >-
           ruff check
           growth
+          reliability
+          commerce/views.py
+          commerce/fulfillment.py
+          commerce/staff_views.py
           catalog/discovery.py
           catalog/views.py
           catalog/watermarks.py
@@ -84,3 +89,50 @@ jobs:
           config/settings_base.py
           config/settings_production.py
           config/urls.py
+
+  transaction-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: leosoft_ci
+          POSTGRES_USER: leosoft_ci
+          POSTGRES_PASSWORD: leosoft_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U leosoft_ci -d leosoft_ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      ALLTECH_DB_ENGINE: django.db.backends.postgresql
+      ALLTECH_DB_NAME: leosoft_ci
+      ALLTECH_DB_USER: leosoft_ci
+      ALLTECH_DB_PASSWORD: leosoft_ci_password
+      ALLTECH_DB_HOST: 127.0.0.1
+      ALLTECH_DB_PORT: 5432
+      ALLTECH_SECRET_KEY: ci-transaction-secret-key-that-is-longer-than-fifty-characters-123456
+      ALLTECH_FIELD_ENCRYPTION_KEY: ci-transaction-field-encryption-key-longer-than-thirty-two
+      ALLTECH_ALLOWED_HOSTS: localhost
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.lock
+
+      - name: Apply migrations on PostgreSQL
+        run: python manage.py migrate --noinput
+
+      - name: Run transaction reliability tests on PostgreSQL
+        run: python manage.py test reliability.test_transactions commerce
