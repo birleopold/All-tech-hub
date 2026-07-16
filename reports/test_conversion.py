@@ -120,5 +120,5 @@ class ConversionLifecycleReportTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Conversion and customer lifecycle")
-        self.assertContains(response, "500,000.00")
+        self.assertContains(response, "500000.00")
         self.assertContains(response, "Saved carts")
