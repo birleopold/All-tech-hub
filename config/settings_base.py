@@ -26,9 +26,9 @@ INSTALLED_APPS = [
     "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "django.contrib.humanize", "django.contrib.sitemaps", "core", "crm", "catalog",
-    "commerce", "billing", "operations", "dashboard", "reports", "portal",
-    "purchasing", "messaging", "inventory", "marketing.apps.MarketingConfig",
-    "growth.apps.GrowthConfig",
+    "commerce", "reliability.apps.ReliabilityConfig", "billing", "operations",
+    "dashboard", "reports", "portal", "purchasing", "messaging", "inventory",
+    "marketing.apps.MarketingConfig", "growth.apps.GrowthConfig",
 ]
 
 MIDDLEWARE = [
@@ -94,6 +94,10 @@ PRIVATE_MEDIA_ROOT = Path(
 )
 PRIVATE_MEDIA_USE_X_ACCEL = env_bool("ALLTECH_PRIVATE_MEDIA_USE_X_ACCEL", False)
 BACKUP_ROOT = Path(os.getenv("ALLTECH_BACKUP_ROOT", str(BASE_DIR / "backups")))
+ORDER_RESERVATION_MINUTES = max(
+    5,
+    int(os.getenv("ALLTECH_ORDER_RESERVATION_MINUTES", "1440")),
+)
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "staff_dashboard"
