@@ -1,0 +1,11 @@
+[Unit]
+Description=Run LEOSOFT transaction integrity audit daily
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+RandomizedDelaySec=300
+Unit=leosoft-transaction-audit.service
+
+[Install]
+WantedBy=timers.target
