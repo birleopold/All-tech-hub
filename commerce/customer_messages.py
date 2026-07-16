@@ -12,10 +12,17 @@ from messaging.models import OutboundEmail
 
 
 ORDER_SUBJECT_PREFIX = "Order"
+CONSOLE_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 def _enabled(setting_name: str, default: bool = True) -> bool:
     return bool(getattr(settings, setting_name, default))
+
+
+def customer_email_delivery_ready() -> bool:
+    """The console backend prints mail but does not deliver it to customers."""
+
+    return str(getattr(settings, "EMAIL_BACKEND", "")).strip() != CONSOLE_EMAIL_BACKEND
 
 
 def _absolute_order_url(order: Order) -> str:
@@ -26,7 +33,7 @@ def _absolute_order_url(order: Order) -> str:
 
 def _deliver(*, to_email: str, subject: str, body: str) -> OutboundEmail | None:
     recipient = (to_email or "").strip().lower()
-    if not recipient:
+    if not recipient or not customer_email_delivery_ready():
         return None
 
     existing = OutboundEmail.objects.filter(
@@ -161,6 +168,10 @@ def send_order_status_update_by_id(event_id: int) -> OutboundEmail | None:
 
 
 def retry_failed_order_emails(*, limit: int = 100) -> dict[str, int]:
+    if not customer_email_delivery_ready():
+        raise RuntimeError(
+            "Customer email delivery is unavailable while the Django console mail backend is active."
+        )
     rows = list(
         OutboundEmail.objects.filter(
             status=OutboundEmail.STATUS_FAILED,
