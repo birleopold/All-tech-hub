@@ -55,6 +55,11 @@ jobs:
           catalog.test_social_marketing
           catalog.test_watermarks
           catalog.test_discovery
+          catalog.test_responsive_images
+          catalog.test_experience
+          commerce.test_progress
+          portal.test_warranties
+          core.test_api_experience
           core.test_phase1_security
           reliability
 
@@ -75,19 +80,33 @@ jobs:
             commerce/views.py \
             commerce/fulfillment.py \
             commerce/staff_views.py \
+            commerce/progress.py \
+            commerce/templatetags \
+            commerce/test_progress.py \
             catalog/discovery.py \
+            catalog/experience.py \
+            catalog/responsive_images.py \
+            catalog/templatetags \
             catalog/views.py \
             catalog/watermarks.py \
             catalog/signals.py \
             catalog/test_discovery.py \
             catalog/test_watermarks.py \
+            catalog/test_responsive_images.py \
+            catalog/test_experience.py \
             catalog/management/commands/watermark_product_images.py \
             catalog/management/commands/reprocess_product_images.py \
+            catalog/management/commands/generate_product_image_variants.py \
+            portal/warranty_views.py \
+            portal/templatetags \
+            portal/test_warranties.py \
             core/views.py \
+            core/api_views.py \
             core/private_files.py \
             core/private_views.py \
             core/field_encryption.py \
             core/auth_views.py \
+            core/test_api_experience.py \
             core/test_phase1_security.py \
             core/management/commands/backup_alltech.py \
             core/management/commands/verify_alltech_backup.py \
@@ -146,5 +165,12 @@ jobs:
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
 
-      - name: Run transaction and automation tests on PostgreSQL
-        run: python manage.py test reliability automation commerce
+      - name: Run transaction and customer experience tests on PostgreSQL
+        run: >-
+          python manage.py test
+          reliability
+          automation
+          commerce
+          catalog.test_experience
+          portal.test_warranties
+          core.test_api_experience
