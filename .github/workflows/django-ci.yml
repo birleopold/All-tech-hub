@@ -97,6 +97,7 @@ jobs:
             catalog/management/commands/watermark_product_images.py \
             catalog/management/commands/reprocess_product_images.py \
             catalog/management/commands/generate_product_image_variants.py \
+            catalog/management/commands/audit_customer_experience.py \
             portal/warranty_views.py \
             portal/templatetags \
             portal/test_warranties.py \
