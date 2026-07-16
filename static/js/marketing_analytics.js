@@ -9,6 +9,7 @@
   const requireConsent = body.dataset.analyticsConsentRequired === "1";
   const consentKey = "leosoft_analytics_consent";
   let integrationsLoaded = false;
+  let vitalsObserved = false;
 
   const readJsonScript = (id) => {
     const node = document.getElementById(id);
@@ -58,6 +59,99 @@
     if (!ga4Id || typeof window.gtag !== "function") return;
     queuedEvents.splice(0).forEach(sendEvent);
   };
+
+  const vitalRating = (name, value) => {
+    const thresholds = {
+      LCP: [2500, 4000],
+      INP: [200, 500],
+      CLS: [0.1, 0.25],
+      FCP: [1800, 3000],
+      TTFB: [800, 1800],
+    }[name];
+    if (!thresholds) return "unknown";
+    if (value <= thresholds[0]) return "good";
+    if (value <= thresholds[1]) return "needs_improvement";
+    return "poor";
+  };
+
+  const queueVital = (name, value) => {
+    if (!Number.isFinite(value) || value < 0) return;
+    queuedEvents.push({
+      name: "web_vital",
+      params: {
+        metric_name: name,
+        metric_value: Number(value.toFixed(name === "CLS" ? 4 : 1)),
+        metric_rating: vitalRating(name, value),
+        page_path: window.location.pathname,
+        non_interaction: true,
+      },
+    });
+    if (integrationsLoaded) flushEvents();
+  };
+
+  const observeWebVitals = () => {
+    if (vitalsObserved || !ga4Id || !("PerformanceObserver" in window)) return;
+    vitalsObserved = true;
+
+    const navigation = performance.getEntriesByType("navigation")[0];
+    if (navigation && Number.isFinite(navigation.responseStart)) {
+      queueVital("TTFB", navigation.responseStart);
+    }
+    const firstContentfulPaint = performance.getEntriesByName("first-contentful-paint")[0];
+    if (firstContentfulPaint) queueVital("FCP", firstContentfulPaint.startTime);
+
+    let latestLcp = 0;
+    let cumulativeLayoutShift = 0;
+    let worstInteraction = 0;
+    const observers = [];
+
+    const observe = (type, callback, options = {}) => {
+      try {
+        const observer = new PerformanceObserver(callback);
+        observer.observe({ type, buffered: true, ...options });
+        observers.push(observer);
+      } catch (_error) {
+        // Unsupported performance entry type.
+      }
+    };
+
+    observe("largest-contentful-paint", (list) => {
+      const entries = list.getEntries();
+      const last = entries[entries.length - 1];
+      if (last) latestLcp = last.startTime;
+    });
+
+    observe("layout-shift", (list) => {
+      list.getEntries().forEach((entry) => {
+        if (!entry.hadRecentInput) cumulativeLayoutShift += entry.value;
+      });
+    });
+
+    observe("event", (list) => {
+      list.getEntries().forEach((entry) => {
+        if (entry.interactionId && entry.duration > worstInteraction) {
+          worstInteraction = entry.duration;
+        }
+      });
+    }, { durationThreshold: 40 });
+
+    let finalised = false;
+    const finalise = () => {
+      if (finalised) return;
+      finalised = true;
+      if (latestLcp) queueVital("LCP", latestLcp);
+      queueVital("CLS", cumulativeLayoutShift);
+      if (worstInteraction) queueVital("INP", worstInteraction);
+      observers.forEach((observer) => observer.disconnect());
+    };
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") finalise();
+    }, { once: true });
+    window.addEventListener("pagehide", finalise, { once: true });
+  };
+
+  observeWebVitals();
 
   const loadGA4 = () => {
     if (!ga4Id) return;
