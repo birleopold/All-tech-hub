@@ -68,8 +68,7 @@ jobs:
           automation/signals.py
           automation/management/commands
           automation/templatetags
-          automation/test_connectors.py
-          automation/test_jobs.py
+          automation/test_*.py
           growth
           reliability
           marketing/forms.py
