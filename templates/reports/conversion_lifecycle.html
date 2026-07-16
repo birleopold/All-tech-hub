@@ -1,0 +1,74 @@
+{% extends "staff_base.html" %}
+{% block title %}Conversion lifecycle{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <p class="text-uppercase small fw-semibold text-primary mb-1">Phase 5 reporting</p>
+    <h1 class="h3 mb-1">Conversion and customer lifecycle</h1>
+    <p class="text-muted mb-0">Orders, saved-cart recovery, customer communication and pending-order health for the last {{ conversion.days }} days.</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary" href="{% url 'staff_reports' %}">All reports</a>
+    <a class="btn {% if conversion.days == 7 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=7">7 days</a>
+    <a class="btn {% if conversion.days == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=30">30 days</a>
+    <a class="btn {% if conversion.days == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=90">90 days</a>
+  </div>
+</div>
+
+{% if conversion.failed_order_emails or conversion.missing_confirmation_emails or conversion.pending_older_than_24h %}
+<div class="alert alert-warning border-0 shadow-sm" role="alert">
+  <strong>Lifecycle attention required.</strong>
+  Failed order emails: {{ conversion.failed_order_emails }} · orders missing a sent confirmation record: {{ conversion.missing_confirmation_emails }} · pending over 24 hours: {{ conversion.pending_older_than_24h }}.
+</div>
+{% else %}
+<div class="alert alert-success border-0 shadow-sm" role="status"><strong>Communication and pending-order checks are clear for this period.</strong></div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Non-cancelled orders</p><p class="display-6 mb-1">{{ conversion.order_count }}</p><p class="small text-muted mb-0">{{ conversion.cancelled_orders }} cancelled</p></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Order revenue</p><p class="h3 mb-1">{{ company.currency_code }} {{ conversion.revenue|floatformat:2 }}</p><p class="small text-muted mb-0">Online orders in period</p></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Average order value</p><p class="h3 mb-1">{{ company.currency_code }} {{ conversion.average_order_value|floatformat:2 }}</p><p class="small text-muted mb-0">Excludes cancelled orders</p></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Conversion proxy</p><p class="h3 mb-1">{{ conversion.checkout_conversion_proxy }}%</p><p class="small text-muted mb-0">Orders versus orders plus unrecovered saved carts</p></div></div></div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-start gap-3 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Saved carts</p><h2 class="h5 mb-0">Recovery performance</h2></div><span class="badge text-bg-light">{{ conversion.saved_cart_recovery_rate }}% recovered</span></div>
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-md"><div class="border rounded p-3"><div class="small text-muted">Saved</div><strong>{{ conversion.saved_cart_count }}</strong></div></div>
+        <div class="col-6 col-md"><div class="border rounded p-3"><div class="small text-muted">Recovered</div><strong>{{ conversion.saved_cart_recovered }}</strong></div></div>
+        <div class="col-6 col-md"><div class="border rounded p-3"><div class="small text-muted">Active</div><strong>{{ conversion.saved_cart_active }}</strong></div></div>
+        <div class="col-6 col-md"><div class="border rounded p-3"><div class="small text-muted">Expired</div><strong>{{ conversion.saved_cart_expired }}</strong></div></div>
+      </div>
+      <p class="mb-1"><strong>Recovered revenue:</strong> {{ company.currency_code }} {{ conversion.recovered_revenue|floatformat:2 }}</p>
+      <p class="small text-muted mb-0">Recovery is counted only when the saved cart is linked to a completed checkout order.</p>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+      <p class="text-uppercase small fw-semibold text-primary mb-1">Customer communication</p><h2 class="h5 mb-3">Email delivery health</h2>
+      <div class="d-flex justify-content-between border-bottom py-2"><span>Failed order emails</span><strong class="{% if conversion.failed_order_emails %}text-danger{% endif %}">{{ conversion.failed_order_emails }}</strong></div>
+      <div class="d-flex justify-content-between border-bottom py-2"><span>Missing confirmation records</span><strong class="{% if conversion.missing_confirmation_emails %}text-warning{% endif %}">{{ conversion.missing_confirmation_emails }}</strong></div>
+      <div class="d-flex justify-content-between border-bottom py-2"><span>Status emails sent</span><strong>{{ conversion.status_emails_sent }}</strong></div>
+      <div class="d-flex justify-content-between py-2"><span>Pending over 24 hours</span><strong class="{% if conversion.pending_older_than_24h %}text-warning{% endif %}">{{ conversion.pending_older_than_24h }}</strong></div>
+      <p class="small text-muted mt-3 mb-0">Retry failed customer emails from the server with <code>python manage.py retry_order_emails</code>.</p>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+      <p class="text-uppercase small fw-semibold text-primary mb-1">Order pipeline</p><h2 class="h5 mb-3">Status distribution</h2>
+      <div class="d-flex flex-wrap gap-2">{% for item in conversion.status_counts %}<span class="badge text-bg-light border">{{ item.label }}: {{ item.count }}</span>{% endfor %}</div>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+      <p class="text-uppercase small fw-semibold text-primary mb-1">Promotion usage</p><h2 class="h5 mb-3">Coupon orders</h2>
+      <p class="display-6 mb-1">{{ conversion.coupon_orders }}</p><p class="text-muted mb-0">{{ conversion.coupon_order_rate }}% of non-cancelled orders used a coupon.</p>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
