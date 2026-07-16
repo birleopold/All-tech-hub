@@ -19,8 +19,30 @@
       <thead><tr><th>Tracked link</th><th>Campaign</th><th>Source</th><th>Clicks</th><th>Leads</th><th>Actions</th></tr></thead><tbody>
       {% for item in object_list %}<tr><td><strong>{{ item.name }}</strong><div class="small text-muted">/marketing/r/{{ item.code }}/</div></td><td>{{ item.campaign|default:"—" }}</td><td>{{ item.source }} / {{ item.medium }}</td><td>{{ item.click_count }}</td><td>{{ item.lead_count }}</td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_link_edit' item.pk %}">Edit</a> <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_marketing_link_qr' item.pk %}">QR</a> <a class="btn btn-sm btn-outline-success" href="{% url 'marketing_track' item.code %}" target="_blank" rel="noopener">Open</a></td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No tracked links yet.</td></tr>{% endfor %}
       {% elif page_kind == 'posts' %}
-      <thead><tr><th>Post</th><th>Channels</th><th>Schedule</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-      {% for item in object_list %}<tr><td><strong>{{ item.title }}</strong>{% if item.product %}<div class="small text-muted">{{ item.product.name }}</div>{% endif %}<div class="small">{{ item.caption|truncatewords:14 }}</div></td><td class="small">{{ item.channels|join:", " }}</td><td class="small">{{ item.scheduled_for|date:"Y-m-d H:i"|default:"—" }}</td><td><span class="badge text-bg-light">{{ item.get_status_display }}</span></td><td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_post_edit' item.pk %}">Edit</a>{% if item.status != 'published' %} <form method="post" action="{% url 'staff_marketing_post_published' item.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit">Published</button></form>{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No scheduled posts yet.</td></tr>{% endfor %}
+      <thead><tr><th>Post</th><th>Channel delivery</th><th>Schedule</th><th>Automation</th><th>Actions</th></tr></thead><tbody>
+      {% for item in object_list %}
+      {% with plan=item.automation_plan %}
+      <tr>
+        <td><strong>{{ item.title }}</strong>{% if item.product %}<div class="small text-muted">{{ item.product.name }}</div>{% endif %}<div class="small">{{ item.caption|truncatewords:14 }}</div></td>
+        <td class="small">
+          {% if plan %}
+            <div class="d-flex flex-wrap gap-1">
+            {% for delivery in plan.deliveries.all %}
+              <span class="badge {% if delivery.status == 'published' %}text-bg-success{% elif delivery.status == 'failed' %}text-bg-danger{% elif delivery.status == 'retrying' or delivery.status == 'running' or delivery.status == 'queued' %}text-bg-warning{% else %}text-bg-light{% endif %}" title="{{ delivery.last_error }}">{{ delivery.channel }}: {{ delivery.get_status_display }}</span>
+            {% empty %}
+              <span class="text-muted">{{ item.channels|join:", " }}</span>
+            {% endfor %}
+            </div>
+          {% else %}
+            {{ item.channels|join:", " }}
+          {% endif %}
+        </td>
+        <td class="small">{{ item.scheduled_for|date:"Y-m-d H:i"|default:"—" }}</td>
+        <td>{% if plan %}<span class="badge text-bg-light">{{ plan.get_mode_display }}</span><div class="small mt-1">{{ plan.get_status_display }}</div>{% if plan.last_error %}<div class="small text-danger" title="{{ plan.last_error }}">{{ plan.last_error|truncatewords:10 }}</div>{% endif %}{% else %}<span class="badge text-bg-light">Manual</span><div class="small mt-1">{{ item.get_status_display }}</div>{% endif %}</td>
+        <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_post_edit' item.pk %}">Edit</a>{% if item.status != 'published' %} <form method="post" action="{% url 'staff_marketing_post_published' item.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit">Published manually</button></form>{% endif %}</td>
+      </tr>
+      {% endwith %}
+      {% empty %}<tr><td colspan="5" class="text-muted">No scheduled posts yet.</td></tr>{% endfor %}
       {% elif page_kind == 'leads' %}
       <thead><tr><th>Lead</th><th>Source</th><th>Campaign / product</th><th>Status</th><th>Value</th><th></th></tr></thead><tbody>
       {% for item in object_list %}<tr><td><strong>{{ item.name }}</strong><div class="small text-muted">{{ item.email }}{% if item.phone %} · {{ item.phone }}{% endif %}</div></td><td>{{ item.source }}{% if item.medium %}<div class="small text-muted">{{ item.medium }}</div>{% endif %}</td><td>{{ item.campaign|default:"—" }}{% if item.product %}<div class="small text-muted">{{ item.product.name }}</div>{% endif %}</td><td><span class="badge text-bg-light">{{ item.get_status_display }}</span></td><td>UGX {{ item.estimated_value }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_lead_edit' item.pk %}">Open</a></td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No marketing leads yet.</td></tr>{% endfor %}
