@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Order {{ order.reference }}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="same-origin">{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">
@@ -17,21 +18,22 @@
 <div class="container pb-5">
   <div class="row g-4 align-items-start">
     <div class="col-lg-8">
+      {% include "commerce/_order_progress.html" with order=order %}
       <div class="table-responsive card border-0 shadow-sm overflow-hidden mb-4">
         <table class="table mb-0 align-middle">
           <caption class="visually-hidden">Line items for order {{ order.reference }}</caption>
           <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Line</th></tr></thead>
           <tbody>
             {% for line in order.lines.all %}
-            <tr><td>{{ line.description }}</td><td class="text-end">{{ line.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td></tr>
+            <tr><td>{% if line.product %}<a class="text-decoration-none" href="{{ line.product.get_absolute_url }}">{{ line.description }}</a>{% else %}{{ line.description }}{% endif %}</td><td class="text-end">{{ line.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
 
       <div class="row g-4 mb-4">
-        <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5 mb-3">Order timeline</h2><ol class="mb-0 ps-3"><li class="mb-2"><strong>Order placed</strong> · {{ order.placed_at|date:"Y-m-d H:i" }}</li>{% for event in status_events %}<li class="mb-2"><strong>{{ event.get_to_status_display }}</strong> · {{ event.created_at|date:"Y-m-d H:i" }}{% if event.note %}<div class="small text-muted">{{ event.note }}</div>{% endif %}</li>{% endfor %}</ol></div></div></div>
-        <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5 mb-3">Delivery tracking</h2>{% if shipment %}<p class="mb-1"><strong>{{ shipment.get_status_display }}</strong></p>{% if shipment.carrier %}<p class="mb-1">Carrier: {{ shipment.carrier }}</p>{% endif %}{% if shipment.tracking_number %}<p class="mb-1">Tracking: <code>{{ shipment.tracking_number }}</code></p>{% endif %}{% if shipment.estimated_delivery %}<p class="mb-1">Estimated delivery: {{ shipment.estimated_delivery }}</p>{% endif %}{% if shipment.tracking_url %}<a class="btn btn-sm btn-outline-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Track with carrier</a>{% endif %}{% else %}<p class="text-muted mb-0">Tracking details will appear once your order is prepared.</p>{% endif %}</div></div></div>
+        <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5 mb-3">Customer-visible updates</h2><ol class="mb-0 ps-3"><li class="mb-2"><strong>Order placed</strong> · {{ order.placed_at|date:"Y-m-d H:i" }}</li>{% for event in status_events %}<li class="mb-2"><strong>{{ event.get_to_status_display }}</strong> · {{ event.created_at|date:"Y-m-d H:i" }}{% if event.note %}<div class="small text-muted">{{ event.note }}</div>{% endif %}</li>{% endfor %}</ol></div></div></div>
+        <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5 mb-3">Delivery tracking</h2>{% if shipment %}<p class="mb-1"><strong>{{ shipment.get_status_display }}</strong></p>{% if shipment.carrier %}<p class="mb-1">Carrier: {{ shipment.carrier }}</p>{% endif %}{% if shipment.tracking_number %}<p class="mb-1">Tracking: <code>{{ shipment.tracking_number }}</code></p>{% endif %}{% if shipment.estimated_delivery %}<p class="mb-1">Estimated delivery: {{ shipment.estimated_delivery }}</p>{% endif %}{% if shipment.note %}<p class="small text-muted">{{ shipment.note }}</p>{% endif %}{% if shipment.tracking_url %}<a class="btn btn-sm btn-outline-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Track with carrier</a>{% endif %}{% else %}<p class="text-muted mb-0">Tracking details will appear once your order is prepared.</p>{% endif %}</div></div></div>
       </div>
 
       <div class="card border-0 shadow-sm">
@@ -54,7 +56,8 @@
     </div>
 
     <div class="col-lg-4">
-      <aside class="card border-0 shadow-sm product-purchase-card"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p><div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ order.subtotal|floatformat:2 }}</strong></div><div class="d-flex justify-content-between mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</strong></div><hr><div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ order.total|floatformat:2 }}</strong></div></div></aside>
+      <aside class="card border-0 shadow-sm product-purchase-card mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p><div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ order.subtotal|floatformat:2 }}</strong></div><div class="d-flex justify-content-between mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</strong></div>{% if order.discount_amount %}<div class="d-flex justify-content-between mb-2"><span class="text-muted">Discount</span><strong>− {{ company.currency_code }} {{ order.discount_amount|floatformat:2 }}</strong></div>{% endif %}<hr><div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ order.total|floatformat:2 }}</strong></div></div></aside>
+      <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h5 mb-2">Need help?</h2><p class="small text-muted">Use support to ask about payment, delivery, warranty or a product in this order.</p><a class="btn btn-outline-primary w-100" href="{% url 'portal_ticket_create' %}">Open support request</a></div></div>
     </div>
   </div>
 </div>
