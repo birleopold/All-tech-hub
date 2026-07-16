@@ -2,13 +2,19 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.views.decorators.http import require_POST
 
+from core.audit import log_audit_event
+from core.field_encryption import (
+    ensure_profile_secret_protected,
+    protect_totp_secret,
+    reveal_totp_secret,
+)
 from core.models import LoginAttempt, StaffTwoFactor
 from core.totp import generate_secret, provisioning_uri, verify_token
 
@@ -50,8 +56,10 @@ class StaffLoginView(View):
         profile = None
         if valid and user.is_staff:
             profile = StaffTwoFactor.objects.filter(user=user, enabled=True).first()
-            if profile and not verify_token(profile.secret, request.POST.get("otp") or ""):
-                valid = False
+            if profile:
+                clear_secret = ensure_profile_secret_protected(profile)
+                if not verify_token(clear_secret, request.POST.get("otp") or ""):
+                    valid = False
         LoginAttempt.objects.create(
             username=username, ip_address=ip, successful=valid
         )
@@ -72,17 +80,23 @@ def two_factor_setup(request):
     if not request.user.is_authenticated or not request.user.is_staff:
         return redirect("login")
     profile, _ = StaffTwoFactor.objects.get_or_create(
-        user=request.user, defaults={"secret": generate_secret()}
+        user=request.user,
+        defaults={"secret": protect_totp_secret(generate_secret())},
     )
     if not profile.secret:
-        profile.secret = generate_secret()
+        profile.secret = protect_totp_secret(generate_secret())
         profile.save(update_fields=["secret", "updated_at"])
+    display_secret = ensure_profile_secret_protected(profile)
     return render(
         request,
         "registration/two_factor_setup.html",
         {
             "profile": profile,
-            "provisioning_uri": provisioning_uri(profile.secret, request.user.get_username()),
+            "display_secret": display_secret,
+            "provisioning_uri": provisioning_uri(
+                display_secret,
+                request.user.get_username(),
+            ),
         },
     )
 
@@ -91,11 +105,18 @@ def two_factor_setup(request):
 def two_factor_confirm(request):
     if not request.user.is_authenticated or not request.user.is_staff:
         return redirect("login")
-    profile = StaffTwoFactor.objects.get(user=request.user)
-    if verify_token(profile.secret, request.POST.get("otp") or ""):
+    profile = get_object_or_404(StaffTwoFactor, user=request.user)
+    clear_secret = ensure_profile_secret_protected(profile)
+    if verify_token(clear_secret, request.POST.get("otp") or ""):
         profile.enabled = True
         profile.confirmed_at = timezone.now()
         profile.save(update_fields=["enabled", "confirmed_at", "updated_at"])
+        log_audit_event(
+            actor=request.user,
+            verb="security.2fa_enabled",
+            summary=f"2FA enabled for {request.user.get_username()}",
+            target=profile,
+        )
         messages.success(request, "Two-factor authentication enabled.")
     else:
         messages.error(request, "That authentication code was not valid.")
@@ -106,6 +127,23 @@ def two_factor_confirm(request):
 def two_factor_disable(request):
     if not request.user.is_authenticated or not request.user.is_staff:
         return redirect("login")
-    StaffTwoFactor.objects.filter(user=request.user).update(enabled=False)
-    messages.success(request, "Two-factor authentication disabled.")
+    profile = get_object_or_404(StaffTwoFactor, user=request.user, enabled=True)
+    password = request.POST.get("password") or ""
+    otp = request.POST.get("otp") or ""
+    clear_secret = reveal_totp_secret(profile.secret)
+    if not request.user.check_password(password) or not verify_token(clear_secret, otp):
+        messages.error(
+            request,
+            "Enter your current password and a valid authenticator code to disable 2FA.",
+        )
+        return redirect("staff_two_factor_setup")
+    profile.enabled = False
+    profile.save(update_fields=["enabled", "updated_at"])
+    log_audit_event(
+        actor=request.user,
+        verb="security.2fa_disabled",
+        summary=f"2FA disabled by {request.user.get_username()}",
+        target=profile,
+    )
+    messages.warning(request, "Two-factor authentication disabled.")
     return redirect("staff_two_factor_setup")
