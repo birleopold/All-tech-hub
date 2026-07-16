@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from io import BytesIO
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 
 from django.conf import settings
 from django.core.files.base import ContentFile
