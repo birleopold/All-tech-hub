@@ -1,4 +1,4 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from commerce.customer_messages import retry_failed_order_emails
 
@@ -15,7 +15,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        result = retry_failed_order_emails(limit=max(1, options["limit"]))
+        try:
+            result = retry_failed_order_emails(limit=max(1, options["limit"]))
+        except RuntimeError as exc:
+            raise CommandError(str(exc)) from exc
         self.stdout.write(
             self.style.SUCCESS(
                 "Order email retry complete — "
