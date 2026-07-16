@@ -102,3 +102,33 @@ class ResponsiveProductImageTests(TransactionTestCase):
         self.assertContains(response, "Featured responsive laptop")
         self.assertContains(response, 'type="image/webp"')
         self.assertContains(response, "320w")
+
+    def test_replacing_and_deleting_image_cleans_public_originals_and_derivatives(self):
+        product = Product.objects.create(
+            category=self.category,
+            name="Replace image",
+            slug="replace-image",
+            price="950000.00",
+            image=uploaded_image("old.jpg"),
+        )
+        old_name = product.image.name
+        old_variant = variant_name(old_name, 320)
+        self.assertTrue(product.image.storage.exists(old_name))
+        self.assertTrue(product.image.storage.exists(old_variant))
+
+        product.image = uploaded_image("new.jpg", size=(640, 320))
+        product.save(update_fields=["image"])
+        product.refresh_from_db()
+        new_name = product.image.name
+        new_variant = variant_name(new_name, 320)
+
+        self.assertNotEqual(new_name, old_name)
+        self.assertFalse(product.image.storage.exists(old_name))
+        self.assertFalse(product.image.storage.exists(old_variant))
+        self.assertTrue(product.image.storage.exists(new_name))
+        self.assertTrue(product.image.storage.exists(new_variant))
+
+        storage = product.image.storage
+        product.delete()
+        self.assertFalse(storage.exists(new_name))
+        self.assertFalse(storage.exists(new_variant))
