@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -58,6 +59,15 @@ class MetaConfig:
 
 
 TRANSIENT_META_CODES = {1, 2, 4, 17, 32, 341, 613}
+TRANSIENT_META_PHRASES = (
+    "temporarily unavailable",
+    "please try again",
+    "try again later",
+    "not ready",
+    "still processing",
+    "media id is not available",
+    "rate limit",
+)
 
 
 def _meta_url(config: MetaConfig, path: str) -> str:
@@ -67,20 +77,34 @@ def _meta_url(config: MetaConfig, path: str) -> str:
 def _parse_graph_error(raw: bytes, status: int) -> ConnectorError:
     message = f"Meta API returned HTTP {status}."
     code = ""
+    subcode = ""
     try:
         payload = json.loads(raw.decode("utf-8"))
         error = payload.get("error") or {}
         message = str(error.get("message") or message)
         code = str(error.get("code") or "")
+        subcode = str(error.get("error_subcode") or "")
     except Exception:
         pass
     numeric_code = int(code) if code.isdigit() else None
+    lower_message = message.lower()
     retryable = status in {408, 409, 425, 429} or status >= 500
     if numeric_code in TRANSIENT_META_CODES:
         retryable = True
-    if status in {400, 401, 403, 404} and numeric_code not in TRANSIENT_META_CODES:
+    if any(phrase in lower_message for phrase in TRANSIENT_META_PHRASES):
+        retryable = True
+    if (
+        status in {400, 401, 403, 404}
+        and numeric_code not in TRANSIENT_META_CODES
+        and not any(phrase in lower_message for phrase in TRANSIENT_META_PHRASES)
+    ):
         retryable = False
-    return ConnectorError(message[:1000], retryable=retryable, code=code)
+    combined_code = f"{code}:{subcode}".strip(":")
+    return ConnectorError(
+        message[:1000],
+        retryable=retryable,
+        code=combined_code,
+    )
 
 
 def _graph_request(
@@ -120,7 +144,7 @@ def _graph_request(
         raise _parse_graph_error(raw, exc.code) from exc
     except (URLError, TimeoutError, OSError) as exc:
         raise ConnectorError(
-            "Meta API could not be reached. The job will retry.",
+            "Meta API could not be reached. The delivery outcome may be unknown; verify the platform before manually requeuing this job.",
             retryable=True,
         ) from exc
 
@@ -128,7 +152,7 @@ def _graph_request(
         payload = json.loads(raw.decode("utf-8")) if raw else {}
     except Exception as exc:
         raise ConnectorError(
-            "Meta API returned an unreadable response.",
+            "Meta API returned an unreadable response. Verify the platform before manually requeuing if the final outcome is uncertain.",
             retryable=True,
         ) from exc
     if isinstance(payload, dict) and payload.get("error"):
@@ -195,14 +219,47 @@ def publish_facebook(*, post, image_url: str = "") -> dict:
     external_id = str(payload.get("post_id") or payload.get("id") or "")
     if not external_id:
         raise ConnectorError(
-            "Facebook accepted the request but did not return a post identifier.",
-            retryable=True,
+            "Facebook accepted the request but did not return a post identifier. Verify the Page before requeuing.",
+            retryable=False,
         )
     return {
         "external_id": external_id,
         "external_url": _permalink(config, external_id),
         "provider": "meta",
     }
+
+
+def _wait_for_instagram_container(config: MetaConfig, creation_id: str) -> None:
+    polls = max(
+        1,
+        min(10, int(getattr(settings, "META_MEDIA_STATUS_POLLS", 5))),
+    )
+    interval = max(
+        1,
+        min(5, int(getattr(settings, "META_MEDIA_STATUS_POLL_SECONDS", 2))),
+    )
+    last_status = ""
+    for index in range(polls):
+        payload = _graph_request(
+            config,
+            "GET",
+            creation_id,
+            query={"fields": "status_code"},
+        )
+        last_status = str(payload.get("status_code") or "").upper()
+        if last_status == "FINISHED":
+            return
+        if last_status in {"ERROR", "EXPIRED"}:
+            raise ConnectorError(
+                f"Instagram media preparation ended with status {last_status}.",
+                retryable=False,
+            )
+        if index + 1 < polls:
+            time.sleep(interval)
+    raise ConnectorError(
+        f"Instagram media is still processing ({last_status or 'unknown status'}).",
+        retryable=True,
+    )
 
 
 def publish_instagram(*, post, image_url: str = "") -> dict:
@@ -229,6 +286,7 @@ def publish_instagram(*, post, image_url: str = "") -> dict:
             "Instagram did not return a media container identifier.",
             retryable=True,
         )
+    _wait_for_instagram_container(config, creation_id)
     published = _graph_request(
         config,
         "POST",
@@ -238,8 +296,8 @@ def publish_instagram(*, post, image_url: str = "") -> dict:
     external_id = str(published.get("id") or "")
     if not external_id:
         raise ConnectorError(
-            "Instagram did not return a published media identifier.",
-            retryable=True,
+            "Instagram did not return a published media identifier. Verify the account before requeuing.",
+            retryable=False,
         )
     return {
         "external_id": external_id,
