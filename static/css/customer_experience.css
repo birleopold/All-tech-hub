@@ -1,6 +1,7 @@
 .catalog-card-image-wrap picture,
 .product-detail-image-wrap picture,
 .compare-image-wrap picture,
+.recommendation-image-wrap picture,
 .card-product > picture {
   display: block;
   width: 100%;
@@ -9,7 +10,8 @@
 
 .catalog-card-image,
 .home-product-image,
-.compare-image {
+.compare-image,
+.recommendation-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -23,6 +25,12 @@
   background: #f8f9fa;
 }
 
+.recommendation-image-wrap {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
 .product-compare-column {
   min-width: 220px;
 }
@@ -30,6 +38,23 @@
 .product-compare-table th,
 .product-compare-table td {
   vertical-align: top;
+}
+
+.fulfillment-option {
+  min-width: 10rem;
+  cursor: pointer;
+}
+
+.cart-quantity-input {
+  max-width: 5.5rem;
+}
+
+.cart-coupon-input {
+  max-width: 16rem;
+}
+
+.payment-instructions {
+  overflow-wrap: anywhere;
 }
 
 .order-progress {
