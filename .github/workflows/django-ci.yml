@@ -44,10 +44,12 @@ jobs:
         run: |
           python manage.py check --deploy
           python manage.py collectstatic --noinput
+          python manage.py check_marketing_integrations
 
       - name: Run focused application tests
         run: >-
           python manage.py test
+          automation
           growth.test_growth
           marketing.test_automation
           catalog.test_social_marketing
@@ -59,8 +61,10 @@ jobs:
       - name: Run Ruff on changed Python scope
         run: >-
           ruff check
+          automation
           growth
           reliability
+          marketing/forms.py
           commerce/views.py
           commerce/fulfillment.py
           commerce/staff_views.py
@@ -134,5 +138,5 @@ jobs:
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
 
-      - name: Run transaction reliability tests on PostgreSQL
-        run: python manage.py test reliability commerce
+      - name: Run transaction and automation tests on PostgreSQL
+        run: python manage.py test reliability automation commerce
