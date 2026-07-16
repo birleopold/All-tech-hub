@@ -18,6 +18,7 @@ URL_PERMISSION_PREFIXES = {
     "staff_ticket": "core.view_supportticket",
     "staff_contact": "core.view_contactmessage",
     "staff_reports": "billing.view_commercialdocument",
+    "staff_conversion": "commerce.view_order",
     "staff_marketing": "marketing.view_marketingcampaign",
     "staff_growth": "growth.view_growthsettings",
     "staff_export": "billing.view_commercialdocument",
