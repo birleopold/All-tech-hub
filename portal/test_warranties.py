@@ -79,6 +79,9 @@ class CustomerWarrantyPortalTests(TestCase):
         self.assertContains(response, self.expired.serial_number)
         self.assertNotContains(response, "OTHER-SERIAL-003")
         self.assertContains(response, 'name="robots" content="noindex,nofollow,noarchive"')
+        self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow, noarchive")
+        self.assertIn("private", response.headers["Cache-Control"])
+        self.assertIn("no-store", response.headers["Cache-Control"])
         self.assertEqual(response.context["active_warranty_count"], 1)
         self.assertEqual(response.context["expired_warranty_count"], 1)
 
@@ -88,3 +91,8 @@ class CustomerWarrantyPortalTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Active warranties")
         self.assertContains(response, reverse("portal_warranties"))
+
+    def test_public_knowledge_base_is_not_forced_to_noindex(self):
+        response = self.client.get(reverse("portal_kb"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("X-Robots-Tag", response.headers)
