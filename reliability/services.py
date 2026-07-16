@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from commerce.models import Order
@@ -59,6 +59,11 @@ PAYMENT_TRANSITIONS = {
     PaymentAttempt.STATUS_EXPIRED: set(),
     PaymentAttempt.STATUS_REFUNDED: set(),
     PaymentAttempt.STATUS_CANCELLED: set(),
+}
+
+COUNTED_PAYMENT_STATUSES = {
+    PaymentAttempt.STATUS_PAID,
+    PaymentAttempt.STATUS_PARTIALLY_REFUNDED,
 }
 
 
@@ -194,6 +199,35 @@ def _normalise_money(amount) -> Decimal:
     return value
 
 
+def _attempt_net_amount(attempt: PaymentAttempt) -> Decimal:
+    refunded = sum(
+        (refund.amount for refund in attempt.refunds.all()),
+        Decimal("0"),
+    )
+    return max(Decimal("0"), attempt.amount - refunded).quantize(Decimal("0.01"))
+
+
+def _net_paid_total(
+    order: Order,
+    *,
+    exclude_attempt_id: int | None = None,
+    lock_attempts: bool = False,
+) -> Decimal:
+    attempts = PaymentAttempt.objects.filter(
+        order=order,
+        status__in=COUNTED_PAYMENT_STATUSES,
+    )
+    if exclude_attempt_id is not None:
+        attempts = attempts.exclude(pk=exclude_attempt_id)
+    if lock_attempts:
+        attempts = attempts.select_for_update()
+    attempts = attempts.prefetch_related("refunds").order_by("id")
+    return sum(
+        (_attempt_net_amount(attempt) for attempt in attempts),
+        Decimal("0"),
+    ).quantize(Decimal("0.01"))
+
+
 @transaction.atomic
 def create_payment_attempt(
     *,
@@ -213,23 +247,64 @@ def create_payment_attempt(
     normalised_amount = _normalise_money(amount)
     provider = (provider or "manual").strip().lower()[:64]
     currency = (currency or "UGX").strip().upper()[:8]
-    attempt, created = PaymentAttempt.objects.get_or_create(
-        idempotency_key=key,
-        defaults={
-            "order": order,
-            "provider": provider,
-            "external_reference": (external_reference or "")[:160],
-            "amount": normalised_amount,
-            "currency": currency,
-            "safe_metadata": safe_metadata or {},
-            "request_fingerprint": (request_fingerprint or "")[:64],
-        },
-    )
+    external_reference = (external_reference or "").strip()[:160]
+    locked_order = Order.objects.select_for_update().get(pk=order.pk)
+
+    if external_reference:
+        provider_existing = PaymentAttempt.objects.filter(
+            provider=provider,
+            external_reference=external_reference,
+        ).first()
+        if provider_existing:
+            if (
+                provider_existing.order_id != locked_order.pk
+                or provider_existing.amount != normalised_amount
+                or provider_existing.currency != currency
+            ):
+                raise ValidationError(
+                    "This provider payment reference is already linked to different details."
+                )
+            return provider_existing, False
+
+    try:
+        attempt, created = PaymentAttempt.objects.get_or_create(
+            idempotency_key=key,
+            defaults={
+                "order": locked_order,
+                "provider": provider,
+                "external_reference": external_reference,
+                "amount": normalised_amount,
+                "currency": currency,
+                "safe_metadata": safe_metadata or {},
+                "request_fingerprint": (request_fingerprint or "")[:64],
+            },
+        )
+    except IntegrityError as exc:
+        provider_existing = None
+        if external_reference:
+            provider_existing = PaymentAttempt.objects.filter(
+                provider=provider,
+                external_reference=external_reference,
+            ).first()
+        if provider_existing and (
+            provider_existing.order_id == locked_order.pk
+            and provider_existing.amount == normalised_amount
+            and provider_existing.currency == currency
+        ):
+            return provider_existing, False
+        raise ValidationError(
+            "This payment request conflicts with an existing provider transaction."
+        ) from exc
+
     if (
-        attempt.order_id != order.pk
+        attempt.order_id != locked_order.pk
         or attempt.amount != normalised_amount
         or attempt.provider != provider
         or attempt.currency != currency
+        or (
+            external_reference
+            and attempt.external_reference != external_reference
+        )
     ):
         raise ValidationError(
             "The payment idempotency key was already used with different details."
@@ -239,7 +314,7 @@ def create_payment_attempt(
             actor=actor,
             verb="billing.payment_attempt_created",
             summary=(
-                f"Payment attempt created for {order.reference}: "
+                f"Payment attempt created for {locked_order.reference}: "
                 f"{currency} {normalised_amount} via {provider}"
             ),
             target=attempt,
@@ -257,9 +332,11 @@ def transition_payment_attempt(
     last_error: str = "",
     auto_confirm_order: bool = True,
 ) -> PaymentAttempt:
-    attempt = PaymentAttempt.objects.select_for_update().select_related("order").get(
+    order_id = PaymentAttempt.objects.values_list("order_id", flat=True).get(
         pk=attempt.pk
     )
+    locked_order = Order.objects.select_for_update().get(pk=order_id)
+    attempt = PaymentAttempt.objects.select_for_update().get(pk=attempt.pk)
     old_status = attempt.status
     if new_status == old_status:
         return attempt
@@ -268,9 +345,36 @@ def transition_payment_attempt(
             f"Cannot move payment from {attempt.get_status_display()} to "
             f"{dict(PaymentAttempt.STATUS_CHOICES).get(new_status, new_status)}."
         )
+
+    projected_paid_total = None
+    if new_status == PaymentAttempt.STATUS_PAID:
+        projected_paid_total = (
+            _net_paid_total(
+                locked_order,
+                exclude_attempt_id=attempt.pk,
+                lock_attempts=True,
+            )
+            + attempt.amount
+        ).quantize(Decimal("0.01"))
+        if projected_paid_total > locked_order.total:
+            raise ValidationError(
+                f"This payment would overpay order {locked_order.reference}. "
+                f"Order total is {locked_order.total}; projected paid total is "
+                f"{projected_paid_total}."
+            )
+
     attempt.status = new_status
+    external_reference = (external_reference or "").strip()[:160]
     if external_reference:
-        attempt.external_reference = external_reference[:160]
+        duplicate_reference = PaymentAttempt.objects.exclude(pk=attempt.pk).filter(
+            provider=attempt.provider,
+            external_reference=external_reference,
+        ).exists()
+        if duplicate_reference:
+            raise ValidationError(
+                "This provider payment reference has already been recorded."
+            )
+        attempt.external_reference = external_reference
     attempt.last_error = (last_error or "")[:4000]
     if new_status in {
         PaymentAttempt.STATUS_PAID,
@@ -282,35 +386,46 @@ def transition_payment_attempt(
         attempt.completed_at = timezone.now()
     else:
         attempt.completed_at = None
-    attempt.save(
-        update_fields=[
-            "status",
-            "external_reference",
-            "last_error",
-            "completed_at",
-            "updated_at",
-        ]
-    )
-    if new_status == PaymentAttempt.STATUS_PAID:
+    try:
+        with transaction.atomic():
+            attempt.save(
+                update_fields=[
+                    "status",
+                    "external_reference",
+                    "last_error",
+                    "completed_at",
+                    "updated_at",
+                ]
+            )
+    except IntegrityError as exc:
+        raise ValidationError(
+            "This provider payment reference has already been recorded."
+        ) from exc
+
+    if (
+        new_status == PaymentAttempt.STATUS_PAID
+        and projected_paid_total is not None
+        and projected_paid_total >= locked_order.total
+    ):
         commit_order_reservation(
-            attempt.order,
+            locked_order,
             actor=actor,
             reason=f"Payment {attempt.external_reference or attempt.pk} completed",
         )
-        if auto_confirm_order and attempt.order.status == Order.STATUS_PENDING:
+        if auto_confirm_order and locked_order.status == Order.STATUS_PENDING:
             from commerce.fulfillment import transition_order
 
             transition_order(
-                attempt.order,
+                locked_order,
                 Order.STATUS_CONFIRMED,
                 actor=actor,
-                note=f"Payment confirmed via {attempt.provider}",
+                note=f"Full payment confirmed via {attempt.provider}",
             )
     log_audit_event(
         actor=actor,
         verb="billing.payment_status_changed",
         summary=(
-            f"{attempt.order.reference}: payment {old_status} -> {new_status} "
+            f"{locked_order.reference}: payment {old_status} -> {new_status} "
             f"via {attempt.provider}"
         ),
         target=attempt,
@@ -332,6 +447,10 @@ def record_payment_refund(
     if not key:
         raise ValidationError("A refund idempotency key is required.")
     normalised_amount = _normalise_money(amount)
+    order_id = PaymentAttempt.objects.values_list("order_id", flat=True).get(
+        pk=payment_attempt.pk
+    )
+    Order.objects.select_for_update().get(pk=order_id)
     payment_attempt = PaymentAttempt.objects.select_for_update().get(
         pk=payment_attempt.pk
     )
