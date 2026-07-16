@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.db.models import Avg, Count, Sum
 from django.utils import timezone
 
+from commerce.customer_messages import customer_email_delivery_ready
 from commerce.models import Order
 from growth.models import SavedCart
 from messaging.models import OutboundEmail
@@ -95,6 +97,10 @@ def conversion_summary(days: int = 30) -> dict:
         "saved_cart_recovery_rate": _rate(saved_recovered, recovered_denominator),
         "recovered_revenue": recovered_revenue,
         "checkout_conversion_proxy": _rate(order_count, conversion_denominator),
+        "order_emails_enabled": bool(
+            getattr(settings, "ORDER_CUSTOMER_EMAILS_ENABLED", True)
+        ),
+        "email_delivery_ready": customer_email_delivery_ready(),
         "missing_confirmation_emails": missing_confirmation,
         "failed_order_emails": failed_order_emails,
         "status_emails_sent": status_emails_sent,
