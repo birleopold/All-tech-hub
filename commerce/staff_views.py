@@ -14,6 +14,7 @@ from commerce.fulfillment import transition_order
 from commerce.fulfillment_forms import OrderStatusForm, ShipmentForm
 from commerce.models import CustomerReturn, Order
 from commerce.return_forms import CustomerReturnForm
+from core.audit import log_audit_event
 from core.mixins import StaffRequiredMixin
 from inventory.models import StockMovement
 from inventory.services import change_stock
@@ -44,11 +45,15 @@ class StaffOrderDetailView(StaffRequiredMixin, DetailView):
     context_object_name = "order"
 
     def get_queryset(self):
-        return Order.objects.select_related("customer").prefetch_related(
+        return Order.objects.select_related(
+            "customer",
+            "stock_reservation",
+        ).prefetch_related(
             "lines__product",
             "lines__product_variant",
             "documents",
             "status_events__changed_by",
+            "payment_attempts",
         )
 
     def get_context_data(self, **kwargs):
@@ -61,6 +66,8 @@ class StaffOrderDetailView(StaffRequiredMixin, DetailView):
         ctx["customer_returns"] = CustomerReturn.objects.filter(
             order_line__order=self.object
         ).select_related("order_line", "processed_by")
+        ctx["reservation"] = getattr(self.object, "stock_reservation", None)
+        ctx["payment_attempts"] = self.object.payment_attempts.all()
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -69,6 +76,12 @@ class StaffOrderDetailView(StaffRequiredMixin, DetailView):
         if note is not None:
             self.object.staff_note = note.strip()
         self.object.save(update_fields=["staff_note", "updated_at"])
+        log_audit_event(
+            actor=request.user,
+            verb="commerce.order_note_updated",
+            summary=f"Internal note updated for {self.object.reference}",
+            target=self.object,
+        )
         messages.success(request, "Order updated.")
         return redirect("staff_order_detail", pk=self.object.pk)
 
@@ -76,11 +89,10 @@ class StaffOrderDetailView(StaffRequiredMixin, DetailView):
 @transaction.atomic
 def staff_create_invoice_from_order(request, pk: int):
     if not request.user.is_staff:
-        from django.http import Http404
-
         raise Http404
     order = get_object_or_404(
-        Order.objects.prefetch_related("lines__product", "lines__product_variant"), pk=pk
+        Order.objects.prefetch_related("lines__product", "lines__product_variant"),
+        pk=pk,
     )
     if request.method != "POST":
         return redirect("staff_order_detail", pk=pk)
@@ -114,6 +126,12 @@ def staff_create_invoice_from_order(request, pk: int):
         )
     inv.recalculate_from_lines()
     inv.save()
+    log_audit_event(
+        actor=request.user,
+        verb="billing.invoice_created_from_order",
+        summary=f"Created {inv.number} from {order.reference}",
+        target=inv,
+    )
     messages.success(request, f"Created {inv.number} from order {order.reference}.")
     return redirect("staff_document_edit", pk=inv.pk)
 
@@ -121,15 +139,14 @@ def staff_create_invoice_from_order(request, pk: int):
 @transaction.atomic
 def staff_customer_return(request, pk: int):
     if not request.user.is_staff or request.method != "POST":
-        from django.http import Http404
-
         raise Http404
     order = get_object_or_404(Order, pk=pk)
     form = CustomerReturnForm(request.POST, order=order)
     if not form.is_valid():
-        messages.error(request, "; ".join(
-            error for errors in form.errors.values() for error in errors
-        ))
+        messages.error(
+            request,
+            "; ".join(error for errors in form.errors.values() for error in errors),
+        )
         return redirect("staff_order_detail", pk=pk)
     returned = form.save(commit=False)
     returned.reference = allocate_document_number("RET")
@@ -154,6 +171,15 @@ def staff_customer_return(request, pk: int):
             note=returned.reason,
             actor=request.user,
         )
+    log_audit_event(
+        actor=request.user,
+        verb="commerce.customer_return_recorded",
+        summary=(
+            f"{returned.reference}: returned {returned.quantity} × "
+            f"{returned.order_line.description} for {order.reference}"
+        ),
+        target=returned,
+    )
     messages.success(request, f"Customer return {returned.reference} recorded.")
     return redirect("staff_order_detail", pk=pk)
 
@@ -216,6 +242,15 @@ def staff_order_shipment(request, pk: int):
             )
         except ValidationError:
             pass
+    log_audit_event(
+        actor=request.user,
+        verb="commerce.shipment_updated",
+        summary=(
+            f"Shipment for {order.reference} updated to "
+            f"{shipment.get_status_display()}"
+        ),
+        target=shipment,
+    )
     from commerce.notifications import notify_order_status
 
     notify_order_status(order)
