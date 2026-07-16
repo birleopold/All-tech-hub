@@ -1,6 +1,10 @@
 from django.core.management.base import BaseCommand
 
 from catalog.models import Product, ProductImage
+from catalog.responsive_images import (
+    generate_responsive_variants,
+    purge_responsive_name,
+)
 from catalog.watermarks import WATERMARK_PREFIX, watermark_stored_model_image
 
 
@@ -56,14 +60,19 @@ class Command(BaseCommand):
             self.stdout.write(f"Images requiring watermarking: {len(pending)}")
             return
 
-        processed = skipped = failed = 0
+        processed = failed = 0
         for instance, field_name, label in pending:
+            old_field = getattr(instance, field_name)
+            old_name = old_field.name
+            storage = old_field.storage
             changed = watermark_stored_model_image(
                 instance,
                 field_name,
                 force=force,
             )
             if changed:
+                purge_responsive_name(storage, old_name)
+                generate_responsive_variants(getattr(instance, field_name), force=True)
                 processed += 1
                 self.stdout.write(self.style.SUCCESS(f"Watermarked {label}"))
             else:
