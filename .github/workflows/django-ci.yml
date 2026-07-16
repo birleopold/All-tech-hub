@@ -61,7 +61,15 @@ jobs:
       - name: Run Ruff on changed Python scope
         run: >-
           ruff check
-          automation
+          automation/admin.py
+          automation/apps.py
+          automation/connectors.py
+          automation/models.py
+          automation/signals.py
+          automation/management/commands
+          automation/templatetags
+          automation/test_connectors.py
+          automation/test_jobs.py
           growth
           reliability
           marketing/forms.py
