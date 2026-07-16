@@ -10,6 +10,7 @@ DELIVERY_STEPS = [
     (Order.STATUS_READY, "Ready for dispatch"),
     (Order.STATUS_DISPATCHED, "Dispatched"),
     (Order.STATUS_DELIVERED, "Delivered"),
+    (Order.STATUS_FULFILLED, "Completed"),
 ]
 
 PICKUP_STEPS = [
@@ -34,8 +35,6 @@ def order_progress(order: Order) -> dict:
             (index for index, (status, _label) in enumerate(steps) if status == last_status),
             0,
         )
-    elif order.status == Order.STATUS_FULFILLED and order.fulfillment_type == Order.FULFILLMENT_DELIVERY:
-        current_index = len(steps) - 1
     else:
         current_index = next(
             (index for index, (status, _label) in enumerate(steps) if status == order.status),
