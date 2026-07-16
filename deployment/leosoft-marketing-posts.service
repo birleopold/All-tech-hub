@@ -1,6 +1,7 @@
 [Unit]
-Description=Run LEOSOFT growth marketing automation
-After=network.target postgresql.service
+Description=Run LEOSOFT durable marketing and customer automation
+Wants=network-online.target
+After=network-online.target postgresql.service
 
 [Service]
 Type=oneshot
@@ -8,4 +9,7 @@ User=admin
 Group=www-data
 WorkingDirectory=/home/admin/All-tech-hub
 EnvironmentFile=/home/admin/All-tech-hub/.env
-ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py run_growth_automation
+ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py run_automation_jobs --limit 100
+Nice=5
+NoNewPrivileges=true
+PrivateTmp=true
