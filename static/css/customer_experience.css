@@ -1,0 +1,115 @@
+.catalog-card-image-wrap picture,
+.product-detail-image-wrap picture,
+.compare-image-wrap picture,
+.card-product > picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.catalog-card-image,
+.home-product-image,
+.compare-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.compare-image-wrap {
+  width: min(100%, 220px);
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: .5rem;
+  background: #f8f9fa;
+}
+
+.product-compare-table th,
+.product-compare-table td {
+  vertical-align: top;
+}
+
+.order-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+}
+
+.order-progress__step {
+  position: relative;
+  display: flex;
+  gap: .65rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.order-progress__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: .9rem;
+  left: 1.8rem;
+  right: -.65rem;
+  height: 2px;
+  background: #dee2e6;
+}
+
+.order-progress__marker {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 1.8rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 2px solid #adb5bd;
+  border-radius: 50%;
+  color: #6c757d;
+  background: #fff;
+}
+
+.order-progress__step.is-complete .order-progress__marker {
+  border-color: #198754;
+  color: #fff;
+  background: #198754;
+}
+
+.order-progress__step.is-complete::after {
+  background: #198754;
+}
+
+.order-progress__step.is-current .order-progress__marker {
+  border-color: #0d6efd;
+  color: #0d6efd;
+  box-shadow: 0 0 0 .25rem rgba(13, 110, 253, .12);
+}
+
+.order-progress__step.is-upcoming {
+  color: #6c757d;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid rgba(13, 110, 253, .45);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767.98px) {
+  .order-progress {
+    grid-template-columns: 1fr;
+    gap: .85rem;
+  }
+
+  .order-progress__step:not(:last-child)::after {
+    top: 1.7rem;
+    right: auto;
+    bottom: -.85rem;
+    left: .85rem;
+    width: 2px;
+    height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-progress__marker {
+    box-shadow: none !important;
+  }
+}
