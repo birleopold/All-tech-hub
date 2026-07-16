@@ -16,6 +16,7 @@
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_dashboard' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_search' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_reports' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
+      <li><a class="nav-link px-0 py-2" href="{% url 'staff_conversion_lifecycle' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_conversion_lifecycle' %}aria-current="page"{% endif %}>Conversion lifecycle</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_marketing_dashboard' %}" data-bs-dismiss="offcanvas" {% if 'staff_marketing' in u and 'staff_growth' not in u %}aria-current="page"{% endif %}>Marketing automation</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_growth_dashboard' %}" data-bs-dismiss="offcanvas" {% if 'staff_growth' in u %}aria-current="page"{% endif %}>Growth &amp; analytics</a></li>
       <li><a class="nav-link px-0 py-2" href="{% url 'staff_audit_log' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
@@ -55,6 +56,7 @@
       <li><a class="nav-link px-0" href="{% url 'staff_dashboard' %}" {% if resolve_url_name == 'staff_dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
       <li><a class="nav-link px-0" href="{% url 'staff_search' %}" {% if resolve_url_name == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
       <li><a class="nav-link px-0" href="{% url 'staff_reports' %}" {% if resolve_url_name == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
+      <li><a class="nav-link px-0" href="{% url 'staff_conversion_lifecycle' %}" {% if resolve_url_name == 'staff_conversion_lifecycle' %}aria-current="page"{% endif %}>Conversion lifecycle</a></li>
       <li><a class="nav-link px-0" href="{% url 'staff_marketing_dashboard' %}" {% if 'staff_marketing' in resolve_url_name and 'staff_growth' not in resolve_url_name %}aria-current="page"{% endif %}>Marketing automation</a></li>
       <li><a class="nav-link px-0" href="{% url 'staff_growth_dashboard' %}" {% if 'staff_growth' in resolve_url_name %}aria-current="page"{% endif %}>Growth &amp; analytics</a></li>
       <li><a class="nav-link px-0" href="{% url 'staff_audit_log' %}" {% if resolve_url_name == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
