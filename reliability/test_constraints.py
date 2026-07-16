@@ -58,3 +58,35 @@ class TransactionConstraintTests(TestCase):
                 amount=Decimal("0.00"),
                 reason="Invalid zero refund",
             )
+
+    def test_database_rejects_duplicate_nonblank_provider_reference(self):
+        PaymentAttempt.objects.create(
+            order=self.order,
+            idempotency_key="provider-reference-one",
+            provider="testpay",
+            external_reference="PROVIDER-DUPLICATE-001",
+            amount=Decimal("10.00"),
+        )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            PaymentAttempt.objects.create(
+                order=self.order,
+                idempotency_key="provider-reference-two",
+                provider="testpay",
+                external_reference="PROVIDER-DUPLICATE-001",
+                amount=Decimal("10.00"),
+            )
+
+    def test_database_allows_blank_provider_references(self):
+        PaymentAttempt.objects.create(
+            order=self.order,
+            idempotency_key="blank-provider-reference-one",
+            provider="testpay",
+            amount=Decimal("4.00"),
+        )
+        PaymentAttempt.objects.create(
+            order=self.order,
+            idempotency_key="blank-provider-reference-two",
+            provider="testpay",
+            amount=Decimal("6.00"),
+        )
+        self.assertEqual(PaymentAttempt.objects.count(), 2)
