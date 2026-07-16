@@ -1,0 +1,15 @@
+[Unit]
+Description=LEOSOFT transaction integrity audit
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py audit_transaction_integrity
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
