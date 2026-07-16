@@ -3,6 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from commerce.models import Order, OrderStatusEvent, OrderStockRestoration
+from core.audit import log_audit_event
 from inventory.models import StockMovement
 from inventory.services import change_stock
 
@@ -49,7 +50,13 @@ def restore_cancelled_order_stock(order: Order, actor=None) -> bool:
             note="Automatic stock restoration after cancellation",
             actor=actor,
         )
-    OrderStockRestoration.objects.create(order=order, restored_by=actor)
+    restoration = OrderStockRestoration.objects.create(order=order, restored_by=actor)
+    log_audit_event(
+        actor=actor,
+        verb="commerce.stock_restored",
+        summary=f"Stock restored once for cancelled order {order.reference}",
+        target=restoration,
+    )
     return True
 
 
@@ -64,10 +71,35 @@ def transition_order(order: Order, new_status: str, actor=None, note: str = ""):
             f"Cannot move order from {order.get_status_display()} to "
             f"{dict(Order.STATUS_CHOICES).get(new_status, new_status)}."
         )
+
     if new_status == Order.STATUS_CANCELLED:
         restore_cancelled_order_stock(order, actor=actor)
         order.cancellation_reason = note[:255]
         order.cancelled_at = timezone.now()
+        from reliability.services import close_order_reservation
+
+        close_order_reservation(
+            order,
+            actor=actor,
+            reason=note or "Order cancelled",
+            expired=(note or "").lower().startswith("reservation expired"),
+        )
+    elif new_status in {
+        Order.STATUS_CONFIRMED,
+        Order.STATUS_PROCESSING,
+        Order.STATUS_READY,
+        Order.STATUS_DISPATCHED,
+        Order.STATUS_DELIVERED,
+        Order.STATUS_FULFILLED,
+    }:
+        from reliability.services import commit_order_reservation
+
+        commit_order_reservation(
+            order,
+            actor=actor,
+            reason=note or f"Order moved to {new_status}",
+        )
+
     if new_status in {Order.STATUS_DELIVERED, Order.STATUS_FULFILLED}:
         order.fulfilled_at = timezone.now()
     order.status = new_status
@@ -80,11 +112,17 @@ def transition_order(order: Order, new_status: str, actor=None, note: str = ""):
             "updated_at",
         ]
     )
-    OrderStatusEvent.objects.create(
+    event = OrderStatusEvent.objects.create(
         order=order,
         from_status=old_status,
         to_status=new_status,
         note=note[:255],
         changed_by=actor,
+    )
+    log_audit_event(
+        actor=actor,
+        verb="commerce.order_status_changed",
+        summary=f"{order.reference}: {old_status} -> {new_status}",
+        target=event,
     )
     return order
