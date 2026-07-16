@@ -30,7 +30,7 @@
                 {{ field.errors }}
                 <div class="d-flex flex-wrap gap-2">
                   {% for radio in field %}
-                  <label class="form-check d-flex align-items-center gap-2 border rounded px-3 py-2 mb-0 flex-grow-1 fulfillment-option {% if radio.data.selected %}border-primary bg-primary-subtle{% endif %}" style="min-width: 10rem; cursor: pointer;">
+                  <label class="form-check d-flex align-items-center gap-2 border rounded px-3 py-2 mb-0 flex-grow-1 fulfillment-option {% if radio.data.selected %}border-primary bg-primary-subtle{% endif %}">
                     <input type="radio" class="form-check-input mt-0" name="{{ radio.data.name }}" value="{{ radio.data.value }}" id="{{ radio.id_for_label }}" {% if radio.data.selected %}checked{% endif %} {% if radio.data.attrs.required %}required{% endif %}>
                     <span class="form-check-label">{{ radio.choice_label }}</span>
                   </label>
@@ -48,12 +48,12 @@
             {% endif %}
           {% endfor %}
           <button type="submit" class="btn btn-primary btn-lg w-100">Place order</button>
-          <p class="small text-muted mt-3 mb-0">Your order will be recorded and the team will follow up where needed.</p>
+          <p class="small text-muted mt-3 mb-0">A confirmation email and private tracking link will be sent to the address above. Placing an order does not by itself confirm payment.</p>
         </div>
       </form>
     </div>
     <div class="col-lg-5">
-      <aside class="card border-0 shadow-sm product-purchase-card">
+      <aside class="card border-0 shadow-sm product-purchase-card mb-4">
         <div class="card-body p-4">
           <p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p>
           <ul class="list-group list-group-flush mb-3">
@@ -71,6 +71,20 @@
           <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ total }}</strong></div>
         </div>
       </aside>
+
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <p class="text-uppercase small fw-semibold text-primary mb-1">Safe payment</p>
+          <h2 class="h5 mb-2">How payment works</h2>
+          <ol class="small text-muted ps-3 mb-3">
+            <li class="mb-2">Place the order so LEOSOFT can confirm stock, delivery and the final reference.</li>
+            <li class="mb-2">Use only the official payment details shown by LEOSOFT.</li>
+            <li>Keep the transaction reference until payment is verified.</li>
+          </ol>
+          {% if company.bank_details %}<div class="payment-instructions border rounded bg-light p-3 small mb-3">{{ company.bank_details|linebreaksbr }}</div>{% endif %}
+          <p class="small text-muted mb-0"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>Never send money to a different number or account supplied through an unverified message.</p>
+        </div>
+      </div>
     </div>
   </div>
 </div>
