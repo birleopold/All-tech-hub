@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "commerce", "reliability.apps.ReliabilityConfig", "billing", "operations",
     "dashboard", "reports", "portal", "purchasing", "messaging", "inventory",
     "marketing.apps.MarketingConfig", "growth.apps.GrowthConfig",
+    "automation.apps.AutomationConfig",
 ]
 
 MIDDLEWARE = [
@@ -98,6 +99,23 @@ ORDER_RESERVATION_MINUTES = max(
     5,
     int(os.getenv("ALLTECH_ORDER_RESERVATION_MINUTES", "1440")),
 )
+
+AUTOMATION_JOB_MAX_ATTEMPTS = max(
+    1,
+    min(20, int(os.getenv("ALLTECH_AUTOMATION_JOB_MAX_ATTEMPTS", "5"))),
+)
+AUTOMATION_HTTP_TIMEOUT_SECONDS = max(
+    5,
+    min(60, int(os.getenv("ALLTECH_AUTOMATION_HTTP_TIMEOUT_SECONDS", "20"))),
+)
+META_AUTO_PUBLISH_ENABLED = env_bool("ALLTECH_META_AUTO_PUBLISH_ENABLED", False)
+META_GRAPH_VERSION = os.getenv("ALLTECH_META_GRAPH_VERSION", "v23.0").strip()
+META_PAGE_ID = os.getenv("ALLTECH_META_PAGE_ID", "").strip()
+META_INSTAGRAM_ACCOUNT_ID = os.getenv(
+    "ALLTECH_META_INSTAGRAM_ACCOUNT_ID", ""
+).strip()
+META_PAGE_ACCESS_TOKEN = os.getenv("ALLTECH_META_PAGE_ACCESS_TOKEN", "").strip()
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "staff_dashboard"
