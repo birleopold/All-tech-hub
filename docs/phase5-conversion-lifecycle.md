@@ -21,6 +21,8 @@ The email attempt is written to the existing `OutboundEmail` log. SMTP failure d
 
 A queued or sent email with the same recipient and subject is reused so refreshing or retrying the checkout response cannot send duplicate confirmation messages.
 
+The delivery service refuses Django's console email backend because that backend prints messages to logs but does not deliver them to customers.
+
 ### Customer-visible order status emails
 
 A newly created `OrderStatusEvent` sends an email only when `visible_to_customer=True`.
@@ -41,7 +43,7 @@ Limit a run with:
 python manage.py retry_order_emails --limit 50
 ```
 
-The command changes a message to `sent` only after the mail backend accepts it. A repeated failure remains logged with the latest error.
+The command changes a message to `sent` only after the mail backend accepts it. A repeated failure remains logged with the latest error. The command exits with an error while the non-delivering console backend is active.
 
 ### Payment guidance
 
@@ -88,6 +90,8 @@ The dashboard supports 7-, 30- and 90-day windows and reports:
 - saved-cart recovery rate;
 - recovered-cart revenue;
 - a clearly labelled checkout conversion proxy;
+- whether the order-email feature is enabled;
+- whether the configured mail backend can deliver;
 - failed order emails;
 - orders without a sent confirmation record;
 - customer status emails sent;
@@ -122,11 +126,11 @@ Strict customer-email release gate:
 python manage.py audit_conversion_funnel --days 30 --strict
 ```
 
-Strict mode fails only when failed customer order emails remain. Older orders without Phase 5 confirmation records are reported as warnings because they may predate this release.
+Strict mode fails when failed customer order emails remain or when customer emails are enabled while the non-delivering console backend is active. Older orders without Phase 5 confirmation records remain warnings because they may predate this release.
 
 ## Environment controls
 
-Recommended production values:
+Recommended production values after SMTP has been tested:
 
 ```dotenv
 ALLTECH_ORDER_CUSTOMER_EMAILS_ENABLED=1
@@ -188,7 +192,9 @@ Use a real internal address controlled by LEOSOFT:
 python manage.py shell -c "from django.core.mail import send_mail; from django.conf import settings; print(send_mail('LEOSOFT SMTP test','Phase 5 SMTP is working.',settings.DEFAULT_FROM_EMAIL,['YOUR_INTERNAL_EMAIL'],fail_silently=False))"
 ```
 
-Replace `YOUR_INTERNAL_EMAIL` locally. Do not commit it.
+Replace `YOUR_INTERNAL_EMAIL` locally. Do not commit it. Confirm that the message actually arrives; a successful command result alone is not enough when using a non-delivering test backend.
+
+After delivery is confirmed, add the two order-email environment values and reload `.env` before restarting the service.
 
 ### 4. Run focused tests
 
@@ -209,7 +215,7 @@ python manage.py audit_conversion_funnel --days 30 --json
 python manage.py audit_customer_experience --json
 ```
 
-Do not use strict conversion mode as a first historical baseline because older orders may predate confirmation-email logging. Strict mode blocks only active failed order emails.
+The first historical baseline may report orders without Phase 5 confirmation records. Review those as historical warnings. Strict mode blocks active failed order emails and an enabled non-delivering backend.
 
 ### 6. Publish and restart
 
@@ -234,6 +240,7 @@ curl -fsS https://leosoftug.com/healthz/
 10. Open `/staff/reports/conversion/` and check the selected reporting window.
 11. Review outbound email failures in the existing email log.
 12. Run `python manage.py retry_order_emails` only after fixing SMTP errors.
+13. Run `python manage.py audit_conversion_funnel --days 30 --strict` after SMTP and the test order are confirmed.
 
 ## Operational cautions
 
