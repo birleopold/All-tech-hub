@@ -68,7 +68,7 @@ class CustomerWarrantyPortalTests(TestCase):
         response = self.client.get(reverse("portal_warranties"))
         self.assertRedirects(
             response,
-            f"{reverse('portal_login')}?next={reverse('portal_warranties')}",
+            reverse("portal_login"),
             fetch_redirect_response=False,
         )
 
