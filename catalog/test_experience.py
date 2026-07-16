@@ -1,8 +1,11 @@
+import json
+
 from django.test import TestCase
 from django.urls import reverse
 
 from catalog.experience import COMPARE_SESSION_KEY, RECENT_SESSION_KEY
 from catalog.models import Category, Product
+from growth.models import GrowthSettings, ProductGrowthData
 
 
 class CatalogExperienceTests(TestCase):
@@ -89,6 +92,29 @@ class CatalogExperienceTests(TestCase):
         self.assertNotIn("view=", canonical)
         self.assertTrue(response.context["catalog_noindex"])
         self.assertContains(response, 'name="robots" content="noindex,follow"')
+
+    def test_product_schema_includes_feed_metadata_shipping_and_return_policy(self):
+        ProductGrowthData.objects.create(
+            product=self.products[0],
+            brand="Lenovo",
+            gtin="1234567890123",
+            mpn="T14-G2",
+            condition=ProductGrowthData.CONDITION_REFURBISHED,
+        )
+        settings = GrowthSettings.load()
+        settings.merchant_country = "UG"
+        settings.merchant_shipping_price = "15000.00"
+        settings.merchant_return_policy_url = "https://leosoftug.com/returns/"
+        settings.save()
+
+        response = self.client.get(self.products[0].get_absolute_url())
+        schema = json.loads(str(response.context["product_schema_json"]))
+        self.assertEqual(schema["brand"]["name"], "Lenovo")
+        self.assertEqual(schema["gtin"], "1234567890123")
+        self.assertEqual(schema["mpn"], "T14-G2")
+        self.assertEqual(schema["itemCondition"], "https://schema.org/RefurbishedCondition")
+        self.assertEqual(schema["offers"]["shippingDetails"]["shippingDestination"]["addressCountry"], "UG")
+        self.assertEqual(schema["offers"]["hasMerchantReturnPolicy"]["url"], "https://leosoftug.com/returns/")
 
     def test_clearing_comparison_removes_session_selection(self):
         session = self.client.session
