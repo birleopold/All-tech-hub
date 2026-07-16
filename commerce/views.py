@@ -11,8 +11,13 @@ from django.views.decorators.http import require_POST
 from billing.models import allocate_document_number
 from catalog.models import Product, ProductVariant
 from commerce import cart as cart_mod
+from commerce.customer_messages import send_order_confirmation_by_id
 from commerce.forms import CheckoutForm
 from commerce.models import Order, OrderLine
+from commerce.recommendations import (
+    recommended_products_for_lines,
+    recommended_products_for_order,
+)
 from commerce.stock import InsufficientStock, decrement_line_stock
 from core.models import CompanySettings
 from reliability.services import create_order_reservation, order_for_idempotency_key
@@ -72,6 +77,8 @@ def cart_view(request):
             "discount": discount,
             "total": total,
             "coupon": coupon,
+            "recommended_products": recommended_products_for_lines(lines),
+            "recommendation_title": "Useful additions for this order",
         },
     )
 
@@ -288,6 +295,10 @@ def checkout_view(request):
                         posted,
                         actor=request.user if request.user.is_authenticated else None,
                     )
+                    order_id = order.pk
+                    transaction.on_commit(
+                        lambda: send_order_confirmation_by_id(order_id)
+                    )
             except InsufficientStock as exc:
                 messages.error(request, str(exc))
                 return redirect("checkout")
@@ -352,9 +363,19 @@ def checkout_view(request):
 def order_detail(request, reference: str, view_key: uuid.UUID):
     order = get_object_or_404(
         Order.objects.select_related("customer", "stock_reservation").prefetch_related(
-            "lines__product", "lines__product_variant"
+            "lines__product__category",
+            "lines__product_variant",
+            "status_events",
         ),
         reference=reference,
         view_key=view_key,
     )
-    return render(request, "commerce/order_detail.html", {"order": order})
+    return render(
+        request,
+        "commerce/order_detail.html",
+        {
+            "order": order,
+            "recommended_products": recommended_products_for_order(order),
+            "recommendation_title": "You may also need",
+        },
+    )
