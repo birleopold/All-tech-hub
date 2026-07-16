@@ -59,47 +59,48 @@ jobs:
           reliability
 
       - name: Run Ruff on changed Python scope
-        run: >-
-          ruff check
-          automation/admin.py
-          automation/apps.py
-          automation/connectors.py
-          automation/models.py
-          automation/signals.py
-          automation/management/commands
-          automation/templatetags
-          automation/test_*.py
-          growth
-          reliability
-          marketing/forms.py
-          commerce/views.py
-          commerce/fulfillment.py
-          commerce/staff_views.py
-          catalog/discovery.py
-          catalog/views.py
-          catalog/watermarks.py
-          catalog/signals.py
-          catalog/test_discovery.py
-          catalog/test_watermarks.py
-          catalog/management/commands/watermark_product_images.py
-          catalog/management/commands/reprocess_product_images.py
-          core/views.py
-          core/private_files.py
-          core/private_views.py
-          core/field_encryption.py
-          core/auth_views.py
-          core/test_phase1_security.py
-          core/management/commands/backup_alltech.py
-          core/management/commands/verify_alltech_backup.py
-          core/management/commands/check_operational_health.py
-          core/management/commands/encrypt_staff_totp_secrets.py
-          marketing/services.py
-          marketing/public_urls.py
-          core/middleware.py
-          core/management/commands/bootstrap_roles.py
-          config/settings_base.py
-          config/settings_production.py
-          config/urls.py
+        run: |
+          ruff check \
+            automation/admin.py \
+            automation/apps.py \
+            automation/connectors.py \
+            automation/models.py \
+            automation/signals.py \
+            automation/management/commands \
+            automation/templatetags \
+            automation/test_*.py \
+            growth \
+            reliability \
+            marketing/forms.py \
+            commerce/views.py \
+            commerce/fulfillment.py \
+            commerce/staff_views.py \
+            catalog/discovery.py \
+            catalog/views.py \
+            catalog/watermarks.py \
+            catalog/signals.py \
+            catalog/test_discovery.py \
+            catalog/test_watermarks.py \
+            catalog/management/commands/watermark_product_images.py \
+            catalog/management/commands/reprocess_product_images.py \
+            core/views.py \
+            core/private_files.py \
+            core/private_views.py \
+            core/field_encryption.py \
+            core/auth_views.py \
+            core/test_phase1_security.py \
+            core/management/commands/backup_alltech.py \
+            core/management/commands/verify_alltech_backup.py \
+            core/management/commands/check_operational_health.py \
+            core/management/commands/encrypt_staff_totp_secrets.py \
+            marketing/services.py \
+            marketing/public_urls.py \
+            core/middleware.py \
+            core/management/commands/bootstrap_roles.py \
+            config/settings_base.py \
+            config/settings_production.py \
+            config/urls.py
+          ruff check --ignore F401 automation/services.py
 
   transaction-postgres:
     runs-on: ubuntu-latest
