@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
+from django.utils import timezone as django_timezone
 
 
 class Command(BaseCommand):
-    help = "Check database, disk space, backup freshness and private-media permissions."
+    help = (
+        "Check database, disk space, backup freshness, private-media permissions "
+        "and overdue transaction reservations."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("--json", action="store_true", dest="as_json")
@@ -26,6 +30,12 @@ class Command(BaseCommand):
             "--minimum-free-disk-percent",
             type=float,
             default=15.0,
+        )
+        parser.add_argument(
+            "--reservation-grace-minutes",
+            type=int,
+            default=30,
+            help="Allowed timer delay before an overdue reservation is unhealthy.",
         )
 
     def handle(self, *args, **options):
@@ -106,6 +116,38 @@ class Command(BaseCommand):
                 failures.append(
                     f"private_media: directory is accessible to other users ({oct(mode)})"
                 )
+
+        try:
+            from reliability.models import OrderReservation
+
+            cutoff = django_timezone.now() - timedelta(
+                minutes=max(0, options["reservation_grace_minutes"])
+            )
+            overdue_count = OrderReservation.objects.filter(
+                status=OrderReservation.STATUS_RESERVED,
+                expires_at__lt=cutoff,
+            ).count()
+            reservation_status = "ok" if overdue_count == 0 else "error"
+            checks.append(
+                {
+                    "name": "order_reservations",
+                    "status": reservation_status,
+                    "overdue_count": overdue_count,
+                }
+            )
+            if overdue_count:
+                failures.append(
+                    f"order_reservations: {overdue_count} reservation(s) overdue beyond grace period"
+                )
+        except Exception as exc:
+            checks.append(
+                {
+                    "name": "order_reservations",
+                    "status": "error",
+                    "detail": str(exc),
+                }
+            )
+            failures.append(f"order_reservations: {exc}")
 
         payload = {
             "status": "error" if failures else "ok",
