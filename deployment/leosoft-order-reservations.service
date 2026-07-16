@@ -1,0 +1,15 @@
+[Unit]
+Description=LEOSOFT order reservation expiry
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py expire_order_reservations --limit 500
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
