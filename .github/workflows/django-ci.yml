@@ -32,7 +32,20 @@ jobs:
       - name: Run Django checks
         run: python manage.py check
 
-      - name: Run marketing, growth, image and discovery tests
+      - name: Validate production settings and hashed static assets
+        env:
+          ALLTECH_ENV: production
+          ALLTECH_SECRET_KEY: ci-only-secret-key-that-is-longer-than-fifty-characters-123456789
+          ALLTECH_FIELD_ENCRYPTION_KEY: ci-only-field-encryption-key-longer-than-thirty-two-characters
+          ALLTECH_ALLOWED_HOSTS: localhost
+          ALLTECH_CSRF_TRUSTED_ORIGINS: https://localhost
+          ALLTECH_DB_ENGINE: django.db.backends.sqlite3
+          ALLTECH_DB_NAME: /tmp/leosoft-ci.sqlite3
+        run: |
+          python manage.py check --deploy
+          python manage.py collectstatic --noinput
+
+      - name: Run marketing, growth, image, discovery and Phase 1 tests
         run: >-
           python manage.py test
           growth.test_growth
@@ -40,6 +53,7 @@ jobs:
           catalog.test_social_marketing
           catalog.test_watermarks
           catalog.test_discovery
+          core.test_phase1_security
 
       - name: Run Ruff on changed Python scope
         run: >-
@@ -54,9 +68,19 @@ jobs:
           catalog/management/commands/watermark_product_images.py
           catalog/management/commands/reprocess_product_images.py
           core/views.py
+          core/private_files.py
+          core/private_views.py
+          core/field_encryption.py
+          core/auth_views.py
+          core/test_phase1_security.py
+          core/management/commands/backup_alltech.py
+          core/management/commands/verify_alltech_backup.py
+          core/management/commands/check_operational_health.py
+          core/management/commands/encrypt_staff_totp_secrets.py
           marketing/services.py
           marketing/public_urls.py
           core/middleware.py
           core/management/commands/bootstrap_roles.py
           config/settings_base.py
+          config/settings_production.py
           config/urls.py
