@@ -4,11 +4,14 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from catalog.models import Category, Product
+from commerce import cart as cart_mod
 from commerce.fulfillment import transition_order
 from commerce.models import Order, OrderLine
+from commerce.views import SESSION_CHECKOUT_TOKEN
 from crm.models import Customer
 from reliability.models import OrderReservation, PaymentAttempt, PaymentWebhookEvent
 from reliability.services import (
@@ -56,6 +59,43 @@ class TransactionReliabilityTests(TestCase):
             unit_price=Decimal("50.00"),
         )
         return order
+
+    def test_checkout_replay_returns_original_order_without_second_stock_change(self):
+        checkout_key = "browser-checkout-idempotency-key"
+        session = self.client.session
+        cart_mod.add_product(session, self.product.pk, 2)
+        session[SESSION_CHECKOUT_TOKEN] = checkout_key
+        session.save()
+        payload = {
+            "checkout_token": checkout_key,
+            "name": self.customer.name,
+            "email": self.customer.email,
+            "phone": "0700000000",
+            "company_name": "",
+            "billing_address": "Kampala",
+            "shipping_address": "Kampala",
+            "customer_note": "",
+            "fulfillment_type": Order.FULFILLMENT_PICKUP,
+        }
+
+        first_response = self.client.post(reverse("checkout"), payload)
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(Order.objects.count(), 1)
+        order = Order.objects.get()
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 1)
+        self.assertEqual(order.stock_reservation.idempotency_key, checkout_key)
+
+        second_response = self.client.post(reverse("checkout"), payload)
+        self.assertRedirects(
+            second_response,
+            order.get_absolute_url(),
+            fetch_redirect_response=False,
+        )
+        self.product.refresh_from_db()
+        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(OrderReservation.objects.count(), 1)
+        self.assertEqual(self.product.stock_quantity, 1)
 
     def test_reservation_key_is_idempotent_for_same_order(self):
         order = self.make_order()
