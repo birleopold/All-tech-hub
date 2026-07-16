@@ -1,6 +1,6 @@
 # Phase 2 — Transaction reliability
 
-This phase introduces durable stock reservations, checkout idempotency, payment-attempt state management, refund idempotency, webhook deduplication and stronger order audit trails.
+This phase introduces durable stock reservations, checkout idempotency, payment-attempt state management, refund idempotency, webhook deduplication, atomic shipment transitions and stronger order audit trails.
 
 ## What is implemented
 
@@ -13,7 +13,8 @@ If the same checkout request is submitted again:
 - the existing order is returned;
 - no second order is created;
 - stock is not deducted again;
-- coupon usage is not incremented again.
+- coupon usage is not incremented again;
+- the original receipt is returned even after the first request cleared the cart.
 
 Database uniqueness remains the final protection when simultaneous requests reach different Gunicorn workers.
 
@@ -24,7 +25,7 @@ Checkout still deducts on-hand stock atomically, but the deduction is now explic
 Reservation states:
 
 - `reserved` — stock is held for a pending order;
-- `committed` — payment or staff confirmation committed the stock;
+- `committed` — full payment or staff confirmation committed the stock;
 - `released` — cancellation returned the stock;
 - `expired` — the pending reservation timed out and returned the stock.
 
@@ -46,7 +47,7 @@ python manage.py expire_order_reservations
 
 cancels only due orders that are still pending. It then restores stock once and marks the reservation expired.
 
-Orders already confirmed or further advanced are committed instead of cancelled.
+Orders already confirmed or further advanced are committed instead of cancelled. The command uses the same database lock order as payment and order operations to reduce deadlock risk.
 
 Preview due reservations without changing anything:
 
@@ -85,13 +86,23 @@ Stock restoration remains protected by the existing one-to-one `OrderStockRestor
 
 Every payment attempt requires a unique idempotency key. Reusing the same key with identical details returns the existing attempt; reusing it with different order, amount, provider or currency is rejected.
 
-A successful paid transition can confirm a pending order and commit its stock reservation.
+Nonblank provider transaction references are also unique per provider. A replay with the same reference and matching details returns the existing attempt; a conflicting order or amount is rejected.
+
+Partial payments are supported. A pending order is confirmed only when the net successful payment total reaches the order total. A payment that would cause an overpayment is rejected.
+
+Payment, order and reservation operations use a consistent lock order:
+
+```text
+Order → Payment attempt → Stock reservation
+```
+
+This reduces deadlock risk during simultaneous payment callbacks, cancellation and reservation expiry.
 
 ### Refund idempotency
 
 Every refund requires a unique idempotency key. Replayed provider callbacks return the existing refund instead of recording another refund.
 
-The service rejects a refund that exceeds the remaining refundable amount.
+The service rejects a refund that exceeds the remaining refundable amount. Payment and refund amounts also have database-level positive-value constraints.
 
 ### Webhook deduplication
 
@@ -107,6 +118,47 @@ The service rejects a refund that exceeds the remaining refundable amount.
 The same provider event ID and same payload is treated as a replay. Reusing an event ID with a changed payload is rejected as suspicious.
 
 No provider-specific public webhook endpoint is enabled yet. Each future payment connector must verify its provider signature before calling the generic reliability services.
+
+### Atomic shipment transitions
+
+Shipment status and order status now change in one database transaction.
+
+For example, a shipment cannot be saved as `In transit` while the order remains `Pending`. When the requested order transition is invalid, neither record changes and staff receive the validation message.
+
+### Protected operational records
+
+Reservation, payment, refund and webhook records are visible in Django admin for investigation but are read-only. Staff cannot use admin forms to bypass the approved transaction services.
+
+## Transaction integrity audit
+
+Run a read-only audit:
+
+```bash
+python manage.py audit_transaction_integrity
+```
+
+JSON output:
+
+```bash
+python manage.py audit_transaction_integrity --json
+```
+
+Treat legacy pending orders without reservations as failures as well:
+
+```bash
+python manage.py audit_transaction_integrity --fail-on-warning
+```
+
+The audit checks for:
+
+- pending orders without reservations;
+- reservations inconsistent with order state;
+- overdue reservations;
+- cancelled reservation-aware orders without a stock-restoration record;
+- cancelled orders with open or unsettled payments;
+- net successful payments exceeding an order total.
+
+The command does not change any records.
 
 ## Deployment
 
@@ -149,14 +201,14 @@ python manage.py migrate --plan
 python manage.py migrate --noinput
 python manage.py check
 python manage.py check --deploy
-python manage.py test reliability.test_transactions
+python manage.py test reliability
 ```
 
 Run the wider high-risk suite:
 
 ```bash
 python manage.py test \
-  reliability.test_transactions \
+  reliability \
   core.test_phase1_security \
   catalog.test_watermarks \
   catalog.test_discovery \
@@ -164,13 +216,14 @@ python manage.py test \
   marketing.test_automation
 ```
 
-### 5. Preview reservation processing
+### 5. Audit and preview processing
 
 ```bash
+python manage.py audit_transaction_integrity --json
 python manage.py expire_order_reservations --dry-run
 ```
 
-Immediately after deployment, existing orders will not have reservations. Only checkouts created after this release enter the new reservation workflow.
+Immediately after deployment, existing orders will not have reservations. Only checkouts created after this release enter the new reservation workflow. Legacy pending orders therefore appear as audit warnings, not errors.
 
 ### 6. Restart the application
 
@@ -203,6 +256,7 @@ sudo journalctl -u leosoft-order-reservations.service -n 100 --no-pager
 
 ```bash
 python manage.py check_operational_health --json
+python manage.py audit_transaction_integrity --json
 ```
 
 The health check reports an error when a reservation remains overdue for more than 30 minutes, indicating that the expiry timer may have stopped or failed.
@@ -216,11 +270,16 @@ Use a low-stock test item and verify:
 3. Staff order detail shows a `Reserved` stock reservation.
 4. Customer receipt shows the reservation expiry time.
 5. Reposting the same checkout token returns the original order.
-6. Confirming the order changes the reservation to `Committed` without changing stock again.
-7. Cancelling an unpaid order requires a reason and restores stock once.
-8. Running cancellation again does not restore stock again.
-9. An expired pending test order is automatically cancelled by the timer.
-10. Operational health shows zero overdue reservations.
+6. A partial payment leaves the order pending and reservation held.
+7. Full payment changes the reservation to `Committed` and confirms the order without changing stock again.
+8. An overpayment attempt is rejected.
+9. Cancelling an unpaid order requires a reason and restores stock once.
+10. Cancelling a paid order is rejected until the payment is fully refunded.
+11. Running cancellation again does not restore stock again.
+12. An invalid shipment transition changes neither shipment nor order.
+13. An expired pending test order is automatically cancelled by the timer.
+14. Operational health shows zero overdue reservations.
+15. The transaction-integrity audit shows no errors.
 
 ## Payment connector contract
 
@@ -241,10 +300,10 @@ Never mark a payment paid based only on a browser redirect or customer screensho
 
 ## Rollback
 
-Before migration rollback, stop the timer:
+Before application rollback, stop the timer:
 
 ```bash
 sudo systemctl disable --now leosoft-order-reservations.timer
 ```
 
-Application code can be rolled back while preserving the reliability tables. Do not reverse the reliability migration after real reservations, payments, refunds or webhook events have been recorded unless a verified database backup exists and data-loss implications are accepted.
+Application code can be rolled back while preserving the reliability tables. Do not reverse the reliability migrations after real reservations, payments, refunds or webhook events have been recorded unless a verified database backup exists and data-loss implications are accepted.
