@@ -288,7 +288,6 @@ def checkout_view(request):
                         posted,
                         actor=request.user if request.user.is_authenticated else None,
                     )
-                    cart_mod.clear(request.session)
             except InsufficientStock as exc:
                 messages.error(request, str(exc))
                 return redirect("checkout")
@@ -301,8 +300,8 @@ def checkout_view(request):
                 if order is None:
                     raise
                 reused_order = True
-                cart_mod.clear(request.session)
 
+            cart_mod.clear(request.session)
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
             if reused_order:
                 messages.info(
