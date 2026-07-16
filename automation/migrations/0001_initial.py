@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("marketing", "0001_initial"),
+        ("marketing", "0002_marketing_automation"),
     ]
 
     operations = [
