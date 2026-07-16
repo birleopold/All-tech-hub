@@ -1,4 +1,6 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from commerce.models import Order, OrderStatusEvent
@@ -8,9 +10,15 @@ from crm.models import Customer
 
 class OrderProgressTests(TestCase):
     def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="progress-customer",
+            email="progress@example.com",
+            password="strong-test-password",
+        )
         self.customer = Customer.objects.create(
             name="Progress Customer",
-            email="progress@example.com",
+            email=self.user.email,
+            user=self.user,
         )
 
     def make_order(self, **overrides):
@@ -83,3 +91,29 @@ class OrderProgressTests(TestCase):
             "Customer requested cancellation",
         )
         self.assertEqual(progress["steps"][0]["state"], "complete")
+
+    def test_receipt_and_portal_pages_render_progress_component(self):
+        order = self.make_order(status=Order.STATUS_CONFIRMED)
+        OrderStatusEvent.objects.create(
+            order=order,
+            from_status=Order.STATUS_PENDING,
+            to_status=Order.STATUS_CONFIRMED,
+            note="Confirmed for testing",
+        )
+
+        receipt = self.client.get(
+            reverse("order_detail", args=[order.reference, order.view_key])
+        )
+        self.assertEqual(receipt.status_code, 200)
+        self.assertContains(receipt, "Order progress")
+        self.assertContains(receipt, "customer_experience.css")
+        self.assertEqual(
+            receipt.headers["X-Robots-Tag"],
+            "noindex, nofollow, noarchive",
+        )
+
+        self.client.force_login(self.user)
+        portal = self.client.get(reverse("portal_order_detail", args=[order.pk]))
+        self.assertEqual(portal.status_code, 200)
+        self.assertContains(portal, "Order progress")
+        self.assertContains(portal, "customer_experience.css")
