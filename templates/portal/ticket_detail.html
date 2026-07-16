@@ -35,7 +35,7 @@
           <div>{{ ticket.description|linebreaksbr }}</div>
         </div>
       </div>
-      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5 mb-3">Conversation</h2>{% for c in comments %}<div class="border-bottom pb-3 mb-3"><div class="d-flex justify-content-between small text-muted mb-1"><strong>{{ c.author.get_username|default:"You" }}</strong><span>{{ c.created_at|date:"Y-m-d H:i" }}</span></div><p class="mb-1">{{ c.body|linebreaksbr }}</p>{% if c.attachment %}<a class="small" href="{{ c.attachment.url }}" target="_blank" rel="noopener">View attachment</a>{% endif %}</div>{% empty %}<p class="text-muted mb-0">No replies yet. Our team will get back to you shortly.</p>{% endfor %}</div></div>
+      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5 mb-3">Conversation</h2>{% for c in comments %}<div class="border-bottom pb-3 mb-3"><div class="d-flex justify-content-between small text-muted mb-1"><strong>{{ c.author.get_username|default:"You" }}</strong><span>{{ c.created_at|date:"Y-m-d H:i" }}</span></div><p class="mb-1">{{ c.body|linebreaksbr }}</p>{% if c.attachment %}<a class="small" href="{% url 'portal_ticket_attachment' c.pk %}" target="_blank" rel="noopener">View protected attachment</a>{% endif %}</div>{% empty %}<p class="text-muted mb-0">No replies yet. Our team will get back to you shortly.</p>{% endfor %}</div></div>
       {% if can_reply %}
       <div class="card border-0 shadow-sm"><div class="card-body p-4"><h3 class="h5 mb-3">Add a reply</h3><form method="post">{% csrf_token %}<div class="mb-3">{{ reply_form.body }}</div><button class="btn btn-primary" type="submit">Send reply</button></form></div></div>
       {% else %}
