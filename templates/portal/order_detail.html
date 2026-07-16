@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load commerce_recommendations %}
+{% order_recommendations order 4 as recommended_products %}
 {% block title %}Order {{ order.reference }}{% endblock %}
 {% block meta %}<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="same-origin">{% endblock %}
 {% block content %}
@@ -57,8 +59,10 @@
 
     <div class="col-lg-4">
       <aside class="card border-0 shadow-sm product-purchase-card mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p><div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ order.subtotal|floatformat:2 }}</strong></div><div class="d-flex justify-content-between mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</strong></div>{% if order.discount_amount %}<div class="d-flex justify-content-between mb-2"><span class="text-muted">Discount</span><strong>− {{ company.currency_code }} {{ order.discount_amount|floatformat:2 }}</strong></div>{% endif %}<hr><div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ order.total|floatformat:2 }}</strong></div></div></aside>
+      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Payment guidance</p><h2 class="h5 mb-2">Reference {{ order.reference }}</h2><p class="small text-muted">Payment remains pending until verified by LEOSOFT. Use only official details and retain the transaction reference.</p>{% if company.bank_details %}<div class="payment-instructions border rounded bg-light p-3 small">{{ company.bank_details|linebreaksbr }}</div>{% endif %}</div></div>
       <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h5 mb-2">Need help?</h2><p class="small text-muted">Use support to ask about payment, delivery, warranty or a product in this order.</p><a class="btn btn-outline-primary w-100" href="{% url 'portal_ticket_create' %}">Open support request</a></div></div>
     </div>
   </div>
+  {% with recommendation_title="Useful additions" %}{% include "commerce/_recommendations.html" %}{% endwith %}
 </div>
 {% endblock %}
