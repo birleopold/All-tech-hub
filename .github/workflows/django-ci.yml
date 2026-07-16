@@ -54,7 +54,7 @@ jobs:
           catalog.test_watermarks
           catalog.test_discovery
           core.test_phase1_security
-          reliability.test_transactions
+          reliability
 
       - name: Run Ruff on changed Python scope
         run: >-
@@ -135,4 +135,4 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run transaction reliability tests on PostgreSQL
-        run: python manage.py test reliability.test_transactions commerce
+        run: python manage.py test reliability commerce
