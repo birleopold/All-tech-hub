@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load catalog_images %}
 {% block title %}{{ company.company_name|default:"ALLTECH Hub" }} — Technology, repairs and support{% endblock %}
 {% block content %}
 <section class="home-hero mb-5">
@@ -7,121 +8,24 @@
       <div class="col-lg-7">
         <p class="text-uppercase small text-white-50 mb-2">IT support · devices · repairs · installations</p>
         <h1 class="display-5 fw-bold mb-3">{{ company.tagline|default:"Reliable technology for your business and home." }}</h1>
-        <p class="lead text-white-75 col-lg-10 mb-4">
-          Buy quality devices, request repairs, book installations, and receive clear business documents from quotation to receipt.
-        </p>
-        <div class="d-flex flex-wrap gap-2 mb-4">
-          <a class="btn btn-light btn-lg" href="{% url 'product_list' %}">Browse shop</a>
-          <a class="btn btn-outline-light btn-lg" href="{% url 'contact' %}">Request support</a>
-        </div>
-        <div class="row g-3 text-white-75 small">
-          <div class="col-6 col-md-4"><strong class="d-block text-white">Documented</strong>Quotes, invoices and receipts</div>
-          <div class="col-6 col-md-4"><strong class="d-block text-white">Practical</strong>Repairs, setup and support</div>
-          <div class="col-12 col-md-4"><strong class="d-block text-white">Business-ready</strong>Products and services together</div>
-        </div>
+        <p class="lead text-white-75 col-lg-10 mb-4">Buy quality devices, request repairs, book installations, and receive clear business documents from quotation to receipt.</p>
+        <div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-light btn-lg" href="{% url 'product_list' %}">Browse shop</a><a class="btn btn-outline-light btn-lg" href="{% url 'contact' %}">Request support</a></div>
+        <div class="row g-3 text-white-75 small"><div class="col-6 col-md-4"><strong class="d-block text-white">Documented</strong>Quotes, invoices and receipts</div><div class="col-6 col-md-4"><strong class="d-block text-white">Practical</strong>Repairs, setup and support</div><div class="col-12 col-md-4"><strong class="d-block text-white">Business-ready</strong>Products and services together</div></div>
       </div>
-      <div class="col-lg-5">
-        <div class="home-hero-panel card border-0 shadow-lg">
-          <div class="card-body p-4">
-            <p class="text-uppercase small fw-semibold text-primary mb-2">Quick service desk</p>
-            <h2 class="h4 mb-3">What do you need today?</h2>
-            <div class="d-grid gap-2">
-              <a class="btn btn-outline-primary text-start" href="{% url 'product_list' %}"><i class="bi bi-laptop me-2" aria-hidden="true"></i> Buy devices or accessories</a>
-              <a class="btn btn-outline-primary text-start" href="{% url 'contact' %}"><i class="bi bi-tools me-2" aria-hidden="true"></i> Book a repair or installation</a>
-              <a class="btn btn-outline-primary text-start" href="{% url 'contact' %}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i> Request a formal quote</a>
-            </div>
-            <hr>
-            <p class="small text-muted mb-0">Send your request and the team will guide you on price, availability and next steps.</p>
-          </div>
-        </div>
-      </div>
+      <div class="col-lg-5"><div class="home-hero-panel card border-0 shadow-lg"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Quick service desk</p><h2 class="h4 mb-3">What do you need today?</h2><div class="d-grid gap-2"><a class="btn btn-outline-primary text-start" href="{% url 'product_list' %}"><i class="bi bi-laptop me-2" aria-hidden="true"></i> Buy devices or accessories</a><a class="btn btn-outline-primary text-start" href="{% url 'contact' %}"><i class="bi bi-tools me-2" aria-hidden="true"></i> Book a repair or installation</a><a class="btn btn-outline-primary text-start" href="{% url 'contact' %}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i> Request a formal quote</a></div><hr><p class="small text-muted mb-0">Send your request and the team will guide you on price, availability and next steps.</p></div></div></div>
     </div>
   </div>
 </section>
 
 <div class="container">
-  <section class="mb-5">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><h2 class="h5 mt-3">Reliable process</h2><p class="text-muted mb-0">Requests can be handled with proper records, quotation, invoice, receipt and follow-up.</p></div></div>
-      </div>
-      <div class="col-md-4">
-        <div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span><h2 class="h5 mt-3">Products and services</h2><p class="text-muted mb-0">Buy equipment, then request setup, repair, software or networking support from one team.</p></div></div>
-      </div>
-      <div class="col-md-4">
-        <div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><h2 class="h5 mt-3">Human support</h2><p class="text-muted mb-0">Get guidance before buying, after-sales support, and clear communication on service work.</p></div></div>
-      </div>
-    </div>
-  </section>
+  <section class="mb-5"><div class="row g-3"><div class="col-md-4"><div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><h2 class="h5 mt-3">Reliable process</h2><p class="text-muted mb-0">Requests can be handled with proper records, quotation, invoice, receipt and follow-up.</p></div></div></div><div class="col-md-4"><div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span><h2 class="h5 mt-3">Products and services</h2><p class="text-muted mb-0">Buy equipment, then request setup, repair, software or networking support from one team.</p></div></div></div><div class="col-md-4"><div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><h2 class="h5 mt-3">Human support</h2><p class="text-muted mb-0">Get guidance before buying, after-sales support, and clear communication on service work.</p></div></div></div></div></section>
 
-  {% if featured_services %}
-  <section class="mb-5">
-    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
-      <div><p class="text-uppercase small fw-semibold text-primary mb-1">Professional services</p><h2 class="h3 mb-0">Featured services</h2></div>
-      <a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}?kind=service">View services</a>
-    </div>
-    <div class="row g-3">
-      {% for p in featured_services %}
-      <div class="col-md-4">
-        <div class="card card-product home-service-card h-100">
-          <div class="card-body">
-            <span class="badge badge-kind-service mb-2">Service</span>
-            <h3 class="h5 card-title">{{ p.name }}</h3>
-            <p class="card-text text-muted">{{ p.short_description|default:p.description|truncatewords:24 }}</p>
-            <p class="fw-semibold mb-0">{{ company.currency_code }} {{ p.price }}</p>
-            <a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
+  {% if featured_services %}<section class="mb-5"><div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Professional services</p><h2 class="h3 mb-0">Featured services</h2></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}?kind=service">View services</a></div><div class="row g-3">{% for p in featured_services %}<div class="col-md-4"><div class="card card-product home-service-card h-100"><div class="card-body"><span class="badge badge-kind-service mb-2">Service</span><h3 class="h5 card-title">{{ p.name }}</h3><p class="card-text text-muted">{{ p.short_description|default:p.description|truncatewords:24 }}</p><p class="fw-semibold mb-0">{{ company.currency_code }} {{ p.price }}</p><a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a></div></div></div>{% endfor %}</div></section>{% endif %}
 
-  <section class="home-process card border-0 shadow-sm mb-5">
-    <div class="card-body p-4 p-lg-5">
-      <div class="row g-4 align-items-center">
-        <div class="col-lg-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Simple workflow</p><h2 class="h3 mb-2">From request to receipt</h2><p class="text-muted mb-0">A clear process builds confidence and keeps every job organised.</p></div>
-        <div class="col-lg-8">
-          <div class="row g-3">
-            <div class="col-md-4"><div class="home-step"><span>1</span><strong>Request</strong><p>Choose an item or ask for support.</p></div></div>
-            <div class="col-md-4"><div class="home-step"><span>2</span><strong>Quote</strong><p>Receive a clear price and scope.</p></div></div>
-            <div class="col-md-4"><div class="home-step"><span>3</span><strong>Deliver</strong><p>Get the product or service documented.</p></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <section class="home-process card border-0 shadow-sm mb-5"><div class="card-body p-4 p-lg-5"><div class="row g-4 align-items-center"><div class="col-lg-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Simple workflow</p><h2 class="h3 mb-2">From request to receipt</h2><p class="text-muted mb-0">A clear process builds confidence and keeps every job organised.</p></div><div class="col-lg-8"><div class="row g-3"><div class="col-md-4"><div class="home-step"><span>1</span><strong>Request</strong><p>Choose an item or ask for support.</p></div></div><div class="col-md-4"><div class="home-step"><span>2</span><strong>Quote</strong><p>Receive a clear price and scope.</p></div></div><div class="col-md-4"><div class="home-step"><span>3</span><strong>Deliver</strong><p>Get the product or service documented.</p></div></div></div></div></div></div></section>
 
-  {% if featured_products %}
-  <section class="mb-5">
-    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3">
-      <div><p class="text-uppercase small fw-semibold text-primary mb-1">Shop highlights</p><h2 class="h3 mb-0">Popular products</h2></div>
-      <a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}">View shop</a>
-    </div>
-    <div class="row g-3">
-      {% for p in featured_products %}
-      <div class="col-6 col-md-3">
-        <div class="card card-product h-100">
-          {% if p.primary_display_image %}<img src="{{ p.primary_display_image.url }}" class="card-img-top object-fit-cover home-product-image" alt="{{ p.name }}">{% else %}<div class="home-product-placeholder"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}
-          <div class="card-body">
-            <span class="badge badge-kind-product mb-2">Product</span>
-            <h3 class="h6 card-title">{{ p.name }}</h3>
-            <p class="fw-semibold mb-0">{% if p.has_sellable_variants and p.min_active_variant_price %}From {{ company.currency_code }} {{ p.min_active_variant_price }}{% else %}{{ company.currency_code }} {{ p.price }}{% endif %}</p>
-            <a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
+  {% if featured_products %}<section class="mb-5"><div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Shop highlights</p><h2 class="h3 mb-0">Popular products</h2></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}">View shop</a></div><div class="row g-3">{% for p in featured_products %}<div class="col-6 col-md-3"><div class="card card-product h-100">{% if p.primary_display_image %}{% responsive_image p.primary_display_image p.name "card-img-top object-fit-cover home-product-image" "(max-width: 767px) 50vw, 25vw" "lazy" "low" %}{% else %}<div class="home-product-placeholder"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}<div class="card-body"><span class="badge badge-kind-product mb-2">Product</span><h3 class="h6 card-title">{{ p.name }}</h3><p class="fw-semibold mb-0">{% if p.has_sellable_variants and p.min_active_variant_price %}From {{ company.currency_code }} {{ p.min_active_variant_price }}{% else %}{{ company.currency_code }} {{ p.price }}{% endif %}</p><a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a></div></div></div>{% endfor %}</div></section>{% endif %}
 
-  <section class="home-cta card border-0 shadow-sm mb-5">
-    <div class="card-body p-4 p-lg-5 d-flex justify-content-between align-items-center flex-wrap gap-3">
-      <div><p class="text-uppercase small fw-semibold text-primary mb-1">Need help choosing?</p><h2 class="h3 mb-1">Talk to the team before you buy or book.</h2><p class="text-muted mb-0">Get guidance on the right product, repair, installation or support service.</p></div>
-      <a class="btn btn-primary btn-lg" href="{% url 'contact' %}">Contact us</a>
-    </div>
-  </section>
+  <section class="home-cta card border-0 shadow-sm mb-5"><div class="card-body p-4 p-lg-5 d-flex justify-content-between align-items-center flex-wrap gap-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Need help choosing?</p><h2 class="h3 mb-1">Talk to the team before you buy or book.</h2><p class="text-muted mb-0">Get guidance on the right product, repair, installation or support service.</p></div><a class="btn btn-primary btn-lg" href="{% url 'contact' %}">Contact us</a></div></section>
 </div>
 {% endblock %}
