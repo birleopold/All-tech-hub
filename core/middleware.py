@@ -32,6 +32,24 @@ URL_PERMISSION_PREFIXES = {
     "staff_apply_customer_credit": "billing.change_customercredit",
 }
 
+PRIVATE_RESPONSE_PREFIXES = (
+    "/staff/",
+    "/admin/",
+    "/accounts/",
+    "/cart/",
+    "/quote/",
+    "/pay/",
+)
+PRIVATE_RESPONSE_PATHS = {
+    "/api/v1/orders/lookup/",
+}
+
+
+def _is_private_response_path(path: str) -> bool:
+    if path.startswith("/portal/") and not path.startswith("/portal/kb/"):
+        return True
+    return path in PRIVATE_RESPONSE_PATHS or path.startswith(PRIVATE_RESPONSE_PREFIXES)
+
 
 class SecurityHeadersMiddleware:
     def __init__(self, get_response):
@@ -48,6 +66,10 @@ class SecurityHeadersMiddleware:
             "Permissions-Policy",
             getattr(settings, "PERMISSIONS_POLICY", ""),
         )
+
+        if _is_private_response_path(request.path_info):
+            self._set_header(response, "X-Robots-Tag", "noindex, nofollow, noarchive")
+            self._set_header(response, "Cache-Control", "private, no-store")
 
         csp = getattr(settings, "CONTENT_SECURITY_POLICY", "")
         if csp:
