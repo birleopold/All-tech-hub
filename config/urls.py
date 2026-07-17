@@ -65,6 +65,7 @@ urlpatterns = [
         core_auth.two_factor_disable,
         name="staff_two_factor_disable",
     ),
+    path("preferences/", include("loyalty.urls")),
     path("marketing/", include("marketing.public_urls")),
     path("marketing/", include("growth.public_urls")),
     path("staff/marketing/growth/", include("growth.staff_urls")),
