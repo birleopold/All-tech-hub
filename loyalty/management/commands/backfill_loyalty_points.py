@@ -22,9 +22,15 @@ class Command(BaseCommand):
             idempotency_key__startswith="order:",
             kind=LoyaltyTransaction.KIND_EARN,
         ).values_list("order_reference", flat=True)
-        queryset = Order.objects.filter(
-            status__in=[Order.STATUS_DELIVERED, Order.STATUS_FULFILLED],
-        ).exclude(reference__in=awarded_order_ids).order_by("placed_at", "id")
+        queryset = (
+            Order.objects.filter(
+                status__in=[Order.STATUS_DELIVERED, Order.STATUS_FULFILLED],
+            )
+            .exclude(reference__in=awarded_order_ids)
+            .exclude(lines__returns__isnull=False)
+            .distinct()
+            .order_by("placed_at", "id")
+        )
         limit = max(0, int(options["limit"] or 0))
         if limit:
             queryset = queryset[:limit]
@@ -32,7 +38,7 @@ class Command(BaseCommand):
         if options["dry_run"]:
             self.stdout.write(
                 self.style.WARNING(
-                    f"Dry run: {len(orders)} completed order(s) are eligible for loyalty point review."
+                    f"Dry run: {len(orders)} completed, non-returned order(s) are eligible for loyalty point review."
                 )
             )
             return
