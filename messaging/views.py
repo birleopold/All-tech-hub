@@ -121,7 +121,7 @@ def email_job_update(request, pk: int):
             if log.status == "sent":
                 messages.success(request, "Update email sent.")
             else:
-                messages.error(request, f"Retry failed: {log.error}")
+                messages.error(request, f"Email failed: {log.error}")
             return redirect("staff_job_detail", pk=job.pk)
     else:
         form = SendEmailForm(initial=initial)
