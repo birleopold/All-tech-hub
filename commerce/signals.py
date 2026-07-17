@@ -10,12 +10,18 @@ from loyalty.services import award_completed_order_points_by_id
 
 @receiver(post_save, sender=OrderStatusEvent)
 def queue_customer_order_status_email(sender, instance, created, **kwargs):
-    if not created or not instance.visible_to_customer:
+    if not created:
         return
-    event_id = instance.pk
-    transaction.on_commit(lambda: send_order_status_update_by_id(event_id))
+
+    if instance.visible_to_customer:
+        event_id = instance.pk
+        transaction.on_commit(lambda: send_order_status_update_by_id(event_id))
 
     if instance.to_status in {Order.STATUS_DELIVERED, Order.STATUS_FULFILLED}:
         order_id = instance.order_id
-        transaction.on_commit(lambda: send_order_review_request_by_id(order_id))
-        transaction.on_commit(lambda: award_completed_order_points_by_id(order_id))
+        if instance.visible_to_customer:
+            transaction.on_commit(lambda: send_order_review_request_by_id(order_id))
+        transaction.on_commit(
+            lambda: award_completed_order_points_by_id(order_id),
+            robust=True,
+        )
