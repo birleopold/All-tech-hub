@@ -16,21 +16,13 @@ from django.utils import timezone as django_timezone
 class Command(BaseCommand):
     help = (
         "Check database, disk space, backup freshness, private-media permissions, "
-        "transaction reservations and automation health."
+        "transaction reservations, automation and email deliverability health."
     )
 
     def add_arguments(self, parser):
         parser.add_argument("--json", action="store_true", dest="as_json")
-        parser.add_argument(
-            "--max-backup-age-hours",
-            type=int,
-            default=30,
-        )
-        parser.add_argument(
-            "--minimum-free-disk-percent",
-            type=float,
-            default=15.0,
-        )
+        parser.add_argument("--max-backup-age-hours", type=int, default=30)
+        parser.add_argument("--minimum-free-disk-percent", type=float, default=15.0)
         parser.add_argument(
             "--reservation-grace-minutes",
             type=int,
@@ -232,6 +224,39 @@ class Command(BaseCommand):
                 }
             )
             failures.append(f"automation: {exc}")
+
+        try:
+            from messaging.reporting import email_deliverability_findings
+
+            delivery = email_deliverability_findings()
+            checks.append(
+                {
+                    "name": "email_deliverability",
+                    "status": "ok" if delivery["errors"] == 0 else "error",
+                    "integrity_errors": delivery["errors"],
+                    "stale_queued": delivery["stale_queued"],
+                    "unprotected_bounces": delivery[
+                        "bounced_without_suppression"
+                    ],
+                    "unprotected_complaints": delivery[
+                        "complaints_without_suppression"
+                    ],
+                }
+            )
+            if delivery["errors"]:
+                failures.append(
+                    "email_deliverability: "
+                    f"{delivery['errors']} ledger or suppression integrity error(s)"
+                )
+        except Exception as exc:
+            checks.append(
+                {
+                    "name": "email_deliverability",
+                    "status": "error",
+                    "detail": str(exc),
+                }
+            )
+            failures.append(f"email_deliverability: {exc}")
 
         payload = {
             "status": "error" if failures else "ok",
