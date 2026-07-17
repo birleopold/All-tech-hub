@@ -54,9 +54,10 @@ class Migration(migrations.Migration):
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("email_address", models.EmailField(max_length=254)),
-                ("status", models.CharField(choices=[("pending", "Pending"), ("sent", "Sent"), ("suppressed", "Suppressed"), ("failed", "Failed")], db_index=True, default="pending", max_length=16)),
+                ("status", models.CharField(choices=[("pending", "Pending"), ("processing", "Processing"), ("sent", "Sent"), ("suppressed", "Suppressed"), ("failed", "Failed")], db_index=True, default="pending", max_length=16)),
                 ("suppression_reason", models.CharField(blank=True, max_length=160)),
                 ("prepared_at", models.DateTimeField(auto_now_add=True)),
+                ("attempted_at", models.DateTimeField(blank=True, null=True)),
                 ("sent_at", models.DateTimeField(blank=True, null=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 ("campaign", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="recipients", to="customer_campaigns.customercampaign")),
