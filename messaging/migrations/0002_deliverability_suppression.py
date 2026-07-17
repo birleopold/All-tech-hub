@@ -3,16 +3,19 @@
 import uuid
 
 import django.db.models.deletion
+import django.utils.timezone
 from django.conf import settings
 from django.db import migrations, models
-import django.utils.timezone
 
 
 def backfill_outbound_delivery_fields(apps, schema_editor):
     OutboundEmail = apps.get_model("messaging", "OutboundEmail")
     for row in OutboundEmail.objects.all().iterator():
         normalized = (row.to_email or "").strip().lower()
-        updates = {"normalized_to_email": normalized}
+        updates = {
+            "normalized_to_email": normalized,
+            "tracking_token": uuid.uuid4(),
+        }
         if row.status == "sent" and row.sent_at:
             updates["accepted_at"] = row.sent_at
             updates["last_event_at"] = row.sent_at
@@ -110,7 +113,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="outboundemail",
             name="tracking_token",
-            field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
+            field=models.UUIDField(blank=True, editable=False, null=True),
         ),
         migrations.AddField(
             model_name="outboundemail",
@@ -297,5 +300,10 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             backfill_outbound_delivery_fields,
             reverse_code=migrations.RunPython.noop,
+        ),
+        migrations.AlterField(
+            model_name="outboundemail",
+            name="tracking_token",
+            field=models.UUIDField(default=uuid.uuid4, editable=False, unique=True),
         ),
     ]
