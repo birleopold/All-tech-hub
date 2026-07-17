@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Communication preferences{% endblock %}
+{% block meta %}<meta name="robots" content="noindex,nofollow,noarchive">{% endblock %}
+{% block content %}
+<section class="catalog-hero mb-5"><div class="container py-4 py-lg-5"><div class="d-flex justify-content-between align-items-end flex-wrap gap-3"><div><p class="text-uppercase small text-white-50 mb-2">Customer portal</p><h1 class="display-6 fw-bold mb-2">Communication preferences</h1><p class="text-white-75 mb-0">Choose the channels and types of optional marketing messages you agree to receive.</p></div><a class="btn btn-light" href="{% url 'portal_home' %}">Back to portal</a></div></div></section>
+<div class="container pb-5 col-lg-8">
+  <div class="alert alert-info border-0 shadow-sm"><strong>Transactional messages are separate.</strong> Order confirmations, payment guidance, delivery updates, warranty support and replies to your requests may still be sent when needed to provide the service you requested.</div>
+  <form method="post" class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5">{% csrf_token %}
+    <fieldset><legend class="h4 mb-3">Optional marketing channels</legend>
+      <div class="form-check mb-3">{{ form.email_marketing }}<label class="form-check-label" for="{{ form.email_marketing.id_for_label }}">{{ form.email_marketing.label }}</label></div>
+      <div class="form-check mb-4">{{ form.whatsapp_marketing }}<label class="form-check-label" for="{{ form.whatsapp_marketing.id_for_label }}">{{ form.whatsapp_marketing.label }}</label></div>
+    </fieldset>
+    <fieldset><legend class="h5 mb-3">Topics</legend>
+      <div class="form-check mb-3">{{ form.product_updates }}<label class="form-check-label" for="{{ form.product_updates.id_for_label }}">{{ form.product_updates.label }}</label></div>
+      <div class="form-check mb-4">{{ form.special_offers }}<label class="form-check-label" for="{{ form.special_offers.id_for_label }}">{{ form.special_offers.label }}</label></div>
+    </fieldset>
+    {% if form.errors %}<div class="alert alert-danger">Please review the selected preferences.</div>{% endif %}
+    <p class="small text-muted">You can change these choices at any time. Turning off both channels also turns off all optional marketing topics.</p>
+    <button class="btn btn-primary" type="submit">Save preferences</button>
+  </div></form>
+  <div class="card border-0 shadow-sm mt-4"><div class="card-body p-4"><h2 class="h5">Consent record</h2><p class="small text-muted mb-1">Source: {{ preference.get_consent_source_display }}</p><p class="small text-muted mb-1">Version: {{ preference.consent_text_version }}</p>{% if preference.consented_at %}<p class="small text-muted mb-1">Consented: {{ preference.consented_at|date:"Y-m-d H:i" }}</p>{% endif %}{% if preference.withdrawn_at %}<p class="small text-muted mb-0">Withdrawn: {{ preference.withdrawn_at|date:"Y-m-d H:i" }}</p>{% endif %}</div></div>
+</div>
+{% endblock %}
