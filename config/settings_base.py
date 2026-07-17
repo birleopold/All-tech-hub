@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "commerce.apps.CommerceConfig", "reliability.apps.ReliabilityConfig", "billing", "operations",
     "dashboard", "reports", "portal", "purchasing", "messaging", "inventory",
     "marketing.apps.MarketingConfig", "growth.apps.GrowthConfig",
-    "automation.apps.AutomationConfig",
+    "automation.apps.AutomationConfig", "loyalty.apps.LoyaltyConfig",
 ]
 
 MIDDLEWARE = [
@@ -116,6 +116,24 @@ ORDER_CUSTOMER_EMAILS_ENABLED = env_bool(
 ORDER_STATUS_EMAILS_ENABLED = env_bool(
     "ALLTECH_ORDER_STATUS_EMAILS_ENABLED",
     True,
+)
+ORDER_REVIEW_EMAILS_ENABLED = env_bool(
+    "ALLTECH_ORDER_REVIEW_EMAILS_ENABLED",
+    False,
+)
+LOYALTY_POINTS_ENABLED = env_bool("ALLTECH_LOYALTY_POINTS_ENABLED", False)
+LOYALTY_SPEND_PER_POINT = max(
+    1,
+    int(os.getenv("ALLTECH_LOYALTY_SPEND_PER_POINT", "10000")),
+)
+LOYALTY_SILVER_POINTS = max(1, int(os.getenv("ALLTECH_LOYALTY_SILVER_POINTS", "100")))
+LOYALTY_GOLD_POINTS = max(
+    LOYALTY_SILVER_POINTS,
+    int(os.getenv("ALLTECH_LOYALTY_GOLD_POINTS", "500")),
+)
+LOYALTY_PLATINUM_POINTS = max(
+    LOYALTY_GOLD_POINTS,
+    int(os.getenv("ALLTECH_LOYALTY_PLATINUM_POINTS", "1500")),
 )
 PRODUCT_IMAGE_RESPONSIVE_ENABLED = env_bool(
     "ALLTECH_PRODUCT_IMAGE_RESPONSIVE_ENABLED",
