@@ -12,6 +12,7 @@ from loyalty.models import (
     CustomerMarketingPreference,
     LoyaltyAccount,
     LoyaltyTransaction,
+    MarketingConsentEvent,
 )
 
 
@@ -24,6 +25,45 @@ def ensure_marketing_preference(customer: Customer) -> CustomerMarketingPreferen
     return preference
 
 
+def _consent_state(preference: CustomerMarketingPreference) -> tuple[bool, bool, bool, bool]:
+    return (
+        preference.email_marketing,
+        preference.whatsapp_marketing,
+        preference.product_updates,
+        preference.special_offers,
+    )
+
+
+def _record_consent_event(
+    preference: CustomerMarketingPreference,
+    *,
+    previous_state: tuple[bool, bool, bool, bool],
+) -> MarketingConsentEvent | None:
+    current_state = _consent_state(preference)
+    if current_state == previous_state:
+        return None
+    previous_any = previous_state[0] or previous_state[1]
+    current_any = current_state[0] or current_state[1]
+    if current_any and not previous_any:
+        action = MarketingConsentEvent.ACTION_GRANTED
+    elif previous_any and not current_any:
+        action = MarketingConsentEvent.ACTION_WITHDRAWN
+    else:
+        action = MarketingConsentEvent.ACTION_UPDATED
+    return MarketingConsentEvent.objects.create(
+        preference=preference,
+        customer=preference.customer,
+        action=action,
+        source=preference.consent_source,
+        email_marketing=preference.email_marketing,
+        whatsapp_marketing=preference.whatsapp_marketing,
+        product_updates=preference.product_updates,
+        special_offers=preference.special_offers,
+        consent_text_version=preference.consent_text_version,
+    )
+
+
+@transaction.atomic
 def update_marketing_preference(
     customer: Customer,
     *,
@@ -34,6 +74,10 @@ def update_marketing_preference(
     source: str,
 ) -> CustomerMarketingPreference:
     preference = ensure_marketing_preference(customer)
+    preference = CustomerMarketingPreference.objects.select_for_update().get(
+        pk=preference.pk
+    )
+    previous_state = _consent_state(preference)
     preference.email_marketing = bool(email_marketing)
     preference.whatsapp_marketing = bool(whatsapp_marketing)
     preference.product_updates = bool(product_updates) and preference.has_any_consent
@@ -41,9 +85,11 @@ def update_marketing_preference(
     preference.consent_source = source
     preference.consent_text_version = CONSENT_TEXT_VERSION
     preference.save()
+    _record_consent_event(preference, previous_state=previous_state)
     return preference
 
 
+@transaction.atomic
 def add_checkout_consent(
     customer: Customer,
     *,
@@ -53,6 +99,10 @@ def add_checkout_consent(
     if not email_marketing and not whatsapp_marketing:
         return None
     preference = ensure_marketing_preference(customer)
+    preference = CustomerMarketingPreference.objects.select_for_update().get(
+        pk=preference.pk
+    )
+    previous_state = _consent_state(preference)
     preference.email_marketing = preference.email_marketing or bool(email_marketing)
     preference.whatsapp_marketing = preference.whatsapp_marketing or bool(whatsapp_marketing)
     preference.product_updates = True
@@ -60,16 +110,23 @@ def add_checkout_consent(
     preference.consent_source = CustomerMarketingPreference.SOURCE_CHECKOUT
     preference.consent_text_version = CONSENT_TEXT_VERSION
     preference.save()
+    _record_consent_event(preference, previous_state=previous_state)
     return preference
 
 
+@transaction.atomic
 def withdraw_all_marketing(preference: CustomerMarketingPreference) -> CustomerMarketingPreference:
+    preference = CustomerMarketingPreference.objects.select_for_update().get(
+        pk=preference.pk
+    )
+    previous_state = _consent_state(preference)
     preference.email_marketing = False
     preference.whatsapp_marketing = False
     preference.product_updates = False
     preference.special_offers = False
     preference.withdrawn_at = timezone.now()
     preference.save()
+    _record_consent_event(preference, previous_state=previous_state)
     return preference
 
 
