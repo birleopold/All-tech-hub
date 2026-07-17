@@ -29,11 +29,17 @@ class Command(BaseCommand):
             default=100,
             help="Maximum records queued or processed per category.",
         )
+        parser.add_argument(
+            "--source",
+            choices=[AutomationRun.SOURCE_TIMER, AutomationRun.SOURCE_MANUAL],
+            default=AutomationRun.SOURCE_TIMER,
+            help="Record whether this invocation came from the timer or a manual command.",
+        )
 
     def handle(self, *args, **options):
         limit = max(1, min(int(options["limit"] or 100), 2000))
         dry_run = options["dry_run"]
-        run = start_automation_run(source=AutomationRun.SOURCE_TIMER)
+        run = start_automation_run(source=options["source"])
         try:
             control = automation_control()
             blocked = bool(control.is_paused)
@@ -82,6 +88,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     "Growth automation complete — "
+                    f"source: {options['source']}; "
                     f"master paused: {blocked}; "
                     f"due posts: {posts['due']}; "
                     f"social jobs queued: {posts['queued']}; "
