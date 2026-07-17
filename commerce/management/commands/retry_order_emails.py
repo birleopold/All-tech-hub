@@ -4,7 +4,7 @@ from commerce.customer_messages import retry_failed_order_emails
 
 
 class Command(BaseCommand):
-    help = "Retry failed customer order confirmation and status emails."
+    help = "Retry failed order confirmation, status and verified-review request emails."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -21,7 +21,7 @@ class Command(BaseCommand):
             raise CommandError(str(exc)) from exc
         self.stdout.write(
             self.style.SUCCESS(
-                "Order email retry complete — "
+                "Customer email retry complete — "
                 f"processed: {result['processed']}; sent: {result['sent']}; "
                 f"still failed: {result['failed']}."
             )
