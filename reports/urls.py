@@ -1,5 +1,6 @@
 from django.urls import path
 
+from customer_campaigns import views as campaign_views
 from loyalty import staff_views as loyalty_staff_views
 from reports import commission_views, conversion_views, retention_views, views
 
@@ -19,6 +20,46 @@ urlpatterns = [
         "reports/customer-growth/",
         loyalty_staff_views.CustomerGrowthDashboardView.as_view(),
         name="staff_customer_growth_dashboard",
+    ),
+    path(
+        "reports/customer-campaigns/",
+        campaign_views.CustomerCampaignListView.as_view(),
+        name="staff_customer_campaigns",
+    ),
+    path(
+        "reports/customer-campaigns/new/",
+        campaign_views.CustomerCampaignCreateView.as_view(),
+        name="staff_customer_campaign_create",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/",
+        campaign_views.customer_campaign_detail,
+        name="staff_customer_campaign_detail",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/edit/",
+        campaign_views.CustomerCampaignUpdateView.as_view(),
+        name="staff_customer_campaign_edit",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/prepare/",
+        campaign_views.customer_campaign_prepare,
+        name="staff_customer_campaign_prepare",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/approve/",
+        campaign_views.customer_campaign_approve,
+        name="staff_customer_campaign_approve",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/send/",
+        campaign_views.customer_campaign_send,
+        name="staff_customer_campaign_send",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/cancel/",
+        campaign_views.customer_campaign_cancel,
+        name="staff_customer_campaign_cancel",
     ),
     path(
         "reports/export/orders.csv",
