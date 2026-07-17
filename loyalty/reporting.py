@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from decimal import Decimal
 
 from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
@@ -13,11 +12,18 @@ from loyalty.models import CustomerMarketingPreference, LoyaltyAccount, LoyaltyT
 
 VALID_CHANNELS = {"email", "whatsapp"}
 VALID_SEGMENTS = {"all", "repeat", "dormant", "recent"}
+VALID_TOPICS = {"product_updates", "special_offers"}
 
 
-def customer_growth_summary(*, channel: str = "email", segment: str = "all") -> dict:
+def customer_growth_summary(
+    *,
+    channel: str = "email",
+    segment: str = "all",
+    topic: str = "product_updates",
+) -> dict:
     channel = channel if channel in VALID_CHANNELS else "email"
     segment = segment if segment in VALID_SEGMENTS else "all"
+    topic = topic if topic in VALID_TOPICS else "product_updates"
     now = timezone.now()
     recent_cutoff = now - timedelta(days=90)
 
@@ -35,7 +41,13 @@ def customer_growth_summary(*, channel: str = "email", segment: str = "all") -> 
         "email": "marketing_preference__email_marketing",
         "whatsapp": "marketing_preference__whatsapp_marketing",
     }[channel]
-    eligible = Customer.objects.filter(**{channel_field: True}).annotate(
+    topic_field = f"marketing_preference__{topic}"
+    eligible = Customer.objects.filter(
+        **{
+            channel_field: True,
+            topic_field: True,
+        }
+    ).annotate(
         order_count=Count(
             "orders",
             filter=~Q(orders__status=Order.STATUS_CANCELLED),
@@ -74,6 +86,7 @@ def customer_growth_summary(*, channel: str = "email", segment: str = "all") -> 
     return {
         "channel": channel,
         "segment": segment,
+        "topic": topic,
         "total_customers": Customer.objects.count(),
         "preference_records": preferences.count(),
         "email_consent_count": email_count,
@@ -102,6 +115,9 @@ def consent_integrity_findings() -> dict:
     withdrawn_but_active = CustomerMarketingPreference.objects.filter(
         withdrawn_at__isnull=False,
     ).filter(Q(email_marketing=True) | Q(whatsapp_marketing=True)).count()
+    whatsapp_without_phone = CustomerMarketingPreference.objects.filter(
+        whatsapp_marketing=True,
+    ).filter(Q(customer__phone="") | Q(customer__phone__isnull=True)).count()
 
     account_mismatches = []
     for account in LoyaltyAccount.objects.select_related("customer"):
@@ -121,14 +137,19 @@ def consent_integrity_findings() -> dict:
                 }
             )
 
-    errors = consent_without_date + topic_without_channel + withdrawn_but_active + len(
-        account_mismatches
+    errors = (
+        consent_without_date
+        + topic_without_channel
+        + withdrawn_but_active
+        + whatsapp_without_phone
+        + len(account_mismatches)
     )
     return {
         "errors": errors,
         "consent_without_date": consent_without_date,
         "topic_without_channel": topic_without_channel,
         "withdrawn_but_active": withdrawn_but_active,
+        "whatsapp_without_phone": whatsapp_without_phone,
         "loyalty_balance_mismatches": account_mismatches[:50],
         "loyalty_balance_mismatch_count": len(account_mismatches),
     }
