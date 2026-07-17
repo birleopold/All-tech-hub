@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.core.management import call_command
@@ -22,6 +24,7 @@ from automation.models import (
     AutomationRun,
 )
 from automation.reporting import automation_integrity_findings
+from automation.services import recover_stale_jobs
 from automation.worker import claim_controlled_job, process_controlled_automation_jobs
 
 
@@ -112,6 +115,26 @@ class AutomationControlCenterTests(TestCase):
             job.events.filter(action=AutomationJobEvent.ACTION_CLAIMED).exists()
         )
 
+    def test_stale_lock_recovery_is_recorded(self):
+        job = self.create_job(status=AutomationJob.STATUS_RUNNING)
+        job.attempt_count = 1
+        job.locked_at = self.now - timedelta(hours=1)
+        job.locked_by = "stale-worker"
+        job.save(
+            update_fields=[
+                "attempt_count",
+                "locked_at",
+                "locked_by",
+                "updated_at",
+            ]
+        )
+        self.assertEqual(recover_stale_jobs(stale_minutes=15), 1)
+        job.refresh_from_db()
+        self.assertEqual(job.status, AutomationJob.STATUS_RETRY)
+        self.assertTrue(
+            job.events.filter(action=AutomationJobEvent.ACTION_RECOVERED).exists()
+        )
+
     def test_failed_email_job_can_be_replayed_after_review(self):
         job = self.create_job(status=AutomationJob.STATUS_FAILED)
         replay_failed_job(job, user=self.manager)
@@ -134,6 +157,28 @@ class AutomationControlCenterTests(TestCase):
         self.assertEqual(job.status, AutomationJob.STATUS_FAILED)
         self.assertTrue(
             job.events.filter(action=AutomationJobEvent.ACTION_BLOCKED).exists()
+        )
+
+    def test_reviewed_failed_job_can_be_closed(self):
+        call_command("run_growth_automation", "--dry-run", "--limit", "5")
+        job = self.create_job(
+            job_type=AutomationJob.TYPE_SOCIAL_POST,
+            status=AutomationJob.STATUS_FAILED,
+        )
+        self.assertEqual(automation_integrity_findings()["dead_letter_jobs"], 1)
+        cancel_open_job(
+            job,
+            user=self.manager,
+            reason="Verified no external post exists; scheduled post will be rebuilt.",
+        )
+        job.refresh_from_db()
+        self.assertEqual(job.status, AutomationJob.STATUS_CANCELLED)
+        self.assertEqual(automation_integrity_findings()["dead_letter_jobs"], 0)
+        self.assertTrue(
+            job.events.filter(
+                action=AutomationJobEvent.ACTION_CANCELLED,
+                actor=self.manager,
+            ).exists()
         )
 
     def test_running_job_cannot_be_cancelled(self):
