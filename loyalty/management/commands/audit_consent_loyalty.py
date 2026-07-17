@@ -17,6 +17,11 @@ class Command(BaseCommand):
             default="email",
         )
         parser.add_argument(
+            "--topic",
+            choices=["product_updates", "special_offers"],
+            default="product_updates",
+        )
+        parser.add_argument(
             "--segment",
             choices=["all", "repeat", "recent", "dormant"],
             default="all",
@@ -25,11 +30,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         summary = customer_growth_summary(
             channel=options["channel"],
+            topic=options["topic"],
             segment=options["segment"],
         )
         findings = consent_integrity_findings()
         payload = {
             "channel": summary["channel"],
+            "topic": summary["topic"],
             "segment": summary["segment"],
             "total_customers": summary["total_customers"],
             "preference_records": summary["preference_records"],
@@ -47,6 +54,8 @@ class Command(BaseCommand):
         else:
             self.stdout.write(
                 "Consent and loyalty audit — "
+                f"channel: {payload['channel']}; "
+                f"topic: {payload['topic']}; "
                 f"customers: {payload['total_customers']}; "
                 f"email consent: {payload['email_consent_count']}; "
                 f"WhatsApp consent: {payload['whatsapp_consent_count']}; "
