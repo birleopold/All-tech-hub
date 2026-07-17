@@ -1,6 +1,6 @@
 from django.urls import path
 
-from commerce import views
+from commerce import retention_views, views
 
 urlpatterns = [
     path("", views.cart_view, name="cart"),
@@ -14,5 +14,15 @@ urlpatterns = [
         "order/<str:reference>/<uuid:view_key>/",
         views.order_detail,
         name="order_detail",
+    ),
+    path(
+        "order/<str:reference>/<uuid:view_key>/reorder/",
+        retention_views.order_reorder,
+        name="order_reorder",
+    ),
+    path(
+        "order/<str:reference>/<uuid:view_key>/review/<int:product_id>/",
+        retention_views.order_product_review,
+        name="order_product_review",
     ),
 ]
