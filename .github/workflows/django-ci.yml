@@ -50,6 +50,7 @@ jobs:
         run: >-
           python manage.py test
           automation
+          messaging.test_deliverability
           growth.test_growth
           marketing.test_automation
           customer_campaigns
@@ -86,6 +87,7 @@ jobs:
             automation/management/commands \
             automation/templatetags \
             automation/test_*.py \
+            messaging \
             customer_campaigns \
             growth \
             loyalty \
@@ -108,8 +110,6 @@ jobs:
             commerce/test_customer_messages.py \
             commerce/test_recommendations.py \
             commerce/test_retention.py \
-            messaging/utils.py \
-            messaging/views.py \
             reports/urls.py \
             reports/conversion.py \
             reports/conversion_views.py \
@@ -201,10 +201,11 @@ jobs:
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
 
-      - name: Validate automation control commands
+      - name: Validate operational commands
         run: |
           python manage.py run_growth_automation --dry-run --limit 5
           python manage.py audit_automation_control --strict
+          python manage.py audit_email_deliverability --strict
           python manage.py run_customer_campaign_scheduler --dry-run --json
           python manage.py audit_customer_campaigns --strict
 
@@ -213,6 +214,7 @@ jobs:
           python manage.py test
           reliability
           automation
+          messaging.test_deliverability
           commerce
           customer_campaigns
           loyalty.test_loyalty
