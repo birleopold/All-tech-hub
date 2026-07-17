@@ -85,7 +85,14 @@ class Command(BaseCommand):
         project_apps = set(ROLE_PERMISSIONS["Technician"]) | set(
             ROLE_PERMISSIONS["Sales"]
         ) | set(ROLE_PERMISSIONS["Inventory"]) | set(ROLE_PERMISSIONS["Finance"])
-        project_apps |= {"portal", "reports", "dashboard"}
+        project_apps |= {
+            "portal",
+            "reports",
+            "dashboard",
+            "automation",
+            "customer_campaigns",
+            "loyalty",
+        }
 
         for role, app_models in ROLE_PERMISSIONS.items():
             group, _ = Group.objects.get_or_create(name=role)
