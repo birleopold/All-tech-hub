@@ -196,6 +196,11 @@ jobs:
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
 
+      - name: Validate scheduled campaign commands
+        run: |
+          python manage.py run_customer_campaign_scheduler --dry-run --json
+          python manage.py audit_customer_campaigns --strict
+
       - name: Run transaction and customer lifecycle tests on PostgreSQL
         run: >-
           python manage.py test
