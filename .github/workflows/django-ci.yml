@@ -60,7 +60,9 @@ jobs:
           commerce.test_progress
           commerce.test_customer_messages
           commerce.test_recommendations
+          commerce.test_retention
           reports.test_conversion
+          reports.test_retention
           portal.test_warranties
           core.test_api_experience
           core.test_phase1_security
@@ -87,16 +89,22 @@ jobs:
             commerce/progress.py \
             commerce/customer_messages.py \
             commerce/recommendations.py \
+            commerce/retention.py \
+            commerce/retention_views.py \
             commerce/signals.py \
             commerce/management/commands \
             commerce/templatetags \
             commerce/test_progress.py \
             commerce/test_customer_messages.py \
             commerce/test_recommendations.py \
+            commerce/test_retention.py \
             reports/conversion.py \
             reports/conversion_views.py \
+            reports/retention.py \
+            reports/retention_views.py \
             reports/management/commands \
             reports/test_conversion.py \
+            reports/test_retention.py \
             catalog/discovery.py \
             catalog/experience.py \
             catalog/responsive_images.py \
@@ -187,6 +195,7 @@ jobs:
           automation
           commerce
           reports.test_conversion
+          reports.test_retention
           catalog.test_experience
           portal.test_warranties
           core.test_api_experience
