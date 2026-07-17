@@ -1,7 +1,8 @@
 # Generated manually for Phase 7 consent and loyalty operations.
 
-import django.db.models.deletion
 import uuid
+
+import django.db.models.deletion
 from django.db import migrations, models
 
 
@@ -58,7 +59,12 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["-created_at", "-id"],
-                "constraints": [models.CheckConstraint(condition=models.Q(("points_delta", 0), _negated=True), name="loyalty_points_delta_nonzero")],
+                "constraints": [
+                    models.CheckConstraint(
+                        condition=~models.Q(points_delta=0),
+                        name="loyalty_points_delta_nonzero",
+                    )
+                ],
             },
         ),
     ]
