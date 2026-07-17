@@ -1,5 +1,6 @@
 from django.urls import path
 
+from loyalty import staff_views as loyalty_staff_views
 from reports import commission_views, conversion_views, retention_views, views
 
 urlpatterns = [
@@ -13,6 +14,11 @@ urlpatterns = [
         "reports/retention/",
         retention_views.RetentionDashboardView.as_view(),
         name="staff_retention_dashboard",
+    ),
+    path(
+        "reports/customer-growth/",
+        loyalty_staff_views.CustomerGrowthDashboardView.as_view(),
+        name="staff_customer_growth_dashboard",
     ),
     path(
         "reports/export/orders.csv",
