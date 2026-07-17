@@ -3,15 +3,15 @@ from __future__ import annotations
 from django.db import connection, transaction
 from django.utils import timezone
 
+from automation.connectors import ConnectorError
 from automation.control import automation_control, worker_identity
-from automation.models import AutomationJob
+from automation.models import AutomationJob, PostChannelDelivery
 from automation.services import (
     _execute_job,
     _finish_failure,
     _finish_success,
     recover_stale_jobs,
 )
-from automation.connectors import ConnectorError
 
 
 @transaction.atomic
@@ -53,8 +53,6 @@ def claim_controlled_job(worker_id: str) -> AutomationJob | None:
         ]
     )
     if job.delivery_id:
-        from automation.models import PostChannelDelivery
-
         PostChannelDelivery.objects.filter(pk=job.delivery_id).update(
             status=PostChannelDelivery.STATUS_RUNNING,
             attempt_count=job.attempt_count,
