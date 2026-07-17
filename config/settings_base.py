@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "dashboard", "reports", "portal", "purchasing", "messaging", "inventory",
     "marketing.apps.MarketingConfig", "growth.apps.GrowthConfig",
     "automation.apps.AutomationConfig", "loyalty.apps.LoyaltyConfig",
+    "customer_campaigns.apps.CustomerCampaignsConfig",
 ]
 
 MIDDLEWARE = [
@@ -134,6 +135,23 @@ LOYALTY_GOLD_POINTS = max(
 LOYALTY_PLATINUM_POINTS = max(
     LOYALTY_GOLD_POINTS,
     int(os.getenv("ALLTECH_LOYALTY_PLATINUM_POINTS", "1500")),
+)
+PUBLIC_BASE_URL = os.getenv("ALLTECH_PUBLIC_BASE_URL", "https://leosoftug.com").rstrip("/")
+CUSTOMER_CAMPAIGN_SEND_ENABLED = env_bool(
+    "ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED",
+    False,
+)
+CUSTOMER_CAMPAIGN_REQUIRE_SEPARATE_APPROVER = env_bool(
+    "ALLTECH_CUSTOMER_CAMPAIGN_REQUIRE_SEPARATE_APPROVER",
+    True,
+)
+CUSTOMER_CAMPAIGN_MAX_RECIPIENTS = max(
+    1,
+    min(500, int(os.getenv("ALLTECH_CUSTOMER_CAMPAIGN_MAX_RECIPIENTS", "100"))),
+)
+CUSTOMER_CAMPAIGN_BATCH_SIZE = max(
+    1,
+    min(50, int(os.getenv("ALLTECH_CUSTOMER_CAMPAIGN_BATCH_SIZE", "10"))),
 )
 PRODUCT_IMAGE_RESPONSIVE_ENABLED = env_bool(
     "ALLTECH_PRODUCT_IMAGE_RESPONSIVE_ENABLED",
