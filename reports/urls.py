@@ -1,5 +1,6 @@
 from django.urls import path
 
+from automation import staff_views as automation_staff_views
 from customer_campaigns import views as campaign_views
 from loyalty import staff_views as loyalty_staff_views
 from reports import commission_views, conversion_views, retention_views, views
@@ -20,6 +21,36 @@ urlpatterns = [
         "reports/customer-growth/",
         loyalty_staff_views.CustomerGrowthDashboardView.as_view(),
         name="staff_customer_growth_dashboard",
+    ),
+    path(
+        "reports/automation-control/",
+        automation_staff_views.AutomationControlDashboardView.as_view(),
+        name="staff_automation_control",
+    ),
+    path(
+        "reports/automation-control/pause/",
+        automation_staff_views.automation_pause,
+        name="staff_automation_pause",
+    ),
+    path(
+        "reports/automation-control/resume/",
+        automation_staff_views.automation_resume,
+        name="staff_automation_resume",
+    ),
+    path(
+        "reports/automation-control/jobs/<int:pk>/",
+        automation_staff_views.automation_job_detail,
+        name="staff_automation_job_detail",
+    ),
+    path(
+        "reports/automation-control/jobs/<int:pk>/replay/",
+        automation_staff_views.automation_job_replay,
+        name="staff_automation_job_replay",
+    ),
+    path(
+        "reports/automation-control/jobs/<int:pk>/cancel/",
+        automation_staff_views.automation_job_cancel,
+        name="staff_automation_job_cancel",
     ),
     path(
         "reports/customer-campaigns/",
