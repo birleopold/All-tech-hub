@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
@@ -61,7 +62,7 @@ def portal_loyalty_account(request):
         {
             "account": account,
             "transactions": account.transactions.all()[:50],
-            "points_enabled": True,
+            "points_enabled": bool(getattr(settings, "LOYALTY_POINTS_ENABLED", False)),
         },
     )
 
