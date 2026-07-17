@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 
 
@@ -201,3 +202,167 @@ class AutomationJob(models.Model):
             self.STATUS_FAILED,
             self.STATUS_CANCELLED,
         }
+
+
+class AutomationControl(models.Model):
+    RUN_NEVER = "never"
+    RUN_RUNNING = "running"
+    RUN_SUCCEEDED = "succeeded"
+    RUN_PARTIAL = "partial"
+    RUN_FAILED = "failed"
+    RUN_PAUSED = "paused"
+    RUN_DRY = "dry_run"
+    RUN_STATUS_CHOICES = [
+        (RUN_NEVER, "Never run"),
+        (RUN_RUNNING, "Running"),
+        (RUN_SUCCEEDED, "Succeeded"),
+        (RUN_PARTIAL, "Completed with failures"),
+        (RUN_FAILED, "Failed"),
+        (RUN_PAUSED, "Paused"),
+        (RUN_DRY, "Dry run"),
+    ]
+
+    singleton_key = models.CharField(
+        max_length=32,
+        default="primary",
+        unique=True,
+        editable=False,
+    )
+    is_paused = models.BooleanField(default=False, db_index=True)
+    paused_job_types = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Automation job type values that workers must not claim.",
+    )
+    pause_reason = models.CharField(max_length=300, blank=True)
+    paused_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="automation_pauses",
+    )
+    paused_at = models.DateTimeField(null=True, blank=True)
+    resumed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="automation_resumes",
+    )
+    resumed_at = models.DateTimeField(null=True, blank=True)
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_run_started_at = models.DateTimeField(null=True, blank=True)
+    last_run_finished_at = models.DateTimeField(null=True, blank=True)
+    last_run_status = models.CharField(
+        max_length=16,
+        choices=RUN_STATUS_CHOICES,
+        default=RUN_NEVER,
+    )
+    last_worker_id = models.CharField(max_length=160, blank=True)
+    last_summary = models.JSONField(default=dict, blank=True)
+    consecutive_failures = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Automation control"
+        verbose_name_plural = "Automation control"
+
+    def __str__(self) -> str:
+        return "Automation control"
+
+    @classmethod
+    def load(cls):
+        row, _ = cls.objects.get_or_create(singleton_key="primary")
+        return row
+
+
+class AutomationRun(models.Model):
+    SOURCE_TIMER = "timer"
+    SOURCE_MANUAL = "manual"
+    SOURCE_HEALTH = "health"
+    SOURCE_CHOICES = [
+        (SOURCE_TIMER, "Timer"),
+        (SOURCE_MANUAL, "Manual command"),
+        (SOURCE_HEALTH, "Health check"),
+    ]
+
+    STATUS_RUNNING = "running"
+    STATUS_SUCCEEDED = "succeeded"
+    STATUS_PARTIAL = "partial"
+    STATUS_FAILED = "failed"
+    STATUS_PAUSED = "paused"
+    STATUS_DRY = "dry_run"
+    STATUS_CHOICES = [
+        (STATUS_RUNNING, "Running"),
+        (STATUS_SUCCEEDED, "Succeeded"),
+        (STATUS_PARTIAL, "Completed with failures"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_PAUSED, "Paused"),
+        (STATUS_DRY, "Dry run"),
+    ]
+
+    source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default=SOURCE_TIMER)
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_RUNNING,
+        db_index=True,
+    )
+    worker_id = models.CharField(max_length=160, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    summary = models.JSONField(default=dict, blank=True)
+    error = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"Automation run {self.pk} — {self.get_status_display()}"
+
+
+class AutomationJobEvent(models.Model):
+    ACTION_QUEUED = "queued"
+    ACTION_CLAIMED = "claimed"
+    ACTION_SUCCEEDED = "succeeded"
+    ACTION_RETRY = "retry"
+    ACTION_FAILED = "failed"
+    ACTION_CANCELLED = "cancelled"
+    ACTION_REPLAYED = "replayed"
+    ACTION_RECOVERED = "recovered"
+    ACTION_BLOCKED = "blocked"
+    ACTION_CHOICES = [
+        (ACTION_QUEUED, "Queued"),
+        (ACTION_CLAIMED, "Claimed"),
+        (ACTION_SUCCEEDED, "Succeeded"),
+        (ACTION_RETRY, "Retry scheduled"),
+        (ACTION_FAILED, "Failed"),
+        (ACTION_CANCELLED, "Cancelled"),
+        (ACTION_REPLAYED, "Replayed"),
+        (ACTION_RECOVERED, "Recovered stale lock"),
+        (ACTION_BLOCKED, "Replay blocked"),
+    ]
+
+    job = models.ForeignKey(
+        AutomationJob,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    action = models.CharField(max_length=16, choices=ACTION_CHOICES, db_index=True)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="automation_job_events",
+    )
+    message = models.CharField(max_length=500, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    occurred_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.job} — {self.get_action_display()}"
