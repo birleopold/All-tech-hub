@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from decimal import Decimal, ROUND_FLOOR
+from decimal import ROUND_FLOOR, Decimal
 
 from django.conf import settings
 from django.db import transaction
@@ -73,14 +73,23 @@ def withdraw_all_marketing(preference: CustomerMarketingPreference) -> CustomerM
     return preference
 
 
-def consented_customers(*, channel: str):
-    field = {
+def consented_customers(*, channel: str, topic: str):
+    channel_field = {
         "email": "marketing_preference__email_marketing",
         "whatsapp": "marketing_preference__whatsapp_marketing",
     }.get(channel)
-    if field is None:
+    topic_field = {
+        "product_updates": "marketing_preference__product_updates",
+        "special_offers": "marketing_preference__special_offers",
+    }.get(topic)
+    if channel_field is None or topic_field is None:
         return Customer.objects.none()
-    return Customer.objects.filter(**{field: True}).order_by("name", "id")
+    return Customer.objects.filter(
+        **{
+            channel_field: True,
+            topic_field: True,
+        }
+    ).order_by("name", "id")
 
 
 def _tier_for_lifetime_points(points: int) -> str:
@@ -111,19 +120,19 @@ def award_completed_order_points(order: Order) -> LoyaltyTransaction | None:
     if not bool(getattr(settings, "LOYALTY_POINTS_ENABLED", False)):
         return None
     order = Order.objects.select_related("customer").get(pk=order.pk)
-    if order.status not in COMPLETED_STATUSES or order.status == Order.STATUS_CANCELLED:
+    if order.status not in COMPLETED_STATUSES:
         return None
     points = points_for_order(order)
     if points <= 0:
         return None
 
     key = f"order:{order.pk}:completed"
+    account, _ = LoyaltyAccount.objects.get_or_create(customer=order.customer)
+    account = LoyaltyAccount.objects.select_for_update().get(pk=account.pk)
     existing = LoyaltyTransaction.objects.filter(idempotency_key=key).first()
     if existing:
         return existing
 
-    account, _ = LoyaltyAccount.objects.get_or_create(customer=order.customer)
-    account = LoyaltyAccount.objects.select_for_update().get(pk=account.pk)
     transaction_row = LoyaltyTransaction.objects.create(
         account=account,
         kind=LoyaltyTransaction.KIND_EARN,
