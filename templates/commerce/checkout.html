@@ -38,6 +38,10 @@
                 </div>
                 {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
               </fieldset>
+            {% elif field.name == 'marketing_email_opt_in' or field.name == 'marketing_whatsapp_opt_in' %}
+              {% if field.name == 'marketing_email_opt_in' %}<fieldset class="border rounded p-3 mb-4"><legend class="h6 px-1">Optional product updates and offers</legend><p class="small text-muted">These choices are optional and do not affect your order. You can unsubscribe later.</p>{% endif %}
+              <div class="form-check mb-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+              {% if field.name == 'marketing_whatsapp_opt_in' %}</fieldset>{% endif %}
             {% else %}
               <div class="mb-3">
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
