@@ -15,8 +15,8 @@ from django.utils import timezone as django_timezone
 
 class Command(BaseCommand):
     help = (
-        "Check database, disk space, backup freshness, private-media permissions "
-        "and overdue transaction reservations."
+        "Check database, disk space, backup freshness, private-media permissions, "
+        "transaction reservations and automation health."
     )
 
     def add_arguments(self, parser):
@@ -36,6 +36,11 @@ class Command(BaseCommand):
             type=int,
             default=30,
             help="Allowed timer delay before an overdue reservation is unhealthy.",
+        )
+        parser.add_argument(
+            "--automation-heartbeat-minutes",
+            type=int,
+            default=getattr(settings, "AUTOMATION_HEARTBEAT_MAX_AGE_MINUTES", 30),
         )
 
     def handle(self, *args, **options):
@@ -149,13 +154,92 @@ class Command(BaseCommand):
             )
             failures.append(f"order_reservations: {exc}")
 
+        try:
+            from automation.models import AutomationControl, AutomationJob
+
+            control = AutomationControl.load()
+            heartbeat_limit = max(5, options["automation_heartbeat_minutes"])
+            heartbeat_cutoff = django_timezone.now() - timedelta(
+                minutes=heartbeat_limit
+            )
+            if control.is_paused:
+                checks.append(
+                    {
+                        "name": "automation_heartbeat",
+                        "status": "warning",
+                        "detail": control.pause_reason or "master pause active",
+                        "last_heartbeat_at": control.last_heartbeat_at,
+                    }
+                )
+            else:
+                heartbeat_ok = bool(
+                    control.last_heartbeat_at
+                    and control.last_heartbeat_at >= heartbeat_cutoff
+                )
+                checks.append(
+                    {
+                        "name": "automation_heartbeat",
+                        "status": "ok" if heartbeat_ok else "error",
+                        "last_heartbeat_at": control.last_heartbeat_at,
+                        "maximum_age_minutes": heartbeat_limit,
+                    }
+                )
+                if not heartbeat_ok:
+                    failures.append(
+                        f"automation_heartbeat: no worker heartbeat within {heartbeat_limit} minutes"
+                    )
+
+            stale_cutoff = django_timezone.now() - timedelta(
+                minutes=max(
+                    5,
+                    int(getattr(settings, "AUTOMATION_STALE_JOB_MINUTES", 15)),
+                )
+            )
+            stale_jobs = AutomationJob.objects.filter(
+                status=AutomationJob.STATUS_RUNNING,
+                locked_at__lt=stale_cutoff,
+            ).count()
+            checks.append(
+                {
+                    "name": "automation_stale_jobs",
+                    "status": "ok" if stale_jobs == 0 else "error",
+                    "count": stale_jobs,
+                }
+            )
+            if stale_jobs:
+                failures.append(f"automation_stale_jobs: {stale_jobs} stale running job(s)")
+
+            dead_letters = AutomationJob.objects.filter(
+                status=AutomationJob.STATUS_FAILED
+            ).count()
+            checks.append(
+                {
+                    "name": "automation_dead_letters",
+                    "status": "ok" if dead_letters == 0 else "error",
+                    "count": dead_letters,
+                }
+            )
+            if dead_letters:
+                failures.append(
+                    f"automation_dead_letters: {dead_letters} failed job(s) require review"
+                )
+        except Exception as exc:
+            checks.append(
+                {
+                    "name": "automation",
+                    "status": "error",
+                    "detail": str(exc),
+                }
+            )
+            failures.append(f"automation: {exc}")
+
         payload = {
             "status": "error" if failures else "ok",
             "checked_at": datetime.now(timezone.utc).isoformat(),
             "checks": checks,
         }
         if options["as_json"]:
-            self.stdout.write(json.dumps(payload, sort_keys=True))
+            self.stdout.write(json.dumps(payload, sort_keys=True, default=str))
         else:
             for check in checks:
                 self.stdout.write(
