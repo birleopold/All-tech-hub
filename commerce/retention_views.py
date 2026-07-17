@@ -1,6 +1,7 @@
 import uuid
 
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -60,12 +61,9 @@ def order_product_review(
     product_id: int,
 ):
     order = _secure_order(reference, view_key)
-    product = get_object_or_404(
-        Product,
-        pk=product_id,
-        is_published=True,
-        order_lines__order=order,
-    )
+    product = get_object_or_404(Product, pk=product_id, is_published=True)
+    if not order.lines.filter(product_id=product.pk).exists():
+        raise Http404
     if order.status not in TERMINAL_REVIEW_STATUSES:
         messages.warning(
             request,
