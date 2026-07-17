@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.utils import timezone
 
 from commerce.models import Order, OrderStatusEvent
@@ -12,6 +13,7 @@ from messaging.models import OutboundEmail
 
 
 ORDER_SUBJECT_PREFIX = "Order"
+REVIEW_SUBJECT_PREFIX = "Review your order"
 CONSOLE_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
@@ -173,10 +175,12 @@ def retry_failed_order_emails(*, limit: int = 100) -> dict[str, int]:
             "Customer email delivery is unavailable while the Django console mail backend is active."
         )
     rows = list(
-        OutboundEmail.objects.filter(
-            status=OutboundEmail.STATUS_FAILED,
-            subject__startswith=f"{ORDER_SUBJECT_PREFIX} ",
-        ).order_by("created_at")[: max(1, min(limit, 500))]
+        OutboundEmail.objects.filter(status=OutboundEmail.STATUS_FAILED)
+        .filter(
+            Q(subject__startswith=f"{ORDER_SUBJECT_PREFIX} ")
+            | Q(subject__startswith=f"{REVIEW_SUBJECT_PREFIX} ")
+        )
+        .order_by("created_at")[: max(1, min(limit, 500))]
     )
     sent = failed = 0
     for row in rows:
