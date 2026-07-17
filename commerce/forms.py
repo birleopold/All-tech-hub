@@ -2,6 +2,7 @@ from django import forms
 
 from commerce.models import Order
 from crm.models import Customer
+from loyalty.services import add_checkout_consent
 
 
 class CheckoutForm(forms.Form):
@@ -28,14 +29,22 @@ class CheckoutForm(forms.Form):
         widget=forms.RadioSelect,
         label="How would you like to receive your order?",
     )
+    marketing_email_opt_in = forms.BooleanField(
+        required=False,
+        label="Send me occasional LEOSOFT product updates and offers by email.",
+    )
+    marketing_whatsapp_opt_in = forms.BooleanField(
+        required=False,
+        label="Send me occasional LEOSOFT product updates and offers by WhatsApp.",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
             if name == "fulfillment_type":
                 continue
-            if isinstance(field.widget, forms.Textarea):
-                field.widget.attrs.setdefault("class", "form-control")
+            if name in {"marketing_email_opt_in", "marketing_whatsapp_opt_in"}:
+                field.widget.attrs.setdefault("class", "form-check-input")
             else:
                 field.widget.attrs.setdefault("class", "form-control")
 
@@ -48,5 +57,10 @@ class CheckoutForm(forms.Form):
                 "company_name": (data.get("company_name") or "").strip(),
                 "phone": (data.get("phone") or "").strip(),
             },
+        )
+        add_checkout_consent(
+            customer,
+            email_marketing=bool(data.get("marketing_email_opt_in")),
+            whatsapp_marketing=bool(data.get("marketing_whatsapp_opt_in")),
         )
         return customer
