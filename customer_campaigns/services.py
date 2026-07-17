@@ -251,9 +251,9 @@ def _claim_recipient(recipient_id: int) -> CustomerCampaignRecipient | None:
     if recipient is None or recipient.status != CustomerCampaignRecipient.STATUS_PENDING:
         return None
     preference, event, reason = _current_consent(recipient)
-    if reason:
+    if reason or preference is None or event is None:
         recipient.status = CustomerCampaignRecipient.STATUS_SUPPRESSED
-        recipient.suppression_reason = reason
+        recipient.suppression_reason = reason or "consent_recheck_failed"
         recipient.attempted_at = timezone.now()
         recipient.save(
             update_fields=[
