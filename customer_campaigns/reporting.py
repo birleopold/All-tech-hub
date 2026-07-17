@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from customer_campaigns.models import CustomerCampaign, CustomerCampaignRecipient
-from loyalty.models import MarketingConsentEvent
+from loyalty.models import CustomerMarketingPreference, MarketingConsentEvent
 from messaging.models import OutboundEmail
 
 
@@ -28,8 +28,8 @@ def campaign_integrity_findings() -> dict:
             status__in=approved_statuses,
             approved_by__isnull=False,
         ).filter(
-            Q(approved_by_id=models_f("created_by_id"))
-            | Q(approved_by_id=models_f("prepared_by_id"))
+            Q(approved_by_id=F("created_by_id"))
+            | Q(approved_by_id=F("prepared_by_id"))
         ).count()
 
     stale_processing = CustomerCampaignRecipient.objects.filter(
@@ -64,7 +64,7 @@ def campaign_integrity_findings() -> dict:
     for recipient in active_recipients.iterator():
         try:
             preference = recipient.customer.marketing_preference
-        except Exception:
+        except CustomerMarketingPreference.DoesNotExist:
             preference = None
         reason = ""
         if preference is None:
@@ -165,9 +165,3 @@ def campaign_integrity_findings() -> dict:
         "limit_exceeded_count": len(limit_exceeded),
         "limit_exceeded": limit_exceeded[:50],
     }
-
-
-def models_f(field_name: str):
-    from django.db.models import F
-
-    return F(field_name)
