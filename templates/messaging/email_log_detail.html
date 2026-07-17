@@ -1,47 +1,25 @@
 {% extends "staff_base.html" %}
-{% block title %}Email log{% endblock %}
+{% block title %}Email evidence{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h4 mb-1">Email log</h1>
-    <p class="text-muted mb-0">{{ email.to_email }} · {{ email.get_status_display }} · {{ email.created_at|date:"Y-m-d H:i" }}</p>
-  </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-outline-secondary" href="{% url 'staff_email_log' %}">Back</a>
-    <form method="post" action="{% url 'staff_email_log_retry' email.pk %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-success" {% if email.status == 'sent' %}disabled{% endif %}>Retry</button>
-    </form>
-  </div>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div><p class="small text-uppercase text-muted mb-1">Outbound ledger</p><h1 class="h3 mb-1">Email #{{ email.pk }}</h1><p class="text-muted mb-0">{{ email.to_email }} · {{ email.get_status_display }} · {{ email.created_at|date:"Y-m-d H:i" }}</p></div>
+  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-secondary" href="{% url 'staff_email_log' %}">Email ledger</a>{% if perms.messaging.view_emailsuppression %}<a class="btn btn-outline-primary" href="{% url 'staff_email_deliverability' %}">Deliverability</a>{% endif %}</div>
 </div>
 
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <p class="small text-muted mb-1">Subject</p>
-    <p class="mb-3">{{ email.subject }}</p>
-    <p class="small text-muted mb-1">Body</p>
-    <pre class="bg-light p-3 rounded mb-0" style="white-space: pre-wrap">{{ email.body }}</pre>
-  </div>
+{% if active_suppression %}<div class="alert alert-danger border-0 shadow-sm"><strong>Address suppression is active.</strong> {{ active_suppression.get_reason_display }} · {{ active_suppression.get_scope_display }}. {% if perms.messaging.view_emailsuppression %}<a href="{% url 'staff_email_suppression_detail' active_suppression.pk %}">Review evidence</a>{% endif %}</div>{% endif %}
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5">Message</h2><p class="small text-muted mb-1">Subject</p><p class="mb-3">{{ email.subject }}</p><p class="small text-muted mb-1">Body</p><pre class="bg-light border rounded p-3 mb-0" style="white-space: pre-wrap">{{ email.body }}</pre></div></div></div>
+  <div class="col-lg-5"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5">Delivery record</h2><dl class="row small mb-0"><dt class="col-5">Category</dt><dd class="col-7">{{ email.get_category_display }}</dd><dt class="col-5">Status</dt><dd class="col-7">{{ email.get_status_display }}</dd><dt class="col-5">Attempts</dt><dd class="col-7">{{ email.attempt_count }}</dd><dt class="col-5">Provider</dt><dd class="col-7">{{ email.provider|default:"—" }}</dd><dt class="col-5">Provider ID</dt><dd class="col-7 text-break">{{ email.provider_message_id|default:"—" }}</dd><dt class="col-5">Tracking token</dt><dd class="col-7 text-break">{{ email.tracking_token }}</dd><dt class="col-5">Last attempt</dt><dd class="col-7">{{ email.last_attempt_at|date:"Y-m-d H:i:s"|default:"—" }}</dd><dt class="col-5">SMTP accepted</dt><dd class="col-7">{{ email.accepted_at|date:"Y-m-d H:i:s"|default:"—" }}</dd><dt class="col-5">Delivered</dt><dd class="col-7">{{ email.delivered_at|date:"Y-m-d H:i:s"|default:"—" }}</dd><dt class="col-5">Bounced</dt><dd class="col-7">{{ email.bounced_at|date:"Y-m-d H:i:s"|default:"—" }}</dd><dt class="col-5">Complaint</dt><dd class="col-7">{{ email.complained_at|date:"Y-m-d H:i:s"|default:"—" }}</dd></dl></div></div></div>
 </div>
 
-<div class="card border-0 shadow-sm">
-  <div class="card-body">
-    <p class="small text-muted mb-1">Linked</p>
-    <p class="mb-1">
-      {% if email.commercial_document_id %}
-        Document: <a href="{% url 'staff_document_view' email.commercial_document_id %}">{{ email.commercial_document.number }}</a>
-      {% elif email.job_card_id %}
-        Job card: <a href="{% url 'staff_job_detail' email.job_card_id %}">{{ email.job_card.number }}</a>
-      {% else %}
-        —
-      {% endif %}
-    </p>
-    {% if email.error %}
-    <div class="alert alert-danger mt-3 mb-0">
-      <strong>Error:</strong> {{ email.error }}
-    </div>
-    {% endif %}
-  </div>
-</div>
+{% if email.error or email.suppression_reason %}<div class="alert alert-warning"><strong>Latest delivery note:</strong> {{ email.error|default:email.suppression_reason }}</div>{% endif %}
+
+{% if can_retry_email %}
+<div class="card border-warning shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5">Retry reviewed email</h2><p class="small text-muted">Retry is available only for eligible failed or soft-bounced non-campaign messages. Suppression is checked again before network access.</p><form method="post" action="{% url 'staff_email_log_retry' email.pk %}">{% csrf_token %}<label class="form-label" for="{{ retry_form.confirmation.id_for_label }}">{{ retry_form.confirmation.label }}</label>{{ retry_form.confirmation }}<button type="submit" class="btn btn-warning mt-3">Retry email</button></form></div></div>
+{% endif %}
+
+<div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5">Linked business record</h2><p class="mb-0">{% if email.commercial_document_id %}Document: <a href="{% url 'staff_document_view' email.commercial_document_id %}">{{ email.commercial_document.number }}</a>{% elif email.job_card_id %}Job card: <a href="{% url 'staff_job_detail' email.job_card_id %}">{{ email.job_card.number }}</a>{% elif email.customer_campaign_recipients.exists %}Controlled customer campaign{% else %}No linked document or job card.{% endif %}</p></div></div>
+
+<div class="card border-0 shadow-sm overflow-hidden"><div class="card-body p-0"><div class="p-4 pb-2"><h2 class="h5 mb-0">Append-only delivery events</h2></div><div class="table-responsive"><table class="table mb-0 align-middle"><thead class="table-light"><tr><th>Occurred</th><th>Event</th><th>Provider</th><th>Provider ID</th><th>Payload hash</th><th>Metadata</th></tr></thead><tbody>{% for event in events %}<tr><td>{{ event.occurred_at|date:"Y-m-d H:i:s" }}</td><td>{{ event.get_event_type_display }}</td><td>{{ event.provider|default:"—" }}</td><td class="small text-muted">{{ event.provider_message_id|default:"—"|truncatechars:36 }}</td><td class="small text-muted">{{ event.payload_hash|truncatechars:18 }}</td><td class="small text-muted">{{ event.metadata|truncatechars:120 }}</td></tr>{% empty %}<tr><td colspan="6" class="text-muted p-4">No delivery events were recorded for this legacy message.</td></tr>{% endfor %}</tbody></table></div></div></div>
 {% endblock %}
-
