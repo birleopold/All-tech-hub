@@ -1,0 +1,22 @@
+{% extends "staff_base.html" %}
+{% block title %}{% if object %}Edit customer campaign{% else %}New customer campaign{% endif %}{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4"><div><p class="text-uppercase small text-muted mb-1">Controlled execution</p><h1 class="h2 mb-1">{% if object %}Edit customer campaign{% else %}New customer campaign{% endif %}</h1><p class="text-muted mb-0">Draft the message and audience limit. Preparation and approval happen separately.</p></div><a class="btn btn-outline-secondary" href="{% if object %}{% url 'staff_customer_campaign_detail' object.pk %}{% else %}{% url 'staff_customer_campaigns' %}{% endif %}">Cancel</a></div>
+
+<div class="alert alert-info border-0 shadow-sm"><strong>No message is sent from this form.</strong> Supported placeholders are <code>{customer_name}</code>, <code>{first_name}</code>, <code>{company}</code> and <code>{unsubscribe_url}</code>. An unsubscribe link is appended automatically when the placeholder is omitted.</div>
+
+<form method="post" class="card border-0 shadow-sm"><div class="card-body p-4 p-lg-5">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="row g-3">
+    {% for field in form %}
+    <div class="{% if field.name == 'body' %}col-12{% else %}col-md-6{% endif %}">
+      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+      {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit">Save draft</button><a class="btn btn-outline-secondary" href="{% if object %}{% url 'staff_customer_campaign_detail' object.pk %}{% else %}{% url 'staff_customer_campaigns' %}{% endif %}">Cancel</a></div>
+</div></form>
+{% endblock %}
