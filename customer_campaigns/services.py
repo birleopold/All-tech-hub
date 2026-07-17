@@ -14,7 +14,7 @@ from crm.models import Customer
 from customer_campaigns.models import CustomerCampaign, CustomerCampaignRecipient
 from loyalty.models import CustomerMarketingPreference, MarketingConsentEvent
 from messaging.models import OutboundEmail
-from messaging.utils import send_outbound_email
+from messaging.utils import retry_outbound_email
 
 
 class CampaignOperationError(Exception):
@@ -293,6 +293,81 @@ def _suppress_processing(recipient_id: int, reason: str) -> None:
     recipient.save(update_fields=["status", "suppression_reason", "updated_at"])
 
 
+@transaction.atomic
+def _create_delivery_log(
+    recipient_id: int,
+    *,
+    subject: str,
+    body: str,
+    user,
+) -> OutboundEmail | None:
+    recipient = CustomerCampaignRecipient.objects.select_for_update().filter(
+        pk=recipient_id,
+        status=CustomerCampaignRecipient.STATUS_PROCESSING,
+        outbound_email__isnull=True,
+    ).first()
+    if recipient is None:
+        return None
+    log = OutboundEmail.objects.create(
+        to_email=recipient.email_address,
+        subject=(subject or "")[:200],
+        body=body,
+        status=OutboundEmail.STATUS_QUEUED,
+        created_by=user,
+    )
+    recipient.outbound_email = log
+    recipient.save(update_fields=["outbound_email", "updated_at"])
+    return log
+
+
+@transaction.atomic
+def _finalize_delivery(
+    recipient_id: int,
+    *,
+    log: OutboundEmail,
+    event: MarketingConsentEvent,
+) -> None:
+    recipient = CustomerCampaignRecipient.objects.select_for_update().filter(
+        pk=recipient_id,
+        status=CustomerCampaignRecipient.STATUS_PROCESSING,
+        outbound_email_id=log.pk,
+    ).first()
+    if recipient is None:
+        return
+    recipient.consent_event = event
+    if log.status == OutboundEmail.STATUS_SENT:
+        recipient.status = CustomerCampaignRecipient.STATUS_SENT
+        recipient.sent_at = log.sent_at or timezone.now()
+        recipient.suppression_reason = ""
+    else:
+        recipient.status = CustomerCampaignRecipient.STATUS_FAILED
+        recipient.suppression_reason = (log.error or "email_delivery_failed")[:160]
+    recipient.save(
+        update_fields=[
+            "consent_event",
+            "status",
+            "sent_at",
+            "suppression_reason",
+            "updated_at",
+        ]
+    )
+
+
+def _reconcile_linked_processing(campaign: CustomerCampaign) -> None:
+    recipients = campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING,
+        outbound_email__isnull=False,
+    ).select_related("outbound_email", "consent_event")
+    for recipient in recipients.iterator():
+        log = recipient.outbound_email
+        if log.status not in {OutboundEmail.STATUS_SENT, OutboundEmail.STATUS_FAILED}:
+            continue
+        event = recipient.consent_event
+        if event is None:
+            continue
+        _finalize_delivery(recipient.pk, log=log, event=event)
+
+
 def refresh_campaign_counts(campaign: CustomerCampaign) -> CustomerCampaign:
     counts = {
         status: campaign.recipients.filter(status=status).count()
@@ -352,6 +427,7 @@ def send_campaign_batch(
     if not campaign.approved_by_id or not campaign.approved_at:
         raise CampaignOperationError("The campaign approval record is incomplete.")
 
+    _reconcile_linked_processing(campaign)
     configured_batch = int(getattr(settings, "CUSTOMER_CAMPAIGN_BATCH_SIZE", 10))
     requested_batch = int(batch_size or configured_batch)
     batch_limit = max(1, min(requested_batch, configured_batch))
@@ -409,31 +485,17 @@ def send_campaign_batch(
                 f"{body.rstrip()}\n\nManage optional marketing preferences: "
                 f"{unsubscribe_url}"
             )
-        log = send_outbound_email(
-            to_email=recipient.email_address,
+        log = _create_delivery_log(
+            recipient_id,
             subject=subject,
             body=body,
-            created_by=user,
+            user=user,
         )
-        recipient.outbound_email = log
-        recipient.consent_event = event
-        if log.status == OutboundEmail.STATUS_SENT:
-            recipient.status = CustomerCampaignRecipient.STATUS_SENT
-            recipient.sent_at = log.sent_at or timezone.now()
-            recipient.suppression_reason = ""
-        else:
-            recipient.status = CustomerCampaignRecipient.STATUS_FAILED
-            recipient.suppression_reason = (log.error or "email_delivery_failed")[:160]
-        recipient.save(
-            update_fields=[
-                "outbound_email",
-                "consent_event",
-                "status",
-                "sent_at",
-                "suppression_reason",
-                "updated_at",
-            ]
-        )
+        if log is None:
+            continue
+        retry_outbound_email(log)
+        log.refresh_from_db()
+        _finalize_delivery(recipient_id, log=log, event=event)
 
     return refresh_campaign_counts(campaign)
 
