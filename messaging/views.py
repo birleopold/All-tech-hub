@@ -121,7 +121,7 @@ def email_job_update(request, pk: int):
             if log.status == "sent":
                 messages.success(request, "Update email sent.")
             else:
-                messages.error(request, f"Email failed: {log.error}")
+                messages.error(request, f"Retry failed: {log.error}")
             return redirect("staff_job_detail", pk=job.pk)
     else:
         form = SendEmailForm(initial=initial)
@@ -178,6 +178,21 @@ def email_log_retry(request, pk: int):
         OutboundEmail.objects.select_related("commercial_document", "job_card"),
         pk=pk,
     )
+    campaign_recipient = log.customer_campaign_recipients.select_related(
+        "campaign"
+    ).first()
+    if campaign_recipient is not None:
+        messages.error(
+            request,
+            (
+                "Controlled campaign emails cannot be retried from the generic email log. "
+                "Review the campaign recipient and current consent instead."
+            ),
+        )
+        return redirect(
+            "staff_customer_campaign_detail",
+            pk=campaign_recipient.campaign_id,
+        )
     attachment_name = None
     attachment_bytes = None
     if log.commercial_document_id:
