@@ -11,7 +11,11 @@ from django.utils import timezone
 from commerce.models import Order
 from core.models import CompanySettings
 from crm.models import Customer
-from customer_campaigns.models import CustomerCampaign, CustomerCampaignRecipient
+from customer_campaigns.models import (
+    CampaignAutomationEvent,
+    CustomerCampaign,
+    CustomerCampaignRecipient,
+)
 from loyalty.models import CustomerMarketingPreference, MarketingConsentEvent
 from messaging.models import OutboundEmail
 from messaging.utils import retry_outbound_email
@@ -19,6 +23,50 @@ from messaging.utils import retry_outbound_email
 
 class CampaignOperationError(Exception):
     pass
+
+
+def _setting_int(name: str, default: int, *, minimum: int = 1, maximum: int = 10000) -> int:
+    try:
+        value = int(getattr(settings, name, default))
+    except (TypeError, ValueError):
+        value = default
+    return max(minimum, min(maximum, value))
+
+
+def _record_automation_event(
+    campaign: CustomerCampaign,
+    action: str,
+    *,
+    actor=None,
+    message: str = "",
+    metadata: dict | None = None,
+) -> CampaignAutomationEvent:
+    return CampaignAutomationEvent.objects.create(
+        campaign=campaign,
+        action=action,
+        actor=actor,
+        message=(message or "")[:255],
+        metadata=metadata or {},
+    )
+
+
+def _approval_deadline(campaign: CustomerCampaign):
+    if campaign.approval_expires_at:
+        return campaign.approval_expires_at
+    if not campaign.approved_at:
+        return None
+    validity_hours = _setting_int(
+        "CUSTOMER_CAMPAIGN_APPROVAL_VALID_HOURS",
+        48,
+        minimum=1,
+        maximum=720,
+    )
+    return campaign.approved_at + timedelta(hours=validity_hours)
+
+
+def _approval_is_current(campaign: CustomerCampaign, *, at=None) -> bool:
+    deadline = _approval_deadline(campaign)
+    return bool(campaign.approved_by_id and campaign.approved_at and deadline and (at or timezone.now()) < deadline)
 
 
 def eligible_customer_queryset(campaign: CustomerCampaign):
@@ -88,7 +136,11 @@ def prepare_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
             "This campaign already has delivery activity and cannot be rebuilt."
         )
 
-    configured_max = int(getattr(settings, "CUSTOMER_CAMPAIGN_MAX_RECIPIENTS", 100))
+    configured_max = _setting_int(
+        "CUSTOMER_CAMPAIGN_MAX_RECIPIENTS",
+        100,
+        maximum=500,
+    )
     if campaign.max_recipients > configured_max:
         raise CampaignOperationError(
             f"The recipient limit exceeds the configured maximum of {configured_max}."
@@ -125,10 +177,21 @@ def prepare_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
     campaign.failed_count = 0
     campaign.approved_by = None
     campaign.approved_at = None
+    campaign.approval_expires_at = None
     campaign.approval_note = ""
     campaign.failure_reason = ""
     campaign.started_at = None
     campaign.completed_at = None
+    campaign.automated_delivery = False
+    campaign.scheduled_for = None
+    campaign.next_run_at = None
+    campaign.scheduled_by = None
+    campaign.scheduled_at = None
+    campaign.paused_by = None
+    campaign.paused_at = None
+    campaign.pause_reason = ""
+    campaign.last_automation_at = None
+    campaign.automation_run_count = 0
     campaign.save(
         update_fields=[
             "status",
@@ -140,10 +203,21 @@ def prepare_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
             "failed_count",
             "approved_by",
             "approved_at",
+            "approval_expires_at",
             "approval_note",
             "failure_reason",
             "started_at",
             "completed_at",
+            "automated_delivery",
+            "scheduled_for",
+            "next_run_at",
+            "scheduled_by",
+            "scheduled_at",
+            "paused_by",
+            "paused_at",
+            "pause_reason",
+            "last_automation_at",
+            "automation_run_count",
             "updated_at",
         ]
     )
@@ -169,15 +243,24 @@ def approve_campaign(
             raise CampaignOperationError(
                 "A different authorised staff member must approve this campaign."
             )
+    approved_at = timezone.now()
+    validity_hours = _setting_int(
+        "CUSTOMER_CAMPAIGN_APPROVAL_VALID_HOURS",
+        48,
+        minimum=1,
+        maximum=720,
+    )
     campaign.status = CustomerCampaign.STATUS_APPROVED
     campaign.approved_by = user
-    campaign.approved_at = timezone.now()
+    campaign.approved_at = approved_at
+    campaign.approval_expires_at = approved_at + timedelta(hours=validity_hours)
     campaign.approval_note = (approval_note or "").strip()
     campaign.save(
         update_fields=[
             "status",
             "approved_by",
             "approved_at",
+            "approval_expires_at",
             "approval_note",
             "updated_at",
         ]
@@ -384,11 +467,14 @@ def refresh_campaign_counts(campaign: CustomerCampaign) -> CustomerCampaign:
     )
     if campaign.status not in {
         CustomerCampaign.STATUS_CANCELLED,
+        CustomerCampaign.STATUS_EXPIRED,
         CustomerCampaign.STATUS_FAILED,
     }:
         if unfinished == 0 and campaign.prepared_count:
             campaign.status = CustomerCampaign.STATUS_COMPLETED
             campaign.completed_at = campaign.completed_at or timezone.now()
+            campaign.automated_delivery = False
+            campaign.next_run_at = None
         elif campaign.status in {
             CustomerCampaign.STATUS_APPROVED,
             CustomerCampaign.STATUS_SENDING,
@@ -402,9 +488,85 @@ def refresh_campaign_counts(campaign: CustomerCampaign) -> CustomerCampaign:
             "failed_count",
             "status",
             "completed_at",
+            "automated_delivery",
+            "next_run_at",
             "updated_at",
         ]
     )
+    return campaign
+
+
+@transaction.atomic
+def _expire_locked_campaign(
+    campaign: CustomerCampaign,
+    *,
+    message: str = "Campaign approval expired before remaining delivery.",
+) -> CustomerCampaign:
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        campaign.status = CustomerCampaign.STATUS_PAUSED
+        campaign.pause_reason = "approval_expired_with_processing_delivery"
+        campaign.paused_at = timezone.now()
+        campaign.next_run_at = None
+        campaign.save(
+            update_fields=[
+                "status",
+                "pause_reason",
+                "paused_at",
+                "next_run_at",
+                "updated_at",
+            ]
+        )
+        _record_automation_event(
+            campaign,
+            CampaignAutomationEvent.ACTION_PAUSED,
+            message="Approval expired while a delivery was processing; manual review required.",
+        )
+        return campaign
+
+    campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PENDING
+    ).update(
+        status=CustomerCampaignRecipient.STATUS_SUPPRESSED,
+        suppression_reason="campaign_approval_expired",
+        attempted_at=timezone.now(),
+    )
+    campaign.status = CustomerCampaign.STATUS_EXPIRED
+    campaign.automated_delivery = False
+    campaign.next_run_at = None
+    campaign.failure_reason = message
+    campaign.completed_at = timezone.now()
+    campaign.save(
+        update_fields=[
+            "status",
+            "automated_delivery",
+            "next_run_at",
+            "failure_reason",
+            "completed_at",
+            "updated_at",
+        ]
+    )
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_EXPIRED,
+        message=message,
+    )
+    return refresh_campaign_counts(campaign)
+
+
+def expire_campaign_if_needed(campaign: CustomerCampaign) -> CustomerCampaign:
+    campaign = CustomerCampaign.objects.get(pk=campaign.pk)
+    deadline = _approval_deadline(campaign)
+    if deadline and timezone.now() >= deadline and campaign.status in {
+        CustomerCampaign.STATUS_APPROVED,
+        CustomerCampaign.STATUS_SCHEDULED,
+        CustomerCampaign.STATUS_SENDING,
+        CustomerCampaign.STATUS_PAUSED,
+    }:
+        with transaction.atomic():
+            locked = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
+            return _expire_locked_campaign(locked)
     return campaign
 
 
@@ -413,22 +575,40 @@ def send_campaign_batch(
     *,
     user,
     batch_size: int | None = None,
+    automated: bool = False,
 ) -> CustomerCampaign:
     if not getattr(settings, "CUSTOMER_CAMPAIGN_SEND_ENABLED", False):
         raise CampaignOperationError(
             "Customer campaign sending is disabled by the production safety switch."
         )
     campaign.refresh_from_db()
-    if campaign.status not in {
-        CustomerCampaign.STATUS_APPROVED,
-        CustomerCampaign.STATUS_SENDING,
-    }:
-        raise CampaignOperationError("The campaign must be approved before sending.")
+    if automated:
+        if not campaign.automated_delivery or campaign.status != CustomerCampaign.STATUS_SENDING:
+            raise CampaignOperationError("The scheduled campaign is not claimed for automation.")
+    else:
+        if campaign.automated_delivery:
+            raise CampaignOperationError(
+                "This campaign is in scheduled-delivery mode. Pause or cancel the schedule instead."
+            )
+        if campaign.status not in {
+            CustomerCampaign.STATUS_APPROVED,
+            CustomerCampaign.STATUS_SENDING,
+        }:
+            raise CampaignOperationError("The campaign must be approved before sending.")
+        if user is None:
+            raise CampaignOperationError("A staff user is required for manual delivery.")
     if not campaign.approved_by_id or not campaign.approved_at:
         raise CampaignOperationError("The campaign approval record is incomplete.")
+    if not _approval_is_current(campaign):
+        expire_campaign_if_needed(campaign)
+        raise CampaignOperationError("The campaign approval has expired.")
 
     _reconcile_linked_processing(campaign)
-    configured_batch = int(getattr(settings, "CUSTOMER_CAMPAIGN_BATCH_SIZE", 10))
+    configured_batch = (
+        _setting_int("CUSTOMER_CAMPAIGN_AUTOMATION_BATCH_SIZE", 1, maximum=50)
+        if automated
+        else _setting_int("CUSTOMER_CAMPAIGN_BATCH_SIZE", 10, maximum=50)
+    )
     requested_batch = int(batch_size or configured_batch)
     batch_limit = max(1, min(requested_batch, configured_batch))
     stale_cutoff = timezone.now() - timedelta(minutes=30)
@@ -501,19 +681,476 @@ def send_campaign_batch(
 
 
 @transaction.atomic
+def schedule_campaign(
+    campaign: CustomerCampaign,
+    *,
+    user,
+    scheduled_for,
+    batch_size: int,
+) -> CustomerCampaign:
+    campaign = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
+    if campaign.status != CustomerCampaign.STATUS_APPROVED:
+        raise CampaignOperationError("Only an approved campaign can be scheduled.")
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        raise CampaignOperationError("A processing recipient prevents scheduling.")
+    if not _approval_is_current(campaign):
+        return _expire_locked_campaign(campaign)
+
+    now = timezone.now()
+    if scheduled_for <= now:
+        raise CampaignOperationError("Choose a future schedule time.")
+    deadline = _approval_deadline(campaign)
+    if deadline is None or scheduled_for >= deadline:
+        raise CampaignOperationError(
+            "The scheduled time must be before the approval expiry time."
+        )
+    max_lead_hours = _setting_int(
+        "CUSTOMER_CAMPAIGN_SCHEDULE_MAX_LEAD_HOURS",
+        24,
+        minimum=1,
+        maximum=720,
+    )
+    if scheduled_for > now + timedelta(hours=max_lead_hours):
+        raise CampaignOperationError(
+            f"Schedule this campaign within the next {max_lead_hours} hours."
+        )
+    configured_batch = _setting_int(
+        "CUSTOMER_CAMPAIGN_AUTOMATION_BATCH_SIZE",
+        1,
+        maximum=50,
+    )
+    safe_batch = max(1, min(int(batch_size or configured_batch), configured_batch))
+
+    campaign.status = CustomerCampaign.STATUS_SCHEDULED
+    campaign.automated_delivery = True
+    campaign.scheduled_for = scheduled_for
+    campaign.next_run_at = scheduled_for
+    campaign.automation_batch_size = safe_batch
+    campaign.scheduled_by = user
+    campaign.scheduled_at = now
+    campaign.paused_by = None
+    campaign.paused_at = None
+    campaign.pause_reason = ""
+    campaign.failure_reason = ""
+    campaign.save(
+        update_fields=[
+            "status",
+            "automated_delivery",
+            "scheduled_for",
+            "next_run_at",
+            "automation_batch_size",
+            "scheduled_by",
+            "scheduled_at",
+            "paused_by",
+            "paused_at",
+            "pause_reason",
+            "failure_reason",
+            "updated_at",
+        ]
+    )
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_SCHEDULED,
+        actor=user,
+        message="Campaign scheduled for automated bounded delivery.",
+        metadata={
+            "scheduled_for": scheduled_for.isoformat(),
+            "batch_size": safe_batch,
+            "approval_expires_at": deadline.isoformat(),
+        },
+    )
+    return campaign
+
+
+@transaction.atomic
+def pause_campaign(
+    campaign: CustomerCampaign,
+    *,
+    user,
+    reason: str,
+    automatic: bool = False,
+) -> CustomerCampaign:
+    campaign = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
+    if not campaign.automated_delivery or campaign.status not in {
+        CustomerCampaign.STATUS_SCHEDULED,
+        CustomerCampaign.STATUS_SENDING,
+    }:
+        raise CampaignOperationError("Only an active scheduled campaign can be paused.")
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        raise CampaignOperationError(
+            "A recipient is processing. Disable scheduler and send switches, then review delivery evidence."
+        )
+    campaign.status = CustomerCampaign.STATUS_PAUSED
+    campaign.next_run_at = None
+    campaign.paused_by = user
+    campaign.paused_at = timezone.now()
+    campaign.pause_reason = (reason or "Campaign paused.")[:240]
+    campaign.save(
+        update_fields=[
+            "status",
+            "next_run_at",
+            "paused_by",
+            "paused_at",
+            "pause_reason",
+            "updated_at",
+        ]
+    )
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_PAUSED,
+        actor=user,
+        message=campaign.pause_reason,
+        metadata={"automatic": bool(automatic)},
+    )
+    return campaign
+
+
+@transaction.atomic
+def resume_campaign(
+    campaign: CustomerCampaign,
+    *,
+    user,
+    next_run_at,
+) -> CustomerCampaign:
+    campaign = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
+    if campaign.status != CustomerCampaign.STATUS_PAUSED or not campaign.automated_delivery:
+        raise CampaignOperationError("Only a paused scheduled campaign can be resumed.")
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        raise CampaignOperationError("Processing delivery evidence must be resolved first.")
+    if not _approval_is_current(campaign):
+        return _expire_locked_campaign(campaign)
+    now = timezone.now()
+    if next_run_at < now:
+        next_run_at = now
+    deadline = _approval_deadline(campaign)
+    if deadline is None or next_run_at >= deadline:
+        raise CampaignOperationError("Resume time must be before approval expiry.")
+    campaign.status = CustomerCampaign.STATUS_SCHEDULED
+    campaign.next_run_at = next_run_at
+    campaign.paused_by = None
+    campaign.paused_at = None
+    campaign.pause_reason = ""
+    campaign.save(
+        update_fields=[
+            "status",
+            "next_run_at",
+            "paused_by",
+            "paused_at",
+            "pause_reason",
+            "updated_at",
+        ]
+    )
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_RESUMED,
+        actor=user,
+        message="Scheduled delivery resumed.",
+        metadata={"next_run_at": next_run_at.isoformat()},
+    )
+    return campaign
+
+
+@transaction.atomic
+def _claim_due_campaign(campaign_id: int) -> CustomerCampaign | None:
+    campaign = CustomerCampaign.objects.select_for_update().filter(pk=campaign_id).first()
+    now = timezone.now()
+    if (
+        campaign is None
+        or campaign.status != CustomerCampaign.STATUS_SCHEDULED
+        or not campaign.automated_delivery
+        or not campaign.next_run_at
+        or campaign.next_run_at > now
+    ):
+        return None
+    if not _approval_is_current(campaign, at=now):
+        _expire_locked_campaign(campaign)
+        return None
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        campaign.status = CustomerCampaign.STATUS_PAUSED
+        campaign.next_run_at = None
+        campaign.paused_at = now
+        campaign.pause_reason = "processing_delivery_requires_manual_review"
+        campaign.save(
+            update_fields=[
+                "status",
+                "next_run_at",
+                "paused_at",
+                "pause_reason",
+                "updated_at",
+            ]
+        )
+        _record_automation_event(
+            campaign,
+            CampaignAutomationEvent.ACTION_PAUSED,
+            message=campaign.pause_reason,
+            metadata={"automatic": True},
+        )
+        return None
+    campaign.status = CustomerCampaign.STATUS_SENDING
+    campaign.next_run_at = None
+    campaign.last_automation_at = now
+    campaign.automation_run_count += 1
+    campaign.started_at = campaign.started_at or now
+    campaign.save(
+        update_fields=[
+            "status",
+            "next_run_at",
+            "last_automation_at",
+            "automation_run_count",
+            "started_at",
+            "updated_at",
+        ]
+    )
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_BATCH_STARTED,
+        message="Automated campaign batch claimed.",
+        metadata={"run": campaign.automation_run_count},
+    )
+    return campaign
+
+
+def _failure_circuit_open(campaign: CustomerCampaign) -> bool:
+    attempts = campaign.sent_count + campaign.failed_count
+    minimum = _setting_int(
+        "CUSTOMER_CAMPAIGN_FAILURE_MIN_ATTEMPTS",
+        3,
+        minimum=1,
+        maximum=1000,
+    )
+    threshold = _setting_int(
+        "CUSTOMER_CAMPAIGN_FAILURE_RATE_PERCENT",
+        50,
+        minimum=1,
+        maximum=100,
+    )
+    return attempts >= minimum and campaign.failed_count * 100 >= attempts * threshold
+
+
+def _finish_automated_batch(
+    campaign: CustomerCampaign,
+    *,
+    before: dict,
+) -> tuple[CustomerCampaign, str]:
+    campaign.refresh_from_db()
+    campaign = refresh_campaign_counts(campaign)
+    deltas = {
+        "sent": campaign.sent_count - before["sent"],
+        "suppressed": campaign.suppressed_count - before["suppressed"],
+        "failed": campaign.failed_count - before["failed"],
+    }
+    if campaign.status == CustomerCampaign.STATUS_COMPLETED:
+        _record_automation_event(
+            campaign,
+            CampaignAutomationEvent.ACTION_COMPLETED,
+            message="Scheduled campaign completed.",
+            metadata=deltas,
+        )
+        return campaign, "completed"
+
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        campaign.status = CustomerCampaign.STATUS_PAUSED
+        campaign.next_run_at = None
+        campaign.paused_at = timezone.now()
+        campaign.pause_reason = "uncertain_processing_delivery_requires_review"
+        campaign.save(
+            update_fields=[
+                "status",
+                "next_run_at",
+                "paused_at",
+                "pause_reason",
+                "updated_at",
+            ]
+        )
+        _record_automation_event(
+            campaign,
+            CampaignAutomationEvent.ACTION_PAUSED,
+            message=campaign.pause_reason,
+            metadata={"automatic": True, **deltas},
+        )
+        return campaign, "paused"
+
+    if _failure_circuit_open(campaign) and campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PENDING
+    ).exists():
+        campaign.status = CustomerCampaign.STATUS_PAUSED
+        campaign.next_run_at = None
+        campaign.paused_at = timezone.now()
+        campaign.pause_reason = "delivery_failure_rate_circuit_breaker"
+        campaign.save(
+            update_fields=[
+                "status",
+                "next_run_at",
+                "paused_at",
+                "pause_reason",
+                "updated_at",
+            ]
+        )
+        _record_automation_event(
+            campaign,
+            CampaignAutomationEvent.ACTION_PAUSED,
+            message=campaign.pause_reason,
+            metadata={"automatic": True, **deltas},
+        )
+        return campaign, "paused"
+
+    interval_minutes = _setting_int(
+        "CUSTOMER_CAMPAIGN_AUTOMATION_INTERVAL_MINUTES",
+        15,
+        minimum=5,
+        maximum=1440,
+    )
+    next_run = timezone.now() + timedelta(minutes=interval_minutes)
+    deadline = _approval_deadline(campaign)
+    if deadline is None or next_run >= deadline:
+        with transaction.atomic():
+            locked = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
+            return _expire_locked_campaign(locked), "expired"
+    campaign.status = CustomerCampaign.STATUS_SCHEDULED
+    campaign.next_run_at = next_run
+    campaign.save(update_fields=["status", "next_run_at", "updated_at"])
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_BATCH_FINISHED,
+        message="Automated batch finished; next bounded batch scheduled.",
+        metadata={"next_run_at": next_run.isoformat(), **deltas},
+    )
+    return campaign, "scheduled"
+
+
+def process_scheduled_campaigns(*, limit: int = 10, dry_run: bool = False) -> dict:
+    now = timezone.now()
+    limit = max(1, min(int(limit or 10), 100))
+    active_statuses = [
+        CustomerCampaign.STATUS_APPROVED,
+        CustomerCampaign.STATUS_SCHEDULED,
+        CustomerCampaign.STATUS_SENDING,
+        CustomerCampaign.STATUS_PAUSED,
+    ]
+    expired_ids = list(
+        CustomerCampaign.objects.filter(
+            status__in=active_statuses,
+            approval_expires_at__isnull=False,
+            approval_expires_at__lte=now,
+        ).order_by("approval_expires_at", "id").values_list("id", flat=True)[:limit]
+    )
+    due_ids = list(
+        CustomerCampaign.objects.filter(
+            status=CustomerCampaign.STATUS_SCHEDULED,
+            automated_delivery=True,
+            next_run_at__isnull=False,
+            next_run_at__lte=now,
+        ).order_by("next_run_at", "id").values_list("id", flat=True)[:limit]
+    )
+    summary = {
+        "due": len(due_ids),
+        "expired": len(expired_ids),
+        "processed": 0,
+        "sent": 0,
+        "suppressed": 0,
+        "failed": 0,
+        "paused": 0,
+        "completed": 0,
+        "disabled": False,
+    }
+    if dry_run:
+        return summary
+
+    for campaign_id in expired_ids:
+        with transaction.atomic():
+            campaign = CustomerCampaign.objects.select_for_update().filter(pk=campaign_id).first()
+            if campaign and campaign.status in active_statuses and not _approval_is_current(campaign):
+                _expire_locked_campaign(campaign)
+
+    if not getattr(settings, "CUSTOMER_CAMPAIGN_SCHEDULER_ENABLED", False) or not getattr(
+        settings,
+        "CUSTOMER_CAMPAIGN_SEND_ENABLED",
+        False,
+    ):
+        summary["disabled"] = True
+        return summary
+
+    for campaign_id in due_ids:
+        campaign = _claim_due_campaign(campaign_id)
+        if campaign is None:
+            continue
+        before = {
+            "sent": campaign.sent_count,
+            "suppressed": campaign.suppressed_count,
+            "failed": campaign.failed_count,
+        }
+        try:
+            campaign = send_campaign_batch(
+                campaign,
+                user=None,
+                batch_size=campaign.automation_batch_size,
+                automated=True,
+            )
+        except CampaignOperationError as exc:
+            campaign.refresh_from_db()
+            if campaign.status == CustomerCampaign.STATUS_SENDING:
+                campaign.status = CustomerCampaign.STATUS_PAUSED
+                campaign.next_run_at = None
+                campaign.paused_at = timezone.now()
+                campaign.pause_reason = f"automation_error: {str(exc)[:210]}"
+                campaign.save(
+                    update_fields=[
+                        "status",
+                        "next_run_at",
+                        "paused_at",
+                        "pause_reason",
+                        "updated_at",
+                    ]
+                )
+                _record_automation_event(
+                    campaign,
+                    CampaignAutomationEvent.ACTION_FAILED,
+                    message=campaign.pause_reason,
+                )
+                summary["paused"] += 1
+            continue
+        campaign, outcome = _finish_automated_batch(campaign, before=before)
+        summary["processed"] += 1
+        summary["sent"] += max(0, campaign.sent_count - before["sent"])
+        summary["suppressed"] += max(
+            0,
+            campaign.suppressed_count - before["suppressed"],
+        )
+        summary["failed"] += max(0, campaign.failed_count - before["failed"])
+        if outcome == "paused":
+            summary["paused"] += 1
+        elif outcome == "completed":
+            summary["completed"] += 1
+        elif outcome == "expired":
+            summary["expired"] += 1
+    return summary
+
+
+@transaction.atomic
 def cancel_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
     campaign = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
     if campaign.status in {
         CustomerCampaign.STATUS_COMPLETED,
         CustomerCampaign.STATUS_CANCELLED,
+        CustomerCampaign.STATUS_EXPIRED,
     }:
         raise CampaignOperationError("This campaign can no longer be cancelled.")
     if campaign.recipients.filter(
         status=CustomerCampaignRecipient.STATUS_PROCESSING
     ).exists():
         raise CampaignOperationError(
-            "A recipient is currently processing. Disable the send switch and review "
-            "the delivery evidence before cancelling."
+            "A recipient is currently processing. Disable scheduler and send switches, "
+            "then review delivery evidence before cancelling."
         )
     campaign.recipients.filter(
         status=CustomerCampaignRecipient.STATUS_PENDING
@@ -523,14 +1160,24 @@ def cancel_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
         attempted_at=timezone.now(),
     )
     campaign.status = CustomerCampaign.STATUS_CANCELLED
+    campaign.automated_delivery = False
+    campaign.next_run_at = None
     campaign.failure_reason = f"Cancelled by {getattr(user, 'get_username', lambda: 'staff')()}"
     campaign.completed_at = timezone.now()
     campaign.save(
         update_fields=[
             "status",
+            "automated_delivery",
+            "next_run_at",
             "failure_reason",
             "completed_at",
             "updated_at",
         ]
+    )
+    _record_automation_event(
+        campaign,
+        CampaignAutomationEvent.ACTION_CANCELLED,
+        actor=user,
+        message=campaign.failure_reason,
     )
     return refresh_campaign_counts(campaign)
