@@ -223,6 +223,7 @@ class EmailDeliveryEvent(models.Model):
     TYPE_HARD_BOUNCE = "hard_bounce"
     TYPE_COMPLAINT = "complaint"
     TYPE_SUPPRESSED = "suppressed"
+    TYPE_FAILED = "failed"
     TYPE_CHOICES = [
         (TYPE_ACCEPTED, "Accepted"),
         (TYPE_DELIVERED, "Delivered"),
@@ -230,6 +231,7 @@ class EmailDeliveryEvent(models.Model):
         (TYPE_HARD_BOUNCE, "Hard bounce"),
         (TYPE_COMPLAINT, "Complaint"),
         (TYPE_SUPPRESSED, "Suppressed"),
+        (TYPE_FAILED, "Failed"),
     ]
 
     event_key = models.CharField(max_length=240, unique=True)
