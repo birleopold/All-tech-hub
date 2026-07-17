@@ -1,54 +1,54 @@
 # Phase 8 — Controlled customer email campaigns
 
-Phase 8 turns the Phase 7 consent-safe audience data into a controlled email campaign workflow. It is designed to prevent accidental bulk delivery, stale-consent sends and duplicate delivery after interrupted requests.
+Phase 8 turns the Phase 7 consent-safe audience data into a controlled email campaign workflow. It prevents accidental bulk delivery, stale-consent sends, permission bypasses and automatic duplicate delivery after interrupted requests.
 
-Phase 8 supports customer email only. It does not send WhatsApp messages. WhatsApp must remain audience-preview only until LEOSOFT has an approved provider, verified sender, message-template process, delivery callbacks and opt-out handling.
+Phase 8 supports customer email only. It does not send WhatsApp messages. WhatsApp remains audience-preview only until LEOSOFT has an approved provider, verified sender, template process, delivery callbacks and opt-out handling.
 
 ## Safety position
 
-Production customer campaign sending is disabled by default:
+Production delivery is disabled by default:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED=0
 ```
 
-With the switch disabled, staff can:
+With the switch disabled, authorised staff can create, prepare, review, approve and cancel campaigns, but the server cannot release customer email.
 
-- create drafts;
-- prepare consent-safe audiences;
-- review recipient evidence;
-- approve campaigns;
-- cancel campaigns.
+The disabled HTML button is only a visual aid. The server checks the environment switch for every send request.
 
-They cannot release any email.
+## Permission requirement
 
-The server checks the switch again for every send request. A disabled HTML button is not the security control; the server-side setting is.
+Campaign pages and actions always require:
+
+```text
+marketing.change_marketingcampaign
+```
+
+This permission is enforced even when the broader optional staff-role middleware is disabled. A staff account without the permission receives an access-denied response.
 
 ## Staff location
-
-Authorised staff can open:
 
 ```text
 /staff/reports/customer-campaigns/
 ```
 
-The workflow appears in both desktop and mobile staff navigation as **Customer email campaigns**.
+The workflow appears in desktop and mobile staff navigation as **Customer email campaigns**.
 
-## Campaign lifecycle
+## Lifecycle
 
 ### 1. Draft
 
 A staff member defines:
 
 - campaign name;
-- optional link to an existing marketing campaign;
-- consent topic: product updates or special offers;
-- customer segment: all, repeat, recent or dormant;
+- optional reporting link to an existing marketing campaign;
+- topic: product updates or special offers;
+- segment: all, repeat, recent or dormant;
 - subject;
-- message body;
+- body;
 - maximum recipients.
 
-Supported placeholders are:
+Supported placeholders:
 
 ```text
 {customer_name}
@@ -57,95 +57,74 @@ Supported placeholders are:
 {unsubscribe_url}
 ```
 
-When `{unsubscribe_url}` is omitted from the body, LEOSOFT appends the customer-specific preference link automatically.
+When the body omits `{unsubscribe_url}`, LEOSOFT appends the customer-specific preference link automatically.
 
 Saving a draft sends nothing.
 
 ### 2. Prepare audience
 
-Preparation builds a fixed recipient snapshot from customers who currently have:
+Preparation creates a fixed recipient snapshot from customers who currently have:
 
 - active email marketing consent;
 - active consent for the selected topic;
-- a current consent event that supports those choices;
+- a current consent event supporting those choices;
 - a recorded email address;
 - the selected business segment.
 
-A customer with only a Boolean preference flag but no consent event is excluded.
+A customer with only a Boolean preference flag and no consent event is excluded.
 
-The snapshot records:
+The snapshot records the customer, normalised email address, consent event and preparation time.
 
-- customer;
-- normalised email address at preparation time;
-- consent event used during preparation;
-- preparation time.
-
-Preparation sends nothing.
-
-A prepared campaign may be rebuilt only before delivery activity begins. Once a recipient has entered processing, failed or sent state, the campaign cannot silently replace its audience.
+Preparation sends nothing. A prepared campaign can be rebuilt only before delivery activity begins.
 
 ### 3. Independent approval
 
-By default, the approver must be different from both:
-
-- the campaign creator;
-- the staff member who prepared the audience.
-
-Controlled by:
+The default control is:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_REQUIRE_SEPARATE_APPROVER=1
 ```
 
-The approver confirms that they reviewed:
-
-- audience and consent topic;
-- subject;
-- message body;
-- unsubscribe control;
-- recipient limit.
-
-Approval records the staff member, date, time and optional review note. Approval does not send anything.
+The approver must be different from both the creator and preparer. Approval records the reviewer, time and optional note. Approval sends nothing.
 
 ### 4. Confirmed bounded delivery
 
-An approved campaign requires the exact phrase:
+The sender must enter:
 
 ```text
 SEND <campaign ID>
 ```
 
-One action releases no more than the configured batch size:
+One action releases no more than:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_BATCH_SIZE=10
 ```
 
-A larger number entered in the form is automatically reduced to the configured maximum.
+A larger form value is reduced to the configured maximum.
 
-The campaign-wide preparation ceiling is:
+The campaign preparation ceiling is:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_MAX_RECIPIENTS=100
 ```
 
-The application limits this setting to a maximum of 500.
+The application caps this setting at 500.
 
 ### 5. Final consent recheck
 
-Immediately before preparing each delivery, LEOSOFT checks again that:
+Immediately before each delivery LEOSOFT confirms:
 
 - the customer still exists;
-- the email address is still present;
-- the email address still matches the prepared snapshot;
+- the email still exists and matches the prepared snapshot;
 - email consent remains active;
 - selected-topic consent remains active;
-- consent has not been withdrawn;
+- consent was not withdrawn;
 - the latest consent event still supports the channel and topic.
 
 A failed check suppresses the recipient instead of sending.
 
-Common suppression reasons include:
+Typical suppression reasons:
 
 ```text
 email_consent_withdrawn
@@ -157,27 +136,32 @@ customer_removed
 campaign_cancelled
 ```
 
-### 6. Delivery evidence
+### 6. Delivery evidence and duplicate protection
 
-Before SMTP submission, LEOSOFT creates an `OutboundEmail` record and links it to the campaign recipient.
-
-This ordering prevents automatic duplicate sends after an interrupted server request:
+Before SMTP submission, LEOSOFT creates and links an `OutboundEmail` record:
 
 1. recipient is claimed;
 2. current consent is checked;
 3. queued outbound record is created and linked;
 4. SMTP submission occurs;
-5. sent or failed result is written back to the recipient.
+5. sent or failed result is written back.
 
-If the process stops after SMTP may have accepted the message but before the final state is known, the linked queued record remains in processing state for manual review. It is not automatically resent.
+If SMTP may have accepted the message but the application stops before the final result is known, the linked queued record remains in `processing`. It is not automatically resent.
 
-Completed sent or failed outbound records are safely reconciled on the next batch request.
+Sent or failed linked logs are safely reconciled later. A processing recipient with no outbound log and no activity for 30 minutes may return to pending because no registered SMTP attempt exists.
 
-Processing records with no outbound log and no activity for 30 minutes may safely return to pending because SMTP submission had not yet been registered.
+The generic email-log retry action refuses to retry campaign-linked messages. This prevents bypassing the campaign consent and approval controls.
 
 ### 7. Cancellation
 
-Cancellation suppresses every pending or processing recipient and records the cancelling staff member.
+Cancellation suppresses pending recipients and records the staff member.
+
+A campaign cannot be cancelled while a recipient is `processing`. Staff must first:
+
+1. set the send switch to `0`;
+2. inspect the outbound log and campaign evidence;
+3. reconcile the uncertain delivery state;
+4. cancel only after no recipient remains processing.
 
 Already-sent messages cannot be recalled.
 
@@ -191,56 +175,34 @@ suppressed
 failed
 ```
 
-`processing` is an important duplicate-prevention state. Staff should investigate stale processing recipients rather than recreating or manually editing records.
+`processing` is a duplicate-prevention state. Do not edit or automatically retry stale processing records.
 
 ## Read-only administration
 
-Django admin exposes customer campaigns and recipients for inspection only.
-
-Staff cannot use Django admin to manually change:
-
-- campaign status;
-- approval evidence;
-- counters;
-- recipient status;
-- consent evidence;
-- outbound-email links;
-- suppression reasons.
-
-Operational changes must use the controlled application services.
+Django admin exposes campaigns and recipients for inspection only. Staff cannot manually change campaign state, approval evidence, counters, recipient status, consent evidence, outbound links or suppression reasons.
 
 ## Strict audit
 
-Run:
-
 ```bash
 python manage.py audit_customer_campaigns --json
-```
-
-Strict release gate:
-
-```bash
 python manage.py audit_customer_campaigns --strict
 ```
 
 The audit checks for:
 
 - approved or completed campaigns without approval evidence;
-- creator or preparer self-approval where separation is required;
+- creator or preparer self-approval;
 - stale processing recipients;
 - completed campaigns with unfinished recipients;
 - sent recipients without a successful outbound log;
 - sent messages without an unsubscribe path;
-- pending recipients whose current consent no longer matches;
-- email-address changes after preparation;
-- campaign counters that do not match recipient records;
-- campaign or prepared-recipient limits above configured controls.
+- pending recipients whose consent or email changed;
+- counters that disagree with recipient records;
+- campaign or recipient limits above configuration.
 
-A normal completed internal test campaign should report zero integrity errors.
+A normal completed internal campaign should report zero errors.
 
-## Environment settings
-
-Recommended initial production values:
+## Initial production settings
 
 ```dotenv
 ALLTECH_PUBLIC_BASE_URL=https://leosoftug.com
@@ -250,7 +212,7 @@ ALLTECH_CUSTOMER_CAMPAIGN_MAX_RECIPIENTS=10
 ALLTECH_CUSTOMER_CAMPAIGN_BATCH_SIZE=2
 ```
 
-Use the smaller limits for the first controlled internal tests. Increase them only after reviewing SMTP delivery, suppression records and the strict audit.
+Use these small limits for internal testing. Increase them only after reviewing SMTP delivery, suppression records and strict audits.
 
 ## Database changes
 
@@ -265,13 +227,7 @@ It creates:
 - `CustomerCampaign`;
 - `CustomerCampaignRecipient`.
 
-The migration:
-
-- sends no messages;
-- creates no campaigns;
-- creates no recipient snapshots;
-- changes no customer consent;
-- does not enable delivery.
+The migration sends no messages, creates no campaigns or snapshots, changes no consent and does not enable delivery.
 
 ## Production deployment
 
@@ -289,9 +245,9 @@ python manage.py backup_alltech \
 python manage.py verify_alltech_backup
 ```
 
-Do not continue when backup verification fails.
+Stop when backup verification fails.
 
-### 2. Pull the phase
+### 2. Pull
 
 ```bash
 git checkout main
@@ -299,9 +255,9 @@ git pull origin main
 pip install -r requirements.lock
 ```
 
-### 3. Confirm the kill switch
+### 3. Confirm safe settings
 
-Before migration, confirm `.env` contains:
+Add or confirm:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED=0
@@ -311,17 +267,11 @@ ALLTECH_CUSTOMER_CAMPAIGN_MAX_RECIPIENTS=10
 ALLTECH_CUSTOMER_CAMPAIGN_BATCH_SIZE=2
 ```
 
-Reload it:
-
 ```bash
 set -a
 source .env
 set +a
-```
 
-Confirm Django sees sending as disabled:
-
-```bash
 python manage.py shell -c \
   "from django.conf import settings; print(settings.CUSTOMER_CAMPAIGN_SEND_ENABLED)"
 ```
@@ -332,7 +282,7 @@ Expected:
 False
 ```
 
-### 4. Validate code and migration state
+### 4. Validate
 
 ```bash
 python manage.py makemigrations --check --dry-run
@@ -341,36 +291,22 @@ python manage.py check
 python manage.py check --deploy
 ```
 
-The migration plan should include:
-
-```text
-customer_campaigns.0001_initial
-```
-
-Migration drift must report no changes.
+The plan should include `customer_campaigns.0001_initial`, and migration drift should report no changes.
 
 ### 5. Run PostgreSQL tests
-
-Temporarily allow the application role to create its test database:
 
 ```bash
 sudo -u postgres psql -c \
   "ALTER ROLE leosoft_user CREATEDB;"
-```
 
-Run the release suite:
-
-```bash
 set +e
-
 python manage.py test \
-  customer_campaigns.test_campaigns \
+  customer_campaigns \
   loyalty.test_loyalty \
   commerce.test_customer_messages \
   commerce.test_retention \
   reports.test_retention \
   reports.test_conversion
-
 TEST_EXIT=$?
 set -e
 
@@ -396,7 +332,7 @@ Expected:
 f
 ```
 
-### 6. Apply migration
+### 6. Apply migration and audit
 
 ```bash
 python manage.py migrate --noinput
@@ -415,27 +351,27 @@ sudo systemctl status leosoft_gunicorn --no-pager -l
 curl -fsS https://leosoftug.com/healthz/
 ```
 
-### 8. Verify while sending remains disabled
+### 8. Verify with sending disabled
 
-Use two internal staff accounts and internal customer accounts only.
+Use two internal staff accounts with `marketing.change_marketingcampaign` and internal customers only.
 
 1. Create a draft.
 2. Prepare an audience.
-3. Confirm customers without matching consent do not appear.
-4. Confirm a different staff member is required for approval.
-5. Approve the campaign.
+3. Confirm customers without matching consent are excluded.
+4. Confirm a different user is required to approve.
+5. Approve.
 6. Enter the exact send phrase.
-7. Confirm the server blocks delivery because the kill switch is off.
-8. Confirm no new campaign `OutboundEmail` was created.
+7. Confirm the server blocks delivery while the switch is off.
+8. Confirm no campaign outbound email is created.
 9. Run the strict audit.
 
-### 9. Controlled internal send test
+### 9. Controlled internal send
 
-Do not first-enable this feature against a real customer audience.
+Do not first-enable against a real customer audience.
 
-Create one or two internal customer records with email addresses controlled by LEOSOFT staff. Record explicit product-update consent through the portal or checkout consent workflow.
+Create one or two internal customer records using mailboxes controlled by LEOSOFT staff. Record explicit product-update consent through checkout or the portal.
 
-Change only:
+Set:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED=1
@@ -443,8 +379,6 @@ ALLTECH_CUSTOMER_CAMPAIGN_MAX_RECIPIENTS=2
 ALLTECH_CUSTOMER_CAMPAIGN_BATCH_SIZE=1
 ```
 
-Reload and restart:
-
 ```bash
 set -a
 source .env
@@ -452,24 +386,19 @@ set +a
 sudo systemctl restart leosoft_gunicorn
 ```
 
-Prepare a new internal campaign after setting the internal consent records. Do not reuse an old snapshot when email addresses or consent changed.
-
-Use separate staff members to prepare and approve it. Send one recipient at a time.
+Prepare a new internal campaign after consent is recorded. Use different staff members to prepare and approve. Send one recipient at a time.
 
 Verify:
 
-- the expected internal mailbox receives the message;
-- the subject placeholders render correctly;
-- the message contains the correct unsubscribe URL;
-- opening the URL with GET changes nothing;
+- the internal mailbox receives the expected message;
+- placeholders render correctly;
+- the unsubscribe link is correct;
+- opening the unsubscribe page with GET changes nothing;
 - confirming withdrawal suppresses the customer from a later campaign;
-- the outbound log is `sent`;
-- the recipient evidence is `sent`;
-- the strict audit reports zero errors.
+- outbound and recipient states are `sent`;
+- strict campaign and consent audits pass.
 
 ### 10. Disable after the internal test
-
-Return the kill switch to off while the operational review is completed:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED=0
@@ -482,29 +411,33 @@ set +a
 sudo systemctl restart leosoft_gunicorn
 ```
 
-## Emergency kill switch
+## Emergency stop
 
-At any time, stop new campaign delivery by setting:
+Set:
 
 ```dotenv
 ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED=0
 ```
 
-Then reload and restart Gunicorn.
+Reload `.env` and restart Gunicorn. This blocks future batch requests but cannot recall email already accepted by SMTP.
 
-The switch blocks future batch requests. It does not recall email already accepted by SMTP.
+When a recipient is processing, do not cancel or retry. Inspect the linked outbound log and run:
 
-Cancel active campaigns in the staff interface to suppress their remaining recipients.
+```bash
+python manage.py audit_customer_campaigns --json
+```
+
+Cancel remaining pending delivery only after processing records are resolved.
 
 ## Operational rules
 
-- Do not import historical customers as consented without reliable evidence.
-- Do not use purchase history, loyalty tier, review activity or dormant status as permission.
-- Never prepare a special-offer campaign from product-update-only consent.
-- Always use a different approver while separation is enabled.
-- Do not increase the first production batch above two internal recipients.
-- Do not manually change campaign or recipient records in Django admin.
-- Do not automatically retry an uncertain queued delivery.
-- Investigate stale processing records before another batch.
-- Run both campaign and consent strict audits before broader use.
+- Never treat purchase history, loyalty tier, review activity or dormancy as consent.
+- Never use product-update-only consent for special offers.
+- Keep independent approval enabled.
+- Do not exceed two internal recipients during the first live test.
+- Do not edit campaign records through Django admin.
+- Do not retry campaign emails through the generic email log.
+- Do not automatically retry uncertain queued delivery.
+- Investigate stale processing before another batch.
+- Run campaign and consent strict audits before broader use.
 - Keep WhatsApp delivery disabled until its own approved provider workflow exists.
