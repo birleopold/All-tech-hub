@@ -130,11 +130,13 @@ class CustomerCampaign(models.Model):
 
 class CustomerCampaignRecipient(models.Model):
     STATUS_PENDING = "pending"
+    STATUS_PROCESSING = "processing"
     STATUS_SENT = "sent"
     STATUS_SUPPRESSED = "suppressed"
     STATUS_FAILED = "failed"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
+        (STATUS_PROCESSING, "Processing"),
         (STATUS_SENT, "Sent"),
         (STATUS_SUPPRESSED, "Suppressed"),
         (STATUS_FAILED, "Failed"),
@@ -173,6 +175,7 @@ class CustomerCampaignRecipient(models.Model):
         related_name="customer_campaign_recipients",
     )
     prepared_at = models.DateTimeField(auto_now_add=True)
+    attempted_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
