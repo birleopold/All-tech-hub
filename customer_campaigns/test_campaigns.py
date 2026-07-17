@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from crm.models import Customer
 from customer_campaigns.forms import CampaignSendForm
@@ -98,6 +101,15 @@ class ControlledCustomerCampaignTests(TestCase):
             name="No Consent Customer",
             email="no-consent@example.com",
         )
+        manual_customer = Customer.objects.create(
+            name="Active Flag Without Event",
+            email="no-event@example.com",
+        )
+        CustomerMarketingPreference.objects.create(
+            customer=manual_customer,
+            email_marketing=True,
+            product_updates=True,
+        )
 
         prepared = prepare_campaign(self.campaign, user=self.creator)
         recipients = list(prepared.recipients.select_related("customer", "consent_event"))
@@ -141,6 +153,7 @@ class ControlledCustomerCampaignTests(TestCase):
         self.assertIn("/preferences/unsubscribe/", log.body)
         self.assertIn("Amina", log.subject)
         self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(campaign_integrity_findings()["errors"], 0)
 
     @override_settings(CUSTOMER_CAMPAIGN_SEND_ENABLED=True)
     def test_withdrawal_after_preparation_suppresses_before_send(self):
@@ -198,6 +211,37 @@ class ControlledCustomerCampaignTests(TestCase):
         self.assertEqual(second.sent_count, 3)
         self.assertEqual(second.status, CustomerCampaign.STATUS_COMPLETED)
         self.assertEqual(len(mail.outbox), 3)
+
+    @override_settings(CUSTOMER_CAMPAIGN_SEND_ENABLED=True)
+    def test_uncertain_queued_delivery_is_not_automatically_resent(self):
+        prepare_campaign(self.campaign, user=self.creator)
+        approve_campaign(self.campaign, user=self.approver)
+        recipient = self.campaign.recipients.get()
+        log = OutboundEmail.objects.create(
+            to_email=recipient.email_address,
+            subject="Queued but uncertain",
+            body="Delivery state is uncertain",
+            status=OutboundEmail.STATUS_QUEUED,
+            created_by=self.creator,
+        )
+        recipient.status = CustomerCampaignRecipient.STATUS_PROCESSING
+        recipient.outbound_email = log
+        recipient.attempted_at = timezone.now() - timedelta(hours=1)
+        recipient.save(
+            update_fields=[
+                "status",
+                "outbound_email",
+                "attempted_at",
+                "updated_at",
+            ]
+        )
+
+        result = send_campaign_batch(self.campaign, user=self.creator)
+        recipient.refresh_from_db()
+        self.assertEqual(result.status, CustomerCampaign.STATUS_SENDING)
+        self.assertEqual(recipient.status, CustomerCampaignRecipient.STATUS_PROCESSING)
+        self.assertEqual(OutboundEmail.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 0)
 
     def test_send_form_requires_exact_confirmation_phrase(self):
         form = CampaignSendForm(
