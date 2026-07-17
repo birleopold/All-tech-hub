@@ -5,6 +5,11 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def create_primary_control(apps, schema_editor):
+    AutomationControl = apps.get_model("automation", "AutomationControl")
+    AutomationControl.objects.get_or_create(singleton_key="primary")
+
+
 class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -198,5 +203,9 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={"ordering": ["-occurred_at", "-id"]},
+        ),
+        migrations.RunPython(
+            create_primary_control,
+            reverse_code=migrations.RunPython.noop,
         ),
     ]
