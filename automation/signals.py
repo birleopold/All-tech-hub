@@ -37,6 +37,17 @@ def remember_job_status(sender, instance, **kwargs):
 def record_job_status_and_sync_delivery(sender, instance, created, **kwargs):
     previous = getattr(instance, "_previous_status", None)
     if created or previous != instance.status:
+        if instance.last_error == "Recovered after a stale worker lock.":
+            record_job_event(
+                instance,
+                AutomationJobEvent.ACTION_RECOVERED,
+                message="Stale worker lock recovered; job state was re-evaluated.",
+                metadata={
+                    "previous_status": previous,
+                    "new_status": instance.status,
+                    "attempt_count": instance.attempt_count,
+                },
+            )
         action_map = {
             AutomationJob.STATUS_QUEUED: AutomationJobEvent.ACTION_QUEUED,
             AutomationJob.STATUS_RUNNING: AutomationJobEvent.ACTION_CLAIMED,
