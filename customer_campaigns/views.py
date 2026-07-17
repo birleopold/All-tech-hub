@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -22,7 +24,22 @@ from customer_campaigns.services import (
 )
 
 
-class CustomerCampaignListView(StaffRequiredMixin, ListView):
+CAMPAIGN_PERMISSION = "marketing.change_marketingcampaign"
+
+
+class CustomerCampaignStaffMixin(PermissionRequiredMixin, StaffRequiredMixin):
+    permission_required = CAMPAIGN_PERMISSION
+    raise_exception = True
+
+
+def _require_campaign_staff(request) -> None:
+    if not request.user.is_authenticated or not request.user.is_staff:
+        raise Http404
+    if not request.user.has_perm(CAMPAIGN_PERMISSION):
+        raise PermissionDenied
+
+
+class CustomerCampaignListView(CustomerCampaignStaffMixin, ListView):
     model = CustomerCampaign
     template_name = "customer_campaigns/list.html"
     context_object_name = "campaigns"
@@ -50,7 +67,7 @@ class CustomerCampaignListView(StaffRequiredMixin, ListView):
         return context
 
 
-class CustomerCampaignCreateView(StaffRequiredMixin, CreateView):
+class CustomerCampaignCreateView(CustomerCampaignStaffMixin, CreateView):
     model = CustomerCampaign
     form_class = CustomerCampaignForm
     template_name = "customer_campaigns/form.html"
@@ -64,7 +81,7 @@ class CustomerCampaignCreateView(StaffRequiredMixin, CreateView):
         return reverse("staff_customer_campaign_detail", kwargs={"pk": self.object.pk})
 
 
-class CustomerCampaignUpdateView(StaffRequiredMixin, UpdateView):
+class CustomerCampaignUpdateView(CustomerCampaignStaffMixin, UpdateView):
     model = CustomerCampaign
     form_class = CustomerCampaignForm
     template_name = "customer_campaigns/form.html"
@@ -81,8 +98,7 @@ class CustomerCampaignUpdateView(StaffRequiredMixin, UpdateView):
 
 
 def customer_campaign_detail(request, pk: int):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        raise Http404
+    _require_campaign_staff(request)
     campaign = get_object_or_404(
         CustomerCampaign.objects.select_related(
             "created_by",
@@ -120,8 +136,7 @@ def customer_campaign_detail(request, pk: int):
 
 @require_POST
 def customer_campaign_prepare(request, pk: int):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        raise Http404
+    _require_campaign_staff(request)
     campaign = get_object_or_404(CustomerCampaign, pk=pk)
     try:
         prepare_campaign(campaign, user=request.user)
@@ -137,8 +152,7 @@ def customer_campaign_prepare(request, pk: int):
 
 @require_POST
 def customer_campaign_approve(request, pk: int):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        raise Http404
+    _require_campaign_staff(request)
     campaign = get_object_or_404(CustomerCampaign, pk=pk)
     form = CampaignApprovalForm(request.POST)
     if not form.is_valid():
@@ -159,8 +173,7 @@ def customer_campaign_approve(request, pk: int):
 
 @require_POST
 def customer_campaign_send(request, pk: int):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        raise Http404
+    _require_campaign_staff(request)
     campaign = get_object_or_404(CustomerCampaign, pk=pk)
     form = CampaignSendForm(request.POST, campaign=campaign)
     if not form.is_valid():
@@ -189,8 +202,7 @@ def customer_campaign_send(request, pk: int):
 
 @require_POST
 def customer_campaign_cancel(request, pk: int):
-    if not request.user.is_authenticated or not request.user.is_staff:
-        raise Http404
+    _require_campaign_staff(request)
     campaign = get_object_or_404(CustomerCampaign, pk=pk)
     try:
         cancel_campaign(campaign, user=request.user)
