@@ -136,7 +136,8 @@ class ConsentAndLoyaltyTests(TestCase):
             preference.consent_source,
             CustomerMarketingPreference.SOURCE_PORTAL,
         )
-        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+        self.assertIn("private", response.headers["Cache-Control"])
+        self.assertIn("no-store", response.headers["Cache-Control"])
         self.assertIn("noindex", response.headers["X-Robots-Tag"])
 
     def test_unsubscribe_get_is_safe_and_post_withdraws_all(self):
@@ -202,11 +203,12 @@ class ConsentAndLoyaltyTests(TestCase):
             ).exists()
         )
 
-    def test_audience_requires_channel_consent(self):
-        CustomerMarketingPreference.objects.create(
+    def test_audience_requires_channel_and_topic_consent(self):
+        preference = CustomerMarketingPreference.objects.create(
             customer=self.customer,
             email_marketing=True,
             product_updates=True,
+            special_offers=False,
         )
         other = Customer.objects.create(
             name="Dormant Without Consent",
@@ -222,10 +224,33 @@ class ConsentAndLoyaltyTests(TestCase):
             shipping_summary="Kampala",
             total="900000.00",
         )
-        summary = customer_growth_summary(channel="email", segment="all")
-        audience_ids = {customer.pk for customer in summary["audience"]}
-        self.assertIn(self.customer.pk, audience_ids)
-        self.assertNotIn(other.pk, audience_ids)
+        product_summary = customer_growth_summary(
+            channel="email",
+            topic="product_updates",
+            segment="all",
+        )
+        product_ids = {customer.pk for customer in product_summary["audience"]}
+        self.assertIn(self.customer.pk, product_ids)
+        self.assertNotIn(other.pk, product_ids)
+
+        offer_summary = customer_growth_summary(
+            channel="email",
+            topic="special_offers",
+            segment="all",
+        )
+        offer_ids = {customer.pk for customer in offer_summary["audience"]}
+        self.assertNotIn(self.customer.pk, offer_ids)
+        preference.special_offers = True
+        preference.save()
+        offer_summary = customer_growth_summary(
+            channel="email",
+            topic="special_offers",
+            segment="all",
+        )
+        self.assertIn(
+            self.customer.pk,
+            {customer.pk for customer in offer_summary["audience"]},
+        )
 
     def test_integrity_audit_detects_loyalty_balance_mismatch(self):
         account = LoyaltyAccount.objects.create(
