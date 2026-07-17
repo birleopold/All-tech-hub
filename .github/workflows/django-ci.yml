@@ -76,8 +76,13 @@ jobs:
             automation/admin.py \
             automation/apps.py \
             automation/connectors.py \
+            automation/control.py \
+            automation/forms.py \
             automation/models.py \
+            automation/reporting.py \
             automation/signals.py \
+            automation/staff_views.py \
+            automation/worker.py \
             automation/management/commands \
             automation/templatetags \
             automation/test_*.py \
@@ -196,8 +201,10 @@ jobs:
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
 
-      - name: Validate scheduled campaign commands
+      - name: Validate automation control commands
         run: |
+          python manage.py run_growth_automation --dry-run --limit 5
+          python manage.py audit_automation_control --strict
           python manage.py run_customer_campaign_scheduler --dry-run --json
           python manage.py audit_customer_campaigns --strict
 
