@@ -243,6 +243,36 @@ class ControlledCustomerCampaignTests(TestCase):
         self.assertEqual(OutboundEmail.objects.count(), 1)
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_generic_email_log_retry_is_blocked_for_campaign_delivery(self):
+        prepare_campaign(self.campaign, user=self.creator)
+        recipient = self.campaign.recipients.get()
+        log = OutboundEmail.objects.create(
+            to_email=recipient.email_address,
+            subject="Failed campaign email",
+            body="Contains an unsubscribe link /preferences/unsubscribe/example/",
+            status=OutboundEmail.STATUS_FAILED,
+            error="Test failure",
+            created_by=self.creator,
+        )
+        recipient.status = CustomerCampaignRecipient.STATUS_FAILED
+        recipient.outbound_email = log
+        recipient.save(update_fields=["status", "outbound_email", "updated_at"])
+
+        self.client.force_login(self.creator)
+        response = self.client.post(
+            reverse("staff_email_log_retry", kwargs={"pk": log.pk})
+        )
+        self.assertRedirects(
+            response,
+            reverse(
+                "staff_customer_campaign_detail",
+                kwargs={"pk": self.campaign.pk},
+            ),
+        )
+        log.refresh_from_db()
+        self.assertEqual(log.status, OutboundEmail.STATUS_FAILED)
+        self.assertEqual(len(mail.outbox), 0)
+
     def test_send_form_requires_exact_confirmation_phrase(self):
         form = CampaignSendForm(
             {"confirmation": "SEND WRONG", "batch_size": 1},
