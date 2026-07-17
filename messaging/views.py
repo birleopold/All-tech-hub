@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView
@@ -6,7 +7,8 @@ from django.views.generic import ListView
 from billing.models import CommercialDocument
 from billing.pdf import render_commercial_pdf
 from core.mixins import StaffRequiredMixin
-from messaging.forms import SendEmailForm
+from messaging.deliverability import active_suppression
+from messaging.forms import RetryOutboundEmailForm, SendEmailForm
 from messaging.models import OutboundEmail
 from messaging.utils import retry_outbound_email, send_outbound_email
 from operations.models import JobCard
@@ -38,14 +40,26 @@ def email_document(request, pk: int):
                 attachment_bytes=attachment_bytes,
                 commercial_document=doc,
             )
-            if log.status == "sent":
-                messages.success(request, "Email sent.")
+            if log.status in {
+                OutboundEmail.STATUS_SENT,
+                OutboundEmail.STATUS_DELIVERED,
+            }:
+                messages.success(request, "Email accepted by the delivery service.")
+            elif log.status == OutboundEmail.STATUS_SUPPRESSED:
+                messages.error(
+                    request,
+                    "Email was not sent because the address is actively suppressed.",
+                )
             else:
                 messages.error(request, f"Email failed: {log.error}")
             return redirect("staff_document_view", pk=doc.pk)
     else:
         form = SendEmailForm(initial=initial)
-    return render(request, "messaging/send_email.html", {"form": form, "title": f"Email {doc.number}"})
+    return render(
+        request,
+        "messaging/send_email.html",
+        {"form": form, "title": f"Email {doc.number}"},
+    )
 
 
 def email_jobcard(request, pk: int):
@@ -73,23 +87,33 @@ def email_jobcard(request, pk: int):
                 attachment_bytes=attachment_bytes,
                 job_card=job,
             )
-            if log.status == "sent":
-                messages.success(request, "Email sent.")
+            if log.status in {
+                OutboundEmail.STATUS_SENT,
+                OutboundEmail.STATUS_DELIVERED,
+            }:
+                messages.success(request, "Email accepted by the delivery service.")
+            elif log.status == OutboundEmail.STATUS_SUPPRESSED:
+                messages.error(
+                    request,
+                    "Email was not sent because the address is actively suppressed.",
+                )
             else:
                 messages.error(request, f"Email failed: {log.error}")
             return redirect("staff_job_detail", pk=job.pk)
     else:
         form = SendEmailForm(initial=initial)
-    return render(request, "messaging/send_email.html", {"form": form, "title": f"Email {job.number}"})
+    return render(
+        request,
+        "messaging/send_email.html",
+        {"form": form, "title": f"Email {job.number}"},
+    )
 
 
 def email_job_update(request, pk: int):
     if not request.user.is_staff:
         raise Http404
     job = get_object_or_404(JobCard, pk=pk)
-    latest_public = (
-        job.notes.filter(is_internal=False).order_by("-created_at").first()
-    )
+    latest_public = job.notes.filter(is_internal=False).order_by("-created_at").first()
     update_text = latest_public.body if latest_public else ""
     initial = {
         "to_email": job.customer.email,
@@ -118,8 +142,16 @@ def email_job_update(request, pk: int):
                 attachment_bytes=attachment_bytes,
                 job_card=job,
             )
-            if log.status == "sent":
-                messages.success(request, "Update email sent.")
+            if log.status in {
+                OutboundEmail.STATUS_SENT,
+                OutboundEmail.STATUS_DELIVERED,
+            }:
+                messages.success(request, "Update accepted by the delivery service.")
+            elif log.status == OutboundEmail.STATUS_SUPPRESSED:
+                messages.error(
+                    request,
+                    "Update was not sent because the address is actively suppressed.",
+                )
             else:
                 messages.error(request, f"Email failed: {log.error}")
             return redirect("staff_job_detail", pk=job.pk)
@@ -138,40 +170,66 @@ class EmailLogListView(StaffRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        qs = OutboundEmail.objects.select_related(
+        queryset = OutboundEmail.objects.select_related(
             "created_by", "commercial_document", "job_card"
         ).order_by("-created_at", "-id")
-        st = self.request.GET.get("status")
-        if st in dict(OutboundEmail.STATUS_CHOICES):
-            qs = qs.filter(status=st)
-        q = self.request.GET.get("q")
-        if q:
+        status = self.request.GET.get("status")
+        if status in dict(OutboundEmail.STATUS_CHOICES):
+            queryset = queryset.filter(status=status)
+        category = self.request.GET.get("category")
+        if category in dict(OutboundEmail.CATEGORY_CHOICES):
+            queryset = queryset.filter(category=category)
+        query = self.request.GET.get("q")
+        if query:
             from django.db.models import Q
 
-            qs = qs.filter(Q(to_email__icontains=q) | Q(subject__icontains=q))
-        return qs
+            queryset = queryset.filter(
+                Q(to_email__icontains=query) | Q(subject__icontains=query)
+            )
+        return queryset
 
     def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx["status_choices"] = OutboundEmail.STATUS_CHOICES
-        ctx["status"] = self.request.GET.get("status") or ""
-        ctx["q"] = self.request.GET.get("q") or ""
-        return ctx
+        context = super().get_context_data(**kwargs)
+        context["status_choices"] = OutboundEmail.STATUS_CHOICES
+        context["category_choices"] = OutboundEmail.CATEGORY_CHOICES
+        context["status"] = self.request.GET.get("status") or ""
+        context["category"] = self.request.GET.get("category") or ""
+        context["q"] = self.request.GET.get("q") or ""
+        return context
 
 
 def email_log_detail(request, pk: int):
     if not request.user.is_staff:
         raise Http404
     email = get_object_or_404(
-        OutboundEmail.objects.select_related("created_by", "commercial_document", "job_card"),
+        OutboundEmail.objects.select_related(
+            "created_by", "commercial_document", "job_card"
+        ),
         pk=pk,
     )
-    return render(request, "messaging/email_log_detail.html", {"email": email})
+    suppression = active_suppression(email.normalized_to_email, email.category)
+    return render(
+        request,
+        "messaging/email_log_detail.html",
+        {
+            "email": email,
+            "events": email.delivery_events.all()[:100],
+            "active_suppression": suppression,
+            "retry_form": RetryOutboundEmailForm(outbound_email=email),
+            "can_retry_email": (
+                request.user.has_perm("messaging.change_outboundemail")
+                and email.can_retry
+                and suppression is None
+            ),
+        },
+    )
 
 
 def email_log_retry(request, pk: int):
     if not request.user.is_staff:
         raise Http404
+    if not request.user.has_perm("messaging.change_outboundemail"):
+        raise PermissionDenied
     if request.method != "POST":
         return redirect("staff_email_log_detail", pk=pk)
     log = get_object_or_404(
@@ -193,6 +251,21 @@ def email_log_retry(request, pk: int):
             "staff_customer_campaign_detail",
             pk=campaign_recipient.campaign_id,
         )
+    form = RetryOutboundEmailForm(request.POST, outbound_email=log)
+    if not form.is_valid():
+        messages.error(request, "The retry confirmation was not valid.")
+        return redirect("staff_email_log_detail", pk=pk)
+    if not log.can_retry:
+        messages.error(request, "This email state is not eligible for retry.")
+        return redirect("staff_email_log_detail", pk=pk)
+    suppression = active_suppression(log.normalized_to_email, log.category)
+    if suppression:
+        messages.error(
+            request,
+            "The active address suppression must be reviewed before retry.",
+        )
+        return redirect("staff_email_log_detail", pk=pk)
+
     attachment_name = None
     attachment_bytes = None
     if log.commercial_document_id:
@@ -201,9 +274,19 @@ def email_log_retry(request, pk: int):
     elif log.job_card_id:
         attachment_name = f"{log.job_card.number}.pdf"
         attachment_bytes = render_jobcard_pdf(log.job_card)
-    retry_outbound_email(log, attachment_name=attachment_name, attachment_bytes=attachment_bytes)
-    if log.status == "sent":
-        messages.success(request, "Email sent.")
+    retry_outbound_email(
+        log,
+        attachment_name=attachment_name,
+        attachment_bytes=attachment_bytes,
+    )
+    log.refresh_from_db()
+    if log.status in {
+        OutboundEmail.STATUS_SENT,
+        OutboundEmail.STATUS_DELIVERED,
+    }:
+        messages.success(request, "Email accepted by the delivery service.")
+    elif log.status == OutboundEmail.STATUS_SUPPRESSED:
+        messages.error(request, "Retry was suppressed by the address controls.")
     else:
         messages.error(request, f"Retry failed: {log.error}")
     return redirect("staff_email_log_detail", pk=pk)
