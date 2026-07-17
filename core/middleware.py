@@ -22,6 +22,7 @@ URL_PERMISSION_PREFIXES = {
     "staff_retention": "commerce.view_order",
     "staff_customer_growth": "commerce.view_order",
     "staff_customer_campaign": "marketing.change_marketingcampaign",
+    "staff_automation": "automation.view_automationjob",
     "staff_marketing": "marketing.view_marketingcampaign",
     "staff_growth": "growth.view_growthsettings",
     "staff_export": "billing.view_commercialdocument",
