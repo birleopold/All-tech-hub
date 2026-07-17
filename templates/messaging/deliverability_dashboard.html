@@ -1,0 +1,64 @@
+{% extends "staff_base.html" %}
+{% block title %}Email deliverability{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <p class="small text-uppercase text-muted mb-1">Delivery protection</p>
+    <h1 class="h2 mb-1">Email deliverability center</h1>
+    <p class="text-muted mb-0">Review SMTP acceptance, confirmed delivery, bounces, complaints and address suppressions.</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{% url 'staff_email_log' %}">Email ledger</a>
+</div>
+
+{% if stale_queued_count %}
+<div class="alert alert-danger border-0 shadow-sm"><strong>{{ stale_queued_count }} queued email{{ stale_queued_count|pluralize }} appear stale.</strong> They have remained queued for more than {{ stale_minutes }} minutes and require review.</div>
+{% else %}
+<div class="alert alert-success border-0 shadow-sm"><strong>No stale queued emails.</strong> SMTP acceptance is recorded separately from confirmed provider delivery.</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">SMTP accepted</p><p class="display-6 mb-0">{{ status_counts.sent|default:0 }}</p><div class="small text-muted">Not yet provider-confirmed</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Delivered</p><p class="display-6 mb-0">{{ status_counts.delivered|default:0 }}</p><div class="small text-muted">Provider-confirmed delivery</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Bounces & complaints</p><p class="display-6 mb-0">{{ status_counts.bounced|default:0 }}</p><div class="small text-muted">{{ status_counts.complained|default:0 }} complaint{{ status_counts.complained|default:0|pluralize }}</div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Active suppressions</p><p class="display-6 mb-0">{{ active_suppression_count }}</p><div class="small text-muted">{{ all_email_suppression_count }} all email · {{ marketing_suppression_count }} marketing</div></div></div></div>
+</div>
+
+{% if can_change_deliverability %}
+<div class="card border-warning shadow-sm mb-4"><div class="card-body p-4">
+  <h2 class="h5">Add reviewed suppression</h2>
+  <p class="small text-muted">Use this only after confirming an invalid address or a business reason to block delivery. The action is audited.</p>
+  <form method="post" action="{% url 'staff_email_suppression_add' %}" class="row g-3">{% csrf_token %}
+    <div class="col-lg-4"><label class="form-label" for="{{ manual_form.email_address.id_for_label }}">Email address</label>{{ manual_form.email_address }}</div>
+    <div class="col-md-6 col-lg-2"><label class="form-label" for="{{ manual_form.scope.id_for_label }}">Scope</label>{{ manual_form.scope }}</div>
+    <div class="col-md-6 col-lg-2"><label class="form-label" for="{{ manual_form.reason.id_for_label }}">Reason</label>{{ manual_form.reason }}</div>
+    <div class="col-lg-4"><label class="form-label" for="{{ manual_form.note.id_for_label }}">Review note</label>{{ manual_form.note }}</div>
+    <div class="col-lg-8"><label class="form-label" for="{{ manual_form.confirmation.id_for_label }}">Confirmation</label>{{ manual_form.confirmation }}<div class="form-text">{{ manual_form.confirmation.help_text }}</div></div>
+    <div class="col-lg-4 d-flex align-items-end"><button class="btn btn-warning w-100" type="submit">Apply suppression</button></div>
+  </form>
+</div></div>
+{% endif %}
+
+<div class="card border-0 shadow-sm overflow-hidden mb-4"><div class="card-body p-0">
+  <div class="p-4 pb-2"><h2 class="h5 mb-0">Suppression register</h2><p class="small text-muted mb-0">Active and released address controls remain visible for audit.</p></div>
+  <div class="table-responsive"><table class="table table-hover mb-0 align-middle"><thead class="table-light"><tr><th>Email</th><th>Scope</th><th>Reason</th><th>State</th><th>Events</th><th>Last seen</th><th></th></tr></thead><tbody>
+  {% for row in recent_suppressions %}<tr><td>{{ row.email_address }}</td><td>{{ row.get_scope_display }}</td><td>{{ row.get_reason_display }}</td><td>{% if row.is_active %}<span class="badge text-bg-danger">Active</span>{% else %}<span class="badge text-bg-secondary">Released</span>{% endif %}</td><td>{{ row.event_count }}</td><td>{{ row.last_seen_at|date:"Y-m-d H:i" }}</td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_email_suppression_detail' row.pk %}">Review</a></td></tr>
+  {% empty %}<tr><td colspan="7" class="text-muted p-4">No email suppressions recorded.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div></div>
+
+<div class="card border-0 shadow-sm overflow-hidden mb-4"><div class="card-body p-0">
+  <div class="p-4 pb-2"><h2 class="h5 mb-0">Recent delivery events</h2></div>
+  <div class="table-responsive"><table class="table mb-0 align-middle"><thead class="table-light"><tr><th>Occurred</th><th>Email</th><th>Event</th><th>Provider</th><th>Message ID</th><th>Ledger</th></tr></thead><tbody>
+  {% for event in recent_events %}<tr><td>{{ event.occurred_at|date:"Y-m-d H:i:s" }}</td><td>{{ event.email_address }}</td><td>{{ event.get_event_type_display }}</td><td>{{ event.provider|default:"—" }}</td><td class="small text-muted">{{ event.provider_message_id|default:"—"|truncatechars:32 }}</td><td>{% if event.outbound_email_id %}<a href="{% url 'staff_email_log_detail' event.outbound_email_id %}">#{{ event.outbound_email_id }}</a>{% else %}—{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6" class="text-muted p-4">No delivery events recorded.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div></div>
+
+<div class="card border-0 shadow-sm overflow-hidden"><div class="card-body p-0">
+  <div class="p-4 pb-2"><h2 class="h5 mb-0">Recent outbound ledger</h2></div>
+  <div class="table-responsive"><table class="table mb-0 align-middle"><thead class="table-light"><tr><th>Created</th><th>Recipient</th><th>Category</th><th>Status</th><th>Attempts</th><th>Subject</th><th></th></tr></thead><tbody>
+  {% for email in recent_emails %}<tr><td>{{ email.created_at|date:"Y-m-d H:i" }}</td><td>{{ email.to_email }}</td><td>{{ email.get_category_display }}</td><td>{{ email.get_status_display }}</td><td>{{ email.attempt_count }}</td><td>{{ email.subject|truncatechars:48 }}</td><td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_email_log_detail' email.pk %}">Evidence</a></td></tr>
+  {% empty %}<tr><td colspan="7" class="text-muted p-4">No outbound email records.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div></div>
+{% endblock %}
