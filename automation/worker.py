@@ -12,6 +12,7 @@ from automation.services import (
     _finish_success,
     recover_stale_jobs,
 )
+from messaging.automation import execute_email_automation_job
 
 
 @transaction.atomic
@@ -67,6 +68,15 @@ def claim_controlled_job(worker_id: str) -> AutomationJob | None:
     return job
 
 
+def _execute_controlled_job(job: AutomationJob) -> dict:
+    if job.job_type in {
+        AutomationJob.TYPE_SAVED_CART_EMAIL,
+        AutomationJob.TYPE_STOCK_ALERT_EMAIL,
+    }:
+        return execute_email_automation_job(job)
+    return _execute_job(job)
+
+
 def process_controlled_automation_jobs(*, limit: int = 100, worker_id: str = "") -> dict:
     worker_id = worker_id or worker_identity()
     control = automation_control()
@@ -85,7 +95,7 @@ def process_controlled_automation_jobs(*, limit: int = 100, worker_id: str = "")
         if job is None:
             break
         try:
-            result = _execute_job(job)
+            result = _execute_controlled_job(job)
             _finish_success(job, result)
             succeeded += 1
         except ConnectorError as exc:
