@@ -7,7 +7,12 @@ from django.utils import timezone
 
 from commerce.models import Order
 from crm.models import Customer
-from loyalty.models import CustomerMarketingPreference, LoyaltyAccount, LoyaltyTransaction
+from loyalty.models import (
+    CustomerMarketingPreference,
+    LoyaltyAccount,
+    LoyaltyTransaction,
+    MarketingConsentEvent,
+)
 
 
 VALID_CHANNELS = {"email", "whatsapp"}
@@ -89,6 +94,7 @@ def customer_growth_summary(
         "topic": topic,
         "total_customers": Customer.objects.count(),
         "preference_records": preferences.count(),
+        "consent_event_count": MarketingConsentEvent.objects.count(),
         "email_consent_count": email_count,
         "whatsapp_consent_count": whatsapp_count,
         "both_consent_count": both_count,
@@ -104,9 +110,16 @@ def customer_growth_summary(
 
 
 def consent_integrity_findings() -> dict:
+    active_filter = Q(email_marketing=True) | Q(whatsapp_marketing=True)
     consent_without_date = CustomerMarketingPreference.objects.filter(
-        Q(email_marketing=True) | Q(whatsapp_marketing=True),
+        active_filter,
         consented_at__isnull=True,
+    ).count()
+    active_without_event = CustomerMarketingPreference.objects.filter(active_filter).exclude(
+        events__action__in=[
+            MarketingConsentEvent.ACTION_GRANTED,
+            MarketingConsentEvent.ACTION_UPDATED,
+        ]
     ).count()
     topic_without_channel = CustomerMarketingPreference.objects.filter(
         email_marketing=False,
@@ -114,7 +127,7 @@ def consent_integrity_findings() -> dict:
     ).filter(Q(product_updates=True) | Q(special_offers=True)).count()
     withdrawn_but_active = CustomerMarketingPreference.objects.filter(
         withdrawn_at__isnull=False,
-    ).filter(Q(email_marketing=True) | Q(whatsapp_marketing=True)).count()
+    ).filter(active_filter).count()
     whatsapp_without_phone = CustomerMarketingPreference.objects.filter(
         whatsapp_marketing=True,
     ).filter(Q(customer__phone="") | Q(customer__phone__isnull=True)).count()
@@ -137,19 +150,46 @@ def consent_integrity_findings() -> dict:
                 }
             )
 
+    awarded_references = LoyaltyTransaction.objects.filter(
+        kind=LoyaltyTransaction.KIND_EARN,
+        order_reference__gt="",
+    ).values_list("order_reference", flat=True)
+    awarded_orders_with_returns = list(
+        Order.objects.filter(
+            reference__in=awarded_references,
+            lines__returns__isnull=False,
+        )
+        .distinct()
+        .order_by("reference")
+        .values_list("reference", flat=True)[:50]
+    )
+    awarded_orders_with_returns_count = (
+        Order.objects.filter(
+            reference__in=awarded_references,
+            lines__returns__isnull=False,
+        )
+        .distinct()
+        .count()
+    )
+
     errors = (
         consent_without_date
+        + active_without_event
         + topic_without_channel
         + withdrawn_but_active
         + whatsapp_without_phone
         + len(account_mismatches)
+        + awarded_orders_with_returns_count
     )
     return {
         "errors": errors,
         "consent_without_date": consent_without_date,
+        "active_without_event": active_without_event,
         "topic_without_channel": topic_without_channel,
         "withdrawn_but_active": withdrawn_but_active,
         "whatsapp_without_phone": whatsapp_without_phone,
         "loyalty_balance_mismatches": account_mismatches[:50],
         "loyalty_balance_mismatch_count": len(account_mismatches),
+        "awarded_orders_with_returns": awarded_orders_with_returns,
+        "awarded_orders_with_returns_count": awarded_orders_with_returns_count,
     }
