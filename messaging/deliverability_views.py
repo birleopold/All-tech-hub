@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
@@ -22,8 +23,8 @@ from messaging.forms import (
 )
 from messaging.models import EmailDeliveryEvent, EmailSuppression, OutboundEmail
 
-VIEW_PERMISSION = "messaging.view_outboundemail"
-CHANGE_PERMISSION = "messaging.change_outboundemail"
+VIEW_PERMISSION = "messaging.view_emailsuppression"
+CHANGE_PERMISSION = "messaging.change_emailsuppression"
 
 
 class EmailDeliverabilityDashboardView(
@@ -38,7 +39,11 @@ class EmailDeliverabilityDashboardView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         now = timezone.now()
-        stale_cutoff = now - timedelta(minutes=15)
+        stale_minutes = max(
+            5,
+            min(1440, int(getattr(settings, "EMAIL_STALE_QUEUE_MINUTES", 15))),
+        )
+        stale_cutoff = now - timedelta(minutes=stale_minutes)
         context.update(
             {
                 "status_counts": {
@@ -77,6 +82,7 @@ class EmailDeliverabilityDashboardView(
                     status=OutboundEmail.STATUS_QUEUED,
                     created_at__lt=stale_cutoff,
                 ).count(),
+                "stale_minutes": stale_minutes,
                 "manual_form": ManualEmailSuppressionForm(),
                 "can_change_deliverability": self.request.user.has_perm(
                     CHANGE_PERMISSION
