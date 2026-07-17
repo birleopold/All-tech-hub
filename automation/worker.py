@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from automation.connectors import ConnectorError
 from automation.control import automation_control, worker_identity
-from automation.models import AutomationJob, PostChannelDelivery
+from automation.models import AutomationControl, AutomationJob, PostChannelDelivery
 from automation.services import (
     _execute_job,
     _finish_failure,
@@ -16,7 +16,11 @@ from automation.services import (
 
 @transaction.atomic
 def claim_controlled_job(worker_id: str) -> AutomationJob | None:
-    control = automation_control()
+    control = AutomationControl.objects.select_for_update().filter(
+        singleton_key="primary"
+    ).first()
+    if control is None:
+        control = AutomationControl.objects.create(singleton_key="primary")
     if control.is_paused:
         return None
     paused_types = [
