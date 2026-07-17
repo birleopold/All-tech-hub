@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -42,6 +43,12 @@ class ControlledCustomerCampaignTests(TestCase):
             password="strong-test-password",
             is_staff=True,
         )
+        campaign_permission = Permission.objects.get(
+            content_type__app_label="marketing",
+            codename="change_marketingcampaign",
+        )
+        self.creator.user_permissions.add(campaign_permission)
+        self.approver.user_permissions.add(campaign_permission)
         self.customer = Customer.objects.create(
             name="Amina Customer",
             email="amina@example.com",
@@ -284,6 +291,16 @@ class ControlledCustomerCampaignTests(TestCase):
             campaign=self.campaign,
         )
         self.assertTrue(valid.is_valid(), valid.errors)
+
+    def test_staff_pages_require_marketing_permission(self):
+        viewer = get_user_model().objects.create_user(
+            username="campaign-viewer",
+            password="strong-test-password",
+            is_staff=True,
+        )
+        self.client.force_login(viewer)
+        response = self.client.get(reverse("staff_customer_campaigns"))
+        self.assertEqual(response.status_code, 403)
 
     def test_staff_pages_are_private(self):
         self.client.force_login(self.creator)
