@@ -22,6 +22,15 @@ def _portal_customer(request):
     return getattr(request.user, "customer_profile", None)
 
 
+def _masked_email(value: str) -> str:
+    email = (value or "").strip()
+    if "@" not in email:
+        return "the linked customer record"
+    local, domain = email.split("@", 1)
+    visible = local[:1] or "*"
+    return f"{visible}***@{domain}"
+
+
 @never_cache
 def portal_marketing_preferences(request):
     customer = _portal_customer(request)
@@ -83,6 +92,7 @@ def unsubscribe_all(request, token):
         "loyalty/unsubscribe.html",
         {
             "preference": preference,
+            "email_hint": _masked_email(preference.customer.email),
             "changed": changed,
             "completed": request.method == "POST",
         },
