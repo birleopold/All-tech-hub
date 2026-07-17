@@ -3,7 +3,7 @@ from django.dispatch import receiver
 
 from customer_campaigns.models import CustomerCampaignRecipient
 from messaging.deliverability import normalize_email
-from messaging.models import OutboundEmail
+from messaging.models import EmailDeliveryEvent, OutboundEmail
 
 
 @receiver(pre_save, sender=OutboundEmail)
@@ -21,4 +21,21 @@ def classify_campaign_outbound_email(sender, instance, **kwargs):
     ).update(
         category=OutboundEmail.CATEGORY_MARKETING,
         normalized_to_email=normalize_email(instance.email_address),
+    )
+
+
+@receiver(post_save, sender=EmailDeliveryEvent)
+def reconcile_immediate_campaign_suppression(sender, instance, created, **kwargs):
+    if (
+        not created
+        or instance.event_type != EmailDeliveryEvent.TYPE_SUPPRESSED
+        or not instance.outbound_email_id
+    ):
+        return
+    from messaging.deliverability import _update_campaign_recipient
+
+    _update_campaign_recipient(
+        instance.outbound_email,
+        instance.event_type,
+        str(instance.metadata.get("reason") or "address_suppressed"),
     )
