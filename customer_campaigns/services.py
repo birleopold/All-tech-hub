@@ -508,11 +508,15 @@ def cancel_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
         CustomerCampaign.STATUS_CANCELLED,
     }:
         raise CampaignOperationError("This campaign can no longer be cancelled.")
+    if campaign.recipients.filter(
+        status=CustomerCampaignRecipient.STATUS_PROCESSING
+    ).exists():
+        raise CampaignOperationError(
+            "A recipient is currently processing. Disable the send switch and review "
+            "the delivery evidence before cancelling."
+        )
     campaign.recipients.filter(
-        status__in=[
-            CustomerCampaignRecipient.STATUS_PENDING,
-            CustomerCampaignRecipient.STATUS_PROCESSING,
-        ]
+        status=CustomerCampaignRecipient.STATUS_PENDING
     ).update(
         status=CustomerCampaignRecipient.STATUS_SUPPRESSED,
         suppression_reason="campaign_cancelled",
