@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -40,8 +40,8 @@ def _clean_metadata(value: Any) -> dict:
     return cleaned
 
 
-def _event_time(value) -> timezone.datetime:
-    if isinstance(value, timezone.datetime):
+def _event_time(value) -> datetime:
+    if isinstance(value, datetime):
         occurred_at = value
     elif isinstance(value, str):
         occurred_at = parse_datetime(value)
@@ -50,7 +50,10 @@ def _event_time(value) -> timezone.datetime:
     if occurred_at is None:
         occurred_at = timezone.now()
     if timezone.is_naive(occurred_at):
-        occurred_at = timezone.make_aware(occurred_at, timezone.get_current_timezone())
+        occurred_at = timezone.make_aware(
+            occurred_at,
+            timezone.get_current_timezone(),
+        )
     return occurred_at
 
 
@@ -217,7 +220,51 @@ def _payload_hash(payload: dict) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def _update_campaign_recipient(outbound: OutboundEmail, event_type: str, message: str) -> None:
+def _event_should_update(
+    outbound: OutboundEmail,
+    event_type: str,
+    occurred_at: datetime,
+) -> bool:
+    current = outbound.status
+    terminal = {
+        OutboundEmail.STATUS_DELIVERED,
+        OutboundEmail.STATUS_BOUNCED,
+        OutboundEmail.STATUS_COMPLAINED,
+        OutboundEmail.STATUS_SUPPRESSED,
+    }
+    event_terminal_status = {
+        EmailDeliveryEvent.TYPE_DELIVERED: OutboundEmail.STATUS_DELIVERED,
+        EmailDeliveryEvent.TYPE_HARD_BOUNCE: OutboundEmail.STATUS_BOUNCED,
+        EmailDeliveryEvent.TYPE_COMPLAINT: OutboundEmail.STATUS_COMPLAINED,
+        EmailDeliveryEvent.TYPE_SUPPRESSED: OutboundEmail.STATUS_SUPPRESSED,
+    }.get(event_type)
+
+    if current == OutboundEmail.STATUS_BOUNCED:
+        return False
+    if current == OutboundEmail.STATUS_COMPLAINED:
+        return event_type == EmailDeliveryEvent.TYPE_HARD_BOUNCE
+    if current == OutboundEmail.STATUS_SUPPRESSED:
+        return event_type in {
+            EmailDeliveryEvent.TYPE_HARD_BOUNCE,
+            EmailDeliveryEvent.TYPE_COMPLAINT,
+        }
+    if current == OutboundEmail.STATUS_DELIVERED:
+        return event_type in {
+            EmailDeliveryEvent.TYPE_HARD_BOUNCE,
+            EmailDeliveryEvent.TYPE_COMPLAINT,
+        }
+    if event_terminal_status:
+        return True
+    if current in terminal:
+        return False
+    return outbound.last_event_at is None or occurred_at >= outbound.last_event_at
+
+
+def _update_campaign_recipient(
+    outbound: OutboundEmail,
+    event_type: str,
+    message: str,
+) -> None:
     try:
         from customer_campaigns.models import CustomerCampaignRecipient
         from customer_campaigns.services import refresh_campaign_counts
@@ -228,8 +275,24 @@ def _update_campaign_recipient(outbound: OutboundEmail, event_type: str, message
     )
     for recipient in recipients:
         if event_type in {
+            EmailDeliveryEvent.TYPE_ACCEPTED,
+            EmailDeliveryEvent.TYPE_DELIVERED,
+        }:
+            recipient.status = CustomerCampaignRecipient.STATUS_SENT
+            recipient.sent_at = recipient.sent_at or outbound.sent_at or timezone.now()
+            recipient.suppression_reason = ""
+            recipient.save(
+                update_fields=[
+                    "status",
+                    "sent_at",
+                    "suppression_reason",
+                    "updated_at",
+                ]
+            )
+        elif event_type in {
             EmailDeliveryEvent.TYPE_HARD_BOUNCE,
             EmailDeliveryEvent.TYPE_SOFT_BOUNCE,
+            EmailDeliveryEvent.TYPE_FAILED,
         }:
             recipient.status = CustomerCampaignRecipient.STATUS_FAILED
             recipient.suppression_reason = message[:160]
@@ -275,7 +338,11 @@ def record_delivery_event(payload: dict) -> tuple[EmailDeliveryEvent, bool]:
     )
     if not email_address:
         raise DeliverabilityError("The delivery event does not identify an email address.")
-    if outbound and outbound.normalized_to_email and email_address != outbound.normalized_to_email:
+    if (
+        outbound
+        and outbound.normalized_to_email
+        and email_address != outbound.normalized_to_email
+    ):
         raise DeliverabilityError("Delivery event email does not match the outbound record.")
 
     event = EmailDeliveryEvent.objects.create(
@@ -295,7 +362,8 @@ def record_delivery_event(payload: dict) -> tuple[EmailDeliveryEvent, bool]:
         or metadata.get("reason")
         or event.get_event_type_display()
     )[:4000]
-    if outbound:
+    state_applied = False
+    if outbound and _event_should_update(outbound, event_type, occurred_at):
         if provider:
             outbound.provider = provider
         if provider_message_id:
@@ -326,7 +394,11 @@ def record_delivery_event(payload: dict) -> tuple[EmailDeliveryEvent, bool]:
             outbound.error = diagnostic
         elif event_type == EmailDeliveryEvent.TYPE_SUPPRESSED:
             outbound.mark_suppressed(diagnostic)
+        elif event_type == EmailDeliveryEvent.TYPE_FAILED:
+            outbound.status = OutboundEmail.STATUS_FAILED
+            outbound.error = diagnostic
         outbound.save()
+        state_applied = True
 
     if event_type == EmailDeliveryEvent.TYPE_HARD_BOUNCE:
         upsert_suppression(
@@ -373,7 +445,7 @@ def record_delivery_event(payload: dict) -> tuple[EmailDeliveryEvent, bool]:
                 occurred_at=occurred_at,
             )
 
-    if outbound:
+    if outbound and state_applied:
         _update_campaign_recipient(outbound, event_type, diagnostic)
     return event, True
 
