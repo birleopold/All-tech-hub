@@ -14,5 +14,6 @@ class CustomerGrowthDashboardView(UserPassesTestMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         channel = (self.request.GET.get("channel") or "email").strip().lower()
         segment = (self.request.GET.get("segment") or "all").strip().lower()
-        context.update(customer_growth_summary(channel=channel, segment=segment))
+        topic = (self.request.GET.get("topic") or "product_updates").strip().lower()
+        context.update(customer_growth_summary(channel=channel, segment=segment, topic=topic))
         return context
