@@ -1,6 +1,6 @@
 from django.urls import path
 
-from reports import commission_views, conversion_views, views
+from reports import commission_views, conversion_views, retention_views, views
 
 urlpatterns = [
     path("reports/", commission_views.ReportsHomeView.as_view(), name="staff_reports"),
@@ -8,6 +8,11 @@ urlpatterns = [
         "reports/conversion/",
         conversion_views.ConversionLifecycleView.as_view(),
         name="staff_conversion_lifecycle",
+    ),
+    path(
+        "reports/retention/",
+        retention_views.RetentionDashboardView.as_view(),
+        name="staff_retention_dashboard",
     ),
     path(
         "reports/export/orders.csv",
