@@ -179,6 +179,8 @@ def award_completed_order_points(order: Order) -> LoyaltyTransaction | None:
     order = Order.objects.select_related("customer").get(pk=order.pk)
     if order.status not in COMPLETED_STATUSES:
         return None
+    if order.lines.filter(returns__isnull=False).exists():
+        return None
     points = points_for_order(order)
     if points <= 0:
         return None
