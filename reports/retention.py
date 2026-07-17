@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
 
-from django.conf import settings
 from django.db.models import Count, Max, Sum
 from django.utils import timezone
 
 from catalog.models import ProductReview, ProductSerial
 from commerce.customer_messages import customer_email_delivery_ready
 from commerce.models import Order
-from commerce.retention import REVIEW_SUBJECT_PREFIX
+from commerce.retention import REVIEW_SUBJECT_PREFIX, review_emails_enabled
 from messaging.models import OutboundEmail
 
 
@@ -32,8 +30,7 @@ def retention_summary(days: int = 90) -> dict:
 
     lifetime = {
         row["customer_id"]: row
-        for row in all_orders.values("customer_id")
-        .annotate(
+        for row in all_orders.values("customer_id").annotate(
             order_count=Count("id"),
             lifetime_value=Sum("total"),
             last_order_at=Max("placed_at"),
@@ -62,7 +59,8 @@ def retention_summary(days: int = 90) -> dict:
     returning_orders = sum(
         1
         for order in period_rows
-        if first_order_at.get(order.customer_id) and first_order_at[order.customer_id] < order.placed_at
+        if first_order_at.get(order.customer_id)
+        and first_order_at[order.customer_id] < order.placed_at
     )
 
     completed_orders = period_orders.filter(
@@ -171,9 +169,7 @@ def retention_summary(days: int = 90) -> dict:
         "average_verified_rating": round(float(average_rating), 1)
         if average_rating is not None
         else None,
-        "review_email_enabled": bool(
-            getattr(settings, "ORDER_REVIEW_EMAILS_ENABLED", False)
-        ),
+        "review_email_enabled": review_emails_enabled(),
         "email_delivery_ready": customer_email_delivery_ready(),
         "expiring_warranty_count": len(expiring_warranties),
         "expiring_warranties": expiring_warranties[:20],
