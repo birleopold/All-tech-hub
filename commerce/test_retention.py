@@ -2,7 +2,8 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from catalog.models import Category, Product, ProductReview
+from catalog.models import Category, Product, ProductReview, ProductVariant
+from commerce.customer_messages import retry_failed_order_emails
 from commerce.models import Order, OrderLine, OrderStatusEvent
 from commerce.retention import order_review_subject, send_order_review_request
 from core.models import CompanySettings
@@ -96,6 +97,32 @@ class RetentionExperienceTests(TestCase):
         )
         self.assertEqual(self.client.get(url).status_code, 404)
 
+    def test_review_link_handles_same_product_on_multiple_variant_lines(self):
+        variant = ProductVariant.objects.create(
+            product=self.product,
+            name="16GB",
+            price=self.product.price,
+            stock_quantity=2,
+        )
+        OrderLine.objects.create(
+            order=self.order,
+            product=self.product,
+            product_variant=variant,
+            description=f"{self.product.name} — {variant.name}",
+            quantity=1,
+            unit_price=variant.price,
+        )
+        url = reverse(
+            "order_product_review",
+            kwargs={
+                "reference": self.order.reference,
+                "view_key": self.order.view_key,
+                "product_id": self.product.pk,
+            },
+        )
+
+        self.assertEqual(self.client.get(url).status_code, 200)
+
     def test_completed_order_can_reorder_available_items(self):
         url = reverse(
             "order_reorder",
@@ -111,6 +138,22 @@ class RetentionExperienceTests(TestCase):
             self.client.session.get("alltech_cart"),
             {f"p:{self.product.pk}": 1},
         )
+
+    def test_failed_review_request_can_use_customer_email_retry(self):
+        row = OutboundEmail.objects.create(
+            to_email=self.customer.email,
+            subject=order_review_subject(self.order),
+            body="Please review your purchase.",
+            status=OutboundEmail.STATUS_FAILED,
+            error="Temporary SMTP failure",
+        )
+
+        result = retry_failed_order_emails(limit=10)
+        row.refresh_from_db()
+
+        self.assertEqual(result, {"processed": 1, "sent": 1, "failed": 0})
+        self.assertEqual(row.status, OutboundEmail.STATUS_SENT)
+        self.assertEqual(row.error, "")
 
     def test_customer_visible_completion_event_queues_review_request(self):
         self.order.status = Order.STATUS_FULFILLED
