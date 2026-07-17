@@ -1,47 +1,35 @@
 {% extends "staff_base.html" %}
-{% block title %}Email log{% endblock %}
+{% block title %}Email ledger{% endblock %}
 {% block staff_content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <h1 class="h3 mb-0">Email log</h1>
+  <div><h1 class="h3 mb-1">Email ledger</h1><p class="text-muted mb-0">SMTP acceptance is not the same as confirmed delivery.</p></div>
+  {% if perms.messaging.view_emailsuppression %}<a class="btn btn-outline-primary" href="{% url 'staff_email_deliverability' %}">Deliverability center</a>{% endif %}
 </div>
 
 <form method="get" class="row g-2 mb-3">
-  <div class="col-md-5">
-    <input class="form-control" name="q" value="{{ q }}" placeholder="Search by recipient or subject">
-  </div>
-  <div class="col-md-3">
-    <select class="form-select" name="status">
-      <option value="">All statuses</option>
-      {% for val,label in status_choices %}
-      <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2">
-    <button class="btn btn-outline-primary w-100" type="submit">Filter</button>
-  </div>
+  <div class="col-lg-4"><input class="form-control" name="q" value="{{ q }}" placeholder="Search recipient or subject"></div>
+  <div class="col-md-4 col-lg-3"><select class="form-select" name="status"><option value="">All statuses</option>{% for val,label in status_choices %}<option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="col-md-4 col-lg-3"><select class="form-select" name="category"><option value="">All categories</option>{% for val,label in category_choices %}<option value="{{ val }}" {% if category == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="col-md-4 col-lg-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
 </form>
 
 <div class="table-responsive card border-0 shadow-sm">
   <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>To</th><th>Subject</th><th>Status</th><th>Linked</th><th>When</th><th></th></tr></thead>
+    <thead class="table-light"><tr><th>To</th><th>Subject</th><th>Category</th><th>Status</th><th>Attempts</th><th>Linked</th><th>When</th><th></th></tr></thead>
     <tbody>
       {% for e in emails %}
       <tr>
         <td>{{ e.to_email }}</td>
-        <td class="text-truncate" style="max-width: 360px">{{ e.subject }}</td>
-        <td>{{ e.get_status_display }}</td>
-        <td class="small text-muted">
-          {% if e.commercial_document_id %}Doc: {{ e.commercial_document.number }}{% elif e.job_card_id %}Job: {{ e.job_card.number }}{% else %}—{% endif %}
-        </td>
+        <td class="text-truncate" style="max-width: 320px">{{ e.subject }}</td>
+        <td>{{ e.get_category_display }}</td>
+        <td>{% if e.status == 'delivered' %}<span class="badge text-bg-success">{{ e.get_status_display }}</span>{% elif e.status == 'sent' %}<span class="badge text-bg-info">{{ e.get_status_display }}</span>{% elif e.status == 'suppressed' or e.status == 'bounced' or e.status == 'complained' %}<span class="badge text-bg-danger">{{ e.get_status_display }}</span>{% elif e.status == 'failed' or e.status == 'soft_bounced' %}<span class="badge text-bg-warning">{{ e.get_status_display }}</span>{% else %}{{ e.get_status_display }}{% endif %}</td>
+        <td>{{ e.attempt_count }}</td>
+        <td class="small text-muted">{% if e.commercial_document_id %}Doc: {{ e.commercial_document.number }}{% elif e.job_card_id %}Job: {{ e.job_card.number }}{% elif e.customer_campaign_recipients.exists %}Campaign{% else %}—{% endif %}</td>
         <td class="small text-muted">{{ e.created_at|date:"Y-m-d H:i" }}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_email_log_detail' e.pk %}">View</a></td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_email_log_detail' e.pk %}">Evidence</a></td>
       </tr>
-      {% empty %}
-      <tr><td colspan="6" class="text-muted">No emails yet.</td></tr>
-      {% endfor %}
+      {% empty %}<tr><td colspan="8" class="text-muted p-4">No email records.</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
 {% endblock %}
-
