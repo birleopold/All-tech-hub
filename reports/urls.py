@@ -57,6 +57,21 @@ urlpatterns = [
         name="staff_customer_campaign_send",
     ),
     path(
+        "reports/customer-campaigns/<int:pk>/schedule/",
+        campaign_views.customer_campaign_schedule,
+        name="staff_customer_campaign_schedule",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/pause/",
+        campaign_views.customer_campaign_pause,
+        name="staff_customer_campaign_pause",
+    ),
+    path(
+        "reports/customer-campaigns/<int:pk>/resume/",
+        campaign_views.customer_campaign_resume,
+        name="staff_customer_campaign_resume",
+    ),
+    path(
         "reports/customer-campaigns/<int:pk>/cancel/",
         campaign_views.customer_campaign_cancel,
         name="staff_customer_campaign_cancel",
