@@ -1,0 +1,24 @@
+{% extends "staff_base.html" %}
+{% block title %}Customer campaigns{% endblock %}
+{% block staff_content %}
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+  <div>
+    <p class="text-uppercase small text-muted mb-1">Controlled execution</p>
+    <h1 class="h2 mb-1">Customer email campaigns</h1>
+    <p class="text-muted mb-0">Prepare consent-safe audiences, require approval and send only bounded batches.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'staff_customer_campaign_create' %}">New customer campaign</a>
+</div>
+
+{% if send_enabled %}
+<div class="alert alert-warning border-0 shadow-sm"><strong>Production sending is enabled.</strong> Every batch still requires approval, an exact confirmation phrase and a final consent recheck.</div>
+{% else %}
+<div class="alert alert-secondary border-0 shadow-sm"><strong>Production sending is disabled.</strong> Staff may create, prepare and approve campaigns, but no customer email can be released.</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm mb-4"><div class="card-body p-3"><form method="get" class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="status">Status</label><select class="form-select" id="status" name="status"><option value="">All statuses</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="col-md-3"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div><div class="col-md-3"><a class="btn btn-outline-secondary w-100" href="{% url 'staff_customer_campaigns' %}">Clear</a></div></form></div></div>
+
+<div class="card border-0 shadow-sm overflow-hidden"><div class="table-responsive"><table class="table mb-0 align-middle"><caption class="visually-hidden">Customer email campaigns</caption><thead class="table-light"><tr><th>Campaign</th><th>Audience</th><th>Status</th><th class="text-end">Prepared</th><th class="text-end">Sent</th><th class="text-end">Suppressed</th><th>Updated</th></tr></thead><tbody>{% for campaign in campaigns %}<tr><td><a class="fw-semibold text-decoration-none" href="{% url 'staff_customer_campaign_detail' campaign.pk %}">{{ campaign.name }}</a><div class="small text-muted">{{ campaign.subject|truncatechars:55 }}</div></td><td>{{ campaign.get_topic_display }}<div class="small text-muted">{{ campaign.get_segment_display }}</div></td><td><span class="badge text-bg-light">{{ campaign.get_status_display }}</span></td><td class="text-end">{{ campaign.prepared_count }}</td><td class="text-end">{{ campaign.sent_count }}</td><td class="text-end">{{ campaign.suppressed_count }}</td><td>{{ campaign.updated_at|date:"Y-m-d H:i" }}</td></tr>{% empty %}<tr><td colspan="7" class="text-muted p-4">No customer campaigns have been created.</td></tr>{% endfor %}</tbody></table></div></div>
+
+{% if is_paginated %}<nav class="mt-4" aria-label="Customer campaign pages"><ul class="pagination">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status %}&status={{ status }}{% endif %}">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status %}&status={{ status }}{% endif %}">Next</a></li>{% endif %}</ul></nav>{% endif %}
+{% endblock %}
