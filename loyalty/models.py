@@ -127,7 +127,7 @@ class LoyaltyTransaction(models.Model):
         ordering = ["-created_at", "-id"]
         constraints = [
             models.CheckConstraint(
-                check=~models.Q(points_delta=0),
+                condition=~models.Q(points_delta=0),
                 name="loyalty_points_delta_nonzero",
             )
         ]
