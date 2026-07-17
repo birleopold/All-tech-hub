@@ -142,6 +142,13 @@ def send_outbound_email(
     if clean_key:
         existing = OutboundEmail.objects.filter(idempotency_key=clean_key).first()
         if existing:
+            if existing.can_retry:
+                return _send_existing_log(
+                    existing,
+                    attachment_name=attachment_name,
+                    attachment_bytes=attachment_bytes,
+                    extra_headers=extra_headers,
+                )
             return existing
     subject = (subject or "")[:200]
     normalized = normalize_email(to_email)
