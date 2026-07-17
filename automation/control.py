@@ -236,80 +236,93 @@ def heartbeat_is_stale(*, max_age_minutes: int = 30) -> bool:
     return control.last_heartbeat_at < cutoff
 
 
-@transaction.atomic
 def replay_failed_job(job: AutomationJob, *, user) -> AutomationJob:
-    job = AutomationJob.objects.select_for_update().get(pk=job.pk)
-    previous_status = job.status
-    previous_error = job.last_error
-    if job.status not in {
+    current = AutomationJob.objects.get(pk=job.pk)
+    if current.status not in {
         AutomationJob.STATUS_FAILED,
         AutomationJob.STATUS_CANCELLED,
     }:
         raise AutomationControlError("Only failed or cancelled jobs can be replayed.")
-    if job.job_type == AutomationJob.TYPE_SOCIAL_POST:
+    if current.job_type == AutomationJob.TYPE_SOCIAL_POST:
         record_job_event(
-            job,
+            current,
             AutomationJobEvent.ACTION_BLOCKED,
             actor=user,
             message=(
                 "Social-post replay blocked because external publication may be uncertain. "
                 "Verify the platform and rebuild the scheduled post instead."
             ),
-            metadata={"previous_status": previous_status},
+            metadata={"previous_status": current.status},
+        )
+        log_audit_event(
+            actor=user,
+            verb="automation.job_replay_blocked",
+            summary=f"Blocked social-post replay for {current.idempotency_key}.",
+            target=current,
         )
         raise AutomationControlError(
             "Social-post replay is blocked. Verify the external platform and rebuild the post."
         )
-    if job.delivery_id:
-        delivery = PostChannelDelivery.objects.select_for_update().get(pk=job.delivery_id)
-        if delivery.status == PostChannelDelivery.STATUS_PUBLISHED:
-            raise AutomationControlError("A published delivery cannot be replayed.")
-        delivery.status = PostChannelDelivery.STATUS_QUEUED
-        delivery.next_attempt_at = timezone.now()
-        delivery.last_error = ""
-        delivery.save(
-            update_fields=["status", "next_attempt_at", "last_error", "updated_at"]
-        )
 
-    now = timezone.now()
-    job.status = AutomationJob.STATUS_QUEUED
-    job.next_attempt_at = now
-    job.attempt_count = 0
-    job.completed_at = None
-    job.locked_at = None
-    job.locked_by = ""
-    job.last_error = ""
-    job.result = {}
-    job.save(
-        update_fields=[
-            "status",
-            "next_attempt_at",
-            "attempt_count",
-            "completed_at",
-            "locked_at",
-            "locked_by",
-            "last_error",
-            "result",
-            "updated_at",
-        ]
-    )
-    record_job_event(
-        job,
-        AutomationJobEvent.ACTION_REPLAYED,
-        actor=user,
-        message="Failed automation job returned to the queue after staff review.",
-        metadata={
-            "previous_status": previous_status,
-            "previous_error": previous_error[:1000],
-        },
-    )
-    log_audit_event(
-        actor=user,
-        verb="automation.job_replayed",
-        summary=f"Replayed automation job {job.idempotency_key}.",
-        target=job,
-    )
-    return job
+    with transaction.atomic():
+        job = AutomationJob.objects.select_for_update().get(pk=current.pk)
+        previous_status = job.status
+        previous_error = job.last_error
+        if job.status not in {
+            AutomationJob.STATUS_FAILED,
+            AutomationJob.STATUS_CANCELLED,
+        }:
+            raise AutomationControlError("The job state changed before replay.")
+        if job.delivery_id:
+            delivery = PostChannelDelivery.objects.select_for_update().get(pk=job.delivery_id)
+            if delivery.status == PostChannelDelivery.STATUS_PUBLISHED:
+                raise AutomationControlError("A published delivery cannot be replayed.")
+            delivery.status = PostChannelDelivery.STATUS_QUEUED
+            delivery.next_attempt_at = timezone.now()
+            delivery.last_error = ""
+            delivery.save(
+                update_fields=["status", "next_attempt_at", "last_error", "updated_at"]
+            )
+
+        now = timezone.now()
+        job.status = AutomationJob.STATUS_QUEUED
+        job.next_attempt_at = now
+        job.attempt_count = 0
+        job.completed_at = None
+        job.locked_at = None
+        job.locked_by = ""
+        job.last_error = ""
+        job.result = {}
+        job.save(
+            update_fields=[
+                "status",
+                "next_attempt_at",
+                "attempt_count",
+                "completed_at",
+                "locked_at",
+                "locked_by",
+                "last_error",
+                "result",
+                "updated_at",
+            ]
+        )
+        record_job_event(
+            job,
+            AutomationJobEvent.ACTION_REPLAYED,
+            actor=user,
+            message="Failed automation job returned to the queue after staff review.",
+            metadata={
+                "previous_status": previous_status,
+                "previous_error": previous_error[:1000],
+            },
+        )
+        log_audit_event(
+            actor=user,
+            verb="automation.job_replayed",
+            summary=f"Replayed automation job {job.idempotency_key}.",
+            target=job,
+        )
+        return job
 
 
 @transaction.atomic
