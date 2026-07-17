@@ -67,4 +67,21 @@ class Migration(migrations.Migration):
                 ],
             },
         ),
+        migrations.CreateModel(
+            name="MarketingConsentEvent",
+            fields=[
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("action", models.CharField(choices=[("granted", "Consent granted"), ("updated", "Preferences updated"), ("withdrawn", "Consent withdrawn")], db_index=True, max_length=16)),
+                ("source", models.CharField(choices=[("checkout", "Checkout"), ("portal", "Customer portal"), ("staff", "Staff recorded"), ("import", "Verified import")], max_length=16)),
+                ("email_marketing", models.BooleanField(default=False)),
+                ("whatsapp_marketing", models.BooleanField(default=False)),
+                ("product_updates", models.BooleanField(default=False)),
+                ("special_offers", models.BooleanField(default=False)),
+                ("consent_text_version", models.CharField(max_length=32)),
+                ("created_at", models.DateTimeField(auto_now_add=True, db_index=True)),
+                ("customer", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="marketing_consent_events", to="crm.customer")),
+                ("preference", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="events", to="loyalty.customermarketingpreference")),
+            ],
+            options={"ordering": ["-created_at", "-id"]},
+        ),
     ]
