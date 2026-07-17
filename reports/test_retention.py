@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from catalog.models import Category, Product, ProductReview
+from catalog.models import Category, Product, ProductReview, ProductSerial
 from commerce.models import Order, OrderLine
 from commerce.retention import order_review_subject
 from crm.models import Customer
@@ -40,6 +40,10 @@ class RetentionReportTests(TestCase):
             name="New Buyer",
             email="new-report@example.com",
         )
+        self.dormant_customer = Customer.objects.create(
+            name="Dormant Buyer",
+            email="dormant-report@example.com",
+        )
         self.first_order = self._order(
             "ORD-RET-RPT-001",
             self.repeat_customer,
@@ -61,6 +65,13 @@ class RetentionReportTests(TestCase):
             days_ago=3,
             status=Order.STATUS_CONFIRMED,
         )
+        self._order(
+            "ORD-RET-RPT-OLD",
+            self.dormant_customer,
+            "75000.00",
+            days_ago=120,
+            status=Order.STATUS_FULFILLED,
+        )
         OutboundEmail.objects.create(
             to_email=self.repeat_customer.email,
             subject=order_review_subject(self.first_order),
@@ -77,6 +88,24 @@ class RetentionReportTests(TestCase):
             is_verified_purchase=True,
             is_published=True,
         )
+        ProductSerial.objects.create(
+            product=self.product,
+            serial_number="RETENTION-WARRANTY-001",
+            status=ProductSerial.STATUS_SOLD,
+            sold_to=self.repeat_customer,
+            sold_at=self._sold_date_expiring_within_30_days(),
+            warranty_months=1,
+        )
+
+    @staticmethod
+    def _sold_date_expiring_within_30_days():
+        target = timezone.localdate() + timedelta(days=15)
+        previous_month = target.month - 1
+        year = target.year
+        if previous_month == 0:
+            previous_month = 12
+            year -= 1
+        return date(year, previous_month, min(target.day, 28))
 
     def _order(self, reference, customer, total, *, days_ago, status):
         order = Order.objects.create(
@@ -122,6 +151,12 @@ class RetentionReportTests(TestCase):
         self.assertEqual(summary["average_verified_rating"], 4.0)
         self.assertTrue(summary["review_email_enabled"])
         self.assertTrue(summary["email_delivery_ready"])
+        self.assertEqual(summary["expiring_warranty_count"], 1)
+        self.assertEqual(summary["dormant_customer_count"], 1)
+        self.assertEqual(
+            summary["dormant_customers"][0]["customer"],
+            self.dormant_customer,
+        )
 
     def test_cancelled_orders_do_not_inflate_retention(self):
         self._order(
@@ -154,3 +189,4 @@ class RetentionReportTests(TestCase):
         self.assertContains(response, "Retention, reviews and repeat sales")
         self.assertContains(response, "85.71%")
         self.assertContains(response, "Verified review performance")
+        self.assertContains(response, "Dormant Buyer")
