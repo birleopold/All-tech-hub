@@ -20,6 +20,7 @@ def send_outbound_email(
     commercial_document=None,
     job_card=None,
 ) -> OutboundEmail:
+    subject = (subject or "")[:200]
     log = OutboundEmail.objects.create(
         to_email=to_email,
         subject=subject,
@@ -68,4 +69,3 @@ def retry_outbound_email(log: OutboundEmail, *, attachment_name: Optional[str] =
         log.mark_failed(str(e))
         log.save(update_fields=["status", "sent_at", "error"])
     return log
-
