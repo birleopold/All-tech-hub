@@ -10,6 +10,7 @@ from commerce import cart as cart_mod
 from commerce.customer_messages import _deliver
 from commerce.models import Order
 from core.models import CompanySettings
+from growth.models import GrowthSettings
 
 
 REVIEW_SUBJECT_PREFIX = "Review your order"
@@ -72,17 +73,14 @@ def send_order_review_request(order: Order):
         return None
 
     company = CompanySettings.load()
+    growth = GrowthSettings.load()
     links = "\n".join(
         f"- {product.name}: "
         f"{_absolute_public_url(order_product_review_path(order, product.pk))}"
         for product in products
     )
     google_review = ""
-    try:
-        growth = company.growthsettings
-    except Exception:
-        growth = None
-    if growth and growth.google_review_url:
+    if growth.google_review_url:
         google_review = (
             "\nYou can also review the overall LEOSOFT experience on Google:\n"
             f"{growth.google_review_url}\n"
