@@ -54,16 +54,75 @@ class CustomerMarketingPreference(models.Model):
         return self.email_marketing or self.whatsapp_marketing
 
     def save(self, *args, **kwargs):
+        previous_had_consent = False
+        previous_withdrawn_at = None
+        if self.pk:
+            previous = type(self).objects.filter(pk=self.pk).values(
+                "email_marketing",
+                "whatsapp_marketing",
+                "withdrawn_at",
+            ).first()
+            if previous:
+                previous_had_consent = bool(
+                    previous["email_marketing"] or previous["whatsapp_marketing"]
+                )
+                previous_withdrawn_at = previous["withdrawn_at"]
+
         if not self.has_any_consent:
             self.product_updates = False
             self.special_offers = False
-            if self.pk and self.withdrawn_at is None:
+            if previous_had_consent and self.withdrawn_at is None:
                 self.withdrawn_at = timezone.now()
+            elif not previous_had_consent and self.withdrawn_at is None:
+                self.withdrawn_at = previous_withdrawn_at
         else:
-            if self.consented_at is None:
+            if (
+                self.consented_at is None
+                or previous_withdrawn_at is not None
+                or not previous_had_consent
+            ):
                 self.consented_at = timezone.now()
             self.withdrawn_at = None
         super().save(*args, **kwargs)
+
+
+class MarketingConsentEvent(models.Model):
+    ACTION_GRANTED = "granted"
+    ACTION_UPDATED = "updated"
+    ACTION_WITHDRAWN = "withdrawn"
+    ACTION_CHOICES = [
+        (ACTION_GRANTED, "Consent granted"),
+        (ACTION_UPDATED, "Preferences updated"),
+        (ACTION_WITHDRAWN, "Consent withdrawn"),
+    ]
+
+    preference = models.ForeignKey(
+        CustomerMarketingPreference,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    customer = models.ForeignKey(
+        "crm.Customer",
+        on_delete=models.CASCADE,
+        related_name="marketing_consent_events",
+    )
+    action = models.CharField(max_length=16, choices=ACTION_CHOICES, db_index=True)
+    source = models.CharField(
+        max_length=16,
+        choices=CustomerMarketingPreference.SOURCE_CHOICES,
+    )
+    email_marketing = models.BooleanField(default=False)
+    whatsapp_marketing = models.BooleanField(default=False)
+    product_updates = models.BooleanField(default=False)
+    special_offers = models.BooleanField(default=False)
+    consent_text_version = models.CharField(max_length=32)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        return f"{self.customer} — {self.get_action_display()}"
 
 
 class LoyaltyAccount(models.Model):
