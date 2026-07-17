@@ -11,6 +11,9 @@ from django.views.generic import CreateView, ListView, UpdateView
 from core.mixins import StaffRequiredMixin
 from customer_campaigns.forms import (
     CampaignApprovalForm,
+    CampaignPauseForm,
+    CampaignResumeForm,
+    CampaignScheduleForm,
     CampaignSendForm,
     CustomerCampaignForm,
 )
@@ -19,7 +22,10 @@ from customer_campaigns.services import (
     CampaignOperationError,
     approve_campaign,
     cancel_campaign,
+    pause_campaign,
     prepare_campaign,
+    resume_campaign,
+    schedule_campaign,
     send_campaign_batch,
 )
 
@@ -50,6 +56,7 @@ class CustomerCampaignListView(CustomerCampaignStaffMixin, ListView):
             "created_by",
             "prepared_by",
             "approved_by",
+            "scheduled_by",
             "marketing_campaign",
         )
         status = (self.request.GET.get("status") or "").strip()
@@ -63,6 +70,9 @@ class CustomerCampaignListView(CustomerCampaignStaffMixin, ListView):
         context["status_choices"] = CustomerCampaign.STATUS_CHOICES
         context["send_enabled"] = bool(
             getattr(settings, "CUSTOMER_CAMPAIGN_SEND_ENABLED", False)
+        )
+        context["scheduler_enabled"] = bool(
+            getattr(settings, "CUSTOMER_CAMPAIGN_SCHEDULER_ENABLED", False)
         )
         return context
 
@@ -104,6 +114,8 @@ def customer_campaign_detail(request, pk: int):
             "created_by",
             "prepared_by",
             "approved_by",
+            "scheduled_by",
+            "paused_by",
             "sent_by",
             "marketing_campaign",
         ),
@@ -112,18 +124,29 @@ def customer_campaign_detail(request, pk: int):
     recipients = campaign.recipients.select_related(
         "customer", "consent_event", "outbound_email"
     ).order_by("status", "customer__name", "id")[:200]
+    events = campaign.automation_events.select_related("actor")[:50]
     context = {
         "campaign": campaign,
         "recipients": recipients,
+        "automation_events": events,
         "approval_form": CampaignApprovalForm(),
         "send_form": CampaignSendForm(campaign=campaign),
+        "schedule_form": CampaignScheduleForm(campaign=campaign),
+        "pause_form": CampaignPauseForm(campaign=campaign),
+        "resume_form": CampaignResumeForm(campaign=campaign),
         "send_enabled": bool(
             getattr(settings, "CUSTOMER_CAMPAIGN_SEND_ENABLED", False)
+        ),
+        "scheduler_enabled": bool(
+            getattr(settings, "CUSTOMER_CAMPAIGN_SCHEDULER_ENABLED", False)
         ),
         "separate_approver_required": bool(
             getattr(settings, "CUSTOMER_CAMPAIGN_REQUIRE_SEPARATE_APPROVER", True)
         ),
         "safe_batch_size": int(getattr(settings, "CUSTOMER_CAMPAIGN_BATCH_SIZE", 10)),
+        "automation_batch_size": int(
+            getattr(settings, "CUSTOMER_CAMPAIGN_AUTOMATION_BATCH_SIZE", 1)
+        ),
         "pending_count": campaign.recipients.filter(
             status=CustomerCampaignRecipient.STATUS_PENDING
         ).count(),
@@ -201,6 +224,79 @@ def customer_campaign_send(request, pk: int):
 
 
 @require_POST
+def customer_campaign_schedule(request, pk: int):
+    _require_campaign_staff(request)
+    campaign = get_object_or_404(CustomerCampaign, pk=pk)
+    form = CampaignScheduleForm(request.POST, campaign=campaign)
+    if not form.is_valid():
+        messages.error(request, "The schedule details or confirmation were not valid.")
+        return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+    try:
+        campaign = schedule_campaign(
+            campaign,
+            user=request.user,
+            scheduled_for=form.cleaned_data["scheduled_for"],
+            batch_size=form.cleaned_data["batch_size"],
+        )
+    except CampaignOperationError as exc:
+        messages.error(request, str(exc))
+    else:
+        if campaign.status == CustomerCampaign.STATUS_EXPIRED:
+            messages.error(request, "The approval expired and remaining recipients were suppressed.")
+        else:
+            messages.success(
+                request,
+                "Campaign scheduled. Delivery still requires both production switches to be enabled.",
+            )
+    return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+
+
+@require_POST
+def customer_campaign_pause(request, pk: int):
+    _require_campaign_staff(request)
+    campaign = get_object_or_404(CustomerCampaign, pk=pk)
+    form = CampaignPauseForm(request.POST, campaign=campaign)
+    if not form.is_valid():
+        messages.error(request, "The pause confirmation was not valid.")
+        return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+    try:
+        pause_campaign(
+            campaign,
+            user=request.user,
+            reason=form.cleaned_data["reason"],
+        )
+    except CampaignOperationError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Scheduled delivery paused.")
+    return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+
+
+@require_POST
+def customer_campaign_resume(request, pk: int):
+    _require_campaign_staff(request)
+    campaign = get_object_or_404(CustomerCampaign, pk=pk)
+    form = CampaignResumeForm(request.POST, campaign=campaign)
+    if not form.is_valid():
+        messages.error(request, "The resume details or confirmation were not valid.")
+        return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+    try:
+        campaign = resume_campaign(
+            campaign,
+            user=request.user,
+            next_run_at=form.cleaned_data["next_run_at"],
+        )
+    except CampaignOperationError as exc:
+        messages.error(request, str(exc))
+    else:
+        if campaign.status == CustomerCampaign.STATUS_EXPIRED:
+            messages.error(request, "The approval expired and the campaign cannot resume.")
+        else:
+            messages.success(request, "Scheduled delivery resumed.")
+    return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+
+
+@require_POST
 def customer_campaign_cancel(request, pk: int):
     _require_campaign_staff(request)
     campaign = get_object_or_404(CustomerCampaign, pk=pk)
@@ -209,5 +305,5 @@ def customer_campaign_cancel(request, pk: int):
     except CampaignOperationError as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, "Campaign cancelled. Remaining recipients were suppressed.")
+        messages.success(request, "Campaign cancelled. Remaining pending recipients were suppressed.")
     return redirect("staff_customer_campaign_detail", pk=campaign.pk)
