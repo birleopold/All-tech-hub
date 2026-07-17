@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "django.contrib.humanize", "django.contrib.sitemaps", "core", "crm", "catalog",
     "commerce.apps.CommerceConfig", "reliability.apps.ReliabilityConfig", "billing", "operations",
-    "dashboard", "reports", "portal", "purchasing", "messaging", "inventory",
+    "dashboard", "reports", "portal", "purchasing", "messaging.apps.MessagingConfig", "inventory",
     "marketing.apps.MarketingConfig", "growth.apps.GrowthConfig",
     "automation.apps.AutomationConfig", "loyalty.apps.LoyaltyConfig",
     "customer_campaigns.apps.CustomerCampaignsConfig",
@@ -265,6 +265,22 @@ EMAIL_HOST_USER = os.getenv("ALLTECH_EMAIL_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("ALLTECH_EMAIL_PASSWORD", "")
 EMAIL_USE_TLS = env_bool("ALLTECH_EMAIL_USE_TLS", True)
 EMAIL_USE_SSL = env_bool("ALLTECH_EMAIL_USE_SSL", False)
+EMAIL_DELIVERY_PROVIDER_NAME = os.getenv(
+    "ALLTECH_EMAIL_DELIVERY_PROVIDER_NAME",
+    "django-email-backend",
+).strip()
+EMAIL_SOFT_BOUNCE_SUPPRESSION_THRESHOLD = max(
+    2,
+    min(20, int(os.getenv("ALLTECH_EMAIL_SOFT_BOUNCE_SUPPRESSION_THRESHOLD", "3"))),
+)
+EMAIL_SOFT_BOUNCE_WINDOW_DAYS = max(
+    1,
+    min(90, int(os.getenv("ALLTECH_EMAIL_SOFT_BOUNCE_WINDOW_DAYS", "30"))),
+)
+EMAIL_STALE_QUEUE_MINUTES = max(
+    5,
+    min(1440, int(os.getenv("ALLTECH_EMAIL_STALE_QUEUE_MINUTES", "15"))),
+)
 if EMAIL_HOST:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
