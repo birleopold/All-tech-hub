@@ -1,8 +1,6 @@
 from decimal import Decimal
 from urllib.parse import urljoin
 
-from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models import Count, Sum
 from django.utils import timezone
 
@@ -18,6 +16,8 @@ from growth.models import (
     SavedCart,
     StockAlertSubscription,
 )
+from messaging.models import OutboundEmail
+from messaging.utils import send_outbound_email
 
 ANALYTICS_SESSION_KEY = "growth_analytics_events"
 PURCHASE_SESSION_KEY = "growth_purchase_order"
@@ -194,7 +194,7 @@ def send_saved_cart_message(
     saved: SavedCart,
     *,
     reminder_number: int = 0,
-) -> int:
+) -> OutboundEmail:
     company = CompanySettings.load()
     if reminder_number == 0:
         subject = f"Your {company.company_name} cart has been saved"
@@ -205,6 +205,7 @@ def send_saved_cart_message(
     else:
         subject = f"Final reminder about your {company.company_name} cart"
         opening = "This is the final reminder for your saved cart."
+    unsubscribe_url = saved_cart_unsubscribe_url(saved)
     body = (
         f"Hello {saved.customer_name or 'there'},\n\n"
         f"{opening}\n\n"
@@ -212,14 +213,19 @@ def send_saved_cart_message(
         f"Saved subtotal: {company.currency_code} {saved.subtotal:.2f}\n\n"
         "Availability and prices may change before checkout. You received this "
         "because you asked LEOSOFT to save and remind you about the cart.\n\n"
-        f"Stop reminders: {saved_cart_unsubscribe_url(saved)}"
+        f"Stop reminders: {unsubscribe_url}"
     )
-    return send_mail(
-        subject,
-        body,
-        settings.DEFAULT_FROM_EMAIL,
-        [saved.email],
-        fail_silently=False,
+    activity_stamp = int(saved.last_activity.timestamp())
+    return send_outbound_email(
+        to_email=saved.email,
+        subject=subject,
+        body=body,
+        created_by=None,
+        category=OutboundEmail.CATEGORY_MARKETING,
+        idempotency_key=(
+            f"saved-cart:{saved.pk}:{activity_stamp}:reminder:{reminder_number}"
+        ),
+        extra_headers={"List-Unsubscribe": f"<{unsubscribe_url}>"},
     )
 
 
@@ -375,6 +381,14 @@ def generate_content_assets(
     ]
 
 
+def _accepted_or_suppressed(log: OutboundEmail) -> bool:
+    return log.status in {
+        OutboundEmail.STATUS_SENT,
+        OutboundEmail.STATUS_DELIVERED,
+        OutboundEmail.STATUS_SUPPRESSED,
+    }
+
+
 def process_saved_cart_reminders(*, limit: int = 100) -> dict:
     config = GrowthSettings.load()
     if not config.abandoned_cart_enabled:
@@ -394,12 +408,12 @@ def process_saved_cart_reminders(*, limit: int = 100) -> dict:
         last_activity__lte=first_cutoff,
     ).order_by("last_activity")[:limit]
     for saved in first_rows:
-        try:
-            send_saved_cart_message(saved, reminder_number=1)
+        log = send_saved_cart_message(saved, reminder_number=1)
+        if _accepted_or_suppressed(log):
             saved.first_reminder_sent_at = now
             saved.save(update_fields=["first_reminder_sent_at", "updated_at"])
-            first_sent += 1
-        except Exception:
+            first_sent += int(log.status != OutboundEmail.STATUS_SUPPRESSED)
+        else:
             errors += 1
 
     second_rows = SavedCart.objects.filter(
@@ -409,66 +423,80 @@ def process_saved_cart_reminders(*, limit: int = 100) -> dict:
         second_reminder_sent_at__isnull=True,
     ).order_by("first_reminder_sent_at")[:limit]
     for saved in second_rows:
-        try:
-            send_saved_cart_message(saved, reminder_number=2)
+        log = send_saved_cart_message(saved, reminder_number=2)
+        if _accepted_or_suppressed(log):
             saved.second_reminder_sent_at = now
             saved.save(update_fields=["second_reminder_sent_at", "updated_at"])
-            second_sent += 1
-        except Exception:
+            second_sent += int(log.status != OutboundEmail.STATUS_SUPPRESSED)
+        else:
             errors += 1
     return {"first": first_sent, "second": second_sent, "errors": errors}
+
+
+def stock_alert_reason(subscription: StockAlertSubscription) -> tuple[bool, str]:
+    product = subscription.product
+    price = product.min_active_variant_price or product.price
+    company = CompanySettings.load()
+    if (
+        subscription.alert_type == StockAlertSubscription.ALERT_BACK_IN_STOCK
+        and product.available_to_sell
+    ):
+        return True, "is back in stock"
+    if (
+        subscription.alert_type == StockAlertSubscription.ALERT_PRICE_DROP
+        and subscription.target_price is not None
+        and price <= subscription.target_price
+    ):
+        return True, f"is now {company.currency_code} {price}"
+    return False, ""
+
+
+def send_stock_alert_message(
+    subscription: StockAlertSubscription,
+    *,
+    reason: str,
+) -> OutboundEmail:
+    product = subscription.product
+    company = CompanySettings.load()
+    unsubscribe_url = absolute_public_url(
+        f"/marketing/alerts/unsubscribe/{subscription.token}/"
+    )
+    body = (
+        f"Hello,\n\n{product.name} {reason}.\n\nView it here: "
+        f"{absolute_public_url(product.get_absolute_url())}\n\n"
+        "Availability can change quickly, so please confirm before payment.\n\n"
+        f"Stop this alert: {unsubscribe_url}"
+    )
+    product_stamp = int(product.updated_at.timestamp())
+    return send_outbound_email(
+        to_email=subscription.email,
+        subject=f"{product.name} update from {company.company_name}",
+        body=body,
+        created_by=None,
+        category=OutboundEmail.CATEGORY_MARKETING,
+        idempotency_key=f"stock-alert:{subscription.pk}:{product_stamp}",
+        extra_headers={"List-Unsubscribe": f"<{unsubscribe_url}>"},
+    )
 
 
 def process_stock_alerts(*, limit: int = 100) -> dict:
     config = GrowthSettings.load()
     if not config.back_in_stock_enabled:
         return {"sent": 0, "errors": 0}
-    company = CompanySettings.load()
     sent = errors = 0
     subscriptions = StockAlertSubscription.objects.filter(
         is_active=True
     ).select_related("product", "product__category")[:limit]
     for subscription in subscriptions:
-        product = subscription.product
-        price = product.min_active_variant_price or product.price
-        triggered = False
-        reason = ""
-        if (
-            subscription.alert_type
-            == StockAlertSubscription.ALERT_BACK_IN_STOCK
-            and product.available_to_sell
-        ):
-            triggered = True
-            reason = "is back in stock"
-        elif (
-            subscription.alert_type == StockAlertSubscription.ALERT_PRICE_DROP
-            and subscription.target_price is not None
-            and price <= subscription.target_price
-        ):
-            triggered = True
-            reason = f"is now {company.currency_code} {price}"
+        triggered, reason = stock_alert_reason(subscription)
         if not triggered:
             continue
-        unsubscribe_url = absolute_public_url(
-            f"/marketing/alerts/unsubscribe/{subscription.token}/"
-        )
-        try:
-            send_mail(
-                f"{product.name} update from {company.company_name}",
-                (
-                    f"Hello,\n\n{product.name} {reason}.\n\nView it here: "
-                    f"{absolute_public_url(product.get_absolute_url())}\n\n"
-                    "Availability can change quickly, so please confirm before "
-                    f"payment.\n\nStop this alert: {unsubscribe_url}"
-                ),
-                settings.DEFAULT_FROM_EMAIL,
-                [subscription.email],
-                fail_silently=False,
-            )
+        log = send_stock_alert_message(subscription, reason=reason)
+        if _accepted_or_suppressed(log):
             subscription.is_active = False
             subscription.notified_at = timezone.now()
             subscription.save(update_fields=["is_active", "notified_at"])
-            sent += 1
-        except Exception:
+            sent += int(log.status != OutboundEmail.STATUS_SUPPRESSED)
+        else:
             errors += 1
     return {"sent": sent, "errors": errors}
