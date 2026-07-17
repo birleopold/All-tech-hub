@@ -52,7 +52,7 @@ jobs:
           automation
           growth.test_growth
           marketing.test_automation
-          customer_campaigns.test_campaigns
+          customer_campaigns
           catalog.test_social_marketing
           catalog.test_watermarks
           catalog.test_discovery
@@ -104,6 +104,7 @@ jobs:
             commerce/test_recommendations.py \
             commerce/test_retention.py \
             messaging/utils.py \
+            messaging/views.py \
             reports/urls.py \
             reports/conversion.py \
             reports/conversion_views.py \
@@ -201,7 +202,7 @@ jobs:
           reliability
           automation
           commerce
-          customer_campaigns.test_campaigns
+          customer_campaigns
           loyalty.test_loyalty
           reports.test_conversion
           reports.test_retention
