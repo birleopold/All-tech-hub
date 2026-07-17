@@ -4,12 +4,13 @@ from django.urls import reverse
 
 from catalog.models import Category, Product
 from commerce.forms import CheckoutForm
-from commerce.models import Order, OrderLine, OrderStatusEvent
+from commerce.models import CustomerReturn, Order, OrderLine, OrderStatusEvent
 from crm.models import Customer
 from loyalty.models import (
     CustomerMarketingPreference,
     LoyaltyAccount,
     LoyaltyTransaction,
+    MarketingConsentEvent,
 )
 from loyalty.reporting import consent_integrity_findings, customer_growth_summary
 from loyalty.services import award_completed_order_points
@@ -60,7 +61,7 @@ class ConsentAndLoyaltyTests(TestCase):
             shipping_summary="Kampala",
             total="1200000.00",
         )
-        OrderLine.objects.create(
+        self.line = OrderLine.objects.create(
             order=self.order,
             product=self.product,
             description=self.product.name,
@@ -83,6 +84,7 @@ class ConsentAndLoyaltyTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         customer = form.save_customer()
         preference = customer.marketing_preference
+        event = MarketingConsentEvent.objects.get(preference=preference)
         self.assertTrue(preference.email_marketing)
         self.assertFalse(preference.whatsapp_marketing)
         self.assertTrue(preference.product_updates)
@@ -92,6 +94,8 @@ class ConsentAndLoyaltyTests(TestCase):
             preference.consent_source,
             CustomerMarketingPreference.SOURCE_CHECKOUT,
         )
+        self.assertEqual(event.action, MarketingConsentEvent.ACTION_GRANTED)
+        self.assertTrue(event.email_marketing)
 
     def test_unchecked_checkout_does_not_create_or_withdraw_consent(self):
         existing = CustomerMarketingPreference.objects.create(
@@ -116,6 +120,7 @@ class ConsentAndLoyaltyTests(TestCase):
         existing.refresh_from_db()
         self.assertTrue(existing.email_marketing)
         self.assertIsNone(existing.withdrawn_at)
+        self.assertEqual(MarketingConsentEvent.objects.count(), 0)
 
     def test_portal_preferences_are_private_and_customer_controlled(self):
         self.client.force_login(self.user)
@@ -131,11 +136,13 @@ class ConsentAndLoyaltyTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         preference = self.customer.marketing_preference
+        event = MarketingConsentEvent.objects.get(preference=preference)
         self.assertTrue(preference.email_marketing)
         self.assertEqual(
             preference.consent_source,
             CustomerMarketingPreference.SOURCE_PORTAL,
         )
+        self.assertEqual(event.action, MarketingConsentEvent.ACTION_GRANTED)
         self.assertIn("private", response.headers["Cache-Control"])
         self.assertIn("no-store", response.headers["Cache-Control"])
         self.assertIn("noindex", response.headers["X-Robots-Tag"])
@@ -156,16 +163,20 @@ class ConsentAndLoyaltyTests(TestCase):
         preference.refresh_from_db()
         self.assertEqual(get_response.status_code, 200)
         self.assertTrue(preference.email_marketing)
+        self.assertEqual(MarketingConsentEvent.objects.count(), 0)
 
         post_response = self.client.post(url)
         preference.refresh_from_db()
+        event = MarketingConsentEvent.objects.get(preference=preference)
         self.assertEqual(post_response.status_code, 200)
         self.assertFalse(preference.email_marketing)
         self.assertFalse(preference.whatsapp_marketing)
         self.assertFalse(preference.product_updates)
         self.assertFalse(preference.special_offers)
         self.assertIsNotNone(preference.withdrawn_at)
+        self.assertEqual(event.action, MarketingConsentEvent.ACTION_WITHDRAWN)
         self.assertEqual(post_response.headers["Cache-Control"], "private, no-store")
+        self.assertNotContains(post_response, self.customer.email)
 
     def test_completed_order_awards_points_once_and_sets_tier(self):
         first = award_completed_order_points(self.order)
@@ -176,6 +187,18 @@ class ConsentAndLoyaltyTests(TestCase):
         self.assertEqual(account.lifetime_points, 120)
         self.assertEqual(account.tier, LoyaltyAccount.TIER_SILVER)
         self.assertEqual(LoyaltyTransaction.objects.count(), 1)
+
+    def test_returned_order_does_not_earn_points(self):
+        CustomerReturn.objects.create(
+            reference="RET-LOYALTY-001",
+            order_line=self.line,
+            quantity=1,
+            reason="Returned during test",
+            disposition=CustomerReturn.DISPOSITION_RESTOCK,
+            processed_by=None,
+        )
+        self.assertIsNone(award_completed_order_points(self.order))
+        self.assertFalse(LoyaltyAccount.objects.filter(customer=self.customer).exists())
 
     def test_terminal_status_event_awards_after_commit(self):
         second_order = Order.objects.create(
@@ -193,7 +216,7 @@ class ConsentAndLoyaltyTests(TestCase):
                 order=second_order,
                 from_status=Order.STATUS_READY,
                 to_status=Order.STATUS_FULFILLED,
-                visible_to_customer=True,
+                visible_to_customer=False,
             )
         account = LoyaltyAccount.objects.get(customer=self.customer)
         self.assertEqual(account.points_balance, 50)
@@ -209,6 +232,15 @@ class ConsentAndLoyaltyTests(TestCase):
             email_marketing=True,
             product_updates=True,
             special_offers=False,
+        )
+        MarketingConsentEvent.objects.create(
+            preference=preference,
+            customer=self.customer,
+            action=MarketingConsentEvent.ACTION_GRANTED,
+            source=CustomerMarketingPreference.SOURCE_PORTAL,
+            email_marketing=True,
+            product_updates=True,
+            consent_text_version=preference.consent_text_version,
         )
         other = Customer.objects.create(
             name="Dormant Without Consent",
