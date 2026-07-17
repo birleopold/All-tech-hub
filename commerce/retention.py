@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -15,6 +16,18 @@ from growth.models import GrowthSettings
 
 REVIEW_SUBJECT_PREFIX = "Review your order"
 TERMINAL_REVIEW_STATUSES = {Order.STATUS_DELIVERED, Order.STATUS_FULFILLED}
+
+
+def review_emails_enabled() -> bool:
+    configured = getattr(settings, "ORDER_REVIEW_EMAILS_ENABLED", None)
+    if configured is not None:
+        return bool(configured)
+    return os.getenv("ALLTECH_ORDER_REVIEW_EMAILS_ENABLED", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def _absolute_public_url(path: str) -> str:
@@ -59,7 +72,7 @@ def reviewable_products(order: Order) -> list[Product]:
 def send_order_review_request(order: Order):
     if not getattr(settings, "ORDER_CUSTOMER_EMAILS_ENABLED", True):
         return None
-    if not getattr(settings, "ORDER_REVIEW_EMAILS_ENABLED", False):
+    if not review_emails_enabled():
         return None
 
     order = Order.objects.select_related("customer").prefetch_related(
