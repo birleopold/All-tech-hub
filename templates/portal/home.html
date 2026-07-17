@@ -55,6 +55,8 @@
             <a class="btn btn-primary text-start" href="{% url 'portal_repair_intake' %}"><i class="bi bi-clipboard-plus me-2" aria-hidden="true"></i>Request repair</a>
             <a class="btn btn-outline-primary text-start" href="{% url 'portal_ticket_create' %}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>New support request</a>
             <a class="btn btn-outline-primary text-start" href="{% url 'portal_warranties' %}"><i class="bi bi-shield-check me-2" aria-hidden="true"></i>My warranties</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'portal_loyalty_account' %}"><i class="bi bi-award me-2" aria-hidden="true"></i>My loyalty account</a>
+            <a class="btn btn-outline-primary text-start" href="{% url 'portal_marketing_preferences' %}"><i class="bi bi-sliders me-2" aria-hidden="true"></i>Communication preferences</a>
             <a class="btn btn-outline-primary text-start" href="{% url 'portal_documents' %}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>My documents</a>
             <a class="btn btn-outline-primary text-start" href="{% url 'portal_wishlist' %}"><i class="bi bi-heart me-2" aria-hidden="true"></i>Wishlist</a>
           </div>
@@ -95,6 +97,8 @@
   <div class="d-flex gap-2 flex-wrap">
     <a class="btn btn-outline-primary" href="{% url 'portal_orders' %}">My orders</a>
     <a class="btn btn-outline-primary" href="{% url 'portal_warranties' %}">Warranties</a>
+    <a class="btn btn-outline-primary" href="{% url 'portal_loyalty_account' %}">Loyalty</a>
+    <a class="btn btn-outline-primary" href="{% url 'portal_marketing_preferences' %}">Preferences</a>
     <a class="btn btn-outline-primary" href="{% url 'portal_addresses' %}">Addresses</a>
     <a class="btn btn-outline-primary" href="{% url 'portal_kb' %}">Help</a>
     <form method="post" action="{% url 'portal_logout' %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-outline-secondary">Logout</button></form>
