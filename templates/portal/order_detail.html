@@ -7,11 +7,7 @@
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
-      <div>
-        <p class="text-uppercase small text-white-50 mb-2">Order details</p>
-        <h1 class="display-6 fw-bold mb-2">{{ order.reference }}</h1>
-        <p class="text-white-75 mb-0">{{ order.get_status_display }} · {{ order.placed_at|date:"Y-m-d H:i" }} · {{ order.get_fulfillment_type_display }}</p>
-      </div>
+      <div><p class="text-uppercase small text-white-50 mb-2">Order details</p><h1 class="display-6 fw-bold mb-2">{{ order.reference }}</h1><p class="text-white-75 mb-0">{{ order.get_status_display }} · {{ order.placed_at|date:"Y-m-d H:i" }} · {{ order.get_fulfillment_type_display }}</p></div>
       <a class="btn btn-light" href="{% url 'portal_orders' %}">Back to orders</a>
     </div>
   </div>
@@ -24,10 +20,10 @@
       <div class="table-responsive card border-0 shadow-sm overflow-hidden mb-4">
         <table class="table mb-0 align-middle">
           <caption class="visually-hidden">Line items for order {{ order.reference }}</caption>
-          <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Line</th></tr></thead>
+          <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Line</th>{% if order.status == 'delivered' or order.status == 'fulfilled' %}<th class="text-end">Feedback</th>{% endif %}</tr></thead>
           <tbody>
             {% for line in order.lines.all %}
-            <tr><td>{% if line.product %}<a class="text-decoration-none" href="{{ line.product.get_absolute_url }}">{{ line.description }}</a>{% else %}{{ line.description }}{% endif %}</td><td class="text-end">{{ line.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td></tr>
+            <tr><td>{% if line.product %}<a class="text-decoration-none" href="{{ line.product.get_absolute_url }}">{{ line.description }}</a>{% else %}{{ line.description }}{% endif %}</td><td class="text-end">{{ line.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>{% if order.status == 'delivered' or order.status == 'fulfilled' %}<td class="text-end">{% if line.product and line.product.kind == 'physical' %}<a class="btn btn-sm btn-outline-primary" href="{% url 'order_product_review' order.reference order.view_key line.product_id %}">Review</a>{% else %}<span class="text-muted small">—</span>{% endif %}</td>{% endif %}</tr>
             {% endfor %}
           </tbody>
         </table>
@@ -38,27 +34,12 @@
         <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5 mb-3">Delivery tracking</h2>{% if shipment %}<p class="mb-1"><strong>{{ shipment.get_status_display }}</strong></p>{% if shipment.carrier %}<p class="mb-1">Carrier: {{ shipment.carrier }}</p>{% endif %}{% if shipment.tracking_number %}<p class="mb-1">Tracking: <code>{{ shipment.tracking_number }}</code></p>{% endif %}{% if shipment.estimated_delivery %}<p class="mb-1">Estimated delivery: {{ shipment.estimated_delivery }}</p>{% endif %}{% if shipment.note %}<p class="small text-muted">{{ shipment.note }}</p>{% endif %}{% if shipment.tracking_url %}<a class="btn btn-sm btn-outline-primary" href="{{ shipment.tracking_url }}" target="_blank" rel="noopener noreferrer">Track with carrier</a>{% endif %}{% else %}<p class="text-muted mb-0">Tracking details will appear once your order is prepared.</p>{% endif %}</div></div></div>
       </div>
 
-      <div class="card border-0 shadow-sm">
-        <div class="card-body p-4">
-          <h2 class="h5 mb-3">Documents for this order</h2>
-          <div class="table-responsive">
-            <table class="table table-sm mb-0 align-middle">
-              <caption class="visually-hidden">Documents linked to this order</caption>
-              <thead><tr><th>Number</th><th>Type</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th></th></tr></thead>
-              <tbody>
-                {% for d in documents %}
-                <tr><td>{{ d.number }}</td><td>{{ d.get_doc_type_display }}</td><td>{{ d.get_status_display }}</td><td>{{ d.issue_date }}</td><td class="text-end">{{ company.currency_code }} {{ d.total|floatformat:2 }}</td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_document_pdf' d.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open PDF for {{ d.number }} in a new tab">PDF</a></td></tr>
-                {% empty %}<tr><td colspan="6" class="text-muted">No documents yet.</td></tr>{% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <p class="small text-muted mt-2 mb-0">Delivery notes and receipts will appear here when issued by staff.</p>
-        </div>
-      </div>
+      <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h5 mb-3">Documents for this order</h2><div class="table-responsive"><table class="table table-sm mb-0 align-middle"><caption class="visually-hidden">Documents linked to this order</caption><thead><tr><th>Number</th><th>Type</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th></th></tr></thead><tbody>{% for d in documents %}<tr><td>{{ d.number }}</td><td>{{ d.get_doc_type_display }}</td><td>{{ d.get_status_display }}</td><td>{{ d.issue_date }}</td><td class="text-end">{{ company.currency_code }} {{ d.total|floatformat:2 }}</td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_document_pdf' d.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open PDF for {{ d.number }} in a new tab">PDF</a></td></tr>{% empty %}<tr><td colspan="6" class="text-muted">No documents yet.</td></tr>{% endfor %}</tbody></table></div><p class="small text-muted mt-2 mb-0">Delivery notes and receipts will appear here when issued by staff.</p></div></div>
     </div>
 
     <div class="col-lg-4">
       <aside class="card border-0 shadow-sm product-purchase-card mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p><div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ order.subtotal|floatformat:2 }}</strong></div><div class="d-flex justify-content-between mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</strong></div>{% if order.discount_amount %}<div class="d-flex justify-content-between mb-2"><span class="text-muted">Discount</span><strong>− {{ company.currency_code }} {{ order.discount_amount|floatformat:2 }}</strong></div>{% endif %}<hr><div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ order.total|floatformat:2 }}</strong></div></div></aside>
+      {% if order.status == 'delivered' or order.status == 'fulfilled' %}<div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Buy again</p><h2 class="h5 mb-2">Reorder available products</h2><p class="small text-muted">Current stock and prices are checked before checkout.</p><form method="post" action="{% url 'order_reorder' order.reference order.view_key %}">{% csrf_token %}<button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Add available items to cart</button></form></div></div>{% endif %}
       <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Payment guidance</p><h2 class="h5 mb-2">Reference {{ order.reference }}</h2><p class="small text-muted">Payment remains pending until verified by LEOSOFT. Use only official details and retain the transaction reference.</p>{% if company.bank_details %}<div class="payment-instructions border rounded bg-light p-3 small">{{ company.bank_details|linebreaksbr }}</div>{% endif %}</div></div>
       <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h5 mb-2">Need help?</h2><p class="small text-muted">Use support to ask about payment, delivery, warranty or a product in this order.</p><a class="btn btn-outline-primary w-100" href="{% url 'portal_ticket_create' %}">Open support request</a></div></div>
     </div>
