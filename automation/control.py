@@ -70,27 +70,26 @@ def pause_automation(*, user, reason: str, job_types=None) -> AutomationControl:
     now = timezone.now()
     selected = normalise_job_types(job_types)
     reason = (reason or "Automation paused for operational review.").strip()[:300]
+    update_fields = [
+        "is_paused",
+        "paused_job_types",
+        "pause_reason",
+        "paused_by",
+        "paused_at",
+        "updated_at",
+    ]
     if selected:
         control.paused_job_types = sorted(
             set(normalise_job_types(control.paused_job_types)) | set(selected)
         )
     else:
         control.is_paused = True
+        control.last_run_status = AutomationControl.RUN_PAUSED
+        update_fields.append("last_run_status")
     control.pause_reason = reason
     control.paused_by = user
     control.paused_at = now
-    control.last_run_status = AutomationControl.RUN_PAUSED
-    control.save(
-        update_fields=[
-            "is_paused",
-            "paused_job_types",
-            "pause_reason",
-            "paused_by",
-            "paused_at",
-            "last_run_status",
-            "updated_at",
-        ]
-    )
+    control.save(update_fields=update_fields)
     scope = ", ".join(selected) if selected else "all automation"
     log_audit_event(
         actor=user,
@@ -332,10 +331,19 @@ def cancel_open_job(job: AutomationJob, *, user, reason: str = "") -> Automation
         raise AutomationControlError(
             "A running job cannot be cancelled because its external result may be uncertain."
         )
-    if job.is_terminal:
-        raise AutomationControlError("This job is already in a terminal state.")
+    if job.status in {
+        AutomationJob.STATUS_SUCCEEDED,
+        AutomationJob.STATUS_CANCELLED,
+    }:
+        raise AutomationControlError("This job is already in a closed terminal state.")
+    previous_status = job.status
     now = timezone.now()
-    message = (reason or "Cancelled by authorised staff.").strip()[:4000]
+    default_reason = (
+        "Failed job reviewed and closed by authorised staff."
+        if previous_status == AutomationJob.STATUS_FAILED
+        else "Cancelled by authorised staff."
+    )
+    message = (reason or default_reason).strip()[:4000]
     job.status = AutomationJob.STATUS_CANCELLED
     job.completed_at = now
     job.locked_at = None
@@ -365,11 +373,17 @@ def cancel_open_job(job: AutomationJob, *, user, reason: str = "") -> Automation
         AutomationJobEvent.ACTION_CANCELLED,
         actor=user,
         message=message,
+        metadata={"previous_status": previous_status},
+    )
+    verb = (
+        "automation.job_closed"
+        if previous_status == AutomationJob.STATUS_FAILED
+        else "automation.job_cancelled"
     )
     log_audit_event(
         actor=user,
-        verb="automation.job_cancelled",
-        summary=f"Cancelled automation job {job.idempotency_key}: {message[:300]}",
+        verb=verb,
+        summary=f"Closed automation job {job.idempotency_key}: {message[:300]}",
         target=job,
     )
     return job
