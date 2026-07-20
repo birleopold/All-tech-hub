@@ -122,20 +122,25 @@
 }
 
 @media (max-width: 991.98px) {
-  /* Keep only the primary app-style mobile navigation fixed. */
+  /* Reserve space only for the five-button primary mobile navigation. */
   .site-main {
-    padding-bottom: 0;
+    padding-bottom: 0 !important;
   }
 
-  /* Secondary links are a normal footer and scroll with the page. */
-  .mobile-tabbar-more {
-    position: static;
-    left: auto;
-    right: auto;
-    bottom: auto;
-    z-index: auto;
-    margin-top: 1rem;
-    padding-bottom: calc(var(--at-tabbar-h) + env(safe-area-inset-bottom, 0px));
+  /* Force secondary links into normal document flow, even against stale rules. */
+  body.site-body > .mobile-tabbar-more {
+    position: static !important;
+    inset: auto !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    z-index: auto !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 1rem 0 0 !important;
+    transform: none !important;
+    padding-bottom: calc(var(--at-tabbar-h) + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
