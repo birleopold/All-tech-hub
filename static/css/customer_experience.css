@@ -121,6 +121,24 @@
   outline-offset: 2px;
 }
 
+@media (max-width: 991.98px) {
+  /* Keep only the primary app-style mobile navigation fixed. */
+  .site-main {
+    padding-bottom: 0;
+  }
+
+  /* Secondary links are a normal footer and scroll with the page. */
+  .mobile-tabbar-more {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    margin-top: 1rem;
+    padding-bottom: calc(var(--at-tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 767.98px) {
   .order-progress {
     grid-template-columns: 1fr;
