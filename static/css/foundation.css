@@ -1,0 +1,189 @@
+/* Cross-cutting layout, accessibility, and device refinements.
+ *
+ * Keep this file focused on global behavior that should remain consistent
+ * across public, portal, and staff experiences. Component-specific styling
+ * belongs with the component stylesheet that owns it.
+ */
+
+html {
+  scroll-padding-top: 5rem;
+}
+
+body {
+  overflow-wrap: break-word;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.site-main,
+.row > *,
+.card,
+.table-responsive {
+  min-width: 0;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.form-control,
+.form-select,
+.btn {
+  min-height: 2.75rem;
+}
+
+.btn-sm {
+  min-height: 2.25rem;
+}
+
+.alert,
+.card,
+.modal-content,
+.offcanvas {
+  overflow-wrap: anywhere;
+}
+
+[id] {
+  scroll-margin-top: 5rem;
+}
+
+.mobile-scroll-footer {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  background: rgba(246, 248, 251, 0.98);
+  border-top: 1px solid rgba(11, 31, 51, 0.08);
+}
+
+.mobile-scroll-footer__links,
+.mobile-scroll-footer__social {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.mobile-scroll-footer__links {
+  gap: 0.5rem;
+}
+
+.mobile-scroll-footer__social {
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.mobile-scroll-footer__social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  text-decoration: none;
+}
+
+.mobile-scroll-footer__social a:hover {
+  background: rgba(13, 110, 253, 0.08);
+}
+
+.mobile-scroll-footer__logout {
+  display: inline;
+  margin: 0;
+}
+
+.mobile-scroll-footer__logout .btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 991.98px) {
+  /* The secondary footer is now in normal document flow. Only the footer,
+     rather than every page body, needs to reserve space for the fixed tabbar. */
+  .site-main {
+    padding-bottom: 1rem;
+  }
+
+  .site-main:has(.staff-app) {
+    padding-bottom: calc(var(--at-tabbar-h) + 1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-scroll-footer {
+    padding-bottom: calc(var(--at-tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-tabbar__item {
+    min-height: var(--at-tabbar-h);
+  }
+
+  .mobile-scroll-footer .btn,
+  .mobile-scroll-footer__social a {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .mobile-scroll-footer__links .btn {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  .mobile-scroll-footer__logout {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  .mobile-scroll-footer__logout .btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  header,
+  .footer-site,
+  .mobile-tabbar,
+  .mobile-scroll-footer,
+  #analytics-consent-banner,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  body,
+  .site-main,
+  .staff-main-panel {
+    background: #fff !important;
+  }
+
+  .site-main {
+    padding: 0 !important;
+  }
+
+  a[href]::after {
+    content: none !important;
+  }
+
+  .card {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+}

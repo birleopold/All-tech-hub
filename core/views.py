@@ -1,11 +1,10 @@
 from django.contrib import messages
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.templatetags.static import static
 from django.views.generic import TemplateView
 
 from core.forms import ContactForm
-from core.models import CompanySettings
 
 
 class HomeView(TemplateView):
@@ -50,11 +49,6 @@ class OfflineView(TemplateView):
     template_name = "core/offline.html"
 
 
-def healthz(request):
-    CompanySettings.load()
-    return JsonResponse({"status": "ok"})
-
-
 def service_worker(request):
     """Serve a privacy-safe service worker.
 
@@ -65,14 +59,18 @@ def service_worker(request):
     """
 
     offline_url = "/offline/"
-    stylesheet_url = static("css/site.css")
-    manifest_url = static("site.webmanifest")
+    public_asset_urls = [
+        static("css/site.css"),
+        static("css/customer_experience.css"),
+        static("css/foundation.css"),
+        static("js/alltech_ui.js"),
+        static("site.webmanifest"),
+    ]
+    precache_urls = ",\n  ".join(f'"{url}"' for url in [offline_url, *public_asset_urls])
     body = f"""
-const CACHE_NAME = "leosoft-public-assets-v2";
+const CACHE_NAME = "leosoft-public-assets-v3";
 const PRECACHE_URLS = [
-  "{offline_url}",
-  "{stylesheet_url}",
-  "{manifest_url}"
+  {precache_urls}
 ];
 
 self.addEventListener("install", event => {{

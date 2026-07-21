@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: django-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -24,7 +28,14 @@ jobs:
           cache-dependency-path: requirements.lock
 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.lock
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.lock
+
+      - name: Check Python and JavaScript syntax
+        run: |
+          python -m compileall -q -x '/migrations/' .
+          node --check static/js/alltech_ui.js
+          node --check static/js/pwa.js
+          node --check static/js/marketing_analytics.js
 
       - name: Check migration drift
         run: python manage.py makemigrations --check --dry-run
@@ -67,11 +78,12 @@ jobs:
           reports.test_conversion
           reports.test_retention
           portal.test_warranties
+          core.test_foundation
           core.test_api_experience
           core.test_phase1_security
           reliability
 
-      - name: Run Ruff on changed Python scope
+      - name: Run Ruff on maintained Python scope
         run: |
           ruff check \
             automation/admin.py \
@@ -137,11 +149,14 @@ jobs:
             portal/templatetags \
             portal/test_warranties.py \
             core/views.py \
+            core/health.py \
+            core/urls.py \
             core/api_views.py \
             core/private_files.py \
             core/private_views.py \
             core/field_encryption.py \
             core/auth_views.py \
+            core/test_foundation.py \
             core/test_api_experience.py \
             core/test_phase1_security.py \
             core/management/commands/backup_alltech.py \
@@ -196,7 +211,7 @@ jobs:
           cache-dependency-path: requirements.lock
 
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.lock
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.lock
 
       - name: Apply migrations on PostgreSQL
         run: python manage.py migrate --noinput
@@ -222,4 +237,5 @@ jobs:
           reports.test_retention
           catalog.test_experience
           portal.test_warranties
+          core.test_foundation
           core.test_api_experience

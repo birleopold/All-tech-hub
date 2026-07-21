@@ -74,8 +74,11 @@ Both names should resolve to the VPS public IP before running Certbot.
 
 ## Local setup
 
+Python 3.12 is the supported development and CI runtime. Version managers can
+read the repository's `.python-version` file automatically.
+
 ```powershell
-py -3.13 -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements-dev.txt
 Copy-Item .env.example .env
