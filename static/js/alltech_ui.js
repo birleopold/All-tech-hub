@@ -17,7 +17,8 @@
       url.searchParams.delete(name);
     }
     url.searchParams.delete("page");
-    window.location.assign(url.pathname + (url.searchParams.toString() ? "?" + url.searchParams : "") + url.hash);
+    var query = url.searchParams.toString();
+    window.location.assign(url.pathname + (query ? "?" + query : "") + url.hash);
   }
 
   function selectFulfillmentOption(radio) {
@@ -120,6 +121,10 @@
     var variantSelect = document.getElementById("variant_id");
     var priceLabel = document.getElementById("pd-price-label");
     var quantityInput = document.getElementById("quantity");
+    if (priceLabel) {
+      priceLabel.setAttribute("aria-live", "polite");
+      priceLabel.setAttribute("aria-atomic", "true");
+    }
     if (variantSelect) {
       variantSelect.addEventListener("change", function () {
         var option = variantSelect.options[variantSelect.selectedIndex];
