@@ -43,6 +43,22 @@
     button.classList.add("border-primary");
   }
 
+  function prepareVariantOptions(select) {
+    Array.from(select.options).forEach(function (option) {
+      if (!option.value || option.dataset.track !== "1") {
+        return;
+      }
+      var stock = Number.parseInt(option.dataset.stock || "0", 10);
+      if (!Number.isFinite(stock) || stock > 0) {
+        return;
+      }
+      option.disabled = true;
+      if (!option.textContent.includes("Out of stock")) {
+        option.textContent += " — Out of stock";
+      }
+    });
+  }
+
   ready(function () {
     document.querySelectorAll("[data-print-page]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -126,6 +142,7 @@
       priceLabel.setAttribute("aria-atomic", "true");
     }
     if (variantSelect) {
+      prepareVariantOptions(variantSelect);
       variantSelect.addEventListener("change", function () {
         var option = variantSelect.options[variantSelect.selectedIndex];
         if (!option) {
