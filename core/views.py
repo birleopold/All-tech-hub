@@ -1,11 +1,11 @@
 from django.contrib import messages
+from django.db import DatabaseError, connection
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.templatetags.static import static
 from django.views.generic import TemplateView
 
 from core.forms import ContactForm
-from core.models import CompanySettings
 
 
 class HomeView(TemplateView):
@@ -51,8 +51,27 @@ class OfflineView(TemplateView):
 
 
 def healthz(request):
-    CompanySettings.load()
-    return JsonResponse({"status": "ok"})
+    """Return a small, non-cacheable readiness response.
+
+    The check is deliberately read-only: monitoring should verify that the
+    configured database can answer a trivial query without creating or
+    updating application records.
+    """
+
+    status = 200
+    payload = {"status": "ok"}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+    except DatabaseError:
+        status = 503
+        payload = {"status": "unavailable"}
+
+    response = JsonResponse(payload, status=status)
+    response["Cache-Control"] = "no-store, max-age=0"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 def service_worker(request):
@@ -65,14 +84,18 @@ def service_worker(request):
     """
 
     offline_url = "/offline/"
-    stylesheet_url = static("css/site.css")
-    manifest_url = static("site.webmanifest")
+    public_asset_urls = [
+        static("css/site.css"),
+        static("css/customer_experience.css"),
+        static("css/foundation.css"),
+        static("js/alltech_ui.js"),
+        static("site.webmanifest"),
+    ]
+    precache_urls = ",\n  ".join(f'"{url}"' for url in [offline_url, *public_asset_urls])
     body = f"""
-const CACHE_NAME = "leosoft-public-assets-v2";
+const CACHE_NAME = "leosoft-public-assets-v3";
 const PRECACHE_URLS = [
-  "{offline_url}",
-  "{stylesheet_url}",
-  "{manifest_url}"
+  {precache_urls}
 ];
 
 self.addEventListener("install", event => {{
