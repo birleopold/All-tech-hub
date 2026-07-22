@@ -1,6 +1,7 @@
 from django.urls import path
 
 from inventory import views
+from inventory.product_list_view import ProductManageListView
 
 urlpatterns = [
     path("inventory/", views.InventoryHomeView.as_view(), name="staff_inventory"),
@@ -20,7 +21,7 @@ urlpatterns = [
         views.job_record_part_usage,
         name="staff_job_stock_use",
     ),
-    path("inventory/products/", views.ProductManageListView.as_view(), name="staff_products"),
+    path("inventory/products/", ProductManageListView.as_view(), name="staff_products"),
     path("inventory/products/new/", views.ProductCreateView.as_view(), name="staff_product_create"),
     path("inventory/products/<int:pk>/", views.ProductUpdateView.as_view(), name="staff_product_edit"),
     path("inventory/products/<int:pk>/labels/", views.product_label_sheet, name="staff_product_labels"),
@@ -32,4 +33,3 @@ urlpatterns = [
     path("inventory/stocktake/<int:pk>/lines/", views.stocktake_add_line, name="staff_stocktake_add_line"),
     path("inventory/stocktake/<int:pk>/post/", views.stocktake_post, name="staff_stocktake_post"),
 ]
-

@@ -2,19 +2,57 @@
 {% block title %}Products{% endblock %}
 {% block staff_content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <h1 class="h3 mb-0">Products</h1>
+  <div>
+    <h1 class="h3 mb-0">Products</h1>
+    <p class="text-muted small mb-0">
+      {% if is_paginated %}
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} products
+      {% else %}
+      {{ products|length }} product{{ products|length|pluralize }}
+      {% endif %}
+    </p>
+  </div>
   <a class="btn btn-primary" href="{% url 'staff_product_create' %}">New product</a>
 </div>
 
-<form method="get" class="row g-2 mb-3">
-  <div class="col-md-6">
-    <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Search name, SKU, category…">
-  </div>
-  <div class="col-md-2">
-    <button class="btn btn-outline-primary w-100" type="submit">Search</button>
-  </div>
-  <div class="col-md-4 text-end">
-    <a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}">Inventory home</a>
+<form method="get" class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col-lg-4 col-md-6">
+        <label class="form-label small fw-semibold" for="product-search">Search</label>
+        <input class="form-control" id="product-search" type="search" name="q" value="{{ q }}" placeholder="Name, SKU, category…">
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <label class="form-label small fw-semibold" for="product-category">Category</label>
+        <select class="form-select" id="product-category" name="category">
+          <option value="">All categories</option>
+          {% for category in categories %}
+          <option value="{{ category.slug }}"{% if selected_category == category.slug %} selected{% endif %}>{{ category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <label class="form-label small fw-semibold" for="product-sort">Sort by</label>
+        <select class="form-select" id="product-sort" name="sort">
+          {% for value, label in sort_options %}
+          <option value="{{ value }}"{% if selected_sort == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-lg-2 col-md-6">
+        <div class="form-check mb-2">
+          <input class="form-check-input" id="low-stock-only" type="checkbox" name="low" value="1"{% if low_only %} checked{% endif %}>
+          <label class="form-check-label small" for="low-stock-only">Low stock only</label>
+        </div>
+      </div>
+      <div class="col-12 d-flex flex-wrap gap-2 justify-content-between">
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-primary" type="submit">Apply filters</button>
+          <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Clear</a>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}">Inventory home</a>
+      </div>
+    </div>
   </div>
 </form>
 
@@ -28,7 +66,7 @@
       <tr>
         <td>{{ p.name }}</td>
         <td>{{ p.get_kind_display }}</td>
-        <td>{{ p.category.name }}</td>
+        <td>{{ p.category }}</td>
         <td class="text-muted small">{{ p.sku|default:"—" }}</td>
         <td class="text-end">
           {% if p.has_sellable_variants and p.min_active_variant_price %}
@@ -59,9 +97,30 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="8" class="text-muted">No products found.</td></tr>
+      <tr><td colspan="8" class="text-muted py-4 text-center">No products match the selected filters.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+{% if is_paginated %}
+<nav class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3" aria-label="Product pages">
+  <p class="small text-muted mb-0">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
+  <ul class="pagination pagination-sm mb-0 flex-wrap">
+    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+      {% if page_obj.has_previous %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page=1">First</a>{% else %}<span class="page-link">First</span>{% endif %}
+    </li>
+    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+      {% if page_obj.has_previous %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% else %}<span class="page-link">Previous</span>{% endif %}
+    </li>
+    <li class="page-item active" aria-current="page"><span class="page-link">{{ page_obj.number }}</span></li>
+    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+      {% if page_obj.has_next %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% else %}<span class="page-link">Next</span>{% endif %}
+    </li>
+    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+      {% if page_obj.has_next %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ paginator.num_pages }}">Last</a>{% else %}<span class="page-link">Last</span>{% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}
 {% endblock %}
