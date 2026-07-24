@@ -78,7 +78,14 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         )
         quality_rows = catalogue_quality_rows(quality_products)
         ctx["catalogue_quality"] = catalogue_quality_summary(quality_rows)
-        ctx["backup_status"] = latest_backup_status()
+
+        backup_status = latest_backup_status()
+        ctx["backup_status"] = backup_status
+        ctx["backup_requires_attention"] = (
+            not backup_status.healthy
+            or backup_status.age_hours is None
+            or backup_status.age_hours > 48
+        )
         return ctx
 
 
