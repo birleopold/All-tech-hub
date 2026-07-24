@@ -1,12 +1,16 @@
 """Cross-cutting request middleware."""
 
+import logging
 import re
+import time
 import uuid
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import resolve
+
+request_logger = logging.getLogger("alltech.request")
 
 URL_PERMISSION_PREFIXES = {
     "staff_document": "billing.view_commercialdocument",
@@ -61,7 +65,7 @@ def _is_private_response_path(path: str) -> bool:
 
 
 class RequestContextMiddleware:
-    """Attach a safe request ID so browser reports and server logs can correlate."""
+    """Attach a safe request ID and log actionable request outcomes."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -71,8 +75,36 @@ class RequestContextMiddleware:
         request.request_id = (
             supplied if _REQUEST_ID_PATTERN.fullmatch(supplied) else uuid.uuid4().hex
         )
-        response = self.get_response(request)
+        started = time.perf_counter()
+        try:
+            response = self.get_response(request)
+        except Exception:
+            duration_ms = round((time.perf_counter() - started) * 1000, 1)
+            request_logger.exception(
+                "request_failed request_id=%s method=%s path=%s duration_ms=%s",
+                request.request_id,
+                request.method,
+                request.path,
+                duration_ms,
+            )
+            raise
+
+        duration_ms = round((time.perf_counter() - started) * 1000, 1)
         response.setdefault("X-Request-ID", request.request_id)
+        if response.status_code >= 500:
+            log_method = request_logger.error
+        elif response.status_code >= 400:
+            log_method = request_logger.info
+        else:
+            log_method = request_logger.debug
+        log_method(
+            "request_completed request_id=%s method=%s path=%s status=%s duration_ms=%s",
+            request.request_id,
+            request.method,
+            request.path,
+            response.status_code,
+            duration_ms,
+        )
         return response
 
 
