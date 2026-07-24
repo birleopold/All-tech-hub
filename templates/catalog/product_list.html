@@ -1,54 +1,71 @@
 {% extends "base.html" %}
 {% load catalog_images %}
-{% block title %}{% if current_kind == 'service' %}Services{% elif current_kind == 'physical' %}Products{% else %}Catalog{% endif %} — Products and services{% endblock %}
+{% block title %}{% if current_kind == 'service' %}Professional IT services{% elif current_kind == 'physical' %}Computers and technology products{% else %}Technology catalogue{% endif %} — {{ company.company_name }}{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body public-catalog-page{% endblock %}
 {% block meta %}
-<meta name="description" content="{% if current_kind == 'service' %}Book repairs, installations and professional IT support from LEOSOFT UG LTD.{% elif current_kind == 'physical' %}Browse computers, accessories and technology products available from LEOSOFT UG LTD.{% else %}Browse LEOSOFT products, services, repairs and IT support solutions.{% endif %}">
+<meta name="description" content="{% if current_kind == 'service' %}Book repairs, installations and professional IT support from {{ company.company_name }}.{% elif current_kind == 'physical' %}Browse computers, accessories and technology products available from {{ company.company_name }}.{% else %}Browse products, services, repairs and practical IT support solutions from {{ company.company_name }}.{% endif %}">
 <link rel="canonical" href="{{ catalog_canonical_url }}">
 {% if catalog_noindex %}<meta name="robots" content="noindex,follow">{% endif %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="{% if current_kind == 'service' %}Professional IT services{% elif current_kind == 'physical' %}Computers and technology products{% else %}Technology products and services{% endif %} — {{ company.company_name }}">
+<meta property="og:description" content="Browse clear prices, availability signals and professional technology support.">
+<meta property="og:url" content="{{ catalog_canonical_url }}">
 {% endblock %}
 {% block content %}
-<section class="catalog-hero mb-4">
-  <div class="container py-4 py-lg-5">
-    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
-      <div>
-        <p class="text-uppercase small text-white-50 mb-2">{% if current_kind == 'service' %}Professional service catalog{% elif current_kind == 'physical' %}Product catalog{% else %}Shop and service catalog{% endif %}</p>
-        <h1 class="display-6 fw-bold mb-2" id="catalog-heading">{% if current_kind == 'service' %}Book repairs, installations and IT support{% elif current_kind == 'physical' %}Browse available products and accessories{% else %}Find products, services and support{% endif %}</h1>
-        <p class="text-white-75 mb-0">{% if current_kind == 'service' %}Choose a service, check the starting price, and request help from the team with clear documentation.{% elif current_kind == 'physical' %}Browse devices and accessories with prices, options and availability signals.{% else %}Browse devices, accessories, repairs and IT services with clear pricing and availability.{% endif %}</p>
+<section class="public-catalog-hero">
+  <div class="container public-catalog-hero__inner">
+    <div class="row align-items-end g-4">
+      <div class="col-lg-8" data-reveal>
+        <p class="public-eyebrow">{% if current_kind == 'service' %}Professional service catalogue{% elif current_kind == 'physical' %}Product catalogue{% else %}Products and professional services{% endif %}</p>
+        <h1 id="catalog-heading">{% if current_kind == 'service' %}Book skilled technology support{% elif current_kind == 'physical' %}Find technology that fits the job{% else %}Choose technology with more confidence{% endif %}</h1>
+        <p>{% if current_kind == 'service' %}Explore repairs, installations and IT support with clear starting prices and a professional service process.{% elif current_kind == 'physical' %}Compare dependable computers, accessories and equipment with useful specifications, pricing and availability signals.{% else %}Search devices, accessories, repairs and IT services from one complete catalogue.{% endif %}</p>
+        <form method="get" class="public-catalog-search" role="search">
+          <i class="bi bi-search public-catalog-search__icon" aria-hidden="true"></i>
+          <label class="visually-hidden" for="catalog-hero-search">Search the catalogue</label>
+          <input id="catalog-hero-search" class="form-control" type="search" name="q" value="{{ search_q }}" placeholder="Search laptops, accessories, repairs, CCTV…">
+          {% if current_kind %}<input type="hidden" name="kind" value="{{ current_kind }}">{% endif %}
+          {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+          {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+          <button class="btn btn-light" type="submit">Search</button>
+        </form>
       </div>
-      <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-light" href="{% url 'product_compare' %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>Compare{% if compare_count %} ({{ compare_count }}){% endif %}</a><a class="btn btn-light" href="{% url 'contact' %}">{% if current_kind == 'service' %}Book service{% else %}Request a quote{% endif %}</a></div>
+      <div class="col-lg-4 text-lg-end" data-reveal data-reveal-delay="2">
+        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+          <a class="public-btn-ghost text-decoration-none" href="{% url 'product_compare' %}"><i class="bi bi-columns-gap" aria-hidden="true"></i> Compare{% if compare_count %} {{ compare_count }}{% endif %}</a>
+          <a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}">{% if current_kind == 'service' %}Request service{% else %}Request a quote{% endif %}</a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="container pb-5">
-  <div class="catalog-toolbar card border-0 shadow-sm mb-4">
-    <div class="card-body">
-      <form method="get" class="row g-2 align-items-end" aria-labelledby="catalog-filters-heading">
-        <div class="col-lg-3">
-          <label class="form-label small text-muted" for="catalog-search">Search catalog</label>
-          <input id="catalog-search" type="search" name="q" value="{{ search_q }}" class="form-control" placeholder="Search laptops, CCTV, repair, software…">
-        </div>
-        <div class="col-sm-6 col-lg-2">
-          <label class="form-label small text-muted" for="catalog-kind">Type</label>
-          <select id="catalog-kind" name="kind" class="form-select">
-            <option value="">All types</option>
+<div class="container public-catalog-shell">
+  <details class="public-mobile-filter" data-reveal>
+    <summary><span><i class="bi bi-sliders me-2" aria-hidden="true"></i>Filter and sort</span><span class="small text-muted">{% if search_q or current_kind or current_category or current_sort %}Active{% else %}All items{% endif %}</span></summary>
+    <div class="public-mobile-filter__body">
+      <form method="get" class="row g-3">
+        <div class="col-12">
+          <label class="form-label small fw-semibold" for="mobile-catalog-kind">Type</label>
+          <select id="mobile-catalog-kind" name="kind" class="form-select">
+            <option value="">All products and services</option>
             <option value="physical" {% if current_kind == 'physical' %}selected{% endif %}>Products</option>
             <option value="service" {% if current_kind == 'service' %}selected{% endif %}>Services</option>
           </select>
         </div>
-        <div class="col-sm-6 col-lg-3">
-          <label class="form-label small text-muted" for="catalog-category">Category</label>
-          <select id="catalog-category" name="category" class="form-select">
+        <div class="col-12">
+          <label class="form-label small fw-semibold" for="mobile-catalog-category">Category</label>
+          <select id="mobile-catalog-category" name="category" class="form-select">
             <option value="">All categories</option>
             {% for c in categories %}
             <option value="{{ c.slug }}" {% if current_category == c.slug %}selected{% endif %}>All {{ c.name }}</option>
-            {% if c.subcategories.all %}<optgroup label="{{ c.name }}">{% for subcategory in c.subcategories.all %}<option value="{{ subcategory.slug }}" {% if current_category == subcategory.slug %}selected{% endif %}>{{ subcategory.name }}</option>{% endfor %}</optgroup>{% endif %}
+            {% for subcategory in c.subcategories.all %}<option value="{{ subcategory.slug }}" {% if current_category == subcategory.slug %}selected{% endif %}>{{ c.name }} — {{ subcategory.name }}</option>{% endfor %}
             {% endfor %}
           </select>
         </div>
-        <div class="col-sm-6 col-lg-2">
-          <label class="form-label small text-muted" for="catalog-sort">Sort</label>
-          <select id="catalog-sort" name="sort" class="form-select">
+        <div class="col-12">
+          <label class="form-label small fw-semibold" for="mobile-catalog-sort">Sort</label>
+          <select id="mobile-catalog-sort" name="sort" class="form-select">
             <option value="" {% if not current_sort %}selected{% endif %}>Fresh discovery</option>
             <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest first</option>
             <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
@@ -56,60 +73,120 @@
             <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name: A–Z</option>
           </select>
         </div>
-        <div class="col-sm-6 col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply</button></div>
+        {% if search_q %}<input type="hidden" name="q" value="{{ search_q }}">{% endif %}
+        <div class="col-12 d-grid gap-2"><button class="btn btn-primary" type="submit">Apply filters</button>{% if search_q or current_kind or current_category or current_sort %}<a class="btn btn-outline-secondary" href="{% url 'product_list' %}">Clear all</a>{% endif %}</div>
       </form>
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-        <div class="d-flex flex-wrap gap-2" aria-label="Quick catalog filters">
-          <a class="btn btn-sm {% if not current_kind %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}">All</a>
-          <a class="btn btn-sm {% if current_kind == 'physical' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}?kind=physical">Products</a>
-          <a class="btn btn-sm {% if current_kind == 'service' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'product_list' %}?kind=service">Services</a>
-        </div>
-        {% if search_q or current_kind or current_category or current_sort %}<a class="small" href="{% url 'product_list' %}">Clear filters and sorting</a>{% endif %}
+    </div>
+  </details>
+
+  <div class="public-catalog-layout">
+    <aside class="public-filter-panel" aria-label="Catalogue filters" data-reveal>
+      <div class="public-filter-panel__header"><h2>Browse catalogue</h2>{% if search_q or current_kind or current_category or current_sort %}<a class="small text-decoration-none" href="{% url 'product_list' %}">Reset</a>{% endif %}</div>
+      <div class="public-filter-panel__section">
+        <p class="public-filter-label">Type</p>
+        <nav class="public-filter-options" aria-label="Filter by type">
+          <a class="public-filter-option {% if not current_kind %}is-active{% endif %}" href="{% url 'product_list' %}{% if current_category %}?category={{ current_category|urlencode }}{% endif %}"><span>Everything</span><i class="bi bi-grid" aria-hidden="true"></i></a>
+          <a class="public-filter-option {% if current_kind == 'physical' %}is-active{% endif %}" href="{% url 'product_list' %}?kind=physical{% if current_category %}&amp;category={{ current_category|urlencode }}{% endif %}"><span>Products</span><i class="bi bi-laptop" aria-hidden="true"></i></a>
+          <a class="public-filter-option {% if current_kind == 'service' %}is-active{% endif %}" href="{% url 'product_list' %}?kind=service{% if current_category %}&amp;category={{ current_category|urlencode }}{% endif %}"><span>Services</span><i class="bi bi-tools" aria-hidden="true"></i></a>
+        </nav>
       </div>
-    </div>
-  </div>
+      <div class="public-filter-panel__section">
+        <p class="public-filter-label">Categories</p>
+        <nav class="public-filter-options" aria-label="Filter by category">
+          <a class="public-filter-option {% if not current_category %}is-active{% endif %}" href="{% url 'product_list' %}{% if current_kind %}?kind={{ current_kind|urlencode }}{% endif %}"><span>All categories</span></a>
+          {% for c in categories %}
+          <a class="public-filter-option {% if current_category == c.slug %}is-active{% endif %}" href="{% url 'product_list' %}?category={{ c.slug|urlencode }}{% if current_kind %}&amp;kind={{ current_kind|urlencode }}{% endif %}"><span>{{ c.name }}</span><i class="bi bi-chevron-right small" aria-hidden="true"></i></a>
+          {% endfor %}
+        </nav>
+      </div>
+      <div class="public-filter-panel__section">
+        <p class="public-filter-label">Need guidance?</p>
+        <p class="small text-muted mb-3">Share your budget and intended use. The team can recommend a practical option.</p>
+        <a class="btn btn-outline-primary w-100" href="{% url 'contact' %}">Ask the team</a>
+      </div>
+    </aside>
 
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div>
-      <h2 class="h4 mb-1" id="catalog-filters-heading">{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalog results{% endif %}</h2>
-      <p class="text-muted small mb-0">{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}{% if not current_sort %} · Freshly rotated for discovery{% endif %}</p>
-    </div>
-  </div>
-
-  <div class="row g-3" role="region" aria-labelledby="catalog-heading">
-    {% for p in products %}
-    <div class="col-sm-6 col-lg-4 col-xl-3">
-      <article class="card card-product catalog-card h-100"
-               data-analytics-product-card
-               data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}"
-               data-item-name="{{ p.name }}"
-               data-item-category="{{ p.category.name }}"
-               data-item-price="{% if p.has_sellable_variants and p.min_active_variant_price %}{{ p.min_active_variant_price }}{% else %}{{ p.price }}{% endif %}">
-        <div class="catalog-card-image-wrap">
-          {% if p.primary_display_image %}{% responsive_image p.primary_display_image p.name "card-img-top object-fit-cover catalog-card-image" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 33vw, 25vw" "lazy" "low" %}{% else %}<div class="catalog-card-placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>{% endif %}
-          <span class="catalog-card-badge badge {% if p.kind == 'service' %}badge-kind-service{% else %}badge-kind-product{% endif %}">{% if p.kind == 'service' %}Service{% else %}Product{% endif %}</span>
+    <main class="public-catalog-main" aria-labelledby="catalog-heading">
+      <div class="public-catalog-toolbar" data-reveal>
+        <div class="public-catalog-toolbar__title">
+          <h2>{% if current_kind == 'service' %}Available services{% elif current_kind == 'physical' %}Available products{% else %}Catalogue results{% endif %}</h2>
+          <p>{% if page_obj %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} item{{ paginator.count|pluralize }}{% else %}Browse available products and services{% endif %}{% if not current_sort %} · Rotated for fresh discovery{% endif %}</p>
         </div>
-        <div class="card-body d-flex flex-column">
-          <p class="small text-muted mb-1">{{ p.category.name }}</p>
-          <h3 class="h6 card-title mb-2"><a class="stretched-link text-decoration-none text-dark" data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
-          <p class="small text-muted mb-3">{{ p.short_description|default:p.description|truncatewords:16 }}</p>
-          <div class="mt-auto">
-            <div class="d-flex justify-content-between align-items-end gap-2 mb-2">
-              <p class="fw-semibold mb-0">{% if p.has_sellable_variants and p.min_active_variant_price %}From {{ company.currency_code }} {{ p.min_active_variant_price }}{% else %}{{ company.currency_code }} {{ p.price }}{% endif %}</p>
-              {% if p.has_sellable_variants %}<span class="small text-muted">{{ p.active_variant_count }} option{{ p.active_variant_count|pluralize }}</span>{% endif %}
+        <form method="get" class="public-sort-control">
+          <label for="catalog-sort">Sort by</label>
+          {% if search_q %}<input type="hidden" name="q" value="{{ search_q }}">{% endif %}
+          {% if current_kind %}<input type="hidden" name="kind" value="{{ current_kind }}">{% endif %}
+          {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+          <select id="catalog-sort" name="sort" class="form-select" data-auto-submit>
+            <option value="" {% if not current_sort %}selected{% endif %}>Fresh discovery</option>
+            <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest first</option>
+            <option value="price_low" {% if current_sort == 'price_low' %}selected{% endif %}>Price: low to high</option>
+            <option value="price_high" {% if current_sort == 'price_high' %}selected{% endif %}>Price: high to low</option>
+            <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name: A–Z</option>
+          </select>
+        </form>
+      </div>
+
+      {% if search_q or current_kind or current_category or current_sort %}
+      <div class="public-active-filters" aria-label="Active filters" data-reveal>
+        {% if search_q %}<span class="public-filter-chip"><i class="bi bi-search" aria-hidden="true"></i> “{{ search_q }}”</span>{% endif %}
+        {% if current_kind %}<span class="public-filter-chip"><i class="bi {% if current_kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i> {{ current_kind|title }}</span>{% endif %}
+        {% if current_category %}<span class="public-filter-chip"><i class="bi bi-tag" aria-hidden="true"></i> Category selected</span>{% endif %}
+        {% if current_sort %}<span class="public-filter-chip"><i class="bi bi-sort-down" aria-hidden="true"></i> Custom sorting</span>{% endif %}
+        <a class="public-filter-chip text-decoration-none" href="{% url 'product_list' %}"><i class="bi bi-x-lg" aria-hidden="true"></i> Clear all</a>
+      </div>
+      {% endif %}
+
+      <div class="public-catalog-grid">
+        {% for p in products %}
+        <article class="public-catalog-card" data-reveal data-reveal-delay="{% cycle '1' '2' '3' %}" data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{% if p.has_sellable_variants and p.min_active_variant_price %}{{ p.min_active_variant_price }}{% else %}{{ p.price }}{% endif %}">
+          <div class="public-catalog-card__media">
+            {% if p.primary_display_image %}
+              {% if forloop.first %}{% responsive_image p.primary_display_image p.name "" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 50vw, 33vw" "eager" "high" %}
+              {% else %}{% responsive_image p.primary_display_image p.name "" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 50vw, 33vw" "lazy" "low" %}{% endif %}
+            {% else %}<div class="public-product-card__placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></div>{% endif %}
+            <div class="public-catalog-card__badge-row">
+              <span class="public-catalog-card__type">{% if p.kind == 'service' %}Service{% else %}Product{% endif %}</span>
+              {% if p.kind == 'service' %}<span class="public-catalog-card__stock">Available to book</span>{% elif p.available_to_sell %}<span class="public-catalog-card__stock">In stock</span>{% else %}<span class="public-catalog-card__stock public-catalog-card__stock--muted">Ask availability</span>{% endif %}
             </div>
-            {% if p.kind == 'service' %}<span class="catalog-stock-pill text-primary bg-primary-subtle">Book service</span>{% elif p.available_to_sell %}<span class="catalog-stock-pill text-success bg-success-subtle">In stock</span>{% else %}<span class="catalog-stock-pill text-secondary bg-light">Ask availability</span>{% endif %}
-            {% if p.is_low_stock %}<span class="catalog-stock-pill text-warning bg-warning-subtle ms-1">Low stock</span>{% endif %}
-            {% if p.kind == 'physical' %}<form method="post" action="{% url 'product_compare_toggle' p.pk %}" class="position-relative z-2 mt-3">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-sm {% if p.pk in compare_product_ids %}btn-primary{% else %}btn-outline-primary{% endif %} w-100" aria-pressed="{% if p.pk in compare_product_ids %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>{% if p.pk in compare_product_ids %}Selected for comparison{% else %}Compare{% endif %}</button></form>{% endif %}
           </div>
+          <div class="public-catalog-card__body">
+            <p class="public-catalog-card__category">{{ p.category.name }}</p>
+            <h3><a data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+            <p class="public-catalog-card__copy">{{ p.short_description|default:p.description|truncatewords:18 }}</p>
+            <div class="public-catalog-card__meta">
+              <span class="public-price">{% if p.has_sellable_variants and p.min_active_variant_price %}<small>From</small>{{ company.currency_code }} {{ p.min_active_variant_price|floatformat:0 }}{% else %}{{ company.currency_code }} {{ p.price|floatformat:0 }}{% endif %}</span>
+              <span class="public-catalog-card__options">{% if p.has_sellable_variants %}{{ p.active_variant_count }} option{{ p.active_variant_count|pluralize }}{% elif p.is_low_stock %}<span class="text-warning fw-semibold">Low stock</span>{% endif %}</span>
+            </div>
+            <div class="public-catalog-card__actions">
+              <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+              {% if p.kind == 'physical' %}<form method="post" action="{% url 'product_compare_toggle' p.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn public-compare-button {% if p.pk in compare_product_ids %}btn-primary{% else %}btn-outline-secondary{% endif %}" aria-label="{% if p.pk in compare_product_ids %}Remove {{ p.name }} from comparison{% else %}Add {{ p.name }} to comparison{% endif %}" aria-pressed="{% if p.pk in compare_product_ids %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap" aria-hidden="true"></i></button></form>{% else %}<a class="btn btn-outline-secondary public-compare-button" href="{% url 'contact' %}" aria-label="Ask about {{ p.name }}"><i class="bi bi-chat-dots" aria-hidden="true"></i></a>{% endif %}
+            </div>
+          </div>
+        </article>
+        {% empty %}
+        <div class="public-catalog-empty" data-reveal>
+          <span class="public-catalog-empty__icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+          <h2 class="h4 fw-bold">No matching items found</h2>
+          <p class="text-muted mb-4">Try a shorter search, choose a broader category, or ask the team for a custom recommendation.</p>
+          <div class="d-flex justify-content-center gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Clear filters</a><a class="btn btn-primary" href="{% url 'contact' %}">Ask the team</a></div>
         </div>
-      </article>
-    </div>
-    {% empty %}
-    <div class="col-12"><div class="catalog-empty card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-search display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No matching items found</h2><p class="text-muted mb-4">Try a different search, remove filters, or contact the team for a custom quote.</p><div class="d-flex justify-content-center gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Clear filters</a><a class="btn btn-primary" href="{% url 'contact' %}">Request support</a></div></div></div></div>
-    {% endfor %}
-  </div>
+        {% endfor %}
+      </div>
 
-  {% if is_paginated %}<nav class="mt-4" aria-label="Catalog pagination"><ul class="pagination justify-content-center">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&kind={{ current_kind|urlencode }}&category={{ current_category|urlencode }}&q={{ search_q|urlencode }}&sort={{ current_sort|urlencode }}{% if rotation_seed %}&view={{ rotation_seed }}{% endif %}" aria-label="Go to previous page">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link" aria-current="true">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&kind={{ current_kind|urlencode }}&category={{ current_category|urlencode }}&q={{ search_q|urlencode }}&sort={{ current_sort|urlencode }}{% if rotation_seed %}&view={{ rotation_seed }}{% endif %}" aria-label="Go to next page">Next</a></li>{% endif %}</ul></nav>{% endif %}
+      {% if compare_count %}<div class="public-compare-dock" data-reveal><p><strong>{{ compare_count }} product{{ compare_count|pluralize }}</strong> selected for side-by-side comparison.</p><a class="btn btn-light" href="{% url 'product_compare' %}">Compare now <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a></div>{% endif %}
+
+      {% if is_paginated %}
+      <nav class="mt-4 public-pagination" aria-label="Catalogue pagination">
+        <ul class="pagination justify-content-center gap-1">
+          {% if page_obj.has_previous %}<li class="page-item"><a class="page-link rounded" href="?page=1&amp;kind={{ current_kind|urlencode }}&amp;category={{ current_category|urlencode }}&amp;q={{ search_q|urlencode }}&amp;sort={{ current_sort|urlencode }}{% if rotation_seed %}&amp;view={{ rotation_seed }}{% endif %}" aria-label="First page"><i class="bi bi-chevron-double-left" aria-hidden="true"></i></a></li><li class="page-item"><a class="page-link rounded px-3" href="?page={{ page_obj.previous_page_number }}&amp;kind={{ current_kind|urlencode }}&amp;category={{ current_category|urlencode }}&amp;q={{ search_q|urlencode }}&amp;sort={{ current_sort|urlencode }}{% if rotation_seed %}&amp;view={{ rotation_seed }}{% endif %}">Previous</a></li>{% endif %}
+          <li class="page-item active"><span class="page-link rounded" aria-current="page">{{ page_obj.number }}</span></li>
+          {% if page_obj.has_next %}<li class="page-item"><a class="page-link rounded px-3" href="?page={{ page_obj.next_page_number }}&amp;kind={{ current_kind|urlencode }}&amp;category={{ current_category|urlencode }}&amp;q={{ search_q|urlencode }}&amp;sort={{ current_sort|urlencode }}{% if rotation_seed %}&amp;view={{ rotation_seed }}{% endif %}">Next</a></li><li class="page-item"><a class="page-link rounded" href="?page={{ paginator.num_pages }}&amp;kind={{ current_kind|urlencode }}&amp;category={{ current_category|urlencode }}&amp;q={{ search_q|urlencode }}&amp;sort={{ current_sort|urlencode }}{% if rotation_seed %}&amp;view={{ rotation_seed }}{% endif %}" aria-label="Last page"><i class="bi bi-chevron-double-right" aria-hidden="true"></i></a></li>{% endif %}
+        </ul>
+        <p class="text-center small text-muted mb-0">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
+      </nav>
+      {% endif %}
+    </main>
+  </div>
 </div>
 {% endblock %}

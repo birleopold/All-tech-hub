@@ -1,31 +1,195 @@
 {% extends "base.html" %}
 {% load catalog_images %}
-{% block title %}{{ company.company_name|default:"ALLTECH Hub" }} — Technology, repairs and support{% endblock %}
+{% block title %}{{ company.company_name|default:"LEOSOFT UG LTD" }} — Technology, repairs and business IT support{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body public-home-page{% endblock %}
+{% block meta %}
+<meta name="description" content="Buy dependable computers and accessories, book repairs and installations, and get professional IT support from {{ company.company_name|default:'LEOSOFT UG LTD' }}.">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="{{ company.company_name }} — Technology that works for you">
+<meta property="og:description" content="Products, repairs, installations and dependable IT support for homes, schools and businesses.">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% if company.logo %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url }}">{% endif %}
+<meta name="twitter:card" content="{% if company.logo %}summary_large_image{% else %}summary{% endif %}">
+{% endblock %}
 {% block content %}
-<section class="home-hero mb-5">
-  <div class="container py-5">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-7">
-        <p class="text-uppercase small text-white-50 mb-2">IT support · devices · repairs · installations</p>
-        <h1 class="display-5 fw-bold mb-3">{{ company.tagline|default:"Reliable technology for your business and home." }}</h1>
-        <p class="lead text-white-75 col-lg-10 mb-4">Buy quality devices, request repairs, book installations, and receive clear business documents from quotation to receipt.</p>
-        <div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-light btn-lg" href="{% url 'product_list' %}">Browse shop</a><a class="btn btn-outline-light btn-lg" href="{% url 'contact' %}">Request support</a></div>
-        <div class="row g-3 text-white-75 small"><div class="col-6 col-md-4"><strong class="d-block text-white">Documented</strong>Quotes, invoices and receipts</div><div class="col-6 col-md-4"><strong class="d-block text-white">Practical</strong>Repairs, setup and support</div><div class="col-12 col-md-4"><strong class="d-block text-white">Business-ready</strong>Products and services together</div></div>
+<section class="public-hero">
+  <div class="container public-hero__inner">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-7" data-reveal>
+        <p class="public-eyebrow">Technology for work, learning and growth</p>
+        <h1 class="public-hero__title">{{ company.tagline|default:"Technology that works for you." }}</h1>
+        <p class="public-hero__lead">Choose dependable devices, book skilled technical support, and manage every purchase or service through one professional team—from first enquiry to final receipt.</p>
+        <div class="public-hero__actions">
+          <a class="public-btn-primary text-decoration-none" href="{% url 'product_list' %}">Explore the catalogue <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+          <a class="public-btn-ghost text-decoration-none" href="{% url 'product_list' %}?kind=service">View professional services</a>
+        </div>
+        <div class="public-trust-row" aria-label="Service commitments">
+          <span><i class="bi bi-shield-check" aria-hidden="true"></i> Clear documentation</span>
+          <span><i class="bi bi-headset" aria-hidden="true"></i> Human after-sales support</span>
+          <span><i class="bi bi-tools" aria-hidden="true"></i> Sales and service together</span>
+        </div>
       </div>
-      <div class="col-lg-5"><div class="home-hero-panel card border-0 shadow-lg"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-2">Quick service desk</p><h2 class="h4 mb-3">What do you need today?</h2><div class="d-grid gap-2"><a class="btn btn-outline-primary text-start" href="{% url 'product_list' %}"><i class="bi bi-laptop me-2" aria-hidden="true"></i> Buy devices or accessories</a><a class="btn btn-outline-primary text-start" href="{% url 'contact' %}"><i class="bi bi-tools me-2" aria-hidden="true"></i> Book a repair or installation</a><a class="btn btn-outline-primary text-start" href="{% url 'contact' %}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i> Request a formal quote</a></div><hr><p class="small text-muted mb-0">Send your request and the team will guide you on price, availability and next steps.</p></div></div></div>
+      <div class="col-lg-5" data-reveal data-reveal-delay="2">
+        <div class="public-solution-panel">
+          <div class="public-solution-panel__top">
+            <div>
+              <p class="public-kicker mb-1">LEOSOFT service desk</p>
+              <h2 class="h4 fw-bold mb-0">How can we help today?</h2>
+            </div>
+            <span class="public-solution-panel__status">Ready to assist</span>
+          </div>
+          <div class="public-solution-list">
+            <a class="public-solution-link" href="{% url 'product_list' %}?kind=physical">
+              <span class="public-solution-link__main"><span class="public-solution-link__icon"><i class="bi bi-laptop" aria-hidden="true"></i></span><span><strong>Buy devices and accessories</strong><small>Computers, components and everyday technology</small></span></span>
+              <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </a>
+            <a class="public-solution-link" href="{% url 'product_list' %}?kind=service">
+              <span class="public-solution-link__main"><span class="public-solution-link__icon"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i></span><span><strong>Book repair or installation</strong><small>Diagnostics, setup, networking and support</small></span></span>
+              <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </a>
+            <a class="public-solution-link" href="{% url 'contact' %}">
+              <span class="public-solution-link__main"><span class="public-solution-link__icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><span><strong>Request a formal quotation</strong><small>Clear scope, pricing and next steps</small></span></span>
+              <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="container">
-  <section class="mb-5"><div class="row g-3"><div class="col-md-4"><div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><h2 class="h5 mt-3">Reliable process</h2><p class="text-muted mb-0">Requests can be handled with proper records, quotation, invoice, receipt and follow-up.</p></div></div></div><div class="col-md-4"><div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span><h2 class="h5 mt-3">Products and services</h2><p class="text-muted mb-0">Buy equipment, then request setup, repair, software or networking support from one team.</p></div></div></div><div class="col-md-4"><div class="home-feature-card card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><h2 class="h5 mt-3">Human support</h2><p class="text-muted mb-0">Get guidance before buying, after-sales support, and clear communication on service work.</p></div></div></div></div></section>
+{% if catalog_categories %}
+<section class="public-section public-section--compact">
+  <div class="container">
+    <div class="public-section-heading" data-reveal>
+      <div class="public-section-heading__copy">
+        <p class="public-kicker">Browse by need</p>
+        <h2 class="public-section-title">Find the right technology faster</h2>
+        <p class="public-section-intro">Start with a category, compare practical options, and speak to the team when you need guidance.</p>
+      </div>
+      <a class="public-text-link" href="{% url 'product_list' %}">View full catalogue <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="public-category-grid">
+      {% for category in catalog_categories %}
+      <a class="public-category-card" data-reveal data-reveal-delay="{% cycle '1' '2' '3' %}" href="{% url 'product_list' %}?category={{ category.slug|urlencode }}">
+        <span class="public-category-card__count">{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</span>
+        <span class="public-category-card__icon">
+          {% if forloop.counter == 1 %}<i class="bi bi-laptop" aria-hidden="true"></i>
+          {% elif forloop.counter == 2 %}<i class="bi bi-pc-display" aria-hidden="true"></i>
+          {% elif forloop.counter == 3 %}<i class="bi bi-router" aria-hidden="true"></i>
+          {% elif forloop.counter == 4 %}<i class="bi bi-camera-video" aria-hidden="true"></i>
+          {% elif forloop.counter == 5 %}<i class="bi bi-printer" aria-hidden="true"></i>
+          {% else %}<i class="bi bi-grid" aria-hidden="true"></i>{% endif %}
+        </span>
+        <h3>{{ category.name }}</h3>
+        <p>{{ category.description|default:"Explore available products, options and related support."|truncatewords:18 }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 
-  {% if featured_services %}<section class="mb-5"><div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Professional services</p><h2 class="h3 mb-0">Featured services</h2></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}?kind=service">View services</a></div><div class="row g-3">{% for p in featured_services %}<div class="col-md-4"><div class="card card-product home-service-card h-100"><div class="card-body"><span class="badge badge-kind-service mb-2">Service</span><h3 class="h5 card-title">{{ p.name }}</h3><p class="card-text text-muted">{{ p.short_description|default:p.description|truncatewords:24 }}</p><p class="fw-semibold mb-0">{{ company.currency_code }} {{ p.price }}</p><a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a></div></div></div>{% endfor %}</div></section>{% endif %}
+<section class="public-section--compact">
+  <div class="container">
+    <div class="public-stat-strip" data-reveal>
+      <div class="public-stat"><strong>{{ catalog_stats.products|default:0 }}</strong><span>Published products and devices</span></div>
+      <div class="public-stat"><strong>{{ catalog_stats.services|default:0 }}</strong><span>Professional services available</span></div>
+      <div class="public-stat"><strong>1</strong><span>Connected team from enquiry to after-sales</span></div>
+    </div>
+  </div>
+</section>
 
-  <section class="home-process card border-0 shadow-sm mb-5"><div class="card-body p-4 p-lg-5"><div class="row g-4 align-items-center"><div class="col-lg-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Simple workflow</p><h2 class="h3 mb-2">From request to receipt</h2><p class="text-muted mb-0">A clear process builds confidence and keeps every job organised.</p></div><div class="col-lg-8"><div class="row g-3"><div class="col-md-4"><div class="home-step"><span>1</span><strong>Request</strong><p>Choose an item or ask for support.</p></div></div><div class="col-md-4"><div class="home-step"><span>2</span><strong>Quote</strong><p>Receive a clear price and scope.</p></div></div><div class="col-md-4"><div class="home-step"><span>3</span><strong>Deliver</strong><p>Get the product or service documented.</p></div></div></div></div></div></div></section>
+{% if featured_products %}
+<section class="public-section">
+  <div class="container">
+    <div class="public-section-heading" data-reveal>
+      <div class="public-section-heading__copy">
+        <p class="public-kicker">Selected for you</p>
+        <h2 class="public-section-title">Featured technology</h2>
+        <p class="public-section-intro">A rotating selection of useful devices and accessories currently published in our catalogue.</p>
+      </div>
+      <a class="public-text-link" href="{% url 'product_list' %}?kind=physical">Shop all products <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="public-product-grid">
+      {% for p in featured_products %}
+      <article class="public-product-card" data-reveal data-reveal-delay="{% cycle '1' '2' '3' '4' %}">
+        <div class="public-product-card__media">
+          {% if p.primary_display_image %}
+            {% if forloop.first %}{% responsive_image p.primary_display_image p.name "" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 33vw, 25vw" "eager" "high" %}
+            {% else %}{% responsive_image p.primary_display_image p.name "" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, (max-width: 1199px) 33vw, 25vw" "lazy" "low" %}{% endif %}
+          {% else %}<div class="public-product-card__placeholder"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}
+          <span class="public-product-card__badge">Product</span>
+        </div>
+        <div class="public-product-card__body">
+          <p class="public-product-card__category">{{ p.category.name }}</p>
+          <h3 class="public-product-card__title"><a href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+          <p class="public-product-card__description">{{ p.short_description|default:p.description|truncatewords:18 }}</p>
+          <div class="public-product-card__footer">
+            <span class="public-price">{% if p.has_sellable_variants and p.min_active_variant_price %}<small>From</small>{{ company.currency_code }} {{ p.min_active_variant_price|floatformat:0 }}{% else %}{{ company.currency_code }} {{ p.price|floatformat:0 }}{% endif %}</span>
+            <a class="public-card-arrow" href="{{ p.get_absolute_url }}" aria-label="View {{ p.name }}"><i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 
-  {% if featured_products %}<section class="mb-5"><div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Shop highlights</p><h2 class="h3 mb-0">Popular products</h2></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}">View shop</a></div><div class="row g-3">{% for p in featured_products %}<div class="col-6 col-md-3"><div class="card card-product h-100">{% if p.primary_display_image %}{% responsive_image p.primary_display_image p.name "card-img-top object-fit-cover home-product-image" "(max-width: 767px) 50vw, 25vw" "lazy" "low" %}{% else %}<div class="home-product-placeholder"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}<div class="card-body"><span class="badge badge-kind-product mb-2">Product</span><h3 class="h6 card-title">{{ p.name }}</h3><p class="fw-semibold mb-0">{% if p.has_sellable_variants and p.min_active_variant_price %}From {{ company.currency_code }} {{ p.min_active_variant_price }}{% else %}{{ company.currency_code }} {{ p.price }}{% endif %}</p><a class="stretched-link" href="{{ p.get_absolute_url }}"><span class="visually-hidden">View {{ p.name }} details</span></a></div></div></div>{% endfor %}</div></section>{% endif %}
+{% if featured_services %}
+<section class="public-section public-section--surface">
+  <div class="container">
+    <div class="public-section-heading" data-reveal>
+      <div class="public-section-heading__copy">
+        <p class="public-kicker">Skilled technical support</p>
+        <h2 class="public-section-title">Services built around real needs</h2>
+        <p class="public-section-intro">From one computer to a complete workplace setup, every request can be scoped, documented and followed through professionally.</p>
+      </div>
+      <a class="public-text-link" href="{% url 'product_list' %}?kind=service">Explore all services <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="public-service-grid">
+      {% for p in featured_services %}
+      <a class="public-service-card" data-reveal data-reveal-delay="{% cycle '1' '2' '3' %}" href="{{ p.get_absolute_url }}">
+        <span class="public-service-card__icon">
+          {% if forloop.counter == 1 %}<i class="bi bi-tools" aria-hidden="true"></i>{% elif forloop.counter == 2 %}<i class="bi bi-router" aria-hidden="true"></i>{% elif forloop.counter == 3 %}<i class="bi bi-shield-check" aria-hidden="true"></i>{% else %}<i class="bi bi-gear" aria-hidden="true"></i>{% endif %}
+        </span>
+        <h3>{{ p.name }}</h3>
+        <p>{{ p.short_description|default:p.description|truncatewords:24 }}</p>
+        <span class="public-service-card__meta"><span>From {{ company.currency_code }} {{ p.price|floatformat:0 }}</span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 
-  <section class="home-cta card border-0 shadow-sm mb-5"><div class="card-body p-4 p-lg-5 d-flex justify-content-between align-items-center flex-wrap gap-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Need help choosing?</p><h2 class="h3 mb-1">Talk to the team before you buy or book.</h2><p class="text-muted mb-0">Get guidance on the right product, repair, installation or support service.</p></div><a class="btn btn-primary btn-lg" href="{% url 'contact' %}">Contact us</a></div></section>
-</div>
+<section class="public-section">
+  <div class="container">
+    <div class="public-section-heading" data-reveal>
+      <div class="public-section-heading__copy">
+        <p class="public-kicker">A clear working process</p>
+        <h2 class="public-section-title">Professional from request to completion</h2>
+        <p class="public-section-intro">You always know what is being supplied, what it costs and what happens next.</p>
+      </div>
+    </div>
+    <div class="public-process-grid" data-reveal>
+      <div class="public-process-step"><span class="public-process-step__number">01</span><h3>Tell us what you need</h3><p>Browse the catalogue or send the team a clear product or support request.</p></div>
+      <div class="public-process-step"><span class="public-process-step__number">02</span><h3>Confirm the right solution</h3><p>We clarify specifications, availability, scope and practical alternatives.</p></div>
+      <div class="public-process-step"><span class="public-process-step__number">03</span><h3>Receive clear documentation</h3><p>Quotations, invoices and receipts keep purchases and service work organised.</p></div>
+      <div class="public-process-step"><span class="public-process-step__number">04</span><h3>Get delivery and support</h3><p>Complete the purchase or service with follow-up when further help is needed.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="public-section--compact pb-5">
+  <div class="container">
+    <div class="public-cta" data-reveal>
+      <div><p class="public-eyebrow mb-2">Need a recommendation?</p><h2>Make the next technology decision with confidence.</h2><p>Tell us your budget, purpose and preferred specifications. The team will help narrow the options.</p></div>
+      <a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}">Talk to the team <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+  </div>
+</section>
 {% endblock %}
