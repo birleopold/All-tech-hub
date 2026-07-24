@@ -1,58 +1,35 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}Stock takes{% endblock %}
+{% block staff_page_name %}Stock takes{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Stock takes / cycle counts</h1>
-  <a class="btn btn-outline-secondary btn-sm" href="{% url 'staff_inventory' %}">Back to inventory</a>
-</div>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Inventory control</p><h1>Stock takes and cycle counts</h1><p>Compare physical quantities with system stock and post controlled variance adjustments.</p></div>
+    <div class="staff-page-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Inventory</a></div>
+  </header>
 
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <form method="post" action="{% url 'staff_stocktake_create' %}" class="row g-2 align-items-end">
-      {% csrf_token %}
-      <div class="col-md-5">
-        <label class="form-label small">Name</label>
-        <input name="name" class="form-control" placeholder="e.g. May cycle count — laptops" />
-      </div>
-      <div class="col-md-5">
-        <label class="form-label small">Note (optional)</label>
-        <input name="note" class="form-control" />
-      </div>
-      <div class="col-md-2 d-grid">
-        <button type="submit" class="btn btn-primary">Start new</button>
-      </div>
-    </form>
+  <div class="staff-summary-grid">
+    <div class="staff-summary-card"><span class="staff-summary-icon"><i class="bi bi-clipboard-data" aria-hidden="true"></i></span><span><small>All stock takes</small><strong>{{ stocktake_stats.total }}</strong></span></div>
+    <div class="staff-summary-card staff-summary-card--amber"><span class="staff-summary-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span><span><small>Open counts</small><strong>{{ stocktake_stats.open }}</strong></span></div>
+    <div class="staff-summary-card staff-summary-card--green"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Posted counts</small><strong>{{ stocktake_stats.posted }}</strong></span></div>
   </div>
-</div>
 
-<div class="card border-0 shadow-sm">
-  <div class="table-responsive">
-    <table class="table mb-0 align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Reference</th>
-          <th>Name</th>
-          <th>Status</th>
-          <th>Lines</th>
-          <th>Created</th>
-          <th>Posted</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for take in takes %}
-        <tr>
-          <td><a href="{% url 'staff_stocktake_detail' take.pk %}">{{ take.reference }}</a></td>
-          <td>{{ take.name|default:"—" }}</td>
-          <td><span class="badge text-bg-{% if take.status == 'open' %}warning{% elif take.status == 'posted' %}success{% else %}secondary{% endif %}">{{ take.get_status_display }}</span></td>
-          <td>{{ take.lines.count }}</td>
-          <td class="small">{{ take.created_at|date:"Y-m-d H:i" }}<br><span class="text-muted">{{ take.created_by|default:"—" }}</span></td>
-          <td class="small">{{ take.posted_at|date:"Y-m-d H:i"|default:"—" }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" class="text-center text-muted py-4">No stock takes yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <article class="staff-section-card">
+    <header class="staff-section-card-header"><div><h2>Start a new stock take</h2><p>Name the counting session and add an optional note for the team.</p></div><i class="bi bi-plus-square text-muted" aria-hidden="true"></i></header>
+    <div class="staff-section-card-body"><form method="post" action="{% url 'staff_stocktake_create' %}" class="row g-3 align-items-end">{% csrf_token %}<div class="col-md-5"><label class="form-label small fw-semibold" for="stocktake-name">Name</label><input id="stocktake-name" name="name" class="form-control" placeholder="For example: July laptop cycle count"></div><div class="col-md-5"><label class="form-label small fw-semibold" for="stocktake-note">Note</label><input id="stocktake-note" name="note" class="form-control" placeholder="Optional instructions or location"></div><div class="col-md-2 d-grid"><button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Start count</button></div></form></div>
+  </article>
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header"><div><h2>Counting history</h2><p>Open and completed inventory checks</p></div></div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Reference</th><th>Name</th><th>Status</th><th class="text-end">Lines</th><th>Created</th><th>Posted</th><th class="text-end"><span class="visually-hidden">Open</span></th></tr></thead>
+        <tbody>{% for take in takes %}<tr><td><a class="staff-record-link" href="{% url 'staff_stocktake_detail' take.pk %}">{{ take.reference }}</a></td><td>{{ take.name|default:"Untitled count" }}{% if take.note %}<small class="d-block text-muted">{{ take.note|truncatechars:60 }}</small>{% endif %}</td><td><span class="staff-status-pill staff-status-pill--{{ take.status|staff_status_tone }}">{{ take.get_status_display }}</span></td><td class="text-end fw-semibold">{{ take.lines.count }}</td><td>{{ take.created_at|date:"M j, Y H:i" }}<small class="d-block text-muted">{{ take.created_by|default:"System" }}</small></td><td>{% if take.posted_at %}{{ take.posted_at|date:"M j, Y H:i" }}{% else %}<span class="text-muted">—</span>{% endif %}</td><td class="text-end"><a class="staff-row-action" href="{% url 'staff_stocktake_detail' take.pk %}" aria-label="Open stock take {{ take.reference }}"><i class="bi bi-chevron-right" aria-hidden="true"></i></a></td></tr>{% empty %}<tr><td colspan="7"><div class="staff-empty-state"><i class="bi bi-clipboard" aria-hidden="true"></i><strong>No stock takes yet</strong><span>Start a cycle count using the form above.</span></div></td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
   </div>
-</div>
+
+  {% if is_paginated %}<nav class="staff-pagination" aria-label="Stock take pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
+</section>
 {% endblock %}

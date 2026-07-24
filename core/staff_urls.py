@@ -1,6 +1,6 @@
 from django.urls import path
 
-from core import private_views, staff_views
+from core import private_views, staff_views, staff_workspace_views
 
 urlpatterns = [
     path("search/", staff_views.StaffGlobalSearchView.as_view(), name="staff_search"),
@@ -9,8 +9,12 @@ urlpatterns = [
         staff_views.SecurityDiagnosticsView.as_view(),
         name="staff_security_diagnostics",
     ),
-    path("audit/", staff_views.AuditEventListView.as_view(), name="staff_audit_log"),
-    path("tickets/", staff_views.SupportTicketListView.as_view(), name="staff_tickets"),
+    path("audit/", staff_workspace_views.AuditWorkspaceListView.as_view(), name="staff_audit_log"),
+    path(
+        "tickets/",
+        staff_workspace_views.SupportTicketWorkspaceListView.as_view(),
+        name="staff_tickets",
+    ),
     path("tickets/new/", staff_views.SupportTicketCreateView.as_view(), name="staff_ticket_create"),
     path("tickets/<int:pk>/", staff_views.SupportTicketDetailView.as_view(), name="staff_ticket_detail"),
     path("tickets/<int:pk>/edit/", staff_views.SupportTicketUpdateView.as_view(), name="staff_ticket_edit"),
@@ -24,7 +28,11 @@ urlpatterns = [
         private_views.staff_ticket_attachment,
         name="staff_ticket_attachment",
     ),
-    path("notifications/", staff_views.StaffNotificationListView.as_view(), name="staff_notifications"),
+    path(
+        "notifications/",
+        staff_workspace_views.StaffNotificationWorkspaceListView.as_view(),
+        name="staff_notifications",
+    ),
     path(
         "notifications/<int:pk>/go/",
         staff_views.StaffNotificationGoView.as_view(),
@@ -41,7 +49,11 @@ urlpatterns = [
         staff_views.DeleteStaffSearchView.as_view(),
         name="staff_delete_saved_search",
     ),
-    path("contact/", staff_views.ContactMessageListView.as_view(), name="staff_contact_messages"),
+    path(
+        "contact/",
+        staff_workspace_views.ContactMessageWorkspaceListView.as_view(),
+        name="staff_contact_messages",
+    ),
     path(
         "contact/<int:pk>/toggle/",
         staff_views.ContactMessageToggleView.as_view(),

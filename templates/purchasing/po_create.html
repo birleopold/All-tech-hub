@@ -1,17 +1,22 @@
 {% extends "staff_base.html" %}
-{% block title %}New PO{% endblock %}
+{% block title %}New purchase order{% endblock %}
+{% block staff_page_name %}New purchase order{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">New purchase order</h1>
-<form method="post" class="card border-0 shadow-sm p-4">
-  {% csrf_token %}
-  {% for field in form %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field.errors }}{{ field }}
-  </div>
-  {% endfor %}
-  <button type="submit" class="btn btn-primary">Create &amp; continue</button>
-  <a class="btn btn-link" href="{% url 'staff_purchasing' %}">Cancel</a>
-</form>
-{% endblock %}
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Purchasing</p><h1>New purchase order</h1><p>Create the supplier order header first, then add products and quantities.</p></div>
+    <div class="staff-detail-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_purchasing' %}"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</a></div>
+  </header>
 
+  <form method="post" class="staff-form-shell" novalidate>
+    {% csrf_token %}
+    <div class="staff-form-shell-body">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="staff-form-grid">
+        {% for field in form %}<div class="staff-form-field{% if field.name == 'notes' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}
+      </div>
+    </div>
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-arrow-right-circle me-1" aria-hidden="true"></i>After creation, you will add line items on the next screen.</span><div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_purchasing' %}">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Create and continue</button></div></footer>
+  </form>
+</section>
+{% endblock %}

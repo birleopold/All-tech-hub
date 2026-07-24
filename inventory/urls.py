@@ -1,8 +1,8 @@
 from django.urls import path
 
 from inventory import views
+from inventory.catalog_workspace_views import ProductWorkspaceListView, StockTakeWorkspaceListView
 from inventory.inventory_home_view import StaffInventoryHomeView
-from inventory.product_list_view import ProductManageListView
 
 urlpatterns = [
     path("inventory/", StaffInventoryHomeView.as_view(), name="staff_inventory"),
@@ -22,12 +22,12 @@ urlpatterns = [
         views.job_record_part_usage,
         name="staff_job_stock_use",
     ),
-    path("inventory/products/", ProductManageListView.as_view(), name="staff_products"),
+    path("inventory/products/", ProductWorkspaceListView.as_view(), name="staff_products"),
     path("inventory/products/new/", views.ProductCreateView.as_view(), name="staff_product_create"),
     path("inventory/products/<int:pk>/", views.ProductUpdateView.as_view(), name="staff_product_edit"),
     path("inventory/products/<int:pk>/labels/", views.product_label_sheet, name="staff_product_labels"),
     path("inventory/serials/<int:pk>/labels/", views.serial_label_sheet, name="staff_serial_labels"),
-    path("inventory/stocktake/", views.StockTakeListView.as_view(), name="staff_stocktakes"),
+    path("inventory/stocktake/", StockTakeWorkspaceListView.as_view(), name="staff_stocktakes"),
     path("inventory/stocktake/new/", views.stocktake_create, name="staff_stocktake_create"),
     path("inventory/stocktake/<int:pk>/", views.StockTakeDetailView.as_view(), name="staff_stocktake_detail"),
     path("inventory/stocktake/<int:pk>/labels/", views.stocktake_label_sheet, name="staff_stocktake_labels"),

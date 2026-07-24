@@ -1,20 +1,22 @@
 {% extends "staff_base.html" %}
 {% block title %}{{ title }}{% endblock %}
+{% block staff_page_name %}Compose email{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">{{ title }}</h1>
-<form method="post" class="card border-0 shadow-sm p-4 col-lg-7">
-  {% csrf_token %}
-  {% for field in form %}
-  <div class="mb-3">
-    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-    {{ field.errors }}{{ field }}
-    {% if field.name == 'attach_pdf' %}
-    <div class="form-text">Attach a PDF copy.</div>
-    {% endif %}
-  </div>
-  {% endfor %}
-  <button type="submit" class="btn btn-primary">Send</button>
-  <a class="btn btn-link" href="javascript:history.back()">Cancel</a>
-</form>
-{% endblock %}
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Customer communication</p><h1>{{ title }}</h1><p>Review the recipient, subject, message and attachment before sending.</p></div>
+    <div class="staff-detail-actions"><button type="button" class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</button></div>
+  </header>
 
+  <form method="post" class="staff-form-shell" novalidate>
+    {% csrf_token %}
+    <div class="staff-form-shell-body">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="staff-form-grid">
+        {% for field in form %}<div class="staff-form-field{% if field.name == 'body' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.name == 'attach_pdf' %}<span class="helptext">Attach the relevant PDF copy to this email.</span>{% elif field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}
+      </div>
+    </div>
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>The delivery attempt and evidence will be recorded in the email activity log.</span><div class="staff-form-footer-actions"><button type="button" class="btn btn-outline-secondary" onclick="history.back()">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-send me-1" aria-hidden="true"></i>Send email</button></div></footer>
+  </form>
+</section>
+{% endblock %}

@@ -1,33 +1,41 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}Purchasing{% endblock %}
+{% block staff_page_name %}Purchasing{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <h1 class="h3 mb-0">Purchasing</h1>
-  <a class="btn btn-primary" href="{% url 'staff_po_create' %}">New purchase order</a>
-</div>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Inventory supply</p><h1>Purchasing</h1><p>Plan supplier orders, monitor expected stock and receive goods into inventory.</p></div>
+    <div class="staff-page-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}"><i class="bi bi-box-seam me-1" aria-hidden="true"></i>Inventory</a><a class="btn btn-primary" href="{% url 'staff_po_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New purchase order</a></div>
+  </header>
 
-<h2 class="h6 text-muted text-uppercase">Recent purchase orders</h2>
-<div class="table-responsive card border-0 shadow-sm">
-  <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>PO #</th><th>Supplier</th><th>Status</th><th>Date</th><th></th></tr></thead>
-    <tbody>
-      {% for po in recent_pos %}
-      <tr>
-        <td><a href="{% url 'staff_po_edit' po.pk %}">{{ po.number }}</a></td>
-        <td>{{ po.supplier.name }}</td>
-        <td>{{ po.get_status_display }}</td>
-        <td>{{ po.ordered_on }}</td>
-        <td class="text-end">
-          <form method="post" action="{% url 'staff_po_receive' po.pk %}" class="d-inline">{% csrf_token %}
-            <button class="btn btn-sm btn-outline-success" type="submit">Receive remaining</button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5" class="text-muted">No purchase orders yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <div class="staff-summary-grid">
+    <div class="staff-summary-card"><span class="staff-summary-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span><span><small>All purchase orders</small><strong>{{ purchase_stats.total }}</strong></span></div>
+    <div class="staff-summary-card"><span class="staff-summary-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span><span><small>Drafts</small><strong>{{ purchase_stats.draft }}</strong></span></div>
+    <div class="staff-summary-card staff-summary-card--amber"><span class="staff-summary-icon"><i class="bi bi-truck" aria-hidden="true"></i></span><span><small>Awaiting stock</small><strong>{{ purchase_stats.awaiting }}</strong></span></div>
+    <div class="staff-summary-card staff-summary-card--green"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Received</small><strong>{{ purchase_stats.received }}</strong></span></div>
+  </div>
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header"><div><h2>Recent purchase orders</h2><p>{{ supplier_count }} supplier{{ supplier_count|pluralize }} in the purchasing database</p></div><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_po_create' %}">Create PO</a></div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Purchase order</th><th>Supplier</th><th>Status</th><th>Ordered</th><th>Expected</th><th class="text-end">Ordered value</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for po in recent_pos %}
+          <tr>
+            <td><a class="staff-record-link" href="{% url 'staff_po_edit' po.pk %}">{{ po.number }}</a></td>
+            <td><strong>{{ po.supplier.name }}</strong></td>
+            <td><span class="staff-status-pill staff-status-pill--{{ po.status|staff_status_tone }}">{{ po.get_status_display }}</span></td>
+            <td>{{ po.ordered_on|date:"M j, Y" }}</td>
+            <td>{% if po.expected_on %}{{ po.expected_on|date:"M j, Y" }}{% else %}<span class="text-muted">Not set</span>{% endif %}</td>
+            <td class="text-end fw-semibold">{{ company.currency_code }} {{ po.total_ordered_value|floatformat:2 }}</td>
+            <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_po_edit' po.pk %}">Open</a>{% if po.status != 'received' and po.status != 'cancelled' %}<form method="post" action="{% url 'staff_po_receive' po.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit">Receive</button></form>{% endif %}</td>
+          </tr>
+          {% empty %}<tr><td colspan="7"><div class="staff-empty-state"><i class="bi bi-cart-plus" aria-hidden="true"></i><strong>No purchase orders yet</strong><span>Create the first PO to begin tracking incoming stock.</span></div></td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 {% endblock %}
-

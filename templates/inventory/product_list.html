@@ -1,126 +1,53 @@
 {% extends "staff_base.html" %}
 {% block title %}Products{% endblock %}
+{% block staff_page_name %}Products{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h3 mb-0">Products</h1>
-    <p class="text-muted small mb-0">
-      {% if is_paginated %}
-      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} products
-      {% else %}
-      {{ products|length }} product{{ products|length|pluralize }}
-      {% endif %}
-    </p>
-  </div>
-  <a class="btn btn-primary" href="{% url 'staff_product_create' %}">New product</a>
-</div>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Inventory catalogue</p><h1>Products and services</h1><p>Manage pricing, publication, stock tracking, variants and product labels.</p></div>
+    <div class="staff-page-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}"><i class="bi bi-box-seam me-1" aria-hidden="true"></i>Inventory</a><a class="btn btn-primary" href="{% url 'staff_product_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New product</a></div>
+  </header>
 
-<form method="get" class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <div class="row g-3 align-items-end">
-      <div class="col-lg-4 col-md-6">
-        <label class="form-label small fw-semibold" for="product-search">Search</label>
-        <input class="form-control" id="product-search" type="search" name="q" value="{{ q }}" placeholder="Name, SKU, category…">
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <label class="form-label small fw-semibold" for="product-category">Category</label>
-        <select class="form-select" id="product-category" name="category">
-          <option value="">All categories</option>
-          {% for category in categories %}
-          <option value="{{ category.slug }}"{% if selected_category == category.slug %} selected{% endif %}>{{ category }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <label class="form-label small fw-semibold" for="product-sort">Sort by</label>
-        <select class="form-select" id="product-sort" name="sort">
-          {% for value, label in sort_options %}
-          <option value="{{ value }}"{% if selected_sort == value %} selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-lg-2 col-md-6">
-        <div class="form-check mb-2">
-          <input class="form-check-input" id="low-stock-only" type="checkbox" name="low" value="1"{% if low_only %} checked{% endif %}>
-          <label class="form-check-label small" for="low-stock-only">Low stock only</label>
-        </div>
-      </div>
-      <div class="col-12 d-flex flex-wrap gap-2 justify-content-between">
-        <div class="d-flex flex-wrap gap-2">
-          <button class="btn btn-primary" type="submit">Apply filters</button>
-          <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Clear</a>
-        </div>
-        <a class="btn btn-outline-secondary" href="{% url 'staff_inventory' %}">Inventory home</a>
-      </div>
+  <div class="staff-summary-grid">
+    <a class="staff-summary-card" href="{% url 'staff_products' %}"><span class="staff-summary-icon"><i class="bi bi-grid" aria-hidden="true"></i></span><span><small>All catalogue items</small><strong>{{ product_stats.total }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--teal" href="{% url 'staff_products' %}"><span class="staff-summary-icon"><i class="bi bi-laptop" aria-hidden="true"></i></span><span><small>Physical products</small><strong>{{ product_stats.physical }}</strong></span></a>
+    <a class="staff-summary-card" href="{% url 'staff_products' %}"><span class="staff-summary-icon"><i class="bi bi-tools" aria-hidden="true"></i></span><span><small>Services</small><strong>{{ product_stats.services }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--amber" href="{% url 'staff_products' %}?low=1"><span class="staff-summary-icon"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span><span><small>Low stock</small><strong>{{ product_stats.low_stock }}</strong></span></a>
+  </div>
+
+  <form method="get" class="staff-filter-card" role="search">
+    <div class="staff-filter-grid">
+      <div class="staff-filter-field staff-filter-field--wide"><label for="product-search">Search catalogue</label><div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="product-search" type="search" name="q" value="{{ q }}" placeholder="Name, SKU, variant or category"></div></div>
+      <div class="staff-filter-field"><label for="product-category">Category</label><select class="form-select" id="product-category" name="category"><option value="">All categories</option>{% for category in categories %}<option value="{{ category.slug }}"{% if selected_category == category.slug %} selected{% endif %}>{{ category }}</option>{% endfor %}</select></div>
+      <div class="staff-filter-field"><label for="product-sort">Sort by</label><select class="form-select" id="product-sort" name="sort">{% for value,label in sort_options %}<option value="{{ value }}"{% if selected_sort == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="staff-filter-field d-flex align-items-end"><div class="form-check form-switch mb-2"><input class="form-check-input" id="low-stock-only" type="checkbox" role="switch" name="low" value="1"{% if low_only %} checked{% endif %}><label class="form-check-label" for="low-stock-only">Low stock only</label></div></div>
+      <div class="staff-filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button>{% if q or selected_category or low_only or selected_sort != 'category' %}<a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Clear</a>{% endif %}</div>
+    </div>
+  </form>
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header"><div><h2>Catalogue register</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} items{% else %}{{ products|length }} item{{ products|length|pluralize }}{% endif %} · {{ product_stats.published }} currently published</p></div></div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Product or service</th><th>Category</th><th>SKU</th><th>Kind</th><th class="text-end">Price</th><th class="text-end">Stock</th><th class="text-center">Options</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for product in products %}
+          <tr>
+            <td><a class="staff-record-link" href="{% url 'staff_product_edit' product.pk %}">{{ product.name }}</a><small class="d-block text-muted mt-1">{% if product.is_published %}Published{% else %}Hidden from shop{% endif %}{% if product.is_featured %} · Featured{% endif %}</small></td>
+            <td>{{ product.category }}</td>
+            <td><code>{{ product.sku|default:"—" }}</code></td>
+            <td><span class="staff-status-pill staff-status-pill--{% if product.kind == 'physical' %}primary{% else %}info{% endif %}">{{ product.get_kind_display }}</span></td>
+            <td class="text-end fw-semibold">{% if product.has_sellable_variants and product.min_active_variant_price %}<small class="text-muted">from</small> {{ company.currency_code }} {{ product.min_active_variant_price|floatformat:2 }}{% else %}{{ company.currency_code }} {{ product.price|floatformat:2 }}{% endif %}</td>
+            <td class="text-end">{% if product.kind == 'physical' %}{% if product.has_sellable_variants %}{% if product.variants_total_stock is not None %}<span class="{% if product.is_low_stock %}text-danger fw-semibold{% endif %}">Σ {{ product.variants_total_stock }}</span>{% else %}<span class="text-muted">Not tracked</span>{% endif %}{% else %}<span class="{% if product.is_low_stock %}text-danger fw-semibold{% endif %}">{{ product.stock_quantity }}</span>{% endif %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="text-center">{% if product.has_sellable_variants %}<span class="staff-status-pill staff-status-pill--neutral">{{ product.active_variant_count }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_product_edit' product.pk %}">Edit</a><a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' product.pk %}">Labels</a></td>
+          </tr>
+          {% empty %}<tr><td colspan="8"><div class="staff-empty-state"><i class="bi bi-box-seam" aria-hidden="true"></i><strong>No catalogue items found</strong><span>Clear the filters or create a new product.</span></div></td></tr>{% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
-</form>
 
-<div class="table-responsive card border-0 shadow-sm">
-  <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light">
-      <tr><th>Name</th><th>Kind</th><th>Category</th><th>SKU</th><th class="text-end">Price</th><th class="text-end">Stock</th><th class="text-center">Opts</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for p in products %}
-      <tr>
-        <td>{{ p.name }}</td>
-        <td>{{ p.get_kind_display }}</td>
-        <td>{{ p.category }}</td>
-        <td class="text-muted small">{{ p.sku|default:"—" }}</td>
-        <td class="text-end">
-          {% if p.has_sellable_variants and p.min_active_variant_price %}
-          <span class="text-muted small">from</span> {{ company.currency_code }} {{ p.min_active_variant_price|floatformat:2 }}
-          {% else %}
-          {{ company.currency_code }} {{ p.price|floatformat:2 }}
-          {% endif %}
-        </td>
-        <td class="text-end">
-          {% if p.kind == 'physical' %}
-            {% if p.has_sellable_variants %}
-            {% if p.variants_total_stock is not None %}
-            <span class="small text-muted" title="Sum of variant stock (tracked)">Σ {{ p.variants_total_stock }}</span>
-            {% else %}
-            <span class="small text-muted">—</span>
-            {% endif %}
-            {% else %}
-            {{ p.stock_quantity }}
-            {% endif %}
-          {% else %}—{% endif %}
-        </td>
-        <td class="text-center small">{% if p.has_sellable_variants %}{{ p.active_variant_count }}{% else %}—{% endif %}</td>
-        <td class="text-end">
-          <div class="btn-group btn-group-sm">
-            <a class="btn btn-outline-primary" href="{% url 'staff_product_edit' p.pk %}">Edit</a>
-            <a class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' p.pk %}">Labels</a>
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="8" class="text-muted py-4 text-center">No products match the selected filters.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-{% if is_paginated %}
-<nav class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3" aria-label="Product pages">
-  <p class="small text-muted mb-0">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
-  <ul class="pagination pagination-sm mb-0 flex-wrap">
-    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
-      {% if page_obj.has_previous %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page=1">First</a>{% else %}<span class="page-link">First</span>{% endif %}
-    </li>
-    <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
-      {% if page_obj.has_previous %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% else %}<span class="page-link">Previous</span>{% endif %}
-    </li>
-    <li class="page-item active" aria-current="page"><span class="page-link">{{ page_obj.number }}</span></li>
-    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
-      {% if page_obj.has_next %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% else %}<span class="page-link">Next</span>{% endif %}
-    </li>
-    <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
-      {% if page_obj.has_next %}<a class="page-link" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ paginator.num_pages }}">Last</a>{% else %}<span class="page-link">Last</span>{% endif %}
-    </li>
-  </ul>
-</nav>
-{% endif %}
+  {% if is_paginated %}<nav class="staff-pagination" aria-label="Product pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page=1">First</a><a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a><a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ paginator.num_pages }}">Last</a>{% endif %}</div></nav>{% endif %}
+</section>
 {% endblock %}

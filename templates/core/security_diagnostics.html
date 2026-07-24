@@ -1,74 +1,59 @@
 {% extends "staff_base.html" %}
-{% block title %}Security diagnostics - {{ block.super }}{% endblock %}
+{% block title %}Security diagnostics{% endblock %}
+{% block staff_page_name %}Security diagnostics{% endblock %}
 {% block staff_content %}
-<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
-  <div>
-    <h1 class="h3 mb-1">Security diagnostics</h1>
-    <p class="text-muted mb-0">Operational checks for hardening, access control, database health, and backups.</p>
-  </div>
-  <span class="text-muted small">Generated {{ generated_at|date:"Y-m-d H:i" }}</span>
-</div>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Administration</p><h1>Security diagnostics</h1><p>Review access controls, production hardening, database health and backup freshness.</p></div>
+    <div class="staff-page-actions"><span class="staff-status-pill staff-status-pill--neutral"><i class="bi bi-clock me-1" aria-hidden="true"></i>{{ generated_at|date:"M j, Y H:i" }}</span><a class="btn btn-outline-secondary" href="{% url 'staff_two_factor_setup' %}"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Two-factor security</a></div>
+  </header>
 
-<div class="row g-3 mb-4">
-  {% for check in checks %}
-    <div class="col-sm-6 col-xl-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start gap-2">
-            <div>
-              <p class="text-muted small text-uppercase mb-1">{{ check.label }}</p>
-              <h2 class="h5 mb-2">{{ check.value }}</h2>
-            </div>
-            <span class="badge {% if check.status == 'ok' %}text-bg-success{% elif check.status == 'warning' %}text-bg-warning{% else %}text-bg-danger{% endif %}">
-              {{ check.status|title }}
-            </span>
-          </div>
-          <p class="small text-muted mb-0">{{ check.detail }}</p>
+  <div class="staff-health-grid mb-3">
+    {% for check in checks %}
+    <article class="staff-health-card staff-health-card--{{ check.status }}">
+      <div class="staff-health-card-header"><div><small>{{ check.label }}</small><strong>{{ check.value }}</strong></div><span class="staff-status-pill staff-status-pill--{% if check.status == 'ok' %}success{% elif check.status == 'warning' %}warning{% else %}danger{% endif %}">{{ check.status|title }}</span></div>
+      <p>{{ check.detail }}</p>
+    </article>
+    {% endfor %}
+  </div>
+
+  <article class="staff-section-card">
+    <header class="staff-section-card-header"><div><h2>Backup freshness</h2><p>Latest local database and media archives</p></div><i class="bi bi-database-check text-muted" aria-hidden="true"></i></header>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Backup</th><th>Status</th><th>Last file</th><th>Age</th><th>Updated</th><th class="text-end">Size</th></tr></thead>
+        <tbody>
+          {% for backup in backups %}
+          <tr><td class="fw-semibold">{{ backup.label }}</td><td><span class="staff-status-pill staff-status-pill--{% if backup.status == 'ok' %}success{% elif backup.status == 'warning' %}warning{% elif backup.status == 'missing' %}neutral{% else %}danger{% endif %}">{{ backup.status_label }}</span></td><td><code>{{ backup.path|default:"Not found" }}</code></td><td>{% if backup.age_hours is not None %}{{ backup.age_hours }} hours{% else %}—{% endif %}</td><td>{% if backup.updated_at %}{{ backup.updated_at|date:"M j, Y H:i" }}{% else %}—{% endif %}</td><td class="text-end">{% if backup.size_mb is not None %}{{ backup.size_mb }} MB{% else %}—{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <div class="staff-workflow-columns">
+    <article class="staff-section-card">
+      <header class="staff-section-card-header"><div><h2>Release checklist</h2><p>Recommended before each production deployment</p></div><i class="bi bi-clipboard-check text-muted" aria-hidden="true"></i></header>
+      <div class="staff-section-card-body">
+        <ol class="staff-timeline">
+          <li class="staff-timeline-item"><span class="staff-timeline-dot"></span><div class="staff-timeline-copy"><strong>Run deployment checks</strong><p><code>python manage.py check --deploy</code></p></div></li>
+          <li class="staff-timeline-item"><span class="staff-timeline-dot"></span><div class="staff-timeline-copy"><strong>Collect static assets</strong><p>Confirm new interface files are copied successfully.</p></div></li>
+          <li class="staff-timeline-item"><span class="staff-timeline-dot"></span><div class="staff-timeline-copy"><strong>Restart application services</strong><p>Restart Gunicorn and verify the health endpoint.</p></div></li>
+          <li class="staff-timeline-item"><span class="staff-timeline-dot"></span><div class="staff-timeline-copy"><strong>Verify backups</strong><p>Keep recent copies off the application server.</p></div></li>
+        </ol>
+      </div>
+    </article>
+
+    <article class="staff-section-card">
+      <header class="staff-section-card-header"><div><h2>Hardening priorities</h2><p>Important production security controls</p></div><i class="bi bi-shield-exclamation text-muted" aria-hidden="true"></i></header>
+      <div class="staff-section-card-body">
+        <div class="staff-compact-list">
+          <div class="staff-compact-row"><span><strong class="d-block">Content Security Policy</strong><small>Move remaining inline scripts and styles before enforcing CSP.</small></span><i class="bi bi-code-slash" aria-hidden="true"></i></div>
+          <div class="staff-compact-row"><span><strong class="d-block">Staff account protection</strong><small>Require two-factor authentication and role permissions.</small></span><i class="bi bi-person-lock" aria-hidden="true"></i></div>
+          <div class="staff-compact-row"><span><strong class="d-block">Automated backups</strong><small>Schedule <code>backup_alltech</code> and copy archives off-site.</small></span><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i></div>
         </div>
       </div>
-    </div>
-  {% endfor %}
-</div>
-
-<section class="mb-4">
-  <h2 class="h5">Backup freshness</h2>
-  <div class="table-responsive">
-    <table class="table table-sm align-middle">
-      <thead>
-        <tr>
-          <th>Backup</th>
-          <th>Status</th>
-          <th>Last file</th>
-          <th>Age</th>
-          <th class="text-end">Size</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for backup in backups %}
-          <tr>
-            <td>{{ backup.label }}</td>
-            <td>
-              <span class="badge {% if backup.status == 'ok' %}text-bg-success{% elif backup.status == 'warning' %}text-bg-warning{% elif backup.status == 'missing' %}text-bg-secondary{% else %}text-bg-danger{% endif %}">
-                {{ backup.status_label }}
-              </span>
-            </td>
-            <td>{{ backup.path|default:"-" }}</td>
-            <td>{% if backup.age_hours is not None %}{{ backup.age_hours }}h{% else %}-{% endif %}</td>
-            <td class="text-end">{% if backup.size_mb is not None %}{{ backup.size_mb }} MB{% else %}-{% endif %}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    </article>
   </div>
-</section>
-
-<section>
-  <h2 class="h5">Suggested actions</h2>
-  <ul class="list-group">
-    <li class="list-group-item">Keep CSP in report-only mode until inline scripts and styles are moved into static files.</li>
-    <li class="list-group-item">Require staff 2FA and role permissions in production.</li>
-    <li class="list-group-item">Schedule `python manage.py backup_alltech --output backups` and copy archives off-site.</li>
-    <li class="list-group-item">Run `python manage.py check --deploy` before each production release.</li>
-  </ul>
 </section>
 {% endblock %}

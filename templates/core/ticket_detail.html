@@ -1,71 +1,88 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}{{ ticket.reference }}{% endblock %}
+{% block staff_page_name %}Ticket details{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-  <div>
-    <h1 class="h3 mb-1">{{ ticket.reference }} — {{ ticket.subject }}</h1>
-    <p class="text-muted small mb-0">
-      {{ ticket.customer.name }} · {{ ticket.get_status_display }} · {{ ticket.get_priority_display }} · {{ ticket.get_category_display }}
-      {% if ticket.related_order %}<br><small class="text-muted">Order: <a href="{% url 'staff_order_detail' ticket.related_order.pk %}">{{ ticket.related_order.reference }}</a></small>{% endif %}
-      {% if ticket.related_serial %}<br><small class="text-muted">Serial: {{ ticket.related_serial.serial_number }} ({{ ticket.related_serial.product.name }})</small>{% endif %}
-      {% if ticket.assigned_to %} · Assigned to {{ ticket.assigned_to.get_username }}{% endif %}
-      {% if ticket.due_in_label %}
-        · <span class="badge {% if ticket.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ ticket.due_in_label }}</span>
-      {% endif %}
-    </p>
-  </div>
-  <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" href="{% url 'staff_ticket_edit' ticket.pk %}">Edit ticket</a>
-    <a class="btn btn-outline-secondary" href="{% url 'staff_tickets' %}">Back</a>
-  </div>
-</div>
-
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <h2 class="h6 text-muted text-uppercase">Description</h2>
-    <p class="mb-0">{{ ticket.description|linebreaksbr }}</p>
-  </div>
-</div>
-
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <h2 class="h6 mb-3">Conversation</h2>
-    {% for c in comments %}
-    <div class="mb-3 p-3 rounded {% if c.is_internal %}bg-warning-subtle border border-warning-subtle{% else %}bg-light{% endif %}">
-      <div class="d-flex justify-content-between small text-muted mb-1">
-        <span>
-          <strong>{{ c.author.get_username|default:"Customer" }}</strong>
-          {% if c.is_internal %}<span class="badge bg-warning text-dark ms-1">internal</span>{% endif %}
-        </span>
-        <span>{{ c.created_at|date:"Y-m-d H:i" }}</span>
-      </div>
-      <p class="mb-1">{{ c.body|linebreaksbr }}</p>
-      {% if c.attachment %}
-      <a class="small" href="{% url 'staff_ticket_attachment' c.pk %}" target="_blank" rel="noopener">View protected attachment</a>
-      {% endif %}
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading">
+      <p class="staff-page-eyebrow">Customer support</p>
+      <h1>{{ ticket.reference }} — {{ ticket.subject }}</h1>
+      <p>Created {{ ticket.created_at|date:"M j, Y H:i" }} · Last updated {{ ticket.updated_at|timesince }} ago</p>
     </div>
-    {% empty %}
-    <p class="text-muted mb-3">No comments yet.</p>
-    {% endfor %}
+    <div class="staff-detail-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'staff_tickets' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All tickets</a>
+      <a class="btn btn-primary" href="{% url 'staff_ticket_edit' ticket.pk %}"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Edit ticket</a>
+    </div>
+  </header>
 
-    <form method="post" enctype="multipart/form-data" action="{% url 'staff_ticket_comment_create' ticket.pk %}" class="mt-3">
-      {% csrf_token %}
-      <div class="mb-2">{{ comment_form.body }}</div>
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="d-flex gap-3 align-items-center">
-          <div class="form-check">
-            {{ comment_form.is_internal }}
-            <label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">
-              Internal note (hidden from customer)
-            </label>
-          </div>
-          <div>{{ comment_form.attachment }}</div>
-        </div>
-        <button class="btn btn-primary" type="submit">Post comment</button>
-      </div>
-    </form>
+  <div class="staff-record-hero">
+    <div class="staff-record-hero-grid">
+      <div class="staff-record-stat"><small>Status</small><strong><span class="staff-status-pill staff-status-pill--{{ ticket.status|staff_status_tone }}">{{ ticket.get_status_display }}</span></strong></div>
+      <div class="staff-record-stat"><small>Priority</small><strong><span class="staff-priority-pill staff-priority-pill--{{ ticket.priority|staff_priority_tone }}">{{ ticket.get_priority_display }}</span></strong></div>
+      <div class="staff-record-stat"><small>Assigned to</small><strong>{% if ticket.assigned_to %}{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.get_username }}{% else %}Unassigned{% endif %}</strong><span>{{ ticket.get_category_display }}</span></div>
+      <div class="staff-record-stat"><small>SLA deadline</small><strong class="{% if ticket.is_overdue %}text-danger{% endif %}">{{ ticket.due_in_label|default:"No active SLA" }}</strong>{% if ticket.is_overdue %}<span class="text-danger">Immediate attention required</span>{% endif %}</div>
+    </div>
   </div>
-</div>
 
-<p class="small text-muted">Created {{ ticket.created_at|date:"Y-m-d H:i" }} · Updated {{ ticket.updated_at|date:"Y-m-d H:i" }}</p>
+  <div class="staff-workflow-columns">
+    <div>
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Issue description</h2><p>Original customer request and problem details</p></div><i class="bi bi-chat-left-text text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body staff-prose">{{ ticket.description|linebreaks }}</div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Conversation</h2><p>Customer-visible replies and internal staff notes</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ comments|length }} message{{ comments|length|pluralize }}</span></header>
+        <div class="staff-section-card-body">
+          <div class="staff-conversation">
+            {% for comment in comments %}
+            <article class="staff-message{% if comment.is_internal %} staff-message--internal{% endif %}">
+              <div class="staff-message-meta"><span><strong>{{ comment.author.get_full_name|default:comment.author.get_username|default:"Customer" }}</strong>{% if comment.is_internal %} <span class="staff-status-pill staff-status-pill--warning">Internal note</span>{% endif %}</span><time datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:"M j, Y H:i" }}</time></div>
+              <div class="staff-message-body">{{ comment.body|linebreaks }}</div>
+              {% if comment.attachment %}<a class="btn btn-sm btn-outline-secondary mt-2" href="{% url 'staff_ticket_attachment' comment.pk %}" target="_blank" rel="noopener"><i class="bi bi-paperclip me-1" aria-hidden="true"></i>Open protected attachment</a>{% endif %}
+            </article>
+            {% empty %}<div class="staff-empty-state"><i class="bi bi-chat-square-dots" aria-hidden="true"></i><strong>No conversation yet</strong><span>Post the first update below.</span></div>{% endfor %}
+          </div>
+
+          <form method="post" enctype="multipart/form-data" action="{% url 'staff_ticket_comment_create' ticket.pk %}" class="staff-composer">
+            {% csrf_token %}
+            <label class="form-label fw-semibold" for="{{ comment_form.body.id_for_label }}">Post an update</label>
+            {{ comment_form.body.errors }}{{ comment_form.body }}
+            <div class="staff-composer-actions">
+              <div class="staff-composer-options">
+                <div class="form-check">{{ comment_form.is_internal }}<label class="form-check-label" for="{{ comment_form.is_internal.id_for_label }}">Internal note</label></div>
+                <div><label class="visually-hidden" for="{{ comment_form.attachment.id_for_label }}">Attachment</label>{{ comment_form.attachment }}</div>
+              </div>
+              <button class="btn btn-primary" type="submit"><i class="bi bi-send me-1" aria-hidden="true"></i>Post comment</button>
+            </div>
+          </form>
+        </div>
+      </article>
+    </div>
+
+    <aside>
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Customer</h2><p>Contact and account information</p></div><i class="bi bi-person text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body">
+          <div class="staff-info-grid">
+            <div class="staff-info-item"><small>Name</small><strong>{{ ticket.customer.name }}</strong>{% if ticket.customer.company_name %}<p>{{ ticket.customer.company_name }}</p>{% endif %}</div>
+            <div class="staff-info-item"><small>Email</small><strong><a href="mailto:{{ ticket.customer.email }}">{{ ticket.customer.email }}</a></strong></div>
+            <div class="staff-info-item"><small>Phone</small><strong>{% if ticket.customer.phone %}<a href="tel:{{ ticket.customer.phone }}">{{ ticket.customer.phone }}</a>{% else %}—{% endif %}</strong></div>
+            <div class="staff-info-item"><small>Created by</small><strong>{% if ticket.created_by %}{{ ticket.created_by.get_username }}{% else %}Customer portal{% endif %}</strong></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Related records</h2><p>Connected sales and warranty context</p></div><i class="bi bi-link-45deg text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body">
+          {% if ticket.related_order %}<a class="staff-compact-row" href="{% url 'staff_order_detail' ticket.related_order.pk %}"><span><strong class="d-block">{{ ticket.related_order.reference }}</strong><small>Related order</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% endif %}
+          {% if ticket.related_serial %}<div class="staff-compact-row"><span><strong class="d-block">{{ ticket.related_serial.serial_number }}</strong><small>{{ ticket.related_serial.product.name }}</small></span><i class="bi bi-upc-scan" aria-hidden="true"></i></div>{% endif %}
+          {% if not ticket.related_order and not ticket.related_serial %}<div class="staff-empty-state"><i class="bi bi-link-45deg" aria-hidden="true"></i><strong>No related records</strong><span>Use Edit ticket to connect an order or product serial.</span></div>{% endif %}
+        </div>
+      </article>
+    </aside>
+  </div>
+</section>
 {% endblock %}

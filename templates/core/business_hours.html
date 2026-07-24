@@ -1,49 +1,33 @@
 {% extends "staff_base.html" %}
 {% block title %}Business hours{% endblock %}
+{% block staff_page_name %}Business hours{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Business hours</h1>
-  <a class="btn btn-outline-secondary" href="{% url 'staff_audit_log' %}">Back</a>
-</div>
-<p class="text-muted small">Used on the public contact page to show when customers can reach the team.</p>
-<form method="post" class="card border-0 shadow-sm">
-  {% csrf_token %}
-  <div class="card-body">
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Administration</p><h1>Business hours</h1><p>Control the opening schedule shown to customers on the public contact page.</p></div>
+    <div class="staff-page-actions"><a class="btn btn-outline-secondary" href="{% url 'contact' %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Preview contact page</a></div>
+  </header>
+
+  <form method="post" class="staff-form-shell">
+    {% csrf_token %}
+    <div class="staff-section-card-header"><div><h2>Weekly schedule</h2><p>Disable a day to mark it closed; notes can describe lunch breaks or special arrangements.</p></div><i class="bi bi-calendar-week text-muted" aria-hidden="true"></i></div>
     <div class="table-responsive">
-      <table class="table align-middle mb-0">
-        <thead>
-          <tr>
-            <th>Day</th>
-            <th>Open?</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Note</th>
-          </tr>
-        </thead>
+      <table class="table align-middle mb-0 staff-settings-table">
+        <thead><tr><th>Day</th><th>Open</th><th>Opening time</th><th>Closing time</th><th>Customer note</th></tr></thead>
         <tbody>
-          {% for r in rows %}
+          {% for row in rows %}
           <tr>
-            <th class="align-middle">{{ r.get_weekday_display }}</th>
-            <td>
-              <input class="form-check-input" type="checkbox" name="is_open_{{ r.weekday }}" {% if r.is_open %}checked{% endif %}>
-            </td>
-            <td>
-              <input class="form-control form-control-sm" type="time" name="open_{{ r.weekday }}" value="{{ r.open_time|date:'H:i' }}">
-            </td>
-            <td>
-              <input class="form-control form-control-sm" type="time" name="close_{{ r.weekday }}" value="{{ r.close_time|date:'H:i' }}">
-            </td>
-            <td>
-              <input class="form-control form-control-sm" type="text" name="note_{{ r.weekday }}" maxlength="160" value="{{ r.note }}" placeholder="e.g., Lunch break 13:00–14:00">
-            </td>
+            <th>{{ row.get_weekday_display }}</th>
+            <td><div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" name="is_open_{{ row.weekday }}" id="open-day-{{ row.weekday }}"{% if row.is_open %} checked{% endif %}><label class="form-check-label small" for="open-day-{{ row.weekday }}">{% if row.is_open %}Open{% else %}Closed{% endif %}</label></div></td>
+            <td><label class="visually-hidden" for="open-time-{{ row.weekday }}">{{ row.get_weekday_display }} opening time</label><input class="form-control" id="open-time-{{ row.weekday }}" type="time" name="open_{{ row.weekday }}" value="{{ row.open_time|date:'H:i' }}"></td>
+            <td><label class="visually-hidden" for="close-time-{{ row.weekday }}">{{ row.get_weekday_display }} closing time</label><input class="form-control" id="close-time-{{ row.weekday }}" type="time" name="close_{{ row.weekday }}" value="{{ row.close_time|date:'H:i' }}"></td>
+            <td><label class="visually-hidden" for="note-{{ row.weekday }}">{{ row.get_weekday_display }} note</label><input class="form-control" id="note-{{ row.weekday }}" type="text" name="note_{{ row.weekday }}" maxlength="160" value="{{ row.note }}" placeholder="For example: Lunch break 13:00–14:00"></td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
-  <div class="card-footer bg-white d-flex justify-content-end">
-    <button type="submit" class="btn btn-primary">Save hours</button>
-  </div>
-</form>
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Saved changes appear on the public contact page immediately.</span><div class="staff-form-footer-actions"><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save business hours</button></div></footer>
+  </form>
+</section>
 {% endblock %}

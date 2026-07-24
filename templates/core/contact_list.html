@@ -1,47 +1,48 @@
 {% extends "staff_base.html" %}
-{% block title %}Contact messages{% endblock %}
+{% block title %}Contact inbox{% endblock %}
+{% block staff_page_name %}Contact inbox{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">Contact form messages</h1>
-<form method="get" class="row g-2 mb-3">
-  <div class="col-auto">
-    <select name="handled" class="form-select">
-      <option value="">All</option>
-      <option value="0" {% if request.GET.handled == '0' %}selected{% endif %}>Unhandled</option>
-      <option value="1" {% if request.GET.handled == '1' %}selected{% endif %}>Handled</option>
-    </select>
-  </div>
-  <div class="col-md-4">
-    <input type="search" name="q" class="form-control" placeholder="Search…" value="{{ request.GET.q }}">
-  </div>
-  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
-</form>
-<div class="list-group shadow-sm">
-  {% for m in messages_list %}
-  <div class="list-group-item">
-    <div class="d-flex justify-content-between align-items-start">
-      <div>
-        <h2 class="h6 mb-1">{{ m.subject }}{% if not m.handled %} <span class="badge text-bg-warning">New</span>{% endif %}</h2>
-        <p class="small text-muted mb-1">{{ m.name }} &lt;{{ m.email }}&gt; · {{ m.created_at|date:"Y-m-d H:i" }}</p>
-        <p class="mb-0 small">{{ m.message|truncatewords:40 }}</p>
-      </div>
-      <div class="d-flex flex-column gap-1">
-        {% if not m.handled %}
-        <form method="post" action="{% url 'staff_contact_to_ticket' m.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-primary">Create ticket</button>
-        </form>
-        {% endif %}
-        <form method="post" action="{% url 'staff_contact_toggle' m.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm {% if m.handled %}btn-outline-secondary{% else %}btn-success{% endif %}">
-            {% if m.handled %}Reopen{% else %}Mark handled{% endif %}
-          </button>
-        </form>
-      </div>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div>
+      <p class="staff-page-eyebrow">Customer communication</p>
+      <h1>Contact inbox</h1>
+      <p>Review website enquiries, convert support requests and close handled conversations.</p>
     </div>
+    <div class="staff-page-actions"><a class="btn btn-primary" href="{% url 'staff_ticket_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New ticket</a></div>
+  </header>
+
+  <div class="staff-summary-grid">
+    <a class="staff-summary-card" href="{% url 'staff_contact_messages' %}"><span class="staff-summary-icon"><i class="bi bi-envelope" aria-hidden="true"></i></span><span><small>All messages</small><strong>{{ contact_stats.total }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--amber" href="{% url 'staff_contact_messages' %}?handled=0"><span class="staff-summary-icon"><i class="bi bi-envelope-exclamation" aria-hidden="true"></i></span><span><small>Needs attention</small><strong>{{ contact_stats.unhandled }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_contact_messages' %}?handled=1"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Handled</small><strong>{{ contact_stats.handled }}</strong></span></a>
   </div>
-  {% empty %}
-  <div class="list-group-item text-muted">No messages.</div>
-  {% endfor %}
-</div>
+
+  <form method="get" class="staff-filter-card" role="search">
+    <div class="staff-filter-grid staff-filter-grid--orders">
+      <div class="staff-filter-field staff-filter-field--wide"><label for="contact-search">Search messages</label><div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input id="contact-search" type="search" name="q" class="form-control" placeholder="Subject, sender, email or message" value="{{ request.GET.q }}"></div></div>
+      <div class="staff-filter-field"><label for="contact-status">Status</label><select id="contact-status" name="handled" class="form-select"><option value="">All messages</option><option value="0"{% if request.GET.handled == '0' %} selected{% endif %}>Needs attention</option><option value="1"{% if request.GET.handled == '1' %} selected{% endif %}>Handled</option></select></div>
+      <div class="staff-filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button>{% if request.GET %}<a class="btn btn-outline-secondary" href="{% url 'staff_contact_messages' %}">Clear</a>{% endif %}</div>
+    </div>
+  </form>
+
+  <div class="staff-contact-list">
+    {% for message in messages_list %}
+    <article class="staff-contact-card{% if not message.handled %} staff-contact-card--new{% endif %}">
+      <div class="staff-contact-copy">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-1"><h2>{{ message.subject }}</h2>{% if not message.handled %}<span class="staff-status-pill staff-status-pill--warning">New</span>{% else %}<span class="staff-status-pill staff-status-pill--success">Handled</span>{% endif %}</div>
+        <p><strong class="text-dark">{{ message.name }}</strong> · <a href="mailto:{{ message.email }}">{{ message.email }}</a>{% if message.phone %} · <a href="tel:{{ message.phone }}">{{ message.phone }}</a>{% endif %} · {{ message.created_at|date:"M j, Y H:i" }}</p>
+        <p class="staff-contact-excerpt">{{ message.message|linebreaksbr }}</p>
+      </div>
+      <div class="staff-contact-actions">
+        <a class="btn btn-sm btn-outline-secondary" href="mailto:{{ message.email }}?subject=Re:%20{{ message.subject|urlencode }}"><i class="bi bi-reply me-1" aria-hidden="true"></i>Reply</a>
+        {% if not message.handled %}<form method="post" action="{% url 'staff_contact_to_ticket' message.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-life-preserver me-1" aria-hidden="true"></i>Create ticket</button></form>{% endif %}
+        <form method="post" action="{% url 'staff_contact_toggle' message.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm {% if message.handled %}btn-outline-secondary{% else %}btn-outline-success{% endif %}">{% if message.handled %}Reopen{% else %}Mark handled{% endif %}</button></form>
+      </div>
+    </article>
+    {% empty %}<div class="staff-empty-state"><i class="bi bi-inbox" aria-hidden="true"></i><strong>No contact messages</strong><span>New website enquiries will appear here.</span></div>{% endfor %}
+  </div>
+
+  {% if is_paginated %}<nav class="staff-pagination" aria-label="Contact message pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
+</section>
 {% endblock %}

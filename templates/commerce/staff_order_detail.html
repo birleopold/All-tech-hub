@@ -1,210 +1,83 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}Order {{ order.reference }}{% endblock %}
+{% block staff_page_name %}Order details{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h3 mb-0">{{ order.reference }}</h1>
-    <p class="text-muted mb-0">{{ order.get_status_display }} · {{ order.placed_at|date:"Y-m-d H:i" }} · {{ order.get_fulfillment_type_display }}</p>
-  </div>
-  <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}">All orders</a>
-    <a class="btn btn-outline-primary" href="{{ request.scheme }}://{{ request.get_host }}{{ order.get_absolute_url }}" target="_blank" rel="noopener noreferrer">Customer receipt (opens new tab)</a>
-    <form method="post" action="{% url 'staff_order_invoice' order.pk %}" class="d-inline">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-primary">Create invoice</button>
-    </form>
-  </div>
-</div>
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Sales operations</p><h1>{{ order.reference }}</h1><p>Placed {{ order.placed_at|date:"M j, Y H:i" }} · {{ order.customer.name }} · {{ order.get_fulfillment_type_display }}</p></div>
+    <div class="staff-detail-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All orders</a>
+      <a class="btn btn-outline-primary" href="{{ request.scheme }}://{{ request.get_host }}{{ order.get_absolute_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Customer receipt</a>
+      <form method="post" action="{% url 'staff_order_invoice' order.pk %}">{% csrf_token %}<button type="submit" class="btn btn-primary"><i class="bi bi-receipt me-1" aria-hidden="true"></i>Create invoice</button></form>
+    </div>
+  </header>
 
-<div class="row g-3 mb-4">
-  <div class="col-lg-5">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start gap-2">
-          <div>
-            <h2 class="h6 text-muted mb-1">Stock reservation</h2>
-            {% if reservation %}
-            <p class="mb-1"><strong>{{ reservation.get_status_display }}</strong></p>
-            <p class="small text-muted mb-0">
-              Reserved {{ reservation.reserved_at|date:"Y-m-d H:i" }}
-              {% if reservation.status == 'reserved' %}<br>Expires {{ reservation.expires_at|date:"Y-m-d H:i" }}{% endif %}
-              {% if reservation.committed_at %}<br>Committed {{ reservation.committed_at|date:"Y-m-d H:i" }}{% endif %}
-              {% if reservation.released_at %}<br>Closed {{ reservation.released_at|date:"Y-m-d H:i" }}{% endif %}
-            </p>
-            {% if reservation.release_reason %}<p class="small mb-0 mt-2">{{ reservation.release_reason }}</p>{% endif %}
-            {% else %}
-            <p class="text-muted small mb-0">Legacy or staff-created order without a tracked reservation.</p>
-            {% endif %}
-          </div>
-          {% if reservation %}<span class="badge {% if reservation.status == 'reserved' %}text-bg-warning{% elif reservation.status == 'committed' %}text-bg-success{% else %}text-bg-secondary{% endif %}">{{ reservation.get_status_display }}</span>{% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-7">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <h2 class="h6 text-muted">Payment attempts</h2>
-        {% if payment_attempts %}
-        <div class="table-responsive">
-          <table class="table table-sm mb-0">
-            <thead><tr><th>Provider</th><th>Status</th><th>Amount</th><th>Reference</th><th>Updated</th></tr></thead>
-            <tbody>
-              {% for payment in payment_attempts %}
-              <tr>
-                <td>{{ payment.provider|title }}</td>
-                <td><span class="badge {% if payment.status == 'paid' %}text-bg-success{% elif payment.status == 'failed' or payment.status == 'expired' or payment.status == 'cancelled' %}text-bg-danger{% elif payment.status == 'refunded' or payment.status == 'partial_refund' %}text-bg-secondary{% else %}text-bg-warning{% endif %}">{{ payment.get_status_display }}</span></td>
-                <td>{{ payment.currency }} {{ payment.amount|floatformat:2 }}</td>
-                <td>{{ payment.external_reference|default:"—" }}</td>
-                <td>{{ payment.updated_at|date:"Y-m-d H:i" }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <p class="text-muted small mb-0">No payment attempt has been recorded for this order.</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
+  <div class="staff-record-hero"><div class="staff-record-hero-grid">
+    <div class="staff-record-stat"><small>Status</small><strong><span class="staff-status-pill staff-status-pill--{{ order.status|staff_status_tone }}">{{ order.get_status_display }}</span></strong><span>{{ order.get_fulfillment_type_display }}</span></div>
+    <div class="staff-record-stat"><small>Order total</small><strong>{{ company.currency_code }} {{ order.total|floatformat:2 }}</strong><span>Tax {{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</span></div>
+    <div class="staff-record-stat"><small>Stock reservation</small><strong>{% if reservation %}{{ reservation.get_status_display }}{% else %}Not tracked{% endif %}</strong>{% if reservation %}<span>Reserved {{ reservation.reserved_at|date:"M j H:i" }}</span>{% endif %}</div>
+    <div class="staff-record-stat"><small>Payment activity</small><strong>{{ payment_attempts|length }} attempt{{ payment_attempts|length|pluralize }}</strong><span>{{ order.documents.count }} linked document{{ order.documents.count|pluralize }}</span></div>
+  </div></div>
 
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body">
-    <h2 class="h6">Customer return</h2>
-    <form method="post" action="{% url 'staff_order_return' order.pk %}" class="row g-2">
-      {% csrf_token %}
-      {% for field in return_form %}
-      <div class="col-md-3"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>
-      {% endfor %}
-      <div class="col-12"><button class="btn btn-outline-danger" type="submit">Record return</button></div>
-    </form>
-    {% if customer_returns %}
-    <ul class="list-group list-group-flush mt-3">
-      {% for r in customer_returns %}
-      <li class="list-group-item px-0">{{ r.reference }} · {{ r.quantity }} × {{ r.order_line.description }} · {{ r.get_disposition_display }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
+  <div class="staff-workflow-columns">
+    <main>
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Order items</h2><p>Products, quantities and customer pricing</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ order.lines.count }} line{{ order.lines.count|pluralize }}</span></header>
+        <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Item</th><th>SKU</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Line total</th></tr></thead><tbody>{% for line in order.lines.all %}<tr><td class="fw-semibold">{{ line.description }}</td><td><code>{{ line.sku|default:"—" }}</code></td><td class="text-end">{{ line.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody><tfoot><tr><th colspan="4" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ order.subtotal|floatformat:2 }}</th></tr>{% if order.discount_amount %}<tr><th colspan="4" class="text-end">Discount</th><th class="text-end">− {{ company.currency_code }} {{ order.discount_amount|floatformat:2 }}</th></tr>{% endif %}<tr><th colspan="4" class="text-end">Tax</th><th class="text-end">{{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</th></tr><tr><th colspan="4" class="text-end fs-6">Total</th><th class="text-end fs-6">{{ company.currency_code }} {{ order.total|floatformat:2 }}</th></tr></tfoot></table></div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Customer and delivery</h2><p>Contact, billing and fulfilment information</p></div><i class="bi bi-person-lines-fill text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body"><div class="staff-info-grid">
+          <div class="staff-info-item"><small>Customer account</small><strong>{{ order.customer.name }}</strong>{% if order.customer.company_name %}<p>{{ order.customer.company_name }}</p>{% endif %}</div>
+          <div class="staff-info-item"><small>Account email</small><strong><a href="mailto:{{ order.customer.email }}">{{ order.customer.email }}</a></strong></div>
+          <div class="staff-info-item"><small>Order contact</small><strong>{{ order.contact_name }}</strong><p><a href="mailto:{{ order.contact_email }}">{{ order.contact_email }}</a>{% if order.contact_phone %} · <a href="tel:{{ order.contact_phone }}">{{ order.contact_phone }}</a>{% endif %}</p></div>
+          <div class="staff-info-item"><small>Fulfilment method</small><strong>{{ order.get_fulfillment_type_display }}</strong></div>
+          {% if order.billing_summary %}<div class="staff-info-item"><small>Billing address</small><div class="staff-prose">{{ order.billing_summary|linebreaks }}</div></div>{% endif %}
+          {% if order.shipping_summary %}<div class="staff-info-item"><small>Shipping address</small><div class="staff-prose">{{ order.shipping_summary|linebreaks }}</div></div>{% endif %}
+        </div>{% if order.customer_note %}<div class="alert alert-light border mt-3 mb-0"><strong>Customer note:</strong> {{ order.customer_note }}</div>{% endif %}</div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Payment attempts</h2><p>Gateway and payment-provider activity for this order</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ payment_attempts|length }}</span></header>
+        {% if payment_attempts %}<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Provider</th><th>Status</th><th class="text-end">Amount</th><th>Reference</th><th>Updated</th></tr></thead><tbody>{% for payment in payment_attempts %}<tr><td class="fw-semibold">{{ payment.provider|title }}</td><td><span class="staff-status-pill staff-status-pill--{{ payment.status|staff_status_tone }}">{{ payment.get_status_display }}</span></td><td class="text-end">{{ payment.currency }} {{ payment.amount|floatformat:2 }}</td><td><code>{{ payment.external_reference|default:"—" }}</code></td><td>{{ payment.updated_at|date:"M j, Y H:i" }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="staff-section-card-body"><div class="staff-empty-state"><i class="bi bi-credit-card" aria-hidden="true"></i><strong>No payment attempts</strong><span>No gateway activity has been recorded for this order.</span></div></div>{% endif %}
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Linked documents</h2><p>Invoices, receipts and other commercial documents</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ order.documents.count }}</span></header>
+        <div class="staff-section-card-body">{% if order.documents.all %}<div class="staff-compact-list">{% for document in order.documents.all %}<a class="staff-compact-row" href="{% url 'staff_document_view' document.pk %}"><span><strong class="d-block">{{ document.number }}</strong><small>{{ document.get_doc_type_display }} · {{ document.get_status_display }}</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% endfor %}</div>{% else %}<div class="staff-empty-state"><i class="bi bi-file-earmark" aria-hidden="true"></i><strong>No linked documents</strong><span>Create an invoice using the action at the top of this page.</span></div>{% endif %}</div>
+      </article>
+    </main>
+
+    <aside>
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Advance order status</h2><p>Move the order through its fulfilment workflow</p></div><i class="bi bi-arrow-repeat text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body"><form method="post" action="{% url 'staff_order_transition' order.pk %}">{% csrf_token %}{% for field in status_form %}<div class="mb-3"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<button class="btn btn-primary w-100" type="submit">Update order status</button></form></div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Shipment tracking</h2><p>Carrier, tracking number and delivery progress</p></div><i class="bi bi-truck text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body"><form method="post" action="{% url 'staff_order_shipment' order.pk %}" class="row g-2">{% csrf_token %}{% for field in shipment_form %}<div class="col-12"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<div class="col-12"><button class="btn btn-outline-primary w-100" type="submit">Save shipment details</button></div></form></div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Stock reservation</h2><p>Inventory commitment for this order</p></div>{% if reservation %}<span class="staff-status-pill staff-status-pill--{% if reservation.status == 'committed' %}success{% elif reservation.status == 'reserved' %}warning{% else %}neutral{% endif %}">{{ reservation.get_status_display }}</span>{% endif %}</header>
+        <div class="staff-section-card-body">{% if reservation %}<div class="staff-info-grid"><div class="staff-info-item"><small>Reserved</small><strong>{{ reservation.reserved_at|date:"M j, Y H:i" }}</strong></div><div class="staff-info-item"><small>Expires</small><strong>{% if reservation.status == 'reserved' %}{{ reservation.expires_at|date:"M j, Y H:i" }}{% else %}—{% endif %}</strong></div><div class="staff-info-item"><small>Committed</small><strong>{{ reservation.committed_at|date:"M j, Y H:i"|default:"—" }}</strong></div><div class="staff-info-item"><small>Closed</small><strong>{{ reservation.released_at|date:"M j, Y H:i"|default:"—" }}</strong></div></div>{% if reservation.release_reason %}<p class="small text-muted mt-3 mb-0">{{ reservation.release_reason }}</p>{% endif %}{% else %}<div class="staff-empty-state"><i class="bi bi-box-seam" aria-hidden="true"></i><strong>No tracked reservation</strong><span>This may be a legacy or staff-created order.</span></div>{% endif %}</div>
+      </article>
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Internal note</h2><p>Private context for staff handling this order</p></div><i class="bi bi-sticky text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body"><form method="post">{% csrf_token %}<label class="form-label small fw-semibold" for="staff-note">Staff note</label><textarea id="staff-note" name="staff_note" class="form-control" rows="3" placeholder="Add an internal note">{{ order.staff_note }}</textarea><button type="submit" class="btn btn-outline-primary w-100 mt-2">Save note</button></form></div>
+      </article>
+
+      <article class="staff-section-card staff-section-card--danger">
+        <header class="staff-section-card-header"><div><h2>Customer return</h2><p>Return sold items to stock or mark them damaged</p></div><i class="bi bi-arrow-return-left text-danger" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body"><form method="post" action="{% url 'staff_order_return' order.pk %}" class="row g-2">{% csrf_token %}{% for field in return_form %}<div class="col-12"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<div class="col-12"><button class="btn btn-outline-danger w-100" type="submit">Record customer return</button></div></form>{% if customer_returns %}<div class="staff-compact-list mt-3">{% for returned in customer_returns %}<div class="staff-compact-row"><span><strong class="d-block">{{ returned.reference }}</strong><small>{{ returned.quantity }} × {{ returned.order_line.description }} · {{ returned.get_disposition_display }}</small></span></div>{% endfor %}</div>{% endif %}</div>
+      </article>
+
+      {% if order.status_events.all %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Fulfilment timeline</h2><p>Order status history</p></div><i class="bi bi-clock-history text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body"><ol class="staff-timeline">{% for event in order.status_events.all %}<li class="staff-timeline-item"><span class="staff-timeline-dot"></span><div class="staff-timeline-copy"><strong>{{ event.get_to_status_display }}</strong>{% if event.note %}<p>{{ event.note }}</p>{% endif %}</div><time class="staff-timeline-time">{{ event.created_at|date:"M j H:i" }}</time></li>{% endfor %}</ol></div></article>{% endif %}
+    </aside>
   </div>
-</div>
-<div class="row g-3 mb-4">
-  <div class="col-lg-6">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <h2 class="h6 text-muted">Customer</h2>
-        <p class="mb-1">{{ order.customer.name }}</p>
-        <p class="small text-muted mb-0">{{ order.customer.email }}</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-6">
-    <div class="card border-0 shadow-sm h-100">
-      <div class="card-body">
-        <h2 class="h6 text-muted">Contact on order</h2>
-        <p class="mb-0">{{ order.contact_name }} · {{ order.contact_email }}{% if order.contact_phone %} · {{ order.contact_phone }}{% endif %}</p>
-      </div>
-    </div>
-  </div>
-</div>
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body">
-    <h2 class="h6 text-muted">Internal note</h2>
-    <form method="post" class="row g-2 align-items-end">
-      {% csrf_token %}
-      <div class="col-md-10">
-        <label class="form-label small">Staff note</label>
-        <input type="text" name="staff_note" class="form-control" value="{{ order.staff_note }}" placeholder="Internal note">
-      </div>
-      <div class="col-md-2">
-        <button type="submit" class="btn btn-primary w-100">Save</button>
-      </div>
-    </form>
-  </div>
-</div>
-<div class="row g-3 mb-4">
-  <div class="col-lg-5">
-    <div class="card border-0 shadow-sm h-100"><div class="card-body">
-      <h2 class="h6">Advance order status</h2>
-      <form method="post" action="{% url 'staff_order_transition' order.pk %}">
-        {% csrf_token %}
-        {% for field in status_form %}<div class="mb-2"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
-        <button class="btn btn-primary">Update status</button>
-      </form>
-    </div></div>
-  </div>
-  <div class="col-lg-7">
-    <div class="card border-0 shadow-sm h-100"><div class="card-body">
-      <h2 class="h6">Shipment tracking</h2>
-      <form method="post" action="{% url 'staff_order_shipment' order.pk %}" class="row g-2">
-        {% csrf_token %}
-        {% for field in shipment_form %}<div class="col-md-6"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
-        <div class="col-12"><button class="btn btn-outline-primary">Save shipment</button></div>
-      </form>
-    </div></div>
-  </div>
-</div>
-{% if order.status_events.all %}
-<div class="card border-0 shadow-sm mb-4"><div class="card-body">
-  <h2 class="h6">Fulfillment timeline</h2>
-  <ol class="mb-0">
-    {% for event in order.status_events.all %}
-    <li class="mb-2"><strong>{{ event.get_to_status_display }}</strong> · {{ event.created_at|date:"Y-m-d H:i" }}{% if event.note %}<div class="small text-muted">{{ event.note }}</div>{% endif %}</li>
-    {% endfor %}
-  </ol>
-</div></div>
-{% endif %}
-{% if order.documents.all %}
-<div class="mb-3">
-  <h2 class="h6 text-muted">Linked documents</h2>
-  <ul class="list-group shadow-sm">
-    {% for d in order.documents.all %}
-    <li class="list-group-item d-flex justify-content-between">
-      <a href="{% url 'staff_document_edit' d.pk %}">{{ d.number }}</a>
-      <span class="text-muted small">{{ d.get_doc_type_display }}</span>
-    </li>
-    {% endfor %}
-  </ul>
-</div>
-{% endif %}
-<div class="table-responsive card border-0 shadow-sm">
-  <table class="table mb-0">
-    <thead class="table-light"><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Line</th></tr></thead>
-    <tbody>
-      {% for line in order.lines.all %}
-      <tr>
-        <td>{{ line.description }}</td>
-        <td class="text-end">{{ line.quantity }}</td>
-        <td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td>
-        <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      <tr><th colspan="3" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ order.subtotal|floatformat:2 }}</th></tr>
-      <tr><th colspan="3" class="text-end">Tax</th><th class="text-end">{{ company.currency_code }} {{ order.tax_amount|floatformat:2 }}</th></tr>
-      <tr><th colspan="3" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ order.total|floatformat:2 }}</th></tr>
-    </tfoot>
-  </table>
-</div>
-{% if order.billing_summary or order.shipping_summary %}
-<div class="row g-3 mt-2">
-  <div class="col-md-6">
-    <div class="card border-0 shadow-sm"><div class="card-body small">
-      <h3 class="h6">Billing</h3>
-      {{ order.billing_summary|linebreaks }}
-    </div></div>
-  </div>
-  <div class="col-md-6">
-    <div class="card border-0 shadow-sm"><div class="card-body small">
-      <h3 class="h6">Shipping</h3>
-      {{ order.shipping_summary|linebreaks }}
-    </div></div>
-  </div>
-</div>
-{% endif %}
-{% if order.customer_note %}
-<p class="mt-3 small"><strong>Customer note:</strong> {{ order.customer_note }}</p>
-{% endif %}
+</section>
 {% endblock %}

@@ -1,235 +1,76 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}{{ document.number }}{% endblock %}
+{% block staff_page_name %}Document details{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h3 mb-0">{{ document.number }}</h1>
-    <p class="text-muted mb-0">{{ document.get_doc_type_display }} · {{ document.get_status_display }}</p>
-  </div>
-  <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-success" href="{% url 'staff_document_pdf' document.pk %}?download=1">Download PDF</a>
-    <a class="btn btn-outline-primary" href="{% url 'staff_document_pdf' document.pk %}?inline=1" target="_blank" rel="noopener noreferrer" aria-label="Preview document PDF in a new tab">Preview PDF</a>
-    <a class="btn btn-outline-secondary" href="{% url 'staff_document_pdf' document.pk %}?copy=1&download=1">Copy PDF</a>
-    <a class="btn btn-outline-success" href="{% url 'staff_email_document' document.pk %}">Email</a>
-    {% if document.display_customer_phone %}<a class="btn btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={{ document.get_doc_type_display|urlencode }}%20{{ document.number|urlencode }}">WhatsApp</a>{% endif %}
-    {% if not document.is_locked %}<a class="btn btn-primary" href="{% url 'staff_document_edit' document.pk %}">Edit</a>{% endif %}
-    <form method="post" action="{% url 'staff_document_duplicate' document.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary">Duplicate</button></form>
-    {% if document.status == 'draft' %}<form method="post" action="{% url 'staff_document_issue' document.pk %}">{% csrf_token %}<button class="btn btn-success">Issue &amp; lock</button></form>{% endif %}
-  </div>
-</div>
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body row">
-    <div class="col-md-6">
-      <p class="small text-muted mb-1">Customer</p>
-      <p class="mb-2">{{ document.display_customer_name }}{% if not document.customer_id %} <span class="badge text-bg-light border">Walk-in</span>{% endif %}{% if document.display_customer_company %} — {{ document.display_customer_company }}{% endif %}</p>
-      <p class="small mb-0">{% if document.display_customer_email %}{{ document.display_customer_email }}{% endif %}{% if document.display_customer_email and document.display_customer_phone %} · {% endif %}{% if document.display_customer_phone %}{{ document.display_customer_phone }}{% endif %}</p>
-      {% if document.customer_address %}<p class="small text-muted mt-1 mb-0">{{ document.customer_address|linebreaksbr }}</p>{% endif %}
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Commercial documents</p><h1>{{ document.number }}</h1><p>{{ document.get_doc_type_display }} · {{ document.display_customer_name }} · Issued {{ document.issue_date|date:"M j, Y" }}</p></div>
+    <div class="staff-detail-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'staff_documents' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Documents</a>
+      <div class="dropdown"><button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>PDF</button><ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{% url 'staff_document_pdf' document.pk %}?download=1">Download original</a></li><li><a class="dropdown-item" href="{% url 'staff_document_pdf' document.pk %}?inline=1" target="_blank" rel="noopener noreferrer">Preview in new tab</a></li><li><a class="dropdown-item" href="{% url 'staff_document_pdf' document.pk %}?copy=1&amp;download=1">Download copy</a></li></ul></div>
+      <a class="btn btn-outline-success" href="{% url 'staff_email_document' document.pk %}"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Email</a>
+      {% if document.display_customer_phone %}<a class="btn btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={{ document.get_doc_type_display|urlencode }}%20{{ document.number|urlencode }}"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>WhatsApp</a>{% endif %}
+      {% if not document.is_locked %}<a class="btn btn-primary" href="{% url 'staff_document_edit' document.pk %}"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Edit</a>{% endif %}
     </div>
-    <div class="col-md-6">
-      <p class="small text-muted mb-1">Dates</p>
-      <p class="mb-1">Issue {{ document.issue_date }}{% if document.due_date %} · Due {{ document.due_date }}{% endif %}</p>
-      {% if document.doc_type == 'invoice' or document.doc_type == 'proforma' %}
-      <p class="small text-muted mb-1">Payment</p>
-      <p class="mb-0">Paid {{ company.currency_code }} {{ document.amount_paid|floatformat:2 }} · Balance {{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</p>
-      {% endif %}
-    </div>
+  </header>
+
+  {% if document.is_locked %}<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2"><div><i class="bi bi-lock-fill me-1" aria-hidden="true"></i><strong>This document is locked.</strong> Issued financial records require a revision rather than silent editing.</div>{% if can_revise %}<a class="btn btn-sm btn-outline-dark" href="#revision-actions">Revision controls</a>{% endif %}</div>{% endif %}
+  {% if quote_approval_pending %}<div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2"><div><strong>Internal approval required.</strong><span class="d-block small">This quotation cannot proceed to invoicing until it is approved.</span></div><form method="post" action="{% url 'staff_document_quote_approve' document.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-success">Approve quotation</button></form></div>{% elif quote_approval_complete %}<div class="alert alert-success"><strong>Internally approved.</strong>{% if document.quote_approved_at %}<span class="small text-muted"> {{ document.quote_approved_at|date:"M j, Y H:i" }}{% if document.quote_approved_by %} by {{ document.quote_approved_by.get_username }}{% endif %}</span>{% endif %}</div>{% endif %}
+
+  <div class="staff-record-hero"><div class="staff-record-hero-grid">
+    <div class="staff-record-stat"><small>Document type</small><strong>{{ document.get_doc_type_display }}</strong><span><span class="staff-status-pill staff-status-pill--{{ document.status|staff_status_tone }}">{{ document.get_status_display }}</span></span></div>
+    <div class="staff-record-stat"><small>Total</small><strong>{{ company.currency_code }} {{ document.total|floatformat:2 }}</strong><span>Subtotal {{ company.currency_code }} {{ document.subtotal|floatformat:2 }}</span></div>
+    <div class="staff-record-stat"><small>Payment</small><strong>{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }} paid</strong><span>Balance {{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</span></div>
+    <div class="staff-record-stat"><small>Dates</small><strong>{{ document.issue_date|date:"M j, Y" }}</strong><span>{% if document.due_date %}Due {{ document.due_date|date:"M j, Y" }}{% else %}No due date{% endif %}</span></div>
+  </div></div>
+
+  <div class="staff-workflow-columns">
+    <main>
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Line items</h2><p>Customer-facing products, services and charges</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ document.lines.count }} line{{ document.lines.count|pluralize }}</span></header>
+        <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Description</th><th>Source</th><th class="text-end">Qty</th>{% if not document.hide_prices %}<th class="text-end">Unit price</th><th class="text-end">Total</th>{% endif %}</tr></thead><tbody>{% for line in document.lines.all %}<tr><td>{% if line.section %}<div class="staff-mini-label text-primary">{{ line.section }}</div>{% endif %}<strong>{{ line.description }}</strong>{% if line.line_note %}<small class="d-block text-muted">{{ line.line_note }}</small>{% endif %}</td><td><span class="staff-status-pill staff-status-pill--neutral">{{ line.get_source_type_display }}</span>{% if line.supplier_name %}<small class="d-block text-muted">{{ line.supplier_name }}</small>{% endif %}</td><td class="text-end">{{ line.quantity }}</td>{% if not document.hide_prices %}<td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>{% endif %}</tr>{% empty %}<tr><td colspan="5" class="text-muted">No line items.</td></tr>{% endfor %}</tbody>{% if not document.hide_prices %}<tfoot><tr><th colspan="4" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ document.subtotal|floatformat:2 }}</th></tr>{% if document.discount_amount %}<tr><th colspan="4" class="text-end">Discount</th><th class="text-end">− {{ company.currency_code }} {{ document.discount_amount|floatformat:2 }}</th></tr>{% endif %}{% if document.shipping_amount %}<tr><th colspan="4" class="text-end">Shipping</th><th class="text-end">{{ company.currency_code }} {{ document.shipping_amount|floatformat:2 }}</th></tr>{% endif %}{% if document.other_charges %}<tr><th colspan="4" class="text-end">{{ document.other_charges_label|default:"Other charges" }}</th><th class="text-end">{{ company.currency_code }} {{ document.other_charges|floatformat:2 }}</th></tr>{% endif %}<tr><th colspan="4" class="text-end">Tax</th><th class="text-end">{{ company.currency_code }} {{ document.tax_amount|floatformat:2 }}</th></tr>{% if document.withholding_tax_amount %}<tr><th colspan="4" class="text-end">Withholding</th><th class="text-end">− {{ company.currency_code }} {{ document.withholding_tax_amount|floatformat:2 }}</th></tr>{% endif %}<tr><th colspan="4" class="text-end fs-6">Total</th><th class="text-end fs-6">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>{% if document.doc_type == 'invoice' or document.doc_type == 'proforma' %}<tr><th colspan="4" class="text-end">Paid to date</th><th class="text-end">{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</th></tr><tr><th colspan="4" class="text-end">Balance due</th><th class="text-end">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</th></tr>{% endif %}</tfoot>{% endif %}</table></div>
+      </article>
+
+      {% if document.section_totals %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Section subtotals</h2><p>Grouped values within the document</p></div></header><div class="staff-section-card-body"><div class="staff-summary-grid">{% for section in document.section_totals %}<div class="staff-summary-card"><span class="staff-summary-icon"><i class="bi bi-calculator" aria-hidden="true"></i></span><span><small>{{ section.label }}</small><strong class="fs-6">{{ company.currency_code }} {{ section.total|floatformat:2 }}</strong></span></div>{% endfor %}</div></div></article>{% endif %}
+
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Payment history</h2><p>Recorded receipts, reconciliation and refund controls</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ document.payments.count }}</span></header>
+        {% if document.payments.count %}<div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th><th>Status</th><th class="text-end">Action</th></tr></thead><tbody>{% for payment in document.payments.all %}<tr><td>{{ payment.recorded_at|date:"M j, Y H:i" }}<small class="d-block text-muted">{% if payment.recorded_by %}{{ payment.recorded_by.get_username }}{% else %}System{% endif %}</small></td><td>{{ payment.get_method_display }}</td><td><code>{{ payment.reference|default:"—" }}</code></td><td class="text-end fw-semibold">{{ company.currency_code }} {{ payment.amount|floatformat:2 }}</td><td>{% if payment.reconciled %}<span class="staff-status-pill staff-status-pill--success">Reconciled</span>{% else %}<span class="staff-status-pill staff-status-pill--warning">Unreconciled</span>{% endif %}</td><td class="text-end">{% if not payment.reconciled %}<form method="post" action="{% url 'staff_payment_reconcile' payment.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Reconcile</button></form>{% endif %}{% if payment.refundable_amount > 0 %}<details class="d-inline-block text-start"><summary class="btn btn-sm btn-outline-danger">Refund</summary><form method="post" action="{% url 'staff_payment_refund' payment.pk %}" class="p-2 mt-1 border rounded bg-white" style="min-width:18rem">{% csrf_token %}{% for field in refund_form %}<div class="mb-2"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}<button class="btn btn-sm btn-danger w-100">Process refund</button></form></details>{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="staff-section-card-body"><div class="staff-empty-state"><i class="bi bi-cash-coin" aria-hidden="true"></i><strong>No payments recorded</strong><span>Use the payment form to record the first payment.</span></div></div>{% endif %}
+      </article>
+
+      {% if document.notes %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Notes</h2><p>Additional information printed or stored with this document</p></div><i class="bi bi-journal-text text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body staff-prose">{{ document.notes|linebreaks }}</div></article>{% endif %}
+    </main>
+
+    <aside>
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Customer</h2><p>Identity and contact details saved on this document</p></div>{% if not document.customer_id %}<span class="staff-status-pill staff-status-pill--neutral">Walk-in</span>{% endif %}</header>
+        <div class="staff-section-card-body"><div class="staff-info-grid"><div class="staff-info-item"><small>Name</small><strong>{{ document.display_customer_name }}</strong>{% if document.display_customer_company %}<p>{{ document.display_customer_company }}</p>{% endif %}</div><div class="staff-info-item"><small>Email</small><strong>{% if document.display_customer_email %}<a href="mailto:{{ document.display_customer_email }}">{{ document.display_customer_email }}</a>{% else %}—{% endif %}</strong></div><div class="staff-info-item"><small>Phone</small><strong>{% if document.display_customer_phone %}<a href="tel:{{ document.display_customer_phone }}">{{ document.display_customer_phone }}</a>{% else %}—{% endif %}</strong></div><div class="staff-info-item"><small>Tax reference</small><strong>{{ document.customer_tax_reference|default:"—" }}</strong></div>{% if document.customer_address %}<div class="staff-info-item staff-form-field--full"><small>Address</small><div class="staff-prose">{{ document.customer_address|linebreaks }}</div></div>{% endif %}</div>{% if document.customer_id %}<a class="btn btn-outline-primary w-100 mt-3" href="{% url 'staff_customer_statement' document.customer_id %}">Open customer statement</a>{% endif %}</div>
+      </article>
+
+      {% if payment_request_text %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Payment request</h2><p>Shareable instructions and secure payment link</p></div><i class="bi bi-link-45deg text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body"><p class="small">{{ payment_request_text }}</p>{% if payment_request_url %}<code class="d-block user-select-all p-2 mb-3 text-break">{{ payment_request_url }}</code>{% endif %}<div class="d-grid gap-2">{% if payment_request_url %}<a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{{ payment_request_url }}">Open payment page</a>{% else %}<form method="post" action="{% url 'staff_document_payment_link' document.pk %}">{% csrf_token %}<button type="submit" class="btn btn-primary w-100">Generate payment link</button></form>{% endif %}{% if document.display_customer_phone %}<a class="btn btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={% if payment_request_url %}{{ payment_request_text|add:' '|add:payment_request_url|urlencode }}{% else %}{{ payment_request_text|urlencode }}{% endif %}">Send on WhatsApp</a>{% endif %}{% if document.display_customer_email %}<a class="btn btn-outline-secondary" href="mailto:{{ document.display_customer_email }}?subject=Payment%20request%20{{ document.number|urlencode }}&amp;body={% if payment_request_url %}{{ payment_request_text|add:' '|add:payment_request_url|urlencode }}{% else %}{{ payment_request_text|urlencode }}{% endif %}">Email request</a>{% endif %}</div></div></article>{% endif %}
+
+      {% if document.doc_type == 'quote' %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Customer acceptance</h2><p>Secure online response for this quotation</p></div><i class="bi bi-person-check text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body">{% if quote_customer_accepted %}<div class="alert alert-success mb-3"><strong>Accepted</strong>{% if document.quote_customer_signature_name %} by {{ document.quote_customer_signature_name }}{% endif %}{% if document.quote_customer_responded_at %}<br><small>{{ document.quote_customer_responded_at|date:"M j, Y H:i" }}</small>{% endif %}</div>{% elif quote_customer_declined %}<div class="alert alert-secondary">Customer declined this quotation.</div>{% elif quote_customer_pending and quote_customer_url %}<p class="small">Awaiting customer response.</p><code class="d-block user-select-all p-2 mb-3 text-break">{{ quote_customer_url }}</code>{% else %}<p class="small text-muted">Generate a secure link for the customer to accept or decline online.</p>{% endif %}{% if not quote_customer_accepted %}<form method="post" action="{% url 'staff_document_quote_customer_link' document.pk %}">{% csrf_token %}<button type="submit" class="btn btn-outline-primary w-100">{% if quote_customer_url %}Refresh customer link{% else %}Enable approval link{% endif %}</button></form>{% endif %}</div></article>{% endif %}
+
+      {% if show_payment_form %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Record payment</h2><p>Apply money received to this document</p></div><i class="bi bi-cash-stack text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body"><form method="post" action="{% url 'staff_document_payment' document.pk %}">{% csrf_token %}{% for field in payment_form %}<div class="mb-3"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<button type="submit" class="btn btn-success w-100">Record payment</button></form></div></article>{% endif %}
+
+      {% if available_credits and document.balance_due > 0 %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Available customer credit</h2><p>Apply existing credit toward the outstanding balance</p></div></header><div class="staff-section-card-body">{% for credit in available_credits %}<form method="post" action="{% url 'staff_apply_customer_credit' credit.pk document.pk %}" class="border-bottom pb-3 mb-3">{% csrf_token %}<div class="d-flex justify-content-between mb-2"><strong>Credit #{{ credit.pk }}</strong><span>{{ company.currency_code }} {{ credit.remaining_amount|floatformat:2 }}</span></div><label class="form-label small">Amount to apply</label><input class="form-control" type="number" name="amount" min="0.01" step="0.01" max="{{ credit.remaining_amount }}" value="{{ credit.remaining_amount }}"><button class="btn btn-outline-success w-100 mt-2">Apply credit</button></form>{% endfor %}</div></article>{% endif %}
+
+      <article class="staff-section-card" id="revision-actions">
+        <header class="staff-section-card-header"><div><h2>Document workflow</h2><p>Duplicate, issue, convert, revise or void</p></div><i class="bi bi-diagram-3 text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body d-grid gap-2">
+          <form method="post" action="{% url 'staff_document_duplicate' document.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary w-100">Duplicate as draft</button></form>
+          {% if document.status == 'draft' %}<form method="post" action="{% url 'staff_document_issue' document.pk %}">{% csrf_token %}<button class="btn btn-success w-100">Issue and lock</button></form>{% endif %}
+          {% if document.doc_type == 'quote' and not quote_approval_pending %}<form method="post" action="{% url 'staff_document_to_proforma' document.pk %}">{% csrf_token %}<button class="btn btn-outline-primary w-100">Convert to proforma</button></form><form method="post" action="{% url 'staff_document_to_invoice' document.pk %}">{% csrf_token %}<button class="btn btn-outline-primary w-100">Convert to invoice</button></form>{% elif document.doc_type == 'proforma' %}<form method="post" action="{% url 'staff_document_to_invoice' document.pk %}">{% csrf_token %}<button class="btn btn-outline-primary w-100">Convert to invoice</button></form>{% elif document.doc_type == 'invoice' %}<form method="post" action="{% url 'staff_document_to_delivery_note' document.pk %}">{% csrf_token %}<button class="btn btn-outline-primary w-100">Create delivery note</button></form><form method="post" action="{% url 'staff_document_to_receipt' document.pk %}">{% csrf_token %}<button class="btn btn-outline-primary w-100">Create receipt</button></form><form method="post" action="{% url 'staff_document_to_credit_note' document.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary w-100">Create credit note</button></form>{% endif %}
+          {% if document.is_locked and can_revise and document.status != 'cancelled' %}<details><summary class="btn btn-outline-primary w-100">Start revision</summary><form method="post" action="{% url 'staff_document_revise' document.pk %}" class="mt-2">{% csrf_token %}<label class="form-label small fw-semibold">Reason</label>{{ action_form.reason }}<button class="btn btn-primary w-100 mt-2">Preserve version and revise</button></form></details>{% endif %}
+          {% if can_void and document.status != 'cancelled' %}<details><summary class="btn btn-outline-danger w-100">Void document</summary><form method="post" action="{% url 'staff_document_cancel' document.pk %}" class="mt-2">{% csrf_token %}<label class="form-label small fw-semibold">Reason</label>{{ action_form.reason }}<button class="btn btn-danger w-100 mt-2">Confirm void</button></form></details>{% endif %}
+          {% if document.is_locked %}<p class="small text-muted mb-0">Locked {{ document.locked_at|date:"M j, Y H:i" }}{% if document.locked_by %} by {{ document.locked_by.get_username }}{% endif %}.</p>{% endif %}
+          {% if revisions %}<div class="staff-compact-list mt-2">{% for revision in revisions %}<div class="staff-compact-row"><span><strong class="d-block">Revision {{ revision.revision_number }}</strong><small>{{ revision.created_at|date:"M j, Y H:i" }}{% if revision.created_by %} · {{ revision.created_by.get_username }}{% endif %}<br>{{ revision.reason }}</small></span></div>{% endfor %}</div>{% endif %}
+        </div>
+      </article>
+
+      {% if can_view_margin %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Internal margin</h2><p>Visible only to authorised staff</p></div><i class="bi bi-graph-up-arrow text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body"><div class="staff-info-grid"><div class="staff-info-item"><small>Estimated cost</small><strong>{{ company.currency_code }} {{ document.total_cost|floatformat:2 }}</strong></div><div class="staff-info-item"><small>Gross profit</small><strong>{{ company.currency_code }} {{ document.gross_profit|floatformat:2 }}</strong></div><div class="staff-info-item"><small>Gross margin</small><strong>{{ document.gross_margin_percent }}%</strong></div></div></div></article>{% endif %}
+    </aside>
   </div>
-</div>
-{% if payment_request_text %}
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-      <div>
-        <h2 class="h6 text-muted text-uppercase mb-2">Payment request</h2>
-        <p class="mb-2">{{ payment_request_text }}</p>
-        {% if payment_request_url %}
-        <p class="small mb-2">Secure payment page: <code class="user-select-all">{{ payment_request_url }}</code></p>
-        {% endif %}
-        <p class="small text-muted mb-0">Use this until the online payment gateway is connected. Record the payment below when the transaction reference arrives.</p>
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        {% if payment_request_url %}
-        <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{{ payment_request_url }}">Open payment page</a>
-        {% else %}
-        <form method="post" action="{% url 'staff_document_payment_link' document.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-sm btn-primary">Generate payment link</button>
-        </form>
-        {% endif %}
-        {% if document.display_customer_phone %}
-        <a class="btn btn-sm btn-outline-success" target="_blank" rel="noopener noreferrer" href="https://wa.me/{{ document.display_customer_phone|cut:' '|cut:'+' }}?text={% if payment_request_url %}{{ payment_request_text|add:' '|add:payment_request_url|urlencode }}{% else %}{{ payment_request_text|urlencode }}{% endif %}">Send on WhatsApp</a>
-        {% endif %}
-        {% if document.display_customer_email %}
-        <a class="btn btn-sm btn-outline-primary" href="mailto:{{ document.display_customer_email }}?subject=Payment%20request%20{{ document.number|urlencode }}&body={% if payment_request_url %}{{ payment_request_text|add:' '|add:payment_request_url|urlencode }}{% else %}{{ payment_request_text|urlencode }}{% endif %}">Email request</a>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-{% endif %}
-{% if quote_approval_pending %}
-<div class="alert alert-warning border-0 shadow-sm mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2" role="status">
-  <div>
-    <strong>Internal approval required.</strong>
-    <span class="d-block small">This quotation cannot be converted to proforma or invoice until a staff member approves it.</span>
-  </div>
-  <form method="post" action="{% url 'staff_document_quote_approve' document.pk %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-sm btn-success">Approve quotation</button>
-  </form>
-</div>
-{% elif quote_approval_complete %}
-<div class="alert alert-success border-0 shadow-sm mb-3" role="status">
-  <strong>Internally approved.</strong>
-  {% if document.quote_approved_at %}
-  <span class="small text-muted">({{ document.quote_approved_at|date:"Y-m-d H:i" }}{% if document.quote_approved_by %} · {{ document.quote_approved_by.get_username }}{% endif %})</span>
-  {% endif %}
-</div>
-{% endif %}
-{% if document.doc_type == 'quote' %}
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <h2 class="h6 text-muted text-uppercase mb-2">Customer acceptance</h2>
-    {% if quote_customer_accepted %}
-    <p class="mb-0 text-success"><strong>Accepted</strong>{% if document.quote_customer_signature_name %} by {{ document.quote_customer_signature_name }}{% endif %}{% if document.quote_customer_responded_at %} · {{ document.quote_customer_responded_at|date:"Y-m-d H:i" }}{% endif %}</p>
-    {% elif quote_customer_declined %}
-    <p class="mb-2 text-muted">Customer declined this quotation.</p>
-    {% elif quote_customer_pending and quote_customer_url %}
-    <p class="small mb-2">Awaiting customer response. Share this link:</p>
-    <p class="mb-2"><code class="user-select-all">{{ quote_customer_url }}</code></p>
-    {% else %}
-    <p class="small text-muted mb-2">Generate a secure link for the customer to accept or decline online.</p>
-    {% endif %}
-    {% if not quote_customer_accepted %}
-    <form method="post" action="{% url 'staff_document_quote_customer_link' document.pk %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-outline-primary">{% if quote_customer_url %}Refresh customer link{% else %}Enable customer approval link{% endif %}</button>
-    </form>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
-<div class="table-responsive card border-0 shadow-sm">
-  <table class="table mb-0">
-    <thead class="table-light"><tr><th>Description</th><th>Source</th><th class="text-end">Qty</th>{% if not document.hide_prices %}<th class="text-end">Unit</th><th class="text-end">Total</th>{% endif %}</tr></thead>
-    <tbody>
-      {% for line in document.lines.all %}
-      <tr>
-        <td>{% if line.section %}<div class="small text-uppercase text-primary">{{ line.section }}</div>{% endif %}{{ line.description }}{% if line.line_note %}<div class="small text-muted">{{ line.line_note }}</div>{% endif %}</td>
-        <td><span class="badge text-bg-light border">{{ line.get_source_type_display }}</span>{% if line.supplier_name %}<div class="small text-muted">{{ line.supplier_name }}</div>{% endif %}</td>
-        <td class="text-end">{{ line.quantity }}</td>
-        {% if not document.hide_prices %}
-        <td class="text-end">{{ company.currency_code }} {{ line.unit_price|floatformat:2 }}</td>
-        <td class="text-end">{{ company.currency_code }} {{ line.line_total|floatformat:2 }}</td>
-        {% endif %}
-      </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      {% if not document.hide_prices %}
-      <tr><th colspan="4" class="text-end">Subtotal</th><th class="text-end">{{ company.currency_code }} {{ document.subtotal|floatformat:2 }}</th></tr>
-      {% if document.discount_amount %}<tr><th colspan="4" class="text-end">Discount</th><th class="text-end">− {{ company.currency_code }} {{ document.discount_amount|floatformat:2 }}</th></tr>{% endif %}
-      {% if document.shipping_amount %}<tr><th colspan="4" class="text-end">Shipping</th><th class="text-end">{{ company.currency_code }} {{ document.shipping_amount|floatformat:2 }}</th></tr>{% endif %}
-      {% if document.other_charges %}<tr><th colspan="4" class="text-end">{{ document.other_charges_label|default:"Other charges" }}</th><th class="text-end">{{ company.currency_code }} {{ document.other_charges|floatformat:2 }}</th></tr>{% endif %}
-      <tr><th colspan="4" class="text-end">Tax</th><th class="text-end">{{ company.currency_code }} {{ document.tax_amount|floatformat:2 }}</th></tr>
-      {% if document.withholding_tax_amount %}<tr><th colspan="4" class="text-end">Withholding</th><th class="text-end">− {{ company.currency_code }} {{ document.withholding_tax_amount|floatformat:2 }}</th></tr>{% endif %}
-      <tr><th colspan="4" class="text-end">Total</th><th class="text-end">{{ company.currency_code }} {{ document.total|floatformat:2 }}</th></tr>
-      {% if document.doc_type == 'invoice' or document.doc_type == 'proforma' %}
-      <tr><th colspan="4" class="text-end">Paid to date</th><th class="text-end">{{ company.currency_code }} {{ document.amount_paid|floatformat:2 }}</th></tr>
-      <tr><th colspan="4" class="text-end">Balance due</th><th class="text-end">{{ company.currency_code }} {{ document.balance_due|floatformat:2 }}</th></tr>
-      {% endif %}
-      {% endif %}
-    </tfoot>
-  </table>
-</div>
-{% if document.section_totals %}<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Section subtotals</h2><div class="row g-2">{% for section in document.section_totals %}<div class="col-md-4"><div class="border rounded p-2"><div class="small text-muted">{{ section.label }}</div><strong>{{ company.currency_code }} {{ section.total|floatformat:2 }}</strong></div></div>{% endfor %}</div></div></div>{% endif %}
-{% if document.payments.count %}
-<div class="card border-0 shadow-sm mt-3">
-  <div class="card-body">
-    <h2 class="h6">Payment history</h2>
-    <div class="table-responsive">
-      <table class="table table-sm mb-0">
-        <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>By</th></tr></thead>
-        <tbody>
-          {% for p in document.payments.all %}
-          <tr>
-            <td>{{ p.recorded_at|date:"Y-m-d H:i" }}</td>
-            <td>{{ company.currency_code }} {{ p.amount|floatformat:2 }}</td>
-            <td>{{ p.get_method_display }}</td>
-            <td>{{ p.reference|default:"—" }}</td>
-            <td>{% if p.recorded_by %}{{ p.recorded_by.get_username }}{% else %}—{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-{% endif %}
-{% if document.payments.count %}
-<div class="card border-0 shadow-sm mt-3">
-  <div class="card-body">
-    <h2 class="h6">Reconciliation and refunds</h2>
-    {% for p in document.payments.all %}
-    <div class="border rounded p-3 mb-2">
-      <div class="d-flex justify-content-between flex-wrap gap-2">
-        <span>{{ p.get_method_display }} · {{ company.currency_code }} {{ p.amount|floatformat:2 }} · refunded {{ p.refunded_amount|floatformat:2 }}</span>
-        {% if p.reconciled %}<span class="badge text-bg-success">Reconciled</span>{% else %}
-        <form method="post" action="{% url 'staff_payment_reconcile' p.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Mark reconciled</button></form>
-        {% endif %}
-      </div>
-      {% if p.refundable_amount > 0 %}
-      <details class="mt-2"><summary class="btn btn-sm btn-outline-danger">Refund payment</summary>
-        <form method="post" action="{% url 'staff_payment_refund' p.pk %}" class="row g-2 mt-1">
-          {% csrf_token %}
-          {% for field in refund_form %}<div class="col-md-4"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
-          <div class="col-12"><button class="btn btn-sm btn-danger">Process refund and create credit note</button></div>
-        </form>
-      </details>
-      {% endif %}
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-{% if show_payment_form %}
-<div class="card border-0 shadow-sm mt-3">
-  <div class="card-body col-lg-6">
-    <h2 class="h6">Record payment</h2>
-    <form method="post" action="{% url 'staff_document_payment' document.pk %}">
-      {% csrf_token %}
-      {% for field in payment_form %}
-      <div class="mb-2">
-        <label class="form-label small" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field.errors }}{{ field }}
-      </div>
-      {% endfor %}
-      <button type="submit" class="btn btn-sm btn-success">Record payment</button>
-    </form>
-  </div>
-</div>
-{% endif %}
-{% if available_credits and document.balance_due > 0 %}
-<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Available customer credit</h2>{% for credit in available_credits %}<form method="post" action="{% url 'staff_apply_customer_credit' credit.pk document.pk %}" class="row g-2 align-items-end border-top py-2">{% csrf_token %}<div class="col"><div class="small text-muted">Credit #{{ credit.pk }}</div><strong>{{ company.currency_code }} {{ credit.remaining_amount|floatformat:2 }}</strong></div><div class="col-md-4"><label class="form-label small">Amount to apply</label><input class="form-control form-control-sm" type="number" name="amount" min="0.01" step="0.01" max="{{ credit.remaining_amount }}" value="{{ credit.remaining_amount }}"></div><div class="col-auto"><button class="btn btn-sm btn-success">Apply credit</button></div></form>{% endfor %}</div></div>
-{% endif %}
-{% if can_view_margin %}
-<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Internal margin</h2><div class="row g-3"><div class="col-md-4"><div class="small text-muted">Estimated cost</div><strong>{{ company.currency_code }} {{ document.total_cost|floatformat:2 }}</strong></div><div class="col-md-4"><div class="small text-muted">Gross profit</div><strong>{{ company.currency_code }} {{ document.gross_profit|floatformat:2 }}</strong></div><div class="col-md-4"><div class="small text-muted">Gross margin</div><strong>{{ document.gross_margin_percent }}%</strong></div></div></div></div>
-{% endif %}
-<div class="card border-0 shadow-sm mt-3" id="revision-actions"><div class="card-body">
-  <h2 class="h6">Document control</h2>
-  {% if document.customer_id %}<p><a href="{% url 'staff_customer_statement' document.customer_id %}">Open customer statement</a></p>{% else %}<p class="small text-muted">This is a walk-in document and is saved without a customer account.</p>{% endif %}
-  {% if document.is_locked %}<p class="small text-muted">Locked {{ document.locked_at|date:"Y-m-d H:i" }}{% if document.locked_by %} by {{ document.locked_by.get_username }}{% endif %}.</p>{% endif %}
-  <div class="d-flex flex-wrap gap-3">
-    {% if document.is_locked and can_revise and document.status != 'cancelled' %}
-    <details><summary class="btn btn-outline-primary">Start revision</summary><form method="post" action="{% url 'staff_document_revise' document.pk %}" class="mt-2">{% csrf_token %}<label class="form-label">Reason</label>{{ action_form.reason }}<button class="btn btn-primary btn-sm mt-2">Preserve version and revise</button></form></details>
-    {% endif %}
-    {% if can_void and document.status != 'cancelled' %}
-    <details><summary class="btn btn-outline-danger">Void document</summary><form method="post" action="{% url 'staff_document_cancel' document.pk %}" class="mt-2">{% csrf_token %}<label class="form-label">Reason</label>{{ action_form.reason }}<button class="btn btn-danger btn-sm mt-2">Confirm void</button></form></details>
-    {% endif %}
-  </div>
-  {% if revisions %}<h3 class="h6 mt-4">Revision history</h3><ul class="list-group list-group-flush">{% for revision in revisions %}<li class="list-group-item px-0">Revision {{ revision.revision_number }} · {{ revision.created_at|date:"Y-m-d H:i" }}{% if revision.created_by %} · {{ revision.created_by.get_username }}{% endif %}<div class="small text-muted">{{ revision.reason }}</div></li>{% endfor %}</ul>{% endif %}
-</div></div>
-{% if document.notes %}
-<div class="card border-0 shadow-sm mt-3"><div class="card-body"><h2 class="h6">Notes</h2><p class="mb-0">{{ document.notes|linebreaks }}</p></div></div>
-{% endif %}
+</section>
 {% endblock %}
