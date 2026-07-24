@@ -16,10 +16,8 @@
   </div>
 
   {% if search_q %}
-  {% with has_results=results.customers|length|add:results.documents|length|add:results.orders|length|add:results.jobs|length|add:results.tickets|length|add:results.products|length|add:results.serials|length %}
-  <div class="staff-page-header--compact"><div><h1 class="h4">Results for “{{ search_q }}”</h1><p>{{ has_results }} match{{ has_results|pluralize }} across the workspace</p></div></div>
-  {% if not has_results %}<div class="staff-empty-state"><i class="bi bi-search" aria-hidden="true"></i><strong>No matches found</strong><span>Try a shorter name, a reference number, email address, phone number, SKU or serial.</span></div>{% endif %}
-  {% endwith %}
+  <div class="staff-page-header--compact"><div><h1 class="h4">Results for “{{ search_q }}”</h1><p>Matches are grouped by business record type.</p></div></div>
+  {% if not results.customers and not results.documents and not results.orders and not results.jobs and not results.tickets and not results.products and not results.serials %}<div class="staff-empty-state"><i class="bi bi-search" aria-hidden="true"></i><strong>No matches found</strong><span>Try a shorter name, a reference number, email address, phone number, SKU or serial.</span></div>{% endif %}
 
   <div class="row g-3">
     {% if results.customers %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Customers</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.customers|length }}</span></div><div class="staff-search-results">{% for customer in results.customers %}<a class="staff-search-result" href="{% url 'staff_customer_statement' customer.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-person" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ customer.name }}{% if customer.company_name %} — {{ customer.company_name }}{% endif %}</strong><p>{{ customer.email }}{% if customer.phone %} · {{ customer.phone }}{% endif %}</p></span></span><i class="bi bi-chevron-right text-muted" aria-hidden="true"></i></a>{% endfor %}</div></section>{% endif %}
