@@ -4,11 +4,12 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from catalog.models import Category, Product
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
+from core.models import ContactMessage
 
 
 class ProductionHealthAndHeadersTests(TestCase):
@@ -56,6 +57,23 @@ class ProductionHealthAndHeadersTests(TestCase):
         self.assertEqual(response["Cross-Origin-Resource-Policy"], "same-site")
         self.assertTrue(response["X-Request-ID"])
 
+    @override_settings(DEBUG=False)
+    def test_not_found_page_includes_support_reference(self):
+        response = self.client.get(
+            "/this-page-does-not-exist/",
+            HTTP_X_REQUEST_ID="missing-page-1234",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertContains(
+            response,
+            "We could not find that page",
+            status_code=404,
+        )
+        self.assertContains(response, "missing-page-1234", status_code=404)
+        self.assertEqual(response["Cache-Control"], "no-store, max-age=0")
+        self.assertIn("noindex", response["X-Robots-Tag"])
+
 
 class PublicBuyingGuideTests(TestCase):
     def test_buying_guide_explains_condition_and_confirmation_steps(self):
@@ -77,6 +95,43 @@ class PublicBuyingGuideTests(TestCase):
         self.assertContains(home, reverse("buying_guide"))
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, reverse("buying_guide"))
+
+
+class ContactAbuseProtectionTests(TestCase):
+    def test_contact_honeypot_rejects_automated_submission(self):
+        response = self.client.post(
+            reverse("contact"),
+            {
+                "request_type": "product",
+                "name": "Automated Sender",
+                "email": "bot@example.com",
+                "phone": "0700000000",
+                "subject": "Bulk request",
+                "message": "This otherwise looks like a valid contact request.",
+                "website": "https://spam.example.com",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ContactMessage.objects.count(), 0)
+        self.assertContains(response, "Your request could not be accepted")
+
+    def test_contact_form_still_accepts_legitimate_submission(self):
+        response = self.client.post(
+            reverse("contact"),
+            {
+                "request_type": "product",
+                "name": "Real Customer",
+                "email": "customer@example.com",
+                "phone": "0700000000",
+                "subject": "Laptop question",
+                "message": "Please confirm the available specification and price.",
+                "website": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(ContactMessage.objects.count(), 1)
 
 
 class CatalogueQualityTests(TestCase):
