@@ -29,9 +29,15 @@ urlpatterns = [
         {"sitemaps": site_maps},
         name="django.contrib.sitemaps.views.sitemap",
     ),
+    path("health/live/", core_health.live, name="health_live"),
+    path("health/ready/", core_health.ready, name="health_ready"),
     path("healthz/", core_health.healthz, name="healthz"),
     path("api/v1/products/", core_api.api_products, name="api_products"),
-    path("api/v1/products/<slug:slug>/", core_api.api_product_detail, name="api_product_detail"),
+    path(
+        "api/v1/products/<slug:slug>/",
+        core_api.api_product_detail,
+        name="api_product_detail",
+    ),
     path("api/v1/orders/lookup/", core_api.api_order_lookup, name="api_order_lookup"),
     path(
         "quote/<uuid:token>/",
