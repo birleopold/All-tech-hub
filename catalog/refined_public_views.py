@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from decimal import Decimal
 
 from django.db.models import F, Q
 from django.utils.safestring import mark_safe
@@ -51,6 +50,11 @@ def _script_safe_json(value) -> str:
     )
 
 
+def _delete_parameter(parameters, key: str) -> None:
+    if key in parameters:
+        del parameters[key]
+
+
 class RefinedPublicProductListView(MarketplaceProductListView):
     """Validated marketplace search with accurate effective-price ordering."""
 
@@ -59,19 +63,19 @@ class RefinedPublicProductListView(MarketplaceProductListView):
 
         kind = (parameters.get("kind") or "").strip()
         if kind and kind not in (Product.KIND_PHYSICAL, Product.KIND_SERVICE):
-            parameters.pop("kind", None)
+            _delete_parameter(parameters, "kind")
 
         condition = (parameters.get("condition") or "").strip().lower()
         valid_conditions = {value for value, _ in ProductGrowthData.CONDITION_CHOICES}
         if condition and condition not in valid_conditions:
-            parameters.pop("condition", None)
+            _delete_parameter(parameters, "condition")
 
         minimum = self._decimal_param(parameters.get("min_price", ""))
         maximum = self._decimal_param(parameters.get("max_price", ""))
         if parameters.get("min_price") and minimum is None:
-            parameters.pop("min_price", None)
+            _delete_parameter(parameters, "min_price")
         if parameters.get("max_price") and maximum is None:
-            parameters.pop("max_price", None)
+            _delete_parameter(parameters, "max_price")
         if minimum is not None and maximum is not None and minimum > maximum:
             minimum, maximum = maximum, minimum
             parameters["min_price"] = format(minimum, "f")
