@@ -57,6 +57,28 @@ class ProductionHealthAndHeadersTests(TestCase):
         self.assertTrue(response["X-Request-ID"])
 
 
+class PublicBuyingGuideTests(TestCase):
+    def test_buying_guide_explains_condition_and_confirmation_steps(self):
+        response = self.client.get(reverse("buying_guide"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "What the condition labels mean")
+        self.assertContains(response, "New equipment")
+        self.assertContains(response, "Prepared for resale")
+        self.assertContains(response, "Pre-owned equipment")
+        self.assertContains(response, "Request written confirmation")
+        self.assertContains(response, reverse("product_compare"))
+        self.assertNotContains(response, "style=", html=False)
+
+    def test_buying_guide_is_discoverable_from_navigation_and_sitemap(self):
+        home = self.client.get(reverse("home"))
+        sitemap = self.client.get(reverse("django.contrib.sitemaps.views.sitemap"))
+
+        self.assertContains(home, reverse("buying_guide"))
+        self.assertEqual(sitemap.status_code, 200)
+        self.assertContains(sitemap, reverse("buying_guide"))
+
+
 class CatalogueQualityTests(TestCase):
     @classmethod
     def setUpTestData(cls):
