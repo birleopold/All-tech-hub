@@ -88,7 +88,7 @@ PY
 
 python manage.py check --deploy
 python manage.py makemigrations --check --dry-run
-python manage.py audit_project --strict-environment
+python manage.py audit_project --strict-environment --environment-only
 
 if is_true "$DEPLOY_BACKUP_ENABLED"; then
     log "Pre-migration database backup"
@@ -103,6 +103,9 @@ fi
 
 log "Database migrations"
 python manage.py migrate --noinput
+
+log "Post-migration project audit"
+python manage.py audit_project
 
 log "Static asset manifest"
 python manage.py collectstatic --noinput
