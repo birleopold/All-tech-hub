@@ -1,6 +1,7 @@
 from django.urls import path
 
 from catalog import views
+from catalog.detail_views import PublicProductDetailView
 from catalog.public_views import PublicProductListView
 
 urlpatterns = [
@@ -12,7 +13,7 @@ urlpatterns = [
         views.product_compare_toggle,
         name="product_compare_toggle",
     ),
-    path("item/<slug:slug>/", views.ProductDetailView.as_view(), name="product_detail"),
+    path("item/<slug:slug>/", PublicProductDetailView.as_view(), name="product_detail"),
     path(
         "item/<slug:slug>/review/",
         views.product_review_submit,
