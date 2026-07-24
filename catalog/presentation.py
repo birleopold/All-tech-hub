@@ -10,7 +10,7 @@ from catalog.models import Product
 
 @dataclass(slots=True)
 class PublicProductCard:
-    """Read-only template proxy with precomputed card presentation values."""
+    """Read-only template proxy with precomputed public presentation values."""
 
     product: Product
     primary_display_image: Any
@@ -22,6 +22,32 @@ class PublicProductCard:
 
     def __getattr__(self, name: str):
         return getattr(self.product, name)
+
+    # Public-page aliases keep detailed templates explicit while retaining the
+    # original card attribute names used by the homepage and catalogue.
+    @property
+    def public_display_image(self):
+        return self.primary_display_image
+
+    @property
+    def public_has_variants(self) -> bool:
+        return self.has_sellable_variants
+
+    @property
+    def public_min_price(self) -> Decimal | None:
+        return self.min_active_variant_price
+
+    @property
+    def public_variant_count(self) -> int:
+        return self.active_variant_count
+
+    @property
+    def public_available(self) -> bool:
+        return self.available_to_sell
+
+    @property
+    def public_low_stock(self) -> bool:
+        return self.is_low_stock
 
 
 def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCard]:
