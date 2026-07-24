@@ -8,6 +8,7 @@ from catalog.models import Product, ProductReview
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
 from catalog.stock_alerts import low_stock_products
 from commerce.models import Order
+from core.backups import latest_backup_status
 from core.filters import apply_job_filters, apply_ticket_filters
 from core.mixins import StaffRequiredMixin
 from core.models import ContactMessage, SupportTicket
@@ -27,7 +28,9 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         ctx["orders_in_transit"] = Order.objects.filter(
             status=Order.STATUS_DISPATCHED
         ).count()
-        ctx["open_jobs"] = JobCard.objects.exclude(status__in=terminal_job_statuses).count()
+        ctx["open_jobs"] = JobCard.objects.exclude(
+            status__in=terminal_job_statuses
+        ).count()
         ctx["draft_quotes"] = CommercialDocument.objects.filter(
             doc_type=CommercialDocument.TYPE_QUOTE,
             status=CommercialDocument.STATUS_DRAFT,
@@ -75,6 +78,7 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         )
         quality_rows = catalogue_quality_rows(quality_products)
         ctx["catalogue_quality"] = catalogue_quality_summary(quality_rows)
+        ctx["backup_status"] = latest_backup_status()
         return ctx
 
 
