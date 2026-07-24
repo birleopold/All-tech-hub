@@ -1,97 +1,90 @@
 {% extends "base.html" %}
+{% load static %}
+{% block body_class %}staff-workspace-body{% endblock %}
+{% block extra_css %}<link href="{% static 'css/staff_workspace.css' %}" rel="stylesheet">{% endblock %}
+
 {% block mobile_tabbar %}
-{% with u=resolve_url_name %}
-<nav class="mobile-tabbar mobile-tabbar--staff d-lg-none" role="navigation" aria-label="Staff mobile">
-  <a class="mobile-tabbar__item {% if u == 'staff_dashboard' %}is-active{% endif %}" href="{% url 'staff_dashboard' %}" {% if u == 'staff_dashboard' %}aria-current="page"{% endif %}><i class="bi bi-speedometer2 mobile-tabbar__icon" aria-hidden="true"></i><span>Home</span></a>
-  <a class="mobile-tabbar__item {% if u == 'staff_orders' or u == 'staff_order_detail' %}is-active{% endif %}" href="{% url 'staff_orders' %}" {% if u == 'staff_orders' or u == 'staff_order_detail' %}aria-current="page"{% endif %}><i class="bi bi-bag-check mobile-tabbar__icon" aria-hidden="true"></i><span>Orders</span></a>
-  <a class="mobile-tabbar__item {% if u == 'staff_documents' or u != 'staff_document_create' and 'staff_document_' in u %}is-active{% endif %}" href="{% url 'staff_documents' %}" {% if u == 'staff_documents' or u != 'staff_document_create' and 'staff_document_' in u %}aria-current="page"{% endif %}><i class="bi bi-file-earmark-text mobile-tabbar__icon" aria-hidden="true"></i><span>Docs</span></a>
-  <a class="mobile-tabbar__item {% if u == 'staff_jobs' or u != 'staff_job_create' and 'staff_job' in u %}is-active{% endif %}" href="{% url 'staff_jobs' %}" {% if u == 'staff_jobs' or u != 'staff_job_create' and 'staff_job' in u %}aria-current="page"{% endif %}><i class="bi bi-clipboard-check mobile-tabbar__icon" aria-hidden="true"></i><span>Jobs</span></a>
-  <button type="button" class="mobile-tabbar__item mobile-tabbar__item--btn" data-bs-toggle="offcanvas" data-bs-target="#staffNavOffcanvas" aria-controls="staffNavOffcanvas" aria-expanded="false" aria-label="Open staff menu"><i class="bi bi-list mobile-tabbar__icon" aria-hidden="true"></i><span>Menu</span></button>
+<nav class="staff-mobile-tabbar d-lg-none" aria-label="Staff mobile navigation">
+  <a href="{% url 'staff_dashboard' %}" {% if resolve_url_name == 'staff_dashboard' %}aria-current="page"{% endif %}><i class="bi bi-grid-1x2-fill" aria-hidden="true"></i><span>Home</span></a>
+  <a href="{% url 'staff_orders' %}" {% if resolve_url_name == 'staff_orders' or resolve_url_name == 'staff_order_detail' %}aria-current="page"{% endif %}><i class="bi bi-bag-check" aria-hidden="true"></i><span>Orders</span></a>
+  <a href="{% url 'staff_documents' %}" {% if 'staff_document' in resolve_url_name %}aria-current="page"{% endif %}><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Docs</span></a>
+  <a href="{% url 'staff_jobs' %}" {% if 'staff_job' in resolve_url_name %}aria-current="page"{% endif %}><i class="bi bi-tools" aria-hidden="true"></i><span>Jobs</span></a>
+  <button type="button" data-bs-toggle="offcanvas" data-bs-target="#staffNavOffcanvas" aria-controls="staffNavOffcanvas" aria-label="Open all staff tools"><i class="bi bi-list" aria-hidden="true"></i><span>Menu</span></button>
 </nav>
-<div class="offcanvas offcanvas-start staff-offcanvas d-lg-none" tabindex="-1" id="staffNavOffcanvas" aria-labelledby="staffNavOffcanvasLabel">
-  <div class="offcanvas-header border-bottom"><h2 class="h5 offcanvas-title" id="staffNavOffcanvasLabel">Staff menu</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
+
+<div class="offcanvas offcanvas-start staff-mobile-offcanvas" tabindex="-1" id="staffNavOffcanvas" aria-labelledby="staffNavOffcanvasLabel">
+  <div class="offcanvas-header">
+    <div class="staff-brand staff-brand--mobile">
+      <span class="staff-brand-mark"><i class="bi bi-cpu-fill" aria-hidden="true"></i></span>
+      <span><strong id="staffNavOffcanvasLabel">{{ company.company_name }}</strong><small>Staff workspace</small></span>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
   <div class="offcanvas-body">
-    <p class="small text-uppercase text-muted mb-2">Operations</p>
-    <ul class="nav flex-column gap-1 mb-4 list-unstyled">
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_dashboard' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_search' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_reports' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_conversion_lifecycle' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_conversion_lifecycle' %}aria-current="page"{% endif %}>Conversion lifecycle</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_retention_dashboard' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_retention_dashboard' %}aria-current="page"{% endif %}>Retention &amp; reviews</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_customer_growth_dashboard' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_customer_growth_dashboard' %}aria-current="page"{% endif %}>Customer growth &amp; loyalty</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_customer_campaigns' %}" data-bs-dismiss="offcanvas" {% if 'staff_customer_campaign' in u %}aria-current="page"{% endif %}>Customer email campaigns</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_automation_control' %}" data-bs-dismiss="offcanvas" {% if 'staff_automation' in u %}aria-current="page"{% endif %}>Automation control center</a></li>
-      {% if perms.messaging.view_emailsuppression %}<li><a class="nav-link px-0 py-2" href="{% url 'staff_email_deliverability' %}" data-bs-dismiss="offcanvas" {% if 'staff_email_deliverability' in u or 'staff_email_suppression' in u %}aria-current="page"{% endif %}>Email deliverability</a></li>{% endif %}
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_marketing_dashboard' %}" data-bs-dismiss="offcanvas" {% if 'staff_marketing' in u and 'staff_growth' not in u %}aria-current="page"{% endif %}>Marketing automation</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_growth_dashboard' %}" data-bs-dismiss="offcanvas" {% if 'staff_growth' in u %}aria-current="page"{% endif %}>Growth &amp; analytics</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_audit_log' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_security_diagnostics' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_security_diagnostics' %}aria-current="page"{% endif %}>Security diagnostics</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_orders' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_orders' or u == 'staff_order_detail' %}aria-current="page"{% endif %}>Shop orders</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_documents' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_documents' or u != 'staff_document_create' and 'staff_document_' in u %}aria-current="page"{% endif %}>Quotes &amp; invoices</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_document_create' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_document_create' %}aria-current="page"{% endif %}>New document</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_account_payment_create' %}" data-bs-dismiss="offcanvas">Account payment</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_payment_reconciliation' %}" data-bs-dismiss="offcanvas">Payment reconciliation</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_inventory' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_inventory' or 'staff_product' in u %}aria-current="page"{% endif %}>Inventory</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_warranty_center' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_warranty_center' %}aria-current="page"{% endif %}>Warranty / RMA</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_stocktakes' %}" data-bs-dismiss="offcanvas" {% if 'staff_stocktake' in u %}aria-current="page"{% endif %}>Stock takes</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_purchasing' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_purchasing' or 'staff_po' in u %}aria-current="page"{% endif %}>Purchasing</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_job_bench' %}" data-bs-dismiss="offcanvas" {% if 'staff_job_bench' in u %}aria-current="page"{% endif %}>Technician bench</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_jobs' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_jobs' or u != 'staff_job_create' and 'staff_job' in u %}aria-current="page"{% endif %}>Job cards</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_job_create' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_job_create' %}aria-current="page"{% endif %}>New job card</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_job_calendar' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_job_calendar' %}aria-current="page"{% endif %}>Job calendar</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_tickets' %}" data-bs-dismiss="offcanvas" {% if 'staff_ticket' in u %}aria-current="page"{% endif %}>Support tickets</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_contact_messages' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_contact_messages' %}aria-current="page"{% endif %}>Contact inbox</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_notifications' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_notifications' %}aria-current="page"{% endif %}>Notifications{% if staff_unread_notifications %} <span class="badge text-bg-danger">{{ staff_unread_notifications }}</span>{% endif %}</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_business_hours' %}" data-bs-dismiss="offcanvas" {% if u == 'staff_business_hours' %}aria-current="page"{% endif %}>Business hours</a></li>
-      <li><a class="nav-link px-0 py-2" href="{% url 'staff_two_factor_setup' %}" data-bs-dismiss="offcanvas">Two-factor security</a></li>
-      <li><a class="nav-link px-0 py-2" href="/admin/" data-bs-dismiss="offcanvas" target="_blank" rel="noopener noreferrer" aria-label="Django site admin (opens in a new tab)">Django admin</a></li>
-    </ul>
-    <a class="btn btn-outline-secondary w-100 mb-2" href="{% url 'home' %}" data-bs-dismiss="offcanvas">Public site</a>
-    <form method="post" action="{% url 'logout' %}" class="d-grid">{% csrf_token %}<button type="submit" class="btn btn-outline-primary w-100" data-bs-dismiss="offcanvas">Log out</button></form>
+    {% include "includes/staff_navigation.html" %}
+    <div class="staff-mobile-actions">
+      <a href="{% url 'home' %}" class="btn btn-outline-light w-100">Public site</a>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="btn btn-light w-100">Log out</button></form>
+    </div>
   </div>
 </div>
-{% endwith %}
 {% endblock %}
+
 {% block content %}
-<div class="container-fluid staff-app px-0 px-md-2"><div class="row g-0 flex-md-nowrap">
-  <nav class="col-md-3 col-lg-2 staff-sidebar py-4 px-3 d-none d-md-block" aria-label="Staff workspace">
-    <p class="small text-uppercase text-muted mb-2">Operations</p>
-    <form method="get" action="{% url 'staff_search' %}" class="mb-3" role="search"><label class="visually-hidden" for="staff-sidebar-search">Staff search</label><input class="form-control form-control-sm" id="staff-sidebar-search" name="q" value="{{ search_q|default:'' }}" placeholder="Search..."></form>
-    <ul class="nav flex-column gap-1 mb-4">
-      <li><a class="nav-link px-0" href="{% url 'staff_dashboard' %}" {% if resolve_url_name == 'staff_dashboard' %}aria-current="page"{% endif %}>Dashboard</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_search' %}" {% if resolve_url_name == 'staff_search' %}aria-current="page"{% endif %}>Search</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_reports' %}" {% if resolve_url_name == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_conversion_lifecycle' %}" {% if resolve_url_name == 'staff_conversion_lifecycle' %}aria-current="page"{% endif %}>Conversion lifecycle</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_retention_dashboard' %}" {% if resolve_url_name == 'staff_retention_dashboard' %}aria-current="page"{% endif %}>Retention &amp; reviews</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_customer_growth_dashboard' %}" {% if resolve_url_name == 'staff_customer_growth_dashboard' %}aria-current="page"{% endif %}>Customer growth &amp; loyalty</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_customer_campaigns' %}" {% if 'staff_customer_campaign' in resolve_url_name %}aria-current="page"{% endif %}>Customer email campaigns</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_automation_control' %}" {% if 'staff_automation' in resolve_url_name %}aria-current="page"{% endif %}>Automation control center</a></li>
-      {% if perms.messaging.view_emailsuppression %}<li><a class="nav-link px-0" href="{% url 'staff_email_deliverability' %}" {% if 'staff_email_deliverability' in resolve_url_name or 'staff_email_suppression' in resolve_url_name %}aria-current="page"{% endif %}>Email deliverability</a></li>{% endif %}
-      <li><a class="nav-link px-0" href="{% url 'staff_marketing_dashboard' %}" {% if 'staff_marketing' in resolve_url_name and 'staff_growth' not in resolve_url_name %}aria-current="page"{% endif %}>Marketing automation</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_growth_dashboard' %}" {% if 'staff_growth' in resolve_url_name %}aria-current="page"{% endif %}>Growth &amp; analytics</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_audit_log' %}" {% if resolve_url_name == 'staff_audit_log' %}aria-current="page"{% endif %}>Audit log</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_security_diagnostics' %}" {% if resolve_url_name == 'staff_security_diagnostics' %}aria-current="page"{% endif %}>Security diagnostics</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_orders' %}" {% if resolve_url_name == 'staff_orders' or resolve_url_name == 'staff_order_detail' %}aria-current="page"{% endif %}>Shop orders</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_documents' %}" {% if resolve_url_name == 'staff_documents' or resolve_url_name != 'staff_document_create' and 'staff_document_' in resolve_url_name %}aria-current="page"{% endif %}>Quotes &amp; invoices</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_document_create' %}" {% if resolve_url_name == 'staff_document_create' %}aria-current="page"{% endif %}>New document</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_account_payment_create' %}">Account payment</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_payment_reconciliation' %}">Payment reconciliation</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_inventory' %}" {% if resolve_url_name == 'staff_inventory' or 'staff_product' in resolve_url_name %}aria-current="page"{% endif %}>Inventory</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_warranty_center' %}" {% if resolve_url_name == 'staff_warranty_center' %}aria-current="page"{% endif %}>Warranty / RMA</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_stocktakes' %}" {% if 'staff_stocktake' in resolve_url_name %}aria-current="page"{% endif %}>Stock takes</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_purchasing' %}" {% if resolve_url_name == 'staff_purchasing' or 'staff_po' in resolve_url_name %}aria-current="page"{% endif %}>Purchasing</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_job_bench' %}" {% if 'staff_job_bench' in resolve_url_name %}aria-current="page"{% endif %}>Technician bench</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_jobs' %}" {% if resolve_url_name == 'staff_jobs' or resolve_url_name != 'staff_job_create' and 'staff_job' in resolve_url_name %}aria-current="page"{% endif %}>Job cards</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_job_create' %}" {% if resolve_url_name == 'staff_job_create' %}aria-current="page"{% endif %}>New job card</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_job_calendar' %}" {% if resolve_url_name == 'staff_job_calendar' %}aria-current="page"{% endif %}>Job calendar</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_tickets' %}" {% if 'staff_ticket' in resolve_url_name %}aria-current="page"{% endif %}>Support tickets</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_contact_messages' %}" {% if resolve_url_name == 'staff_contact_messages' %}aria-current="page"{% endif %}>Contact inbox</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_notifications' %}" {% if resolve_url_name == 'staff_notifications' %}aria-current="page"{% endif %}>Notifications{% if staff_unread_notifications %} <span class="badge rounded-pill text-bg-danger">{{ staff_unread_notifications }}</span>{% endif %}</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_business_hours' %}" {% if resolve_url_name == 'staff_business_hours' %}aria-current="page"{% endif %}>Business hours</a></li>
-      <li><a class="nav-link px-0" href="{% url 'staff_two_factor_setup' %}">Two-factor security</a></li>
-      <li><a class="nav-link px-0" href="/admin/" target="_blank" rel="noopener noreferrer" aria-label="Django site admin (opens in a new tab)">Django admin</a></li>
-    </ul>
-  </nav>
-  <div class="col-12 col-md-9 col-lg-10 py-3 py-md-4 px-3 staff-main-panel">{% block staff_content %}{% endblock %}</div>
-</div></div>
+<div class="staff-app">
+  <aside class="staff-sidebar-shell d-none d-lg-flex">
+    <a class="staff-brand" href="{% url 'staff_dashboard' %}">
+      <span class="staff-brand-mark"><i class="bi bi-cpu-fill" aria-hidden="true"></i></span>
+      <span><strong>{{ company.company_name }}</strong><small>Staff workspace</small></span>
+    </a>
+
+    <div class="staff-sidebar-scroll">
+      {% include "includes/staff_navigation.html" %}
+    </div>
+
+    <div class="staff-sidebar-footer">
+      <a href="{% url 'home' %}"><i class="bi bi-globe2" aria-hidden="true"></i><span>View public site</span></a>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><i class="bi bi-box-arrow-left" aria-hidden="true"></i><span>Log out</span></button></form>
+    </div>
+  </aside>
+
+  <section class="staff-workspace">
+    <header class="staff-topbar">
+      <div class="staff-topbar-left">
+        <button type="button" class="staff-menu-button d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#staffNavOffcanvas" aria-controls="staffNavOffcanvas" aria-label="Open staff menu"><i class="bi bi-list" aria-hidden="true"></i></button>
+        <nav class="staff-breadcrumb" aria-label="Breadcrumb">
+          <a href="{% url 'staff_dashboard' %}">Dashboard</a><i class="bi bi-chevron-right" aria-hidden="true"></i><span>{% block staff_page_name %}Workspace{% endblock %}</span>
+        </nav>
+      </div>
+
+      <div class="staff-topbar-actions">
+        <form method="get" action="{% url 'staff_search' %}" class="staff-topbar-search" role="search">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <label class="visually-hidden" for="staff-global-search">Search staff workspace</label>
+          <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search">
+        </form>
+        <a class="staff-icon-button" href="{% url 'staff_notifications' %}" aria-label="Notifications{% if staff_unread_notifications %}, {{ staff_unread_notifications }} unread{% endif %}">
+          <i class="bi bi-bell" aria-hidden="true"></i>{% if staff_unread_notifications %}<span>{{ staff_unread_notifications }}</span>{% endif %}
+        </a>
+        <div class="dropdown">
+          <button class="staff-user-menu" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="staff-avatar">{{ request.user.get_short_name|default:request.user.username|slice:":1"|upper }}</span>
+            <span class="staff-user-copy d-none d-sm-flex"><strong>{{ request.user.get_full_name|default:request.user.username }}</strong><small>Staff member</small></span>
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+            <li><a class="dropdown-item" href="{% url 'staff_two_factor_setup' %}"><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>Security settings</a></li>
+            <li><a class="dropdown-item" href="{% url 'home' %}"><i class="bi bi-globe2 me-2" aria-hidden="true"></i>Public site</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-left me-2" aria-hidden="true"></i>Log out</button></form></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <div class="staff-main-panel">
+      {% block staff_content %}{% endblock %}
+    </div>
+  </section>
+</div>
 {% endblock %}
