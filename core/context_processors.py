@@ -17,6 +17,16 @@ PUBLIC_QUICK_COLLECTIONS = [
 ]
 
 
+def _script_safe_json(payload: dict) -> str:
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    return mark_safe(
+        encoded
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
 def company(request):
     match = getattr(request, "resolver_match", None)
     url_name = getattr(match, "url_name", "") or ""
@@ -79,23 +89,21 @@ def company(request):
 
         home_url = request.build_absolute_uri(reverse("home"))
         catalogue_url = request.build_absolute_uri(reverse("product_list"))
-        context["website_schema_json"] = mark_safe(
-            json.dumps(
-                {
-                    "@context": "https://schema.org",
-                    "@type": "WebSite",
-                    "name": company_settings.company_name,
-                    "url": home_url,
-                    "potentialAction": {
-                        "@type": "SearchAction",
-                        "target": {
-                            "@type": "EntryPoint",
-                            "urlTemplate": f"{catalogue_url}?q={{search_term_string}}",
-                        },
-                        "query-input": "required name=search_term_string",
+        context["website_schema_json"] = _script_safe_json(
+            {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "name": company_settings.company_name,
+                "url": home_url,
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": f"{catalogue_url}?q={{search_term_string}}",
                     },
-                }
-            )
+                    "query-input": "required name=search_term_string",
+                },
+            }
         )
     else:
         context["public_nav_categories"] = []
