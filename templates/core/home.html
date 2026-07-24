@@ -20,11 +20,13 @@
         <p class="public-eyebrow">Technology for work, learning, business and home</p>
         <h1 class="market-home-hero__title">Find the right technology without the guesswork.</h1>
         <p class="market-home-hero__lead">Search dependable computers, accessories and professional services. Compare clear options, confirm condition and availability, and get support from enquiry through after-sales.</p>
-        <form class="market-hero-search" action="{% url 'product_list' %}" method="get" role="search">
+        <form class="market-hero-search market-search-shell" action="{% url 'product_list' %}" method="get" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
           <i class="bi bi-search" aria-hidden="true"></i>
           <label class="visually-hidden" for="market-hero-search-input">Search the LEOSOFT catalogue</label>
-          <input id="market-hero-search-input" name="q" type="search" placeholder="Try HP ProBook, Core i7, 16GB RAM, SSD, printer or repair">
+          <input id="market-hero-search-input" name="q" type="search" placeholder="Try HP ProBook, Core i7, 16GB RAM, SSD, printer or repair" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-hero-search-results" data-market-search-input>
           <button type="submit">Search catalogue</button>
+          <div id="market-hero-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
+          <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
         </form>
         <div class="market-hero-popular" aria-label="Popular searches"><span>Popular:</span><a href="{% url 'product_list' %}?q=laptop">Laptops</a><a href="{% url 'product_list' %}?q=core+i5">Core i5</a><a href="{% url 'product_list' %}?q=ssd">SSD storage</a><a href="{% url 'product_list' %}?collection=student">Student options</a><a href="{% url 'product_list' %}?collection=business">Business computers</a></div>
       </div>
@@ -105,6 +107,15 @@
   <div class="container">
     <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Recently added</p><h2 class="market-section-title">New arrivals</h2><p class="market-section-intro">The latest physical products published in the LEOSOFT catalogue.</p></div><a class="market-section-link" href="{% url 'product_list' %}?collection=new">See all new arrivals <i class="bi bi-arrow-right"></i></a></div>
     <div class="market-product-grid">{% for p in new_arrivals %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+{% if recently_viewed_products %}
+<section class="market-section">
+  <div class="container">
+    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Continue exploring</p><h2 class="market-section-title">Recently viewed</h2><p class="market-section-intro">Return to products and services you opened during recent catalogue visits.</p></div><a class="market-section-link" href="{% url 'product_list' %}">Browse full catalogue <i class="bi bi-arrow-right"></i></a></div>
+    <div class="market-product-grid">{% for p in recently_viewed_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
   </div>
 </section>
 {% endif %}
