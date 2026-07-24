@@ -143,9 +143,29 @@ readiness_payload="$(
         "$HEALTH_URL"
 )"
 printf '%s\n' "$readiness_payload"
-if [[ "$readiness_payload" != *"\"release\": \"${ALLTECH_RELEASE_SHA}\""* ]]; then
-    fail "Readiness endpoint did not report release ${ALLTECH_RELEASE_SHA}."
-fi
+READINESS_PAYLOAD="$readiness_payload" python - <<'PY'
+import json
+import os
+
+try:
+    payload = json.loads(os.environ["READINESS_PAYLOAD"])
+except (KeyError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"Readiness endpoint returned invalid JSON: {exc}") from exc
+
+expected_release = os.environ["ALLTECH_RELEASE_SHA"]
+checks = {
+    "status": payload.get("status") == "ok",
+    "database": payload.get("database") == "ok",
+    "release": payload.get("release") == expected_release,
+}
+failed = [name for name, passed in checks.items() if not passed]
+if failed:
+    raise SystemExit(
+        "Readiness verification failed for "
+        + ", ".join(failed)
+        + f"; expected release {expected_release!r}, received {payload!r}"
+    )
+PY
 
 sudo systemctl status "$SERVICE_NAME" --no-pager -l
 trap - ERR
