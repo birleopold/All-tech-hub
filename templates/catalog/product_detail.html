@@ -11,7 +11,7 @@
 <meta property="og:description" content="{{ meta_description }}">
 <meta property="og:url" content="{{ canonical_url }}">
 {% if social_image_url %}<meta property="og:image" content="{{ social_image_url }}">{% endif %}
-<meta property="product:price:amount" content="{% if product.public_has_variants and product.public_min_price %}{{ product.public_min_price }}{% else %}{{ product.price }}{% endif %}">
+<meta property="product:price:amount" content="{{ product.public_price }}">
 <meta property="product:price:currency" content="{{ company.currency_code }}">
 <meta name="twitter:card" content="{% if social_image_url %}summary_large_image{% else %}summary{% endif %}">
 <meta name="twitter:title" content="{{ share_title }}">
@@ -21,6 +21,7 @@
 {% block extra_css %}<link href="{% static 'css/public_detail_contact.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 <script type="application/ld+json">{{ product_schema_json }}</script>
+<script type="application/ld+json">{{ product_breadcrumb_json }}</script>
 
 <section class="detail-hero">
   <div class="container py-4 py-lg-5">
@@ -39,8 +40,8 @@
         <p class="detail-summary mb-0">{{ product.short_description|default:product.description|truncatewords:35|default:"Clear pricing, availability and support from the LEOSOFT team." }}</p>
         <div class="detail-hero-meta">
           <span class="detail-hero-pill"><i class="bi bi-grid" aria-hidden="true"></i>{{ product.category.name }}</span>
-          {% if product_growth_data and product_growth_data.brand %}<span class="detail-hero-pill"><i class="bi bi-patch-check" aria-hidden="true"></i>{{ product_growth_data.brand }}</span>{% endif %}
-          {% if product_growth_data %}<span class="detail-hero-pill"><i class="bi bi-box-seam" aria-hidden="true"></i>{{ product_growth_data.get_condition_display }}</span>{% endif %}
+          {% if product.public_brand %}<span class="detail-hero-pill"><i class="bi bi-patch-check" aria-hidden="true"></i>{{ product.public_brand }}</span>{% endif %}
+          {% if product.public_condition %}<span class="detail-hero-pill"><i class="bi bi-box-seam" aria-hidden="true"></i>{{ product.public_condition }}</span>{% endif %}
           {% if product.public_available %}<span class="detail-hero-pill"><i class="bi bi-check-circle" aria-hidden="true"></i>{% if product.kind == 'service' %}Booking available{% else %}Available now{% endif %}</span>{% endif %}
         </div>
       </div>
@@ -85,7 +86,7 @@
       {% endif %}
 
       <nav class="product-section-nav" aria-label="Product page sections">
-        <a href="#overview">Overview</a><a href="#details">Details</a><a href="#reviews">Reviews{% if review_summary.count %} ({{ review_summary.count }}){% endif %}</a>{% if recent_products %}<a href="#recently-viewed">Recently viewed</a>{% endif %}
+        <a href="#overview">Overview</a><a href="#details">Details</a><a href="#reviews">Reviews{% if review_summary.count %} ({{ review_summary.count }}){% endif %}</a>{% if related_products %}<a href="#related-products">Similar options</a>{% endif %}{% if recent_products %}<a href="#recently-viewed">Recently viewed</a>{% endif %}
       </nav>
 
       <section class="product-info-card" id="overview">
@@ -100,8 +101,8 @@
         <dl class="product-spec-grid">
           <div class="product-spec-item"><dt>Type</dt><dd>{{ product.get_kind_display }}</dd></div>
           <div class="product-spec-item"><dt>Category</dt><dd>{{ product.category.name }}</dd></div>
-          {% if product_growth_data and product_growth_data.brand %}<div class="product-spec-item"><dt>Brand</dt><dd>{{ product_growth_data.brand }}</dd></div>{% endif %}
-          {% if product_growth_data %}<div class="product-spec-item"><dt>Condition</dt><dd>{{ product_growth_data.get_condition_display }}</dd></div>{% endif %}
+          {% if product.public_brand %}<div class="product-spec-item"><dt>Brand</dt><dd>{{ product.public_brand }}</dd></div>{% endif %}
+          {% if product.public_condition %}<div class="product-spec-item"><dt>Condition</dt><dd>{{ product.public_condition }}</dd></div>{% endif %}
           {% if product.sku %}<div class="product-spec-item"><dt>SKU</dt><dd>{{ product.sku }}</dd></div>{% endif %}
           {% if product.public_has_variants %}<div class="product-spec-item"><dt>Options</dt><dd>{{ product.public_variant_count }} available</dd></div>{% endif %}
           {% if product.service_duration_hours %}<div class="product-spec-item"><dt>Estimated duration</dt><dd>{{ product.service_duration_hours }} hour{{ product.service_duration_hours|pluralize }}</dd></div>{% endif %}
@@ -125,8 +126,8 @@
         <div class="product-buy-card__header"><p class="product-category-label">{{ product.category.name }}</p><h2 class="product-buy-heading" id="buy-heading">{% if product.kind == 'service' %}Book this service{% else %}Purchase options{% endif %}</h2></div>
         <div class="product-buy-card__body">
           {% if review_summary.count %}<div class="product-rating-row"><span class="product-rating-stars" aria-label="{{ review_summary.avg }} out of 5 stars">{% for s in rating_stars %}{% if s <= rounded_review_rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span><a href="#reviews">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a></div>{% endif %}
-          <p class="product-price" id="pd-price-label">{% if product.public_has_variants and product.public_min_price %}From {{ company.currency_code }} {{ product.public_min_price }}{% else %}{{ company.currency_code }} {{ product.price }}{% endif %}</p>
-          {% if product.compare_at_price %}<p class="product-price-note"><span class="text-decoration-line-through">{{ company.currency_code }} {{ product.compare_at_price }}</span> previous comparison price</p>{% elif product.public_has_variants %}<p class="product-price-note">Select an option to confirm its exact price and stock.</p>{% else %}<p class="product-price-note">Price shown before any delivery or optional setup charges.</p>{% endif %}
+          <p class="product-price" id="pd-price-label">{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price }}</p>
+          {% if product.public_compare_at_price %}<p class="product-price-note"><span class="text-decoration-line-through">{{ company.currency_code }} {{ product.public_compare_at_price }}</span> previous comparison price{% if product.savings_percent %} · Save {{ product.savings_percent }}%{% endif %}</p>{% elif product.public_has_variants %}<p class="product-price-note">Select an option to confirm its exact price and stock.</p>{% else %}<p class="product-price-note">Price shown before any delivery or optional setup charges.</p>{% endif %}
 
           <div class="product-status-stack">
             <div class="product-status-line {% if product.public_available %}is-available{% endif %}"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% elif product.public_available %}bi-check-circle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>{% if product.kind == 'service' %}Available for booking{% elif product.public_available %}Available to order{% else %}Contact the team to confirm availability{% endif %}</div>
@@ -192,14 +193,21 @@
     </div>
   </section>
 
+  {% if related_products %}
+  <section class="market-recommendation-section" id="related-products" aria-labelledby="related-products-heading">
+    <div class="market-recommendation-section__head"><div><p class="product-section-kicker mb-1">Compare sensible alternatives</p><h2 id="related-products-heading">Similar products and services</h2><p>Options are selected from the same category, brand or closely related catalogue area.</p></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}?category={{ product.category.slug|urlencode }}">Browse {{ product.category.name }}</a></div>
+    <div class="market-product-grid">{% for p in related_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
+  </section>
+  {% endif %}
+
   {% if recent_products %}
-  <section class="mt-5" id="recently-viewed" aria-labelledby="recent-products-heading">
-    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="product-section-kicker mb-1">Continue exploring</p><h2 class="product-section-title mb-0" id="recent-products-heading">Recently viewed</h2></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}">Browse full catalogue</a></div>
-    <div class="row g-3">{% for item in recent_products %}<div class="col-sm-6 col-lg-3"><article class="product-recent-card"><div class="product-recent-card__image">{% if item.public_display_image %}{% responsive_image item.public_display_image item.name "" "(max-width: 575px) 100vw, 25vw" "lazy" "low" %}{% else %}<div class="catalog-card-placeholder h-100"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}</div><div class="p-3"><p class="small text-muted mb-1">{{ item.category.name }}</p><h3 class="h6 mb-2"><a class="stretched-link text-decoration-none text-dark" href="{{ item.get_absolute_url }}">{{ item.name }}</a></h3><p class="fw-bold mb-0">{% if item.public_has_variants and item.public_min_price %}From {% endif %}{{ company.currency_code }} {% if item.public_has_variants and item.public_min_price %}{{ item.public_min_price }}{% else %}{{ item.price }}{% endif %}</p></div></article></div>{% endfor %}</div>
+  <section class="market-recommendation-section" id="recently-viewed" aria-labelledby="recent-products-heading">
+    <div class="market-recommendation-section__head"><div><p class="product-section-kicker mb-1">Continue exploring</p><h2 id="recent-products-heading">Recently viewed</h2><p>Return to other products and services you opened during this catalogue visit.</p></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}">Browse full catalogue</a></div>
+    <div class="market-product-grid">{% for p in recent_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
   </section>
   {% endif %}
 </div>
 
-<div class="product-mobile-action" aria-label="Quick buying action"><div class="product-mobile-action__price"><small>{% if product.kind == 'service' %}Starting price{% else %}Price{% endif %}</small>{% if product.public_has_variants and product.public_min_price %}From {% endif %}{{ company.currency_code }} {% if product.public_has_variants and product.public_min_price %}{{ product.public_min_price }}{% else %}{{ product.price }}{% endif %}</div><a class="btn btn-light" href="#product-buy-panel">{% if product.kind == 'service' %}Book{% else %}Buy / enquire{% endif %}</a></div>
+<div class="product-mobile-action" aria-label="Quick buying action"><div class="product-mobile-action__price"><small>{% if product.kind == 'service' %}Starting price{% else %}Price{% endif %}</small>{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price }}</div><a class="btn btn-light" href="#product-buy-panel">{% if product.kind == 'service' %}Book{% else %}Buy / enquire{% endif %}</a></div>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'js/social_share.js' %}" defer></script><script src="{% static 'js/public_detail_contact.js' %}" defer></script>{% endblock %}
