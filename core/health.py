@@ -1,5 +1,8 @@
 import os
+from functools import lru_cache
+from pathlib import Path
 
+from django.conf import settings
 from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.utils import timezone
@@ -14,12 +17,21 @@ def _health_response(payload: dict, *, status: int = 200) -> JsonResponse:
     return response
 
 
+@lru_cache(maxsize=1)
 def _release_label() -> str:
-    return (
+    environment_label = (
         os.getenv("ALLTECH_RELEASE_SHA", "").strip()
         or os.getenv("GIT_COMMIT", "").strip()
-        or "unknown"
-    )[:64]
+    )
+    if environment_label:
+        return environment_label[:64]
+
+    marker = Path(settings.BASE_DIR) / ".release"
+    try:
+        file_label = marker.read_text(encoding="utf-8").strip()
+    except OSError:
+        file_label = ""
+    return (file_label or "unknown")[:64]
 
 
 @require_GET
