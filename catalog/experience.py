@@ -23,11 +23,17 @@ def _normalise_ids(raw, *, maximum: int) -> list[int]:
 
 
 def recent_ids(request) -> list[int]:
-    return _normalise_ids(request.session.get(RECENT_SESSION_KEY, []), maximum=MAX_RECENT)
+    return _normalise_ids(
+        request.session.get(RECENT_SESSION_KEY, []),
+        maximum=MAX_RECENT,
+    )
 
 
 def compare_ids(request) -> list[int]:
-    return _normalise_ids(request.session.get(COMPARE_SESSION_KEY, []), maximum=MAX_COMPARE)
+    return _normalise_ids(
+        request.session.get(COMPARE_SESSION_KEY, []),
+        maximum=MAX_COMPARE,
+    )
 
 
 def record_recent_product(request, product: Product) -> None:
@@ -46,7 +52,7 @@ def _ordered_products(ids: list[int]):
     )
     return (
         Product.objects.filter(pk__in=ids, is_published=True)
-        .select_related("category", "category__parent")
+        .select_related("category", "category__parent", "growth_data")
         .prefetch_related("gallery_images", "variants")
         .order_by(ordering)
     )

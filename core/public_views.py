@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from catalog.discovery import new_rotation_seed, order_for_discovery
+from catalog.experience import recent_products
 from catalog.models import Product
 from catalog.presentation import prepare_public_products
 from core.forms import ContactForm
@@ -127,6 +128,9 @@ class PublicHomeView(HomeView):
                 kind=Product.KIND_PHYSICAL,
                 growth_data__condition=ProductGrowthData.CONDITION_REFURBISHED,
             ).order_by("-is_featured", "-updated_at")[:8]
+        )
+        context["recently_viewed_products"] = prepare_public_products(
+            recent_products(self.request, limit=8)
         )
         context["brand_collections"] = list(
             ProductGrowthData.objects.filter(

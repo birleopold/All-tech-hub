@@ -1,0 +1,245 @@
+.market-search-shell {
+  position: relative;
+}
+
+.market-search-results {
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  right: 0;
+  left: 0;
+  z-index: 1085;
+  max-height: min(72vh, 38rem);
+  overflow-y: auto;
+  color: #14283c;
+  background: rgba(255, 255, 255, 0.99);
+  border: 1px solid rgba(20, 40, 60, 0.14);
+  border-radius: 1rem;
+  box-shadow: 0 1.6rem 4rem rgba(4, 20, 36, 0.24);
+  text-align: left;
+  overscroll-behavior: contain;
+}
+
+.market-search-results[hidden] {
+  display: none !important;
+}
+
+.market-search-results__section + .market-search-results__section {
+  border-top: 1px solid rgba(20, 40, 60, 0.09);
+}
+
+.market-search-results__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem 0.35rem;
+  color: #637487;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.market-search-option {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 3.85rem;
+  padding: 0.65rem 0.9rem;
+  color: #14283c;
+  text-decoration: none;
+  border-radius: 0.7rem;
+  outline: none;
+}
+
+.market-search-option:hover,
+.market-search-option:focus-visible,
+.market-search-option.is-active {
+  color: #0a4fae;
+  background: rgba(18, 103, 232, 0.08);
+}
+
+.market-search-option__image,
+.market-search-option__icon {
+  flex: 0 0 3rem;
+  width: 3rem;
+  height: 3rem;
+  overflow: hidden;
+  background: #f1f5fa;
+  border: 1px solid rgba(20, 40, 60, 0.09);
+  border-radius: 0.7rem;
+}
+
+.market-search-option__image {
+  object-fit: contain;
+}
+
+.market-search-option__icon {
+  display: grid;
+  place-items: center;
+  color: #1267e8;
+  font-size: 1.15rem;
+}
+
+.market-search-option__copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.market-search-option__copy strong,
+.market-search-option__copy small {
+  display: block;
+}
+
+.market-search-option__copy strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-search-option__copy small {
+  margin-top: 0.16rem;
+  overflow: hidden;
+  color: #6d7d8d;
+  font-size: 0.73rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-search-option__price {
+  flex: 0 0 auto;
+  color: #0a2947;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.market-search-results__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.9rem;
+  color: #0a4fae;
+  background: #f7faff;
+  border-radius: 0 0 1rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.market-search-results__footer:hover,
+.market-search-results__footer:focus-visible {
+  color: #073b81;
+  background: #edf5ff;
+}
+
+.market-search-empty,
+.market-search-loading {
+  padding: 1.2rem;
+  color: #6d7d8d;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.market-active-filters .market-filter-pill {
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.market-active-filters a.market-filter-pill:hover,
+.market-active-filters a.market-filter-pill:focus-visible {
+  color: #9e2c20;
+  background: rgba(188, 52, 38, 0.08);
+  border-color: rgba(188, 52, 38, 0.18);
+}
+
+.market-filter-pill__remove {
+  margin-left: 0.18rem;
+  font-size: 0.72rem;
+}
+
+.market-product-card__actions {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.market-quick-add-form {
+  display: contents;
+}
+
+.market-quick-add-button {
+  min-width: 2.85rem;
+}
+
+.market-quick-add-button[disabled] {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.market-recommendation-section {
+  margin-top: 2rem;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  background: linear-gradient(145deg, #f8fbff, #fff);
+  border: 1px solid rgba(20, 40, 60, 0.1);
+  border-radius: 1.35rem;
+}
+
+.market-recommendation-section__head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.market-recommendation-section__head h2 {
+  margin: 0;
+  color: #0a2947;
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+  font-weight: 780;
+  letter-spacing: -0.025em;
+}
+
+.market-recommendation-section__head p {
+  max-width: 42rem;
+  margin: 0.35rem 0 0;
+  color: #657689;
+}
+
+.market-search-results mark {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font-weight: 850;
+}
+
+@media (max-width: 1199.98px) {
+  .market-global-search .market-search-results {
+    position: fixed;
+    top: 5.3rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    max-height: calc(100vh - 7rem);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .market-search-option__price {
+    display: none;
+  }
+
+  .market-product-card__actions {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .market-recommendation-section__head {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .market-active-filters .market-filter-pill {
+    transition: none;
+  }
+}

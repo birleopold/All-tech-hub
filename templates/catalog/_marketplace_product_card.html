@@ -35,9 +35,12 @@
     </div>
     <div class="market-product-card__actions">
       <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details</a>
+      {% if p.kind == 'physical' and p.public_available and not p.public_has_variants %}
+      <form method="post" action="{% url 'cart_add' p.pk %}" class="market-quick-add-form" data-market-quick-add>{% csrf_token %}<input type="hidden" name="quantity" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-primary market-quick-add-button" aria-label="Add {{ p.name }} to cart" title="Add to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i></button></form>
+      {% endif %}
       {% if show_compare and p.kind == 'physical' %}
       <form method="post" action="{% url 'product_compare_toggle' p.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn {% if p.pk in compare_product_ids %}btn-primary{% else %}btn-outline-secondary{% endif %}" aria-label="{% if p.pk in compare_product_ids %}Remove {{ p.name }} from comparison{% else %}Compare {{ p.name }}{% endif %}" aria-pressed="{% if p.pk in compare_product_ids %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap" aria-hidden="true"></i></button></form>
-      {% else %}
+      {% elif p.kind == 'service' or not p.public_available or p.public_has_variants %}
       <a class="btn btn-outline-secondary" href="{% url 'contact' %}?type={% if p.kind == 'service' %}support{% else %}product{% endif %}&amp;product={{ p.slug|urlencode }}" aria-label="Ask about {{ p.name }}"><i class="bi bi-chat-dots" aria-hidden="true"></i></a>
       {% endif %}
     </div>
