@@ -1,81 +1,33 @@
 {% extends "staff_base.html" %}
-{% block title %}{% if object %}Edit product{% else %}New product{% endif %}{% endblock %}
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}New product{% endif %}{% endblock %}
+{% block staff_page_name %}{% if object %}Edit product{% else %}New product{% endif %}{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <h1 class="h3 mb-0">{% if object %}Edit product{% else %}New product{% endif %}</h1>
-  <div class="d-flex flex-wrap gap-2">
-    {% if object %}<a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' object.pk %}">Print labels</a>{% endif %}
-    <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Back to products</a>
-  </div>
-</div>
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Inventory catalogue</p><h1>{% if object %}{{ object.name }}{% else %}New product or service{% endif %}</h1><p>{% if object %}Manage catalogue details, images, variants, pricing and stock.{% else %}Create the main catalogue record; images and variants can be added after saving.{% endif %}</p></div>
+    <div class="staff-detail-actions">{% if object %}<a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' object.pk %}"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Print labels</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'staff_products' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Products</a></div>
+  </header>
 
-<form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm p-4">
-  {% csrf_token %}
-  <div class="row g-3">
-    {% for field in form %}
-    <div class="col-md-6">
-      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field.errors }}{{ field }}
-      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-    </div>
-    {% endfor %}
-  </div>
+  {% if object %}<div class="staff-record-hero"><div class="staff-record-hero-grid"><div class="staff-record-stat"><small>Publication</small><strong>{% if object.is_published %}Published{% else %}Hidden{% endif %}</strong>{% if object.is_featured %}<span>Featured product</span>{% endif %}</div><div class="staff-record-stat"><small>Kind</small><strong>{{ object.get_kind_display }}</strong><span>{{ object.category }}</span></div><div class="staff-record-stat"><small>Current price</small><strong>{{ company.currency_code }} {{ object.price|floatformat:2 }}</strong>{% if object.compare_at_price %}<span>Compare at {{ object.compare_at_price|floatformat:2 }}</span>{% endif %}</div><div class="staff-record-stat"><small>Inventory</small><strong>{% if object.kind == 'physical' %}{% if object.has_sellable_variants %}{{ object.active_variant_count }} active options{% else %}{{ object.stock_quantity }} units{% endif %}{% else %}Not stock tracked{% endif %}</strong>{% if object.is_low_stock %}<span class="text-danger">Low-stock alert active</span>{% endif %}</div></div></div>{% endif %}
 
-  {% if object %}
-  <hr class="my-4">
-  <h2 class="h5 mb-3">Gallery images</h2>
-  {{ image_formset.management_form }}
-  <div class="table-responsive mb-4">
-    <table class="table table-sm align-middle">
-      <thead><tr><th>Image</th><th>Sort</th><th>Alt text</th><th>Delete</th></tr></thead>
-      <tbody>
-        {% for f in image_formset %}
-        <tr>
-          {% for h in f.hidden_fields %}{{ h }}{% endfor %}
-          <td>{{ f.image.errors }}{{ f.image }}</td>
-          <td style="width:6rem">{{ f.sort_order }}</td>
-          <td>{{ f.alt_text }}</td>
-          <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <form method="post" enctype="multipart/form-data" class="staff-form-shell" novalidate>
+    {% csrf_token %}
+    <div class="staff-section-card-header"><div><h2>Catalogue details</h2><p>Name, category, description, price, stock and publication settings</p></div><i class="bi bi-box-seam text-muted" aria-hidden="true"></i></div>
+    <div class="staff-form-shell-body"><div class="staff-form-grid">{% for field in form %}<div class="staff-form-field{% if field.name == 'description' or field.name == 'short_description' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}</div></div>
 
-  <h2 class="h5 mb-3">Variants <span class="text-muted small fw-normal">(optional — e.g. sizes; when set, customers pick an option)</span></h2>
-  {{ variant_formset.management_form }}
-  <div class="table-responsive mb-3">
-    <table class="table table-sm align-middle">
-      <thead>
-        <tr>
-          <th>Name</th><th>SKU</th><th>Price</th><th>Compare at</th>
-          <th>Track stock</th><th>Stock</th><th>Sort</th><th>Active</th><th>Del</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for f in variant_formset %}
-        <tr>
-          {% for h in f.hidden_fields %}{{ h }}{% endfor %}
-          <td>{{ f.name.errors }}{{ f.name }}</td>
-          <td style="width:7rem">{{ f.sku }}</td>
-          <td style="width:7rem">{{ f.price }}</td>
-          <td style="width:7rem">{{ f.compare_at_price }}</td>
-          <td class="text-center">{{ f.track_inventory }}</td>
-          <td style="width:6rem">{{ f.stock_quantity }}</td>
-          <td style="width:5rem">{{ f.sort_order }}</td>
-          <td class="text-center">{{ f.is_active }}</td>
-          <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <p class="text-muted small mt-3 mb-0">After creating the product you can add gallery images and variants on the edit screen.</p>
-  {% endif %}
+    {% if object %}
+    <div class="staff-section-card-header"><div><h2>Gallery images</h2><p>Upload multiple product images and control their display order.</p></div><i class="bi bi-images text-muted" aria-hidden="true"></i></div>
+    {{ image_formset.management_form }}
+    {% if image_formset.non_form_errors %}<div class="alert alert-danger mx-3 mt-3">{{ image_formset.non_form_errors }}</div>{% endif %}
+    <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Image</th><th class="text-end">Sort order</th><th>Alternative text</th><th class="text-center">Delete</th></tr></thead><tbody>{% for image_form in image_formset %}<tr>{% for hidden in image_form.hidden_fields %}{{ hidden }}{% endfor %}<td>{{ image_form.image.errors }}{{ image_form.image }}</td><td class="text-end">{{ image_form.sort_order }}</td><td>{{ image_form.alt_text }}</td><td class="text-center">{% if image_form.DELETE %}{{ image_form.DELETE }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 
-  <div class="mt-4">
-    <button type="submit" class="btn btn-primary">Save</button>
-  </div>
-</form>
+    <div class="staff-section-card-header"><div><h2>Product variants</h2><p>Optional configurations such as RAM, storage, colour, condition or size.</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ object.active_variant_count }} active</span></div>
+    {{ variant_formset.management_form }}
+    {% if variant_formset.non_form_errors %}<div class="alert alert-danger mx-3 mt-3">{{ variant_formset.non_form_errors }}</div>{% endif %}
+    <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>SKU</th><th class="text-end">Price</th><th class="text-end">Compare at</th><th class="text-center">Track stock</th><th class="text-end">Stock</th><th class="text-end">Sort</th><th class="text-center">Active</th><th class="text-center">Delete</th></tr></thead><tbody>{% for variant_form in variant_formset %}<tr>{% for hidden in variant_form.hidden_fields %}{{ hidden }}{% endfor %}<td>{{ variant_form.name.errors }}{{ variant_form.name }}</td><td>{{ variant_form.sku }}</td><td class="text-end">{{ variant_form.price }}</td><td class="text-end">{{ variant_form.compare_at_price }}</td><td class="text-center">{{ variant_form.track_inventory }}</td><td class="text-end">{{ variant_form.stock_quantity }}</td><td class="text-end">{{ variant_form.sort_order }}</td><td class="text-center">{{ variant_form.is_active }}</td><td class="text-center">{% if variant_form.DELETE %}{{ variant_form.DELETE }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="staff-section-card-body border-top"><div class="alert alert-info mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>After creating this item, you can add gallery images and product variants on the edit screen.</div></div>{% endif %}
+
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-cloud-check me-1" aria-hidden="true"></i>Catalogue changes are saved together to keep variants and images consistent.</span><div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>{% if object %}Save product{% else %}Create product{% endif %}</button></div></footer>
+  </form>
+</section>
 {% endblock %}
