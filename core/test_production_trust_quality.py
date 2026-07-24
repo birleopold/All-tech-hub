@@ -13,6 +13,7 @@ from django.urls import reverse
 
 from catalog.models import Category, Product
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
+from core.backups import latest_backup_status
 from core.models import ContactMessage
 
 
@@ -155,6 +156,7 @@ class BackupCommandTests(TransactionTestCase):
             backup_root = Path(temporary_directory)
             with override_settings(BACKUP_ROOT=backup_root):
                 call_command("backup_project", "--retention-days=0")
+                status = latest_backup_status()
 
             backup_directories = list(backup_root.glob("leosoft-*"))
             self.assertEqual(len(backup_directories), 1)
@@ -164,6 +166,9 @@ class BackupCommandTests(TransactionTestCase):
             self.assertTrue(database_path.exists())
             self.assertGreater(database_path.stat().st_size, 0)
             self.assertTrue(manifest_path.exists())
+            self.assertTrue(status.exists)
+            self.assertTrue(status.healthy)
+            self.assertEqual(status.path, backup_directory)
 
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             database_record = next(
