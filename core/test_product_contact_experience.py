@@ -1,10 +1,12 @@
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
-from catalog.models import Category, Product
+from catalog.models import Category, Product, ProductImage
 from core.forms import ContactForm
 from core.models import ContactMessage
 
@@ -30,6 +32,18 @@ class ProductContactExperienceTests(TestCase):
             reorder_level=1,
             is_published=True,
         )
+        ProductImage.objects.create(
+            product=cls.product,
+            image="products/gallery/hp-probook-front.jpg",
+            sort_order=0,
+            alt_text="HP ProBook front view",
+        )
+        ProductImage.objects.create(
+            product=cls.product,
+            image="products/gallery/hp-probook-side.jpg",
+            sort_order=1,
+            alt_text="HP ProBook side view",
+        )
 
     def test_product_detail_renders_mature_buying_experience(self):
         response = self.client.get(self.product.get_absolute_url())
@@ -43,6 +57,29 @@ class ProductContactExperienceTests(TestCase):
         self.assertContains(response, "public_detail_contact.js")
         self.assertContains(response, "type=quote&amp;product=hp-probook-440-g2")
         self.assertTrue(response.context["product"].public_available)
+
+    def test_gallery_uses_first_available_image_as_main_image(self):
+        response = self.client.get(self.product.get_absolute_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Image coming soon")
+        self.assertContains(response, "hp-probook-front.jpg")
+        self.assertContains(response, "hp-probook-side.jpg")
+        self.assertEqual(response.context["gallery_count"], 2)
+        self.assertEqual(
+            response.context["product"].public_display_image.name,
+            "products/gallery/hp-probook-front.jpg",
+        )
+
+    def test_gallery_script_prevents_thumbnail_navigation(self):
+        script = (
+            Path(settings.BASE_DIR) / "static" / "js" / "public_detail_contact.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('event.preventDefault();', script)
+        self.assertIn('event.stopImmediatePropagation();', script)
+        self.assertIn('replaceMainImage(button);', script)
+        self.assertIn('link.classList.remove("stretched-link");', script)
 
     def test_contact_prefills_product_and_quote_context(self):
         response = self.client.get(
