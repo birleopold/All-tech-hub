@@ -18,12 +18,13 @@
 
   <div class="staff-summary-grid">
     <a class="staff-summary-card" href="{% url 'staff_orders' %}"><span class="staff-summary-icon"><i class="bi bi-bag" aria-hidden="true"></i></span><span><small>All orders</small><strong>{{ order_stats.total }}</strong></span></a>
-    <a class="staff-summary-card" href="{% url 'staff_orders' %}?status=processing"><span class="staff-summary-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span><span><small>Active queue</small><strong>{{ order_stats.active }}</strong></span></a>
+    <a class="staff-summary-card" href="{% url 'staff_orders' %}?queue=active"><span class="staff-summary-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span><span><small>Active queue</small><strong>{{ order_stats.active }}</strong></span></a>
     <a class="staff-summary-card staff-summary-card--teal" href="{% url 'staff_orders' %}?status=dispatched"><span class="staff-summary-icon"><i class="bi bi-truck" aria-hidden="true"></i></span><span><small>Dispatched</small><strong>{{ order_stats.dispatched }}</strong></span></a>
-    <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_orders' %}?status=fulfilled"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Completed</small><strong>{{ order_stats.completed }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_orders' %}?queue=completed"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Completed</small><strong>{{ order_stats.completed }}</strong></span></a>
   </div>
 
   <form method="get" class="staff-filter-card" role="search">
+    {% if selected_queue %}<input type="hidden" name="queue" value="{{ selected_queue }}">{% endif %}
     <div class="staff-filter-grid staff-filter-grid--orders">
       <div class="staff-filter-field staff-filter-field--wide">
         <label for="order-search">Search orders</label>
@@ -38,7 +39,7 @@
       </div>
       <div class="staff-filter-actions">
         <button class="btn btn-primary" type="submit">Apply filters</button>
-        {% if q or selected_status %}<a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}">Clear</a>{% endif %}
+        {% if q or selected_status or selected_queue %}<a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}">Clear</a>{% endif %}
       </div>
     </div>
   </form>
