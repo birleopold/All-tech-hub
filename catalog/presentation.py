@@ -1,59 +1,65 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any
 
 from catalog.models import Product
 
 
-def prepare_public_products(products: Iterable[Product]) -> list[Product]:
-    """Attach card-ready values using already-prefetched relations.
+@dataclass(slots=True)
+class PublicProductCard:
+    """Read-only template proxy with precomputed card presentation values."""
 
-    Public templates previously called model helpers that perform filtered related
-    queries for every card. This prepares image, variant, stock and price values in
-    memory so homepage and catalogue grids stay fast as the catalogue grows.
+    product: Product
+    primary_display_image: Any
+    has_sellable_variants: bool
+    min_active_variant_price: Decimal | None
+    active_variant_count: int
+    available_to_sell: bool
+    is_low_stock: bool
+
+    def __getattr__(self, name: str):
+        return getattr(self.product, name)
+
+
+def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCard]:
+    """Build card proxies using already-prefetched relations.
+
+    Public templates historically called model helpers that issue filtered related
+    queries for every card. These proxies calculate image, variant, stock and price
+    values in memory so homepage and catalogue grids remain fast as inventory grows.
     """
 
-    prepared = list(products)
-    for product in prepared:
+    prepared: list[PublicProductCard] = []
+    for product in products:
         gallery_images = sorted(
-            (
-                image
-                for image in product.gallery_images.all()
-                if image.image
-            ),
+            (image for image in product.gallery_images.all() if image.image),
             key=lambda image: (image.sort_order, image.pk or 0),
         )
         active_variants = [
             variant for variant in product.variants.all() if variant.is_active
         ]
-
-        product.public_display_image = (
-            gallery_images[0].image
-            if gallery_images
-            else product.image if product.image else None
-        )
-        product.public_has_variants = bool(active_variants)
-        product.public_variant_count = len(active_variants)
-        product.public_min_price = (
+        has_variants = bool(active_variants)
+        min_price = (
             min(variant.price for variant in active_variants)
             if active_variants
             else None
         )
 
         if product.kind == Product.KIND_SERVICE:
-            product.public_available = True
-            product.public_low_stock = False
-            continue
-
-        if active_variants:
-            product.public_available = any(
+            available = True
+            low_stock = False
+        elif active_variants:
+            available = any(
                 (not variant.track_inventory) or variant.stock_quantity > 0
                 for variant in active_variants
             )
             tracked_variants = [
                 variant for variant in active_variants if variant.track_inventory
             ]
-            product.public_low_stock = bool(
+            low_stock = bool(
                 product.reorder_level > 0
                 and tracked_variants
                 and any(
@@ -62,13 +68,27 @@ def prepare_public_products(products: Iterable[Product]) -> list[Product]:
                 )
             )
         else:
-            product.public_available = (
-                (not product.track_inventory) or product.stock_quantity > 0
-            )
-            product.public_low_stock = bool(
+            available = (not product.track_inventory) or product.stock_quantity > 0
+            low_stock = bool(
                 product.track_inventory
                 and product.reorder_level > 0
                 and product.stock_quantity <= product.reorder_level
             )
+
+        prepared.append(
+            PublicProductCard(
+                product=product,
+                primary_display_image=(
+                    gallery_images[0].image
+                    if gallery_images
+                    else product.image if product.image else None
+                ),
+                has_sellable_variants=has_variants,
+                min_active_variant_price=min_price,
+                active_variant_count=len(active_variants),
+                available_to_sell=available,
+                is_low_stock=low_stock,
+            )
+        )
 
     return prepared
