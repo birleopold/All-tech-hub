@@ -1,136 +1,46 @@
 {% extends "staff_base.html" %}
-{% block title %}Staff search{% endblock %}
+{% load dashboard_ui %}
+{% block title %}Global search{% endblock %}
+{% block staff_page_name %}Global search{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h3 mb-1">Staff search</h1>
-    <p class="text-muted mb-0">Find customers, documents, orders, jobs, tickets, products, and serials.</p>
+<section class="staff-page">
+  <div class="staff-search-hero">
+    <p class="staff-page-eyebrow text-info mb-2">Entire workspace</p>
+    <h1 class="h2 fw-bold mb-2">Find anything, fast</h1>
+    <p>Search customers, documents, orders, jobs, tickets, products, SKUs, IMEIs and serial numbers from one place.</p>
+    <form method="get" class="staff-search-box" role="search">
+      <label class="visually-hidden" for="staff-search-q">Search staff workspace</label>
+      <input class="form-control form-control-lg" id="staff-search-q" type="search" name="q" value="{{ search_q }}" placeholder="Name, number, email, phone, SKU or serial" autofocus>
+      <button class="btn btn-primary btn-lg" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
+    </form>
   </div>
-</div>
 
-<form method="get" class="row g-2 mb-4" role="search">
-  <div class="col-md-8 col-lg-6">
-    <label class="visually-hidden" for="staff-search-q">Search</label>
-    <input class="form-control form-control-lg" id="staff-search-q" name="q" value="{{ search_q }}" placeholder="Search by name, number, email, SKU, serial...">
-  </div>
-  <div class="col-auto">
-    <button class="btn btn-primary btn-lg" type="submit">Search</button>
-  </div>
-</form>
-
-{% if search_q %}
+  {% if search_q %}
   {% with has_results=results.customers|length|add:results.documents|length|add:results.orders|length|add:results.jobs|length|add:results.tickets|length|add:results.products|length|add:results.serials|length %}
-  {% if not has_results %}
-    <div class="alert alert-info border-0 shadow-sm">No matches for <strong>{{ search_q }}</strong>.</div>
-  {% endif %}
+  <div class="staff-page-header--compact"><div><h1 class="h4">Results for “{{ search_q }}”</h1><p>{{ has_results }} match{{ has_results|pluralize }} across the workspace</p></div></div>
+  {% if not has_results %}<div class="staff-empty-state"><i class="bi bi-search" aria-hidden="true"></i><strong>No matches found</strong><span>Try a shorter name, a reference number, email address, phone number, SKU or serial.</span></div>{% endif %}
   {% endwith %}
 
-  <div class="row g-4">
-    {% if results.customers %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Customers</h2>
-      <div class="list-group shadow-sm">
-        {% for c in results.customers %}
-        <a class="list-group-item list-group-item-action" href="{% url 'staff_customer_statement' c.pk %}">
-          <strong>{{ c.name }}</strong>{% if c.company_name %}<span class="text-muted"> - {{ c.company_name }}</span>{% endif %}
-          <div class="small text-muted">{{ c.email }}{% if c.phone %} - {{ c.phone }}{% endif %}</div>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+  <div class="row g-3">
+    {% if results.customers %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Customers</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.customers|length }}</span></div><div class="staff-search-results">{% for customer in results.customers %}<a class="staff-search-result" href="{% url 'staff_customer_statement' customer.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-person" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ customer.name }}{% if customer.company_name %} — {{ customer.company_name }}{% endif %}</strong><p>{{ customer.email }}{% if customer.phone %} · {{ customer.phone }}{% endif %}</p></span></span><i class="bi bi-chevron-right text-muted" aria-hidden="true"></i></a>{% endfor %}</div></section>{% endif %}
 
-    {% if results.documents %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Documents</h2>
-      <div class="list-group shadow-sm">
-        {% for d in results.documents %}
-        <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'staff_document_view' d.pk %}">
-          <span><strong>{{ d.number }}</strong> - {{ d.get_doc_type_display }}<span class="d-block small text-muted">{{ d.display_customer_name }}</span></span>
-          <span class="text-nowrap small text-muted">{{ d.get_status_display }}</span>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    {% if results.documents %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Commercial documents</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.documents|length }}</span></div><div class="staff-search-results">{% for document in results.documents %}<a class="staff-search-result" href="{% url 'staff_document_view' document.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ document.number }} — {{ document.get_doc_type_display }}</strong><p>{{ document.display_customer_name }}</p></span></span><span class="staff-status-pill staff-status-pill--{{ document.status|staff_status_tone }}">{{ document.get_status_display }}</span></a>{% endfor %}</div></section>{% endif %}
 
-    {% if results.orders %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Orders</h2>
-      <div class="list-group shadow-sm">
-        {% for o in results.orders %}
-        <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'staff_order_detail' o.pk %}">
-          <span><strong>{{ o.reference }}</strong><span class="d-block small text-muted">{{ o.customer.name }}</span></span>
-          <span class="text-nowrap small text-muted">{{ o.get_status_display }}</span>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    {% if results.orders %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Orders</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.orders|length }}</span></div><div class="staff-search-results">{% for order in results.orders %}<a class="staff-search-result" href="{% url 'staff_order_detail' order.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-bag" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ order.reference }}</strong><p>{{ order.customer.name }} · {{ company.currency_code }} {{ order.total|floatformat:2 }}</p></span></span><span class="staff-status-pill staff-status-pill--{{ order.status|staff_status_tone }}">{{ order.get_status_display }}</span></a>{% endfor %}</div></section>{% endif %}
 
-    {% if results.jobs %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Job cards</h2>
-      <div class="list-group shadow-sm">
-        {% for j in results.jobs %}
-        <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'staff_job_detail' j.pk %}">
-          <span><strong>{{ j.number }}</strong> - {{ j.title }}<span class="d-block small text-muted">{{ j.customer.name }}</span></span>
-          <span class="text-nowrap small text-muted">{{ j.get_status_display }}</span>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    {% if results.jobs %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Job cards</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.jobs|length }}</span></div><div class="staff-search-results">{% for job in results.jobs %}<a class="staff-search-result" href="{% url 'staff_job_detail' job.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-tools" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ job.number }} — {{ job.title }}</strong><p>{{ job.customer.name }}{% if job.device_make or job.device_model %} · {{ job.device_make }} {{ job.device_model }}{% endif %}</p></span></span><span class="staff-status-pill staff-status-pill--{{ job.status|staff_status_tone }}">{{ job.get_status_display }}</span></a>{% endfor %}</div></section>{% endif %}
 
-    {% if results.tickets %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Support tickets</h2>
-      <div class="list-group shadow-sm">
-        {% for t in results.tickets %}
-        <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{% url 'staff_ticket_detail' t.pk %}">
-          <span><strong>{{ t.reference }}</strong> - {{ t.subject }}<span class="d-block small text-muted">{{ t.customer.name }}</span></span>
-          <span class="text-nowrap small text-muted">{{ t.get_status_display }}</span>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    {% if results.tickets %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Support tickets</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.tickets|length }}</span></div><div class="staff-search-results">{% for ticket in results.tickets %}<a class="staff-search-result" href="{% url 'staff_ticket_detail' ticket.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-life-preserver" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ ticket.reference }} — {{ ticket.subject }}</strong><p>{{ ticket.customer.name }}</p></span></span><span class="staff-status-pill staff-status-pill--{{ ticket.status|staff_status_tone }}">{{ ticket.get_status_display }}</span></a>{% endfor %}</div></section>{% endif %}
 
-    {% if results.products %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Products and services</h2>
-      <div class="list-group shadow-sm">
-        {% for p in results.products %}
-        <a class="list-group-item list-group-item-action d-flex justify-content-between gap-3" href="{{ p.get_absolute_url }}">
-          <span><strong>{{ p.name }}</strong><span class="d-block small text-muted">{{ p.category.name }}{% if p.sku %} - {{ p.sku }}{% endif %}</span></span>
-          <span class="text-nowrap small text-muted">{{ company.currency_code }} {{ p.price|floatformat:2 }}</span>
-        </a>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    {% if results.products %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Products and services</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.products|length }}</span></div><div class="staff-search-results">{% for product in results.products %}<a class="staff-search-result" href="{% url 'staff_product_edit' product.pk %}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ product.name }}</strong><p>{{ product.category.name }}{% if product.sku %} · {{ product.sku }}{% endif %}</p></span></span><strong class="text-nowrap">{{ company.currency_code }} {{ product.price|floatformat:2 }}</strong></a>{% endfor %}</div></section>{% endif %}
 
-    {% if results.serials %}
-    <section class="col-lg-6">
-      <h2 class="h6 text-muted text-uppercase">Serials</h2>
-      <div class="list-group shadow-sm">
-        {% for s in results.serials %}
-        <div class="list-group-item">
-          <div class="d-flex justify-content-between gap-3">
-            <span>
-              <strong>{{ s.serial_number }}</strong>
-              <span class="text-muted"> - {{ s.product.name }}</span>
-              <span class="d-block small text-muted">{{ s.get_status_display }}{% if s.sold_to %} - {{ s.sold_to.name }}{% endif %}{% if s.is_under_warranty %} - under warranty{% endif %}</span>
-            </span>
-            <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_serial_labels' s.pk %}">Labels</a>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </section>
-    {% endif %}
+    {% if results.serials %}<section class="col-xl-6 staff-search-section"><div class="staff-search-section-header"><h2>Serials and devices</h2><span class="staff-status-pill staff-status-pill--neutral">{{ results.serials|length }}</span></div><div class="staff-search-results">{% for serial in results.serials %}<a class="staff-search-result" href="{% url 'staff_warranty_center' %}?q={{ serial.serial_number|urlencode }}"><span class="staff-search-result-main"><span class="staff-search-result-icon"><i class="bi bi-upc-scan" aria-hidden="true"></i></span><span class="staff-search-result-copy"><strong>{{ serial.serial_number }}</strong><p>{{ serial.product.name }}{% if serial.sold_to %} · {{ serial.sold_to.name }}{% endif %}</p></span></span><span class="staff-status-pill staff-status-pill--neutral">{{ serial.get_status_display }}</span></a>{% endfor %}</div></section>{% endif %}
   </div>
-{% else %}
-  <div class="alert alert-light border shadow-sm">Start with a customer name, invoice number, job number, SKU, email, phone, IMEI, or serial number.</div>
-{% endif %}
+  {% else %}
+  <div class="staff-workflow-columns">
+    <article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Useful searches</h2><p>Examples that usually find a record immediately</p></div></header><div class="staff-section-card-body"><div class="staff-compact-list"><div class="staff-compact-row"><span><strong class="d-block">Customer identity</strong><small>Name, company, email address or phone number</small></span><i class="bi bi-person" aria-hidden="true"></i></div><div class="staff-compact-row"><span><strong class="d-block">Business reference</strong><small>Invoice, quotation, order, ticket or job-card number</small></span><i class="bi bi-hash" aria-hidden="true"></i></div><div class="staff-compact-row"><span><strong class="d-block">Device identity</strong><small>SKU, serial number, IMEI or MAC address</small></span><i class="bi bi-upc-scan" aria-hidden="true"></i></div></div></div></article>
+    <article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Quick destinations</h2><p>Open common work areas directly</p></div></header><div class="staff-section-card-body"><div class="staff-compact-list"><a class="staff-compact-row" href="{% url 'staff_documents' %}"><span><strong class="d-block">Quotes and invoices</strong><small>Commercial document register</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a><a class="staff-compact-row" href="{% url 'staff_jobs' %}"><span><strong class="d-block">Job cards</strong><small>Service and repair queue</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a><a class="staff-compact-row" href="{% url 'staff_warranty_center' %}"><span><strong class="d-block">Warranty centre</strong><small>Serial and ownership lookup</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a></div></div></article>
+  </div>
+  {% endif %}
+</section>
 {% endblock %}
