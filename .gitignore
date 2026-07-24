@@ -20,6 +20,7 @@ db.sqlite3-*
 media/
 staticfiles/
 backups/
+.release
 
 # Editors and operating systems
 .idea/

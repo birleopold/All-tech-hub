@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Technology buying guide{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body public-guide-page{% endblock %}
+{% block meta %}
+<meta name="description" content="Understand LEOSOFT product conditions, specifications, quotations, availability, delivery, documentation and after-sales support before buying technology.">
+<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="Technology buying guide — {{ company.company_name }}">
+<meta property="og:description" content="A practical guide to choosing, confirming and buying computers and technology with confidence.">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+{% endblock %}
+{% block content %}
+<section class="public-catalog-hero">
+  <div class="container public-catalog-hero__inner">
+    <div class="row align-items-end g-4">
+      <div class="col-lg-8">
+        <p class="public-eyebrow">Buy with clarity</p>
+        <h1>Understand the product before committing your budget.</h1>
+        <p>Use this guide to compare condition, specifications, photographs, availability, documentation and support before purchasing technology from LEOSOFT.</p>
+      </div>
+      <div class="col-lg-4 text-lg-end"><div class="d-flex flex-wrap gap-2 justify-content-lg-end"><a class="public-btn-ghost text-decoration-none" href="{% url 'product_list' %}">Browse catalogue</a><a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}?type=product">Ask for guidance</a></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="market-section">
+  <div class="container">
+    <div class="market-section-heading"><div class="market-section-heading__copy"><p class="market-kicker">Condition transparency</p><h2 class="market-section-title">What the condition labels mean</h2><p class="market-section-intro">The label describes the product’s sales condition. The actual listing, photographs and written quotation remain the specific record for each item.</p></div></div>
+    <div class="market-condition-grid">
+      <article class="market-condition-card"><span>New</span><strong>New equipment</strong><p>Presented as newly supplied by the manufacturer, distributor or authorised supply chain. Packaging and included accessories can vary by item.</p></article>
+      <article class="market-condition-card"><span>Refurbished</span><strong>Prepared for resale</strong><p>Previously owned or previously deployed equipment that has been prepared for resale and clearly identified as refurbished.</p></article>
+      <article class="market-condition-card"><span>Used</span><strong>Pre-owned equipment</strong><p>Previously owned equipment sold in its stated condition. Review the actual photographs and request clarification about wear, battery, accessories and tested functions.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="market-section market-section--soft">
+  <div class="container">
+    <div class="market-section-heading"><div class="market-section-heading__copy"><p class="market-kicker">Before you decide</p><h2 class="market-section-title">Check these six areas</h2></div></div>
+    <div class="market-purpose-grid">
+      <article class="market-purpose-card"><i class="bi bi-cpu"></i><h3>Purpose and workload</h3><p>State the software, schoolwork, business task, design work, gaming or everyday use the device must handle.</p></article>
+      <article class="market-purpose-card"><i class="bi bi-sliders"></i><h3>Specifications</h3><p>Confirm processor generation, memory, storage, graphics, screen size, ports, operating system and upgrade options.</p></article>
+      <article class="market-purpose-card"><i class="bi bi-images"></i><h3>Actual photographs</h3><p>Where actual-unit images are supplied, examine the screen, keyboard, casing, ports, charger and visible cosmetic condition.</p></article>
+      <article class="market-purpose-card"><i class="bi bi-battery-half"></i><h3>Battery and accessories</h3><p>For portable devices, ask what battery information is available and confirm the charger or other accessories included.</p></article>
+      <article class="market-purpose-card"><i class="bi bi-box-seam"></i><h3>Availability</h3><p>Stock changes. Confirm the exact configuration and availability before travelling, paying or relying on a quotation.</p></article>
+      <article class="market-purpose-card"><i class="bi bi-shield-check"></i><h3>Warranty and returns</h3><p>Coverage can differ by product and condition. Use the product description, quotation, invoice or receipt as the specific written terms.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="market-section">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4 p-lg-5">
+            <p class="market-kicker">A safer purchase process</p>
+            <h2 class="market-section-title">From enquiry to after-sales</h2>
+            <div class="vstack gap-4 mt-4">
+              <div class="d-flex gap-3"><span class="badge rounded-circle text-bg-primary fs-6 px-3 py-2 align-self-start">1</span><div><h3 class="h5">Share the need and budget</h3><p class="text-muted mb-0">Describe the intended use, preferred specifications, number of units and realistic budget.</p></div></div>
+              <div class="d-flex gap-3"><span class="badge rounded-circle text-bg-primary fs-6 px-3 py-2 align-self-start">2</span><div><h3 class="h5">Compare suitable options</h3><p class="text-muted mb-0">Review price, condition, performance, portability, upgrade potential and current availability.</p></div></div>
+              <div class="d-flex gap-3"><span class="badge rounded-circle text-bg-primary fs-6 px-3 py-2 align-self-start">3</span><div><h3 class="h5">Request written confirmation</h3><p class="text-muted mb-0">For accountability, request a formal quotation showing the selected item, configuration, quantity and applicable terms.</p></div></div>
+              <div class="d-flex gap-3"><span class="badge rounded-circle text-bg-primary fs-6 px-3 py-2 align-self-start">4</span><div><h3 class="h5">Confirm collection or delivery</h3><p class="text-muted mb-0">Agree on the collection point, delivery destination, timing and any additional delivery or setup charges.</p></div></div>
+              <div class="d-flex gap-3"><span class="badge rounded-circle text-bg-primary fs-6 px-3 py-2 align-self-start">5</span><div><h3 class="h5">Keep the documents</h3><p class="text-muted mb-0">Retain the quotation, invoice, receipt and any product-specific support or warranty information.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <aside class="card border-0 shadow-sm h-100">
+          <div class="card-body p-4 p-lg-5">
+            <p class="market-kicker">Useful requests</p>
+            <h2 class="h4 fw-bold">Ask for the information that matters</h2>
+            <ul class="list-unstyled vstack gap-3 mt-4">
+              <li><i class="bi bi-check-circle-fill text-success me-2"></i>Exact model and configuration</li>
+              <li><i class="bi bi-check-circle-fill text-success me-2"></i>Current stock and final price</li>
+              <li><i class="bi bi-check-circle-fill text-success me-2"></i>Actual images where available</li>
+              <li><i class="bi bi-check-circle-fill text-success me-2"></i>Included charger and accessories</li>
+              <li><i class="bi bi-check-circle-fill text-success me-2"></i>Product-specific warranty or return terms</li>
+              <li><i class="bi bi-check-circle-fill text-success me-2"></i>Delivery, installation and setup charges</li>
+            </ul>
+            <div class="d-grid gap-2 mt-4"><a class="btn btn-primary" href="{% url 'contact' %}?type=quote">Request a formal quotation</a><a class="btn btn-outline-primary" href="{% url 'product_compare' %}">Compare selected products</a></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="public-section--compact pb-5">
+  <div class="container"><div class="public-cta"><div><p class="public-eyebrow mb-2">Still deciding?</p><h2>Send the purpose, budget and preferred specifications.</h2><p>The team can help narrow the catalogue and identify questions that should be confirmed before purchase.</p></div><a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}?type=product">Talk to the team <i class="bi bi-arrow-right"></i></a></div></div>
+</section>
+{% endblock %}

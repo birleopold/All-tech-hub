@@ -1,11 +1,19 @@
 """Cross-cutting request middleware."""
 
+import logging
+import re
+import time
+import uuid
+
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import resolve
 
+request_logger = logging.getLogger("alltech.request")
+
 URL_PERMISSION_PREFIXES = {
+    "staff_catalogue_quality": "catalog.view_product",
     "staff_document": "billing.view_commercialdocument",
     "staff_email_document": "billing.view_commercialdocument",
     "staff_order": "commerce.view_order",
@@ -48,12 +56,57 @@ PRIVATE_RESPONSE_PREFIXES = (
 PRIVATE_RESPONSE_PATHS = {
     "/api/v1/orders/lookup/",
 }
+_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 
 
 def _is_private_response_path(path: str) -> bool:
     if path.startswith("/portal/") and not path.startswith("/portal/kb/"):
         return True
     return path in PRIVATE_RESPONSE_PATHS or path.startswith(PRIVATE_RESPONSE_PREFIXES)
+
+
+class RequestContextMiddleware:
+    """Attach a safe request ID and log actionable request outcomes."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        supplied = (request.headers.get("X-Request-ID") or "").strip()
+        request.request_id = (
+            supplied if _REQUEST_ID_PATTERN.fullmatch(supplied) else uuid.uuid4().hex
+        )
+        started = time.perf_counter()
+        try:
+            response = self.get_response(request)
+        except Exception:
+            duration_ms = round((time.perf_counter() - started) * 1000, 1)
+            request_logger.exception(
+                "request_failed request_id=%s method=%s path=%s duration_ms=%s",
+                request.request_id,
+                request.method,
+                request.path,
+                duration_ms,
+            )
+            raise
+
+        duration_ms = round((time.perf_counter() - started) * 1000, 1)
+        response.setdefault("X-Request-ID", request.request_id)
+        if response.status_code >= 500:
+            log_method = request_logger.error
+        elif response.status_code >= 400:
+            log_method = request_logger.info
+        else:
+            log_method = request_logger.debug
+        log_method(
+            "request_completed request_id=%s method=%s path=%s status=%s duration_ms=%s",
+            request.request_id,
+            request.method,
+            request.path,
+            response.status_code,
+            duration_ms,
+        )
+        return response
 
 
 class SecurityHeadersMiddleware:
@@ -65,12 +118,18 @@ class SecurityHeadersMiddleware:
         if not getattr(settings, "SECURITY_HEADERS_ENABLED", True):
             return response
 
-        self._set_header(response, "Referrer-Policy", getattr(settings, "REFERRER_POLICY", ""))
+        self._set_header(
+            response,
+            "Referrer-Policy",
+            getattr(settings, "REFERRER_POLICY", ""),
+        )
         self._set_header(
             response,
             "Permissions-Policy",
             getattr(settings, "PERMISSIONS_POLICY", ""),
         )
+        self._set_header(response, "X-Permitted-Cross-Domain-Policies", "none")
+        self._set_header(response, "Cross-Origin-Resource-Policy", "same-site")
 
         if _is_private_response_path(request.path_info):
             self._set_header(response, "X-Robots-Tag", "noindex, nofollow, noarchive")
