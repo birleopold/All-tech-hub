@@ -64,7 +64,7 @@ class PublicExperienceTests(TestCase):
         self.assertContains(response, self.service.name)
 
     def test_catalog_search_and_kind_filters_remain_functional(self):
-        search_response = self.client.get(reverse("product_list"), {"q": "Professional"})
+        search_response = self.client.get(reverse("product_list"), {"q": "LAP-PRO-1"})
         self.assertContains(search_response, self.product.name)
         self.assertNotContains(search_response, self.service.name)
 
