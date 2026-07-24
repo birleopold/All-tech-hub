@@ -30,8 +30,9 @@
   <link href="{% static 'css/customer_experience.css' %}" rel="stylesheet">
   <link href="{% static 'css/foundation.css' %}" rel="stylesheet">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
+  {% block extra_css %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100 site-body"
+<body class="{% block body_class %}d-flex flex-column min-vh-100 site-body{% endblock %}"
       data-ga4-id="{{ growth_settings.ga4_measurement_id }}"
       data-clarity-id="{{ growth_settings.clarity_project_id }}"
       data-analytics-consent-required="{{ growth_settings.require_analytics_consent|yesno:'1,0' }}"

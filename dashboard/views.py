@@ -18,13 +18,14 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         today = timezone.localdate()
+        now = timezone.now()
+        terminal_job_statuses = [JobCard.STATUS_COMPLETED, JobCard.STATUS_CANCELLED]
+
         ctx["orders_today"] = Order.objects.filter(placed_at__date=today).count()
         ctx["orders_in_transit"] = Order.objects.filter(
             status=Order.STATUS_DISPATCHED
         ).count()
-        ctx["open_jobs"] = JobCard.objects.exclude(
-            status__in=[JobCard.STATUS_COMPLETED, JobCard.STATUS_CANCELLED]
-        ).count()
+        ctx["open_jobs"] = JobCard.objects.exclude(status__in=terminal_job_statuses).count()
         ctx["draft_quotes"] = CommercialDocument.objects.filter(
             doc_type=CommercialDocument.TYPE_QUOTE,
             status=CommercialDocument.STATUS_DRAFT,
@@ -52,6 +53,12 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         ctx["recent_jobs"] = JobCard.objects.select_related("customer").order_by(
             "-received_on"
         )[:8]
+        ctx["upcoming_jobs"] = (
+            JobCard.objects.select_related("customer", "assigned_to")
+            .filter(scheduled_for__gte=now)
+            .exclude(status__in=terminal_job_statuses)
+            .order_by("scheduled_for", "pk")[:5]
+        )
         ctx["recent_documents"] = CommercialDocument.objects.select_related(
             "customer"
         ).order_by("-created_at", "-id")[:8]
