@@ -13,6 +13,7 @@ from django.urls import resolve
 request_logger = logging.getLogger("alltech.request")
 
 URL_PERMISSION_PREFIXES = {
+    "staff_catalogue_quality": "catalog.view_product",
     "staff_document": "billing.view_commercialdocument",
     "staff_email_document": "billing.view_commercialdocument",
     "staff_order": "commerce.view_order",
