@@ -1,9 +1,10 @@
 from django.urls import path
 
 from commerce import staff_views
+from commerce.staff_order_list_view import StaffOrderListView
 
 urlpatterns = [
-    path("orders/", staff_views.StaffOrderListView.as_view(), name="staff_orders"),
+    path("orders/", StaffOrderListView.as_view(), name="staff_orders"),
     path(
         "orders/<int:pk>/",
         staff_views.StaffOrderDetailView.as_view(),
