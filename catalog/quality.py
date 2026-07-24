@@ -76,6 +76,11 @@ VARIANT_SKU_MISSING = CatalogueQualityIssue(
     "One or more active variants have no SKU",
     6,
 )
+VARIANT_COMPARE_PRICE = CatalogueQualityIssue(
+    "variant_compare_price",
+    "One or more variant comparison prices are invalid",
+    5,
+)
 VARIANT_STOCK_MISSING = CatalogueQualityIssue(
     "variant_stock_missing",
     "All active tracked variants are out of stock",
@@ -119,13 +124,13 @@ def evaluate_product_quality(product: Product) -> CatalogueQualityRow:
     if not (product.category.description or "").strip():
         issues.append(CATEGORY_COPY_MISSING)
 
-    growth_data = _growth_data(product)
-    if growth_data is None:
-        issues.append(GROWTH_DATA_MISSING)
-    elif product.kind == Product.KIND_PHYSICAL and not growth_data.brand.strip():
-        issues.append(BRAND_MISSING)
-
     if product.kind == Product.KIND_PHYSICAL:
+        growth_data = _growth_data(product)
+        if growth_data is None:
+            issues.append(GROWTH_DATA_MISSING)
+        elif not growth_data.brand.strip():
+            issues.append(BRAND_MISSING)
+
         if not product.sku.strip():
             issues.append(SKU_MISSING)
         if product.compare_at_price is not None and product.compare_at_price <= product.price:
@@ -133,10 +138,24 @@ def evaluate_product_quality(product: Product) -> CatalogueQualityRow:
         if active_variants:
             if any(not variant.sku.strip() for variant in active_variants):
                 issues.append(VARIANT_SKU_MISSING)
+            if any(
+                variant.compare_at_price is not None
+                and variant.compare_at_price <= variant.price
+                for variant in active_variants
+            ):
+                issues.append(VARIANT_COMPARE_PRICE)
             tracked = [variant for variant in active_variants if variant.track_inventory]
-            if tracked and all(variant.stock_quantity <= 0 for variant in tracked):
+            if (
+                product.is_published
+                and tracked
+                and all(variant.stock_quantity <= 0 for variant in tracked)
+            ):
                 issues.append(VARIANT_STOCK_MISSING)
-        elif product.track_inventory and product.stock_quantity <= 0:
+        elif (
+            product.is_published
+            and product.track_inventory
+            and product.stock_quantity <= 0
+        ):
             issues.append(BASE_STOCK_MISSING)
     elif product.service_duration_hours is None:
         issues.append(SERVICE_DURATION_MISSING)
