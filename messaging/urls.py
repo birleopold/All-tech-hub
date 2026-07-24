@@ -1,6 +1,6 @@
 from django.urls import path
 
-from messaging import deliverability_views, views
+from messaging import deliverability_views, views, workspace_views
 
 urlpatterns = [
     path("email/document/<int:pk>/", views.email_document, name="staff_email_document"),
@@ -10,7 +10,7 @@ urlpatterns = [
         views.email_job_update,
         name="staff_email_job_update",
     ),
-    path("email/log/", views.EmailLogListView.as_view(), name="staff_email_log"),
+    path("email/log/", workspace_views.EmailWorkspaceListView.as_view(), name="staff_email_log"),
     path(
         "email/log/<int:pk>/",
         views.email_log_detail,
