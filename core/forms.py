@@ -86,11 +86,11 @@ class ContactForm(forms.ModelForm):
         "website",
     )
 
-    def clean_website(self):
-        value = (self.cleaned_data.get("website") or "").strip()
-        if value:
+    def clean(self):
+        cleaned_data = super().clean()
+        if (cleaned_data.get("website") or "").strip():
             raise ValidationError("Your request could not be accepted. Please try again.")
-        return ""
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
