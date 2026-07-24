@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 
 from core.models import ContactMessage, SupportTicket, TicketComment
 
@@ -26,6 +27,17 @@ class ContactForm(forms.ModelForm):
         choices=REQUEST_TYPE_CHOICES,
         label="What can we help with?",
         widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    website = forms.CharField(
+        required=False,
+        label="Leave this field blank",
+        widget=forms.HiddenInput(
+            attrs={
+                "autocomplete": "off",
+                "tabindex": "-1",
+                "aria-hidden": "true",
+            }
+        ),
     )
 
     class Meta:
@@ -64,12 +76,29 @@ class ContactForm(forms.ModelForm):
             "message": "Do not include passwords, PINs or other sensitive credentials.",
         }
 
-    field_order = ("request_type", "name", "email", "phone", "subject", "message")
+    field_order = (
+        "request_type",
+        "name",
+        "email",
+        "phone",
+        "subject",
+        "message",
+        "website",
+    )
+
+    def clean_website(self):
+        value = (self.cleaned_data.get("website") or "").strip()
+        if value:
+            raise ValidationError("Your request could not be accepted. Please try again.")
+        return ""
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         request_type = self.cleaned_data.get("request_type", self.REQUEST_OTHER)
-        request_label = dict(self.REQUEST_TYPE_CHOICES).get(request_type, "General enquiry")
+        request_label = dict(self.REQUEST_TYPE_CHOICES).get(
+            request_type,
+            "General enquiry",
+        )
         subject = (instance.subject or "").strip()
         prefix = f"{request_label}: "
         if subject and not subject.lower().startswith(prefix.lower()):
@@ -121,7 +150,9 @@ class PortalSupportTicketForm(forms.ModelForm):
         self.fields["related_order"].empty_label = "— optional —"
         self.fields["related_serial"].required = False
         self.fields["related_serial"].empty_label = "— optional —"
-        self.fields["related_serial"].queryset = self.fields["related_serial"].queryset.none()
+        self.fields["related_serial"].queryset = self.fields[
+            "related_serial"
+        ].queryset.none()
         if customer is not None:
             from catalog.models import ProductSerial
             from commerce.models import Order
@@ -132,7 +163,8 @@ class PortalSupportTicketForm(forms.ModelForm):
             self.fields["related_serial"].queryset = ProductSerial.objects.filter(
                 sold_to=customer
             ).select_related("product", "product_variant").order_by(
-                "product__name", "serial_number"
+                "product__name",
+                "serial_number",
             )
         self.fields["category"].help_text = (
             "Choose Return / RMA or Warranty claim if this relates to a purchase."
@@ -181,7 +213,8 @@ class StaffSupportTicketForm(forms.ModelForm):
 
 class StaffSavedSearchForm(forms.Form):
     name = forms.CharField(
-        max_length=100, widget=forms.TextInput(attrs={"class": "form-control"})
+        max_length=100,
+        widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     params = forms.CharField(widget=forms.HiddenInput())
 
