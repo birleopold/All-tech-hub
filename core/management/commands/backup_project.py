@@ -40,6 +40,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         root = Path(settings.BACKUP_ROOT).expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            root.chmod(0o700)
+        except OSError as exc:
+            raise CommandError(
+                f"Backup directory permissions could not be secured: {root}"
+            ) from exc
         timestamp = timezone.now().strftime("%Y%m%dT%H%M%S%fZ")
         release = self._release_label()
         backup_dir = root / f"leosoft-{timestamp}-{release}"
