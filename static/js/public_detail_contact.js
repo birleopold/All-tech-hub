@@ -16,6 +16,17 @@
     const galleryStage = document.getElementById("pd-main-wrap");
     const mainImage = () => galleryStage?.querySelector("img.product-detail-image, picture img, img") || null;
 
+    // A Bootstrap stretched link must never escape a recently viewed card and
+    // cover controls elsewhere on the page. Keep the cards isolated and use the
+    // visible product-name links as normal links.
+    document.querySelectorAll(".product-recent-card").forEach((card) => {
+      card.style.position = "relative";
+      card.style.isolation = "isolate";
+    });
+    document.querySelectorAll(".product-recent-card .stretched-link").forEach((link) => {
+      link.classList.remove("stretched-link");
+    });
+
     const setActiveThumbnail = (activeButton) => {
       document.querySelectorAll(".product-gallery-thumbs .pd-thumb").forEach((button) => {
         const isActive = button === activeButton;
