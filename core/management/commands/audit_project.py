@@ -87,10 +87,6 @@ class Command(BaseCommand):
             issues.append("DEBUG must be disabled.")
         if not settings.ALLOWED_HOSTS:
             issues.append("ALLTECH_ALLOWED_HOSTS is empty.")
-        if not settings.CSRF_TRUSTED_ORIGINS:
-            issues.append("ALLTECH_CSRF_TRUSTED_ORIGINS is empty.")
-        if not settings.PUBLIC_BASE_URL.startswith("https://"):
-            issues.append("ALLTECH_PUBLIC_BASE_URL must use HTTPS.")
         storages = getattr(settings, "STORAGES", {})
         static_backend = storages.get("staticfiles", {}).get("BACKEND", "")
         if not static_backend.endswith("ManifestStaticFilesStorage"):
@@ -103,6 +99,15 @@ class Command(BaseCommand):
         production = os.getenv("ALLTECH_ENV", "development").lower() == "production"
         if not production:
             return warnings
+        if not settings.CSRF_TRUSTED_ORIGINS:
+            warnings.append(
+                "ALLTECH_CSRF_TRUSTED_ORIGINS is empty; configure it before adding "
+                "alternate production hostnames or cross-origin form flows."
+            )
+        if not settings.PUBLIC_BASE_URL.startswith("https://"):
+            warnings.append(
+                "ALLTECH_PUBLIC_BASE_URL should use the canonical HTTPS production URL."
+            )
         if settings.EMAIL_BACKEND.endswith("console.EmailBackend"):
             warnings.append(
                 "Email uses the console backend; customer notifications will not leave "
