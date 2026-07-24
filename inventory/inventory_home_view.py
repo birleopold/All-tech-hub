@@ -11,7 +11,7 @@ class StaffInventoryHomeView(views.InventoryHomeView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        product_queryset = Product.objects.filter(kind=Product.KIND_PRODUCT)
+        product_queryset = Product.objects.filter(kind=Product.KIND_PHYSICAL)
         context["inventory_stats"] = {
             "products": product_queryset.count(),
             "published": product_queryset.filter(is_published=True).count(),
