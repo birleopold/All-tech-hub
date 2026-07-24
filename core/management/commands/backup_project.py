@@ -7,7 +7,7 @@ import shutil
 import sqlite3
 import subprocess
 import tarfile
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from django.conf import settings
@@ -40,11 +40,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         root = Path(settings.BACKUP_ROOT).expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        timestamp = timezone.now().strftime("%Y%m%dT%H%M%SZ")
+        timestamp = timezone.now().strftime("%Y%m%dT%H%M%S%fZ")
         release = self._release_label()
         backup_dir = root / f"leosoft-{timestamp}-{release}"
-        if backup_dir.exists():
-            raise CommandError(f"Backup directory already exists: {backup_dir}")
         backup_dir.mkdir(mode=0o700)
 
         manifest = {
@@ -197,7 +195,7 @@ class Command(BaseCommand):
         for candidate in root.glob("leosoft-*"):
             if candidate == current or not candidate.is_dir():
                 continue
-            modified = timezone.datetime.fromtimestamp(
+            modified = datetime.fromtimestamp(
                 candidate.stat().st_mtime,
                 tz=timezone.get_current_timezone(),
             )
@@ -214,8 +212,9 @@ class Command(BaseCommand):
         executable = shutil.which("rclone")
         if not executable:
             raise CommandError("rclone is required for off-site backup copies.")
+        target = f"{destination.rstrip('/')}/{backup_dir.name}"
         subprocess.run(
-            [executable, "copy", str(backup_dir), destination, "--checksum"],
+            [executable, "copy", str(backup_dir), target, "--checksum"],
             check=True,
         )
 
