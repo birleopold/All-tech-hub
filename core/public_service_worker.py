@@ -12,6 +12,7 @@ def service_worker(request):
         static("css/foundation.css"),
         static("css/public_experience.css"),
         static("css/marketplace_experience.css"),
+        static("css/search_conversion_refinement.css"),
         static("css/public_detail_contact.css"),
         static("js/alltech_ui.js"),
         static("js/public_experience.js"),
@@ -23,7 +24,7 @@ def service_worker(request):
         f'"{url}"' for url in [offline_url, *public_asset_urls]
     )
     body = f"""
-const CACHE_NAME = "leosoft-public-assets-v6";
+const CACHE_NAME = "leosoft-public-assets-v7";
 const PRECACHE_URLS = [
   {precache_urls}
 ];
@@ -54,7 +55,7 @@ self.addEventListener("fetch", event => {{
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Never cache HTML, portal, staff, payment, media or API responses.
+  // Never cache HTML, portal, staff, payment, media, JSON or API responses.
   if (request.mode === "navigate") {{
     event.respondWith(
       fetch(request, {{ cache: "no-store" }})
