@@ -1,78 +1,44 @@
 {% extends "staff_base.html" %}
-{% block title %}PO {{ object.number }}{% endblock %}
+{% load dashboard_ui %}
+{% block title %}{{ object.number }}{% endblock %}
+{% block staff_page_name %}Purchase order{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h3 mb-0">{{ object.number }}</h1>
-    <p class="text-muted mb-0">{{ object.supplier.name }} · {{ object.get_status_display }}</p>
-  </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <form method="post" action="{% url 'staff_po_receive' object.pk %}" class="d-inline">{% csrf_token %}
-      <button class="btn btn-outline-success" type="submit">Receive remaining</button>
-    </form>
-    <a class="btn btn-outline-secondary" href="{% url 'staff_purchasing' %}">Back</a>
-  </div>
-</div>
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Purchasing</p><h1>{{ object.number }}</h1><p>{{ object.supplier.name }} · Ordered {{ object.ordered_on|date:"M j, Y" }}</p></div>
+    <div class="staff-detail-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_purchasing' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Purchasing</a>{% if object.status != 'received' and object.status != 'cancelled' %}<form method="post" action="{% url 'staff_po_receive' object.pk %}">{% csrf_token %}<button class="btn btn-outline-success" type="submit"><i class="bi bi-box-arrow-in-down me-1" aria-hidden="true"></i>Receive remaining</button></form>{% endif %}</div>
+  </header>
 
-<form method="post" novalidate>
-  {% csrf_token %}
-  <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body row g-3">
-      {% for field in form %}
-      <div class="col-md-6">
-        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field.errors }}{{ field }}
-      </div>
-      {% endfor %}
-    </div>
-  </div>
+  <div class="staff-record-hero"><div class="staff-record-hero-grid">
+    <div class="staff-record-stat"><small>Status</small><strong><span class="staff-status-pill staff-status-pill--{{ object.status|staff_status_tone }}">{{ object.get_status_display }}</span></strong></div>
+    <div class="staff-record-stat"><small>Line items</small><strong>{{ object.lines.count }}</strong><span>Products ordered</span></div>
+    <div class="staff-record-stat"><small>Ordered value</small><strong>{{ company.currency_code }} {{ object.total_ordered_value|floatformat:2 }}</strong></div>
+    <div class="staff-record-stat"><small>Received value</small><strong>{{ company.currency_code }} {{ object.total_received_value|floatformat:2 }}</strong>{% if object.expected_on %}<span>Expected {{ object.expected_on|date:"M j, Y" }}</span>{% endif %}</div>
+  </div></div>
 
-  <h2 class="h5 mb-2">Line items</h2>
-  {{ lines_formset.management_form }}
-  <div class="card border-0 shadow-sm mb-3">
+  <form method="post" novalidate class="staff-form-shell mb-3">
+    {% csrf_token %}
+    <div class="staff-section-card-header"><div><h2>Purchase order details</h2><p>Supplier, status, expected date and internal notes</p></div><i class="bi bi-receipt text-muted" aria-hidden="true"></i></div>
+    <div class="staff-form-shell-body"><div class="staff-form-grid">{% for field in form %}<div class="staff-form-field{% if field.name == 'notes' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}</div></div>
+
+    <div class="staff-section-card-header"><div><h2>Line items</h2><p>Ordered quantities, unit costs and received quantities</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ object.lines.count }} line{{ object.lines.count|pluralize }}</span></div>
+    {{ lines_formset.management_form }}
+    {% if lines_formset.non_form_errors %}<div class="alert alert-danger mx-3 mt-3">{{ lines_formset.non_form_errors }}</div>{% endif %}
     <div class="table-responsive">
-      <table class="table mb-0 align-middle">
-        <thead class="table-light">
-          <tr><th>Product</th><th>Variant</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit cost</th><th class="text-end">Received</th><th>Del</th></tr>
-        </thead>
-        <tbody>
-          {% for f in lines_formset %}
-          <tr>
-            {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-            <td>{{ f.product.errors }}{{ f.product }}</td>
-            <td style="min-width:12rem">{{ f.product_variant.errors }}{{ f.product_variant }}</td>
-            <td>{{ f.description.errors }}{{ f.description }}</td>
-            <td style="width:7rem" class="text-end">{{ f.quantity.errors }}{{ f.quantity }}</td>
-            <td style="width:9rem" class="text-end">{{ f.unit_cost.errors }}{{ f.unit_cost }}</td>
-            <td style="width:7rem" class="text-end">
-              {% if f.instance.pk %}{{ f.instance.received_quantity }}{% else %}0{% endif %}
-            </td>
-            <td>{% if f.DELETE %}{{ f.DELETE }}{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
+      <table class="table align-middle mb-0">
+        <thead><tr><th>Product</th><th>Variant</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit cost</th><th class="text-end">Received</th><th class="text-center">Delete</th></tr></thead>
+        <tbody>{% for line_form in lines_formset %}<tr>{% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}<td>{{ line_form.product.errors }}{{ line_form.product }}</td><td>{{ line_form.product_variant.errors }}{{ line_form.product_variant }}</td><td>{{ line_form.description.errors }}{{ line_form.description }}</td><td class="text-end">{{ line_form.quantity.errors }}{{ line_form.quantity }}</td><td class="text-end">{{ line_form.unit_cost.errors }}{{ line_form.unit_cost }}</td><td class="text-end fw-semibold">{% if line_form.instance.pk %}{{ line_form.instance.received_quantity }}{% else %}0{% endif %}</td><td class="text-center">{% if line_form.DELETE %}{{ line_form.DELETE }}{% endif %}</td></tr>{% endfor %}</tbody>
       </table>
     </div>
-  </div>
-  <button type="submit" class="btn btn-primary">Save PO</button>
-</form>
-<div class="card border-0 shadow-sm mt-4">
-  <div class="card-body">
-    <h2 class="h6">Return stock to supplier</h2>
-    <form method="post" action="{% url 'staff_po_return' object.pk %}" class="row g-2">
-      {% csrf_token %}
-      {% for field in supplier_return_form %}
-      <div class="col-md-4"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>
-      {% endfor %}
-      <div class="col-12"><button class="btn btn-outline-danger" type="submit">Record supplier return</button></div>
-    </form>
-    {% if supplier_returns %}
-    <ul class="list-group list-group-flush mt-3">
-      {% for r in supplier_returns %}
-      <li class="list-group-item px-0">{{ r.reference }} · {{ r.quantity }} × {{ r.purchase_line.product.name }} · {{ r.reason }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-  </div>
-</div>
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Receiving stock updates inventory and the purchase-order status together.</span><div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_purchasing' %}">Back</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save purchase order</button></div></footer>
+  </form>
+
+  <article class="staff-section-card staff-section-card--danger">
+    <header class="staff-section-card-header"><div><h2>Return stock to supplier</h2><p>Use only for goods that were already received into inventory.</p></div><i class="bi bi-arrow-return-left text-danger" aria-hidden="true"></i></header>
+    <div class="staff-section-card-body">
+      <form method="post" action="{% url 'staff_po_return' object.pk %}" class="row g-3 align-items-end">{% csrf_token %}{% for field in supplier_return_form %}<div class="col-md-4"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<div class="col-12"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-arrow-return-left me-1" aria-hidden="true"></i>Record supplier return</button></div></form>
+      {% if supplier_returns %}<div class="staff-compact-list mt-3">{% for returned in supplier_returns %}<div class="staff-compact-row"><span><strong class="d-block">{{ returned.reference }}</strong><small>{{ returned.quantity }} × {{ returned.purchase_line.product.name }} · {{ returned.reason }}</small></span><span class="staff-status-pill staff-status-pill--danger">Returned</span></div>{% endfor %}</div>{% endif %}
+    </div>
+  </article>
+</section>
 {% endblock %}
