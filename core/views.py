@@ -11,24 +11,37 @@ class HomeView(TemplateView):
     template_name = "core/home.html"
 
     def get_context_data(self, **kwargs):
+        from django.db.models import Count, Q
+
         from catalog.discovery import new_rotation_seed, order_for_discovery
-        from catalog.models import Product
+        from catalog.models import Category, Product
 
         ctx = super().get_context_data(**kwargs)
+        published = Product.objects.filter(is_published=True)
+
         featured_products = (
-            Product.objects.filter(
-                is_published=True,
+            published.filter(
                 is_featured=True,
                 kind=Product.KIND_PHYSICAL,
             )
             .select_related("category")
             .prefetch_related("gallery_images", "variants")
         )
-        featured_services = Product.objects.filter(
-            is_published=True,
+        if not featured_products.exists():
+            featured_products = (
+                published.filter(kind=Product.KIND_PHYSICAL)
+                .select_related("category")
+                .prefetch_related("gallery_images", "variants")
+            )
+
+        featured_services = published.filter(
             kind=Product.KIND_SERVICE,
             is_featured=True,
         ).select_related("category")
+        if not featured_services.exists():
+            featured_services = published.filter(
+                kind=Product.KIND_SERVICE
+            ).select_related("category")
 
         ctx["featured_products"] = order_for_discovery(
             featured_products,
@@ -38,6 +51,40 @@ class HomeView(TemplateView):
             featured_services,
             new_rotation_seed(),
         )[:6]
+
+        catalog_categories = list(
+            Category.objects.filter(parent__isnull=True)
+            .annotate(
+                direct_item_count=Count(
+                    "products",
+                    filter=Q(products__is_published=True),
+                    distinct=True,
+                ),
+                child_item_count=Count(
+                    "subcategories__products",
+                    filter=Q(subcategories__products__is_published=True),
+                    distinct=True,
+                ),
+            )
+            .order_by("sort_order", "name")[:6]
+        )
+        for category in catalog_categories:
+            category.public_item_count = (
+                category.direct_item_count + category.child_item_count
+            )
+
+        ctx["catalog_categories"] = catalog_categories
+        ctx["catalog_stats"] = published.aggregate(
+            total=Count("pk"),
+            products=Count(
+                "pk",
+                filter=Q(kind=Product.KIND_PHYSICAL),
+            ),
+            services=Count(
+                "pk",
+                filter=Q(kind=Product.KIND_SERVICE),
+            ),
+        )
         return ctx
 
 
@@ -63,12 +110,14 @@ def service_worker(request):
         static("css/site.css"),
         static("css/customer_experience.css"),
         static("css/foundation.css"),
+        static("css/public_experience.css"),
         static("js/alltech_ui.js"),
+        static("js/public_experience.js"),
         static("site.webmanifest"),
     ]
     precache_urls = ",\n  ".join(f'"{url}"' for url in [offline_url, *public_asset_urls])
     body = f"""
-const CACHE_NAME = "leosoft-public-assets-v3";
+const CACHE_NAME = "leosoft-public-assets-v4";
 const PRECACHE_URLS = [
   {precache_urls}
 ];
