@@ -1,90 +1,22 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}{{ take.reference }}{% endblock %}
+{% block staff_page_name %}Stock take details{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-  <div>
-    <h1 class="h3 mb-1">{{ take.reference }}</h1>
-    <div class="text-muted small">
-      {{ take.name|default:"" }}
-      <span class="badge text-bg-{% if take.status == 'open' %}warning{% elif take.status == 'posted' %}success{% else %}secondary{% endif %}">{{ take.get_status_display }}</span>
-      · Started {{ take.created_at|date:"Y-m-d H:i" }} by {{ take.created_by|default:"—" }}
-      {% if take.posted_at %} · Posted {{ take.posted_at|date:"Y-m-d H:i" }}{% endif %}
-    </div>
-    {% if take.note %}<p class="small mt-1">{{ take.note }}</p>{% endif %}
-  </div>
-  <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener noreferrer" href="{% url 'staff_stocktake_labels' take.pk %}">Print labels</a>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'staff_stocktakes' %}">All stock takes</a>
-    {% if take.is_open %}
-    <form method="post" action="{% url 'staff_stocktake_post' take.pk %}" onsubmit="return confirm('Post this stock take? Variances will be applied to stock.');">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-success btn-sm">Post stock take</button>
-    </form>
-    {% endif %}
-  </div>
-</div>
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Inventory control</p><h1>{{ take.reference }}</h1><p>{{ take.name|default:"Untitled stock take" }} · Started {{ take.created_at|date:"M j, Y H:i" }}{% if take.created_by %} by {{ take.created_by }}{% endif %}</p></div>
+    <div class="staff-detail-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_stocktakes' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Stock takes</a><a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_stocktake_labels' take.pk %}"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Print labels</a>{% if take.is_open %}<form method="post" action="{% url 'staff_stocktake_post' take.pk %}" onsubmit="return confirm('Post this stock take? Variances will be applied to inventory.');">{% csrf_token %}<button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Post stock take</button></form>{% endif %}</div>
+  </header>
 
-{% if take.is_open %}
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <h2 class="h6 mb-2">Add count line</h2>
-    <form method="post" action="{% url 'staff_stocktake_add_line' take.pk %}" class="row g-2 align-items-end">
-      {% csrf_token %}
-      <div class="col-md-4">
-        <label class="form-label small">Product ID</label>
-        <input name="product" class="form-control" required placeholder="e.g. 12">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label small">Variant ID (optional)</label>
-        <input name="product_variant" class="form-control">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small">Counted qty</label>
-        <input name="counted_quantity" type="number" step="1" class="form-control" required>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label small">Note</label>
-        <input name="note" class="form-control">
-      </div>
-      <div class="col-md-1 d-grid">
-        <button type="submit" class="btn btn-primary">Add</button>
-      </div>
-    </form>
-    <p class="text-muted small mt-2 mb-0">Tip: open the products list in another tab to copy product/variant IDs.</p>
-  </div>
-</div>
-{% endif %}
+  <div class="staff-record-hero"><div class="staff-record-hero-grid"><div class="staff-record-stat"><small>Status</small><strong><span class="staff-status-pill staff-status-pill--{{ take.status|staff_status_tone }}">{{ take.get_status_display }}</span></strong></div><div class="staff-record-stat"><small>Count lines</small><strong>{{ lines|length }}</strong><span>Products and variants checked</span></div><div class="staff-record-stat"><small>Created</small><strong>{{ take.created_at|date:"M j, Y" }}</strong><span>{{ take.created_at|date:"H:i" }}</span></div><div class="staff-record-stat"><small>Posted</small><strong>{% if take.posted_at %}{{ take.posted_at|date:"M j, Y" }}{% else %}Not posted{% endif %}</strong>{% if take.posted_at %}<span>{{ take.posted_at|date:"H:i" }}</span>{% endif %}</div></div></div>
+  {% if take.note %}<div class="alert alert-light border"><strong>Count note:</strong> {{ take.note }}</div>{% endif %}
 
-<div class="card border-0 shadow-sm">
-  <div class="table-responsive">
-    <table class="table mb-0 align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Product</th>
-          <th>Variant</th>
-          <th class="text-end">System</th>
-          <th class="text-end">Counted</th>
-          <th class="text-end">Variance</th>
-          <th>Note</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for line in lines %}
-        <tr>
-          <td>{{ line.product.name }}</td>
-          <td>{{ line.product_variant.name|default:"—" }}</td>
-          <td class="text-end">{{ line.system_quantity }}</td>
-          <td class="text-end">{{ line.counted_quantity }}</td>
-          <td class="text-end {% if line.variance < 0 %}text-danger{% elif line.variance > 0 %}text-success{% endif %}">
-            {{ line.variance|stringformat:"+d" }}
-          </td>
-          <td class="small">{{ line.note|default:"" }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" class="text-center text-muted py-4">No lines yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {% if take.is_open %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Add count line</h2><p>Enter the catalogue IDs and the physical quantity found.</p></div><i class="bi bi-plus-square text-muted" aria-hidden="true"></i></header><div class="staff-section-card-body"><form method="post" action="{% url 'staff_stocktake_add_line' take.pk %}" class="row g-3 align-items-end">{% csrf_token %}<div class="col-md-3"><label class="form-label small fw-semibold" for="count-product">Product ID</label><input id="count-product" name="product" class="form-control" required inputmode="numeric" placeholder="For example: 12"></div><div class="col-md-3"><label class="form-label small fw-semibold" for="count-variant">Variant ID</label><input id="count-variant" name="product_variant" class="form-control" inputmode="numeric" placeholder="Optional"></div><div class="col-md-2"><label class="form-label small fw-semibold" for="count-quantity">Counted quantity</label><input id="count-quantity" name="counted_quantity" type="number" min="0" step="1" class="form-control" required></div><div class="col-md-3"><label class="form-label small fw-semibold" for="count-note">Line note</label><input id="count-note" name="note" class="form-control" placeholder="Optional"></div><div class="col-md-1 d-grid"><button type="submit" class="btn btn-primary">Add</button></div></form><p class="text-muted small mt-2 mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Open <a href="{% url 'staff_products' %}" target="_blank" rel="noopener">Products</a> in another tab to find catalogue and variant IDs.</p></div></article>{% endif %}
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header"><div><h2>Counted inventory</h2><p>System quantities compared with the physical count</p></div></div>
+    <div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Product</th><th>Variant</th><th class="text-end">System</th><th class="text-end">Counted</th><th class="text-end">Variance</th><th>Note</th></tr></thead><tbody>{% for line in lines %}<tr><td class="fw-semibold">{{ line.product.name }}<small class="d-block text-muted">{{ line.product.sku|default:"No SKU" }}</small></td><td>{{ line.product_variant.name|default:"Base product" }}</td><td class="text-end">{{ line.system_quantity }}</td><td class="text-end fw-semibold">{{ line.counted_quantity }}</td><td class="text-end"><span class="staff-status-pill staff-status-pill--{% if line.variance < 0 %}danger{% elif line.variance > 0 %}success{% else %}neutral{% endif %}">{{ line.variance|stringformat:"+d" }}</span></td><td class="small">{{ line.note|default:"—" }}</td></tr>{% empty %}<tr><td colspan="6"><div class="staff-empty-state"><i class="bi bi-clipboard" aria-hidden="true"></i><strong>No count lines yet</strong><span>{% if take.is_open %}Add the first product using the form above.{% else %}This stock take was posted without count lines.{% endif %}</span></div></td></tr>{% endfor %}</tbody></table></div>
   </div>
-</div>
+</section>
 {% endblock %}
