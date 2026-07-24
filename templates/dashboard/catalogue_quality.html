@@ -1,0 +1,86 @@
+{% extends "staff_base.html" %}
+{% block title %}Catalogue quality{% endblock %}
+{% block staff_page_name %}Catalogue quality{% endblock %}
+{% block staff_content %}
+<section class="staff-dashboard">
+  <div class="staff-dashboard-header">
+    <div>
+      <p class="text-primary small fw-semibold text-uppercase mb-1">Catalogue governance</p>
+      <h1>Product listing quality</h1>
+      <p class="text-muted mb-0">Find weak listings before customers encounter missing images, unclear descriptions, incomplete metadata or unusable stock.</p>
+    </div>
+    <div class="staff-dashboard-actions">
+      <a class="btn btn-primary" href="{% url 'staff_product_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New product</a>
+      <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Product register</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-xl-2"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Average score</p><p class="staff-metric-value">{{ quality_summary.average_score }}%</p></div></div></div>
+    <div class="col-6 col-xl-2"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Listings</p><p class="staff-metric-value">{{ quality_summary.total }}</p></div></div></div>
+    <div class="col-6 col-xl-2"><a class="staff-metric-card staff-metric-card--green" href="?status=ready"><div class="card-body"><p class="staff-metric-label">Ready</p><p class="staff-metric-value">{{ quality_summary.ready }}</p></div></a></div>
+    <div class="col-6 col-xl-2"><a class="staff-metric-card staff-metric-card--amber" href="?status=attention"><div class="card-body"><p class="staff-metric-label">Attention</p><p class="staff-metric-value">{{ quality_summary.attention }}</p></div></a></div>
+    <div class="col-6 col-xl-2"><a class="staff-metric-card" href="?status=critical"><div class="card-body"><p class="staff-metric-label">Critical</p><p class="staff-metric-value">{{ quality_summary.critical }}</p></div></a></div>
+    <div class="col-6 col-xl-2"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Published</p><p class="staff-metric-value">{{ quality_summary.published }}</p></div></div></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-xl-8">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body">
+          <div class="staff-panel-heading"><h2>Filter listings</h2><a href="{% url 'staff_catalogue_quality' %}">Reset</a></div>
+          <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-5"><label class="form-label" for="quality-search">Search</label><input id="quality-search" class="form-control" name="q" value="{{ current_query }}" placeholder="Product, SKU, category or brand"></div>
+            <div class="col-sm-6 col-lg-3"><label class="form-label" for="quality-status">Quality status</label><select id="quality-status" class="form-select" name="status"><option value="">All statuses</option><option value="critical" {% if current_status == 'critical' %}selected{% endif %}>Critical</option><option value="attention" {% if current_status == 'attention' %}selected{% endif %}>Needs attention</option><option value="ready" {% if current_status == 'ready' %}selected{% endif %}>Ready</option></select></div>
+            <div class="col-sm-6 col-lg-2"><label class="form-label" for="quality-published">Visibility</label><select id="quality-published" class="form-select" name="published"><option value="">All</option><option value="1" {% if current_publication == '1' %}selected{% endif %}>Published</option><option value="0" {% if current_publication == '0' %}selected{% endif %}>Draft</option></select></div>
+            <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-4">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body">
+          <div class="staff-panel-heading"><h2>Most common gaps</h2></div>
+          <div class="staff-health-list">
+            {% for issue in quality_summary.issue_counts|slice:':6' %}
+            <div class="staff-health-row"><span>{{ issue.label }}</span><span class="badge rounded-pill text-bg-light text-dark">{{ issue.count }}</span></div>
+            {% empty %}<div class="staff-empty-state">No catalogue gaps detected.</div>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card staff-panel-card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Product</th><th>Score</th><th>Issues to correct</th><th>Visibility</th><th class="text-end">Action</th></tr></thead>
+          <tbody>
+            {% for row in quality_rows %}
+            <tr>
+              <td><strong class="d-block">{{ row.product.name }}</strong><small class="text-muted">{{ row.product.category.name }}{% if row.product.sku %} · {{ row.product.sku }}{% endif %}</small></td>
+              <td><span class="badge rounded-pill {% if row.status == 'ready' %}text-bg-success{% elif row.status == 'attention' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ row.score }}%</span></td>
+              <td>
+                {% if row.issues %}<div class="d-flex flex-wrap gap-1">{% for issue in row.issues %}<span class="badge rounded-pill {% if issue.severity == 'critical' %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ issue.label }}</span>{% endfor %}</div>{% else %}<span class="text-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Complete</span>{% endif %}
+              </td>
+              <td>{% if row.product.is_published %}<span class="badge text-bg-success">Published</span>{% else %}<span class="badge text-bg-secondary">Draft</span>{% endif %}</td>
+              <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_product_edit' row.product.pk %}">Improve</a></td>
+            </tr>
+            {% empty %}<tr><td colspan="5"><div class="staff-empty-state py-5">No products match these filters.</div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if is_paginated %}
+  <nav class="mt-4" aria-label="Catalogue quality pages"><ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&amp;q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}">Previous</a></li>{% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&amp;q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}">Next</a></li>{% endif %}
+  </ul></nav>
+  {% endif %}
+</section>
+{% endblock %}
