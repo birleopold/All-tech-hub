@@ -34,7 +34,7 @@ class ProductionHealthAndHeadersTests(TestCase):
             self.assertTrue(response["X-Request-ID"])
 
     def test_release_label_and_safe_request_id_are_exposed(self):
-        with patch.dict(os.environ, {"ALLTECH_RELEASE_SHA": "release-123"}):
+        with patch("core.health.RUNNING_RELEASE", "release-123"):
             response = self.client.get(
                 reverse("health_live"),
                 HTTP_X_REQUEST_ID="customer-report-1234",
