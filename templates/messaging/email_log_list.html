@@ -1,35 +1,40 @@
 {% extends "staff_base.html" %}
-{% block title %}Email ledger{% endblock %}
+{% load dashboard_ui %}
+{% block title %}Email activity log{% endblock %}
+{% block staff_page_name %}Email activity log{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-  <div><h1 class="h3 mb-1">Email ledger</h1><p class="text-muted mb-0">SMTP acceptance is not the same as confirmed delivery.</p></div>
-  {% if perms.messaging.view_emailsuppression %}<a class="btn btn-outline-primary" href="{% url 'staff_email_deliverability' %}">Deliverability center</a>{% endif %}
-</div>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Communication operations</p><h1>Email activity log</h1><p>Review SMTP acceptance, delivery evidence, failures, complaints and suppressed recipients.</p></div>
+    <div class="staff-page-actions">{% if perms.messaging.view_emailsuppression %}<a class="btn btn-outline-primary" href="{% url 'staff_email_deliverability' %}"><i class="bi bi-envelope-check me-1" aria-hidden="true"></i>Deliverability centre</a>{% endif %}</div>
+  </header>
 
-<form method="get" class="row g-2 mb-3">
-  <div class="col-lg-4"><input class="form-control" name="q" value="{{ q }}" placeholder="Search recipient or subject"></div>
-  <div class="col-md-4 col-lg-3"><select class="form-select" name="status"><option value="">All statuses</option>{% for val,label in status_choices %}<option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-  <div class="col-md-4 col-lg-3"><select class="form-select" name="category"><option value="">All categories</option>{% for val,label in category_choices %}<option value="{{ val }}" {% if category == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-  <div class="col-md-4 col-lg-2"><button class="btn btn-outline-primary w-100" type="submit">Filter</button></div>
-</form>
+  <div class="staff-summary-grid">
+    <a class="staff-summary-card" href="{% url 'staff_email_log' %}"><span class="staff-summary-icon"><i class="bi bi-envelope" aria-hidden="true"></i></span><span><small>All email records</small><strong>{{ email_stats.total }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_email_log' %}?status=delivered"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Delivered</small><strong>{{ email_stats.delivered }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--teal" href="{% url 'staff_email_log' %}?status=sent"><span class="staff-summary-icon"><i class="bi bi-send" aria-hidden="true"></i></span><span><small>SMTP accepted</small><strong>{{ email_stats.accepted }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--amber" href="{% url 'staff_email_log' %}?status=failed"><span class="staff-summary-icon"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span><span><small>Failures</small><strong>{{ email_stats.failed }}</strong></span></a>
+  </div>
 
-<div class="table-responsive card border-0 shadow-sm">
-  <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>To</th><th>Subject</th><th>Category</th><th>Status</th><th>Attempts</th><th>Linked</th><th>When</th><th></th></tr></thead>
-    <tbody>
-      {% for e in emails %}
-      <tr>
-        <td>{{ e.to_email }}</td>
-        <td class="text-truncate" style="max-width: 320px">{{ e.subject }}</td>
-        <td>{{ e.get_category_display }}</td>
-        <td>{% if e.status == 'delivered' %}<span class="badge text-bg-success">{{ e.get_status_display }}</span>{% elif e.status == 'sent' %}<span class="badge text-bg-info">{{ e.get_status_display }}</span>{% elif e.status == 'suppressed' or e.status == 'bounced' or e.status == 'complained' %}<span class="badge text-bg-danger">{{ e.get_status_display }}</span>{% elif e.status == 'failed' or e.status == 'soft_bounced' %}<span class="badge text-bg-warning">{{ e.get_status_display }}</span>{% else %}{{ e.get_status_display }}{% endif %}</td>
-        <td>{{ e.attempt_count }}</td>
-        <td class="small text-muted">{% if e.commercial_document_id %}Doc: {{ e.commercial_document.number }}{% elif e.job_card_id %}Job: {{ e.job_card.number }}{% elif e.customer_campaign_recipients.exists %}Campaign{% else %}—{% endif %}</td>
-        <td class="small text-muted">{{ e.created_at|date:"Y-m-d H:i" }}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_email_log_detail' e.pk %}">Evidence</a></td>
-      </tr>
-      {% empty %}<tr><td colspan="8" class="text-muted p-4">No email records.</td></tr>{% endfor %}
-    </tbody>
-  </table>
-</div>
+  <form method="get" class="staff-filter-card" role="search">
+    <div class="staff-filter-grid staff-filter-grid--orders">
+      <div class="staff-filter-field staff-filter-field--wide"><label for="email-search">Search email activity</label><div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="email-search" type="search" name="q" value="{{ q }}" placeholder="Recipient email or subject"></div></div>
+      <div class="staff-filter-field"><label for="email-status">Delivery status</label><select class="form-select" id="email-status" name="status"><option value="">All statuses</option>{% for val,label in status_choices %}<option value="{{ val }}"{% if status == val %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="staff-filter-field"><label for="email-category">Category</label><select class="form-select" id="email-category" name="category"><option value="">All categories</option>{% for val,label in category_choices %}<option value="{{ val }}"{% if category == val %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="staff-filter-actions"><button class="btn btn-primary" type="submit">Apply filters</button>{% if q or status or category %}<a class="btn btn-outline-secondary" href="{% url 'staff_email_log' %}">Clear</a>{% endif %}</div>
+    </div>
+  </form>
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header"><div><h2>Outbound email evidence</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} records{% else %}{{ emails|length }} email record{{ emails|length|pluralize }}{% endif %} · {{ email_stats.suppressed }} suppressed</p></div></div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Recipient</th><th>Subject</th><th>Category</th><th>Status</th><th class="text-end">Attempts</th><th>Linked record</th><th>Created</th><th class="text-end">Evidence</th></tr></thead>
+        <tbody>{% for email in emails %}<tr><td><strong>{{ email.to_email }}</strong>{% if email.provider %}<small class="d-block text-muted">{{ email.provider }}</small>{% endif %}</td><td style="max-width:22rem"><span class="d-block text-truncate" title="{{ email.subject }}">{{ email.subject }}</span>{% if email.error %}<small class="d-block text-danger text-truncate" title="{{ email.error }}">{{ email.error }}</small>{% endif %}</td><td>{{ email.get_category_display }}</td><td><span class="staff-status-pill staff-status-pill--{{ email.status|staff_status_tone }}">{{ email.get_status_display }}</span></td><td class="text-end fw-semibold">{{ email.attempt_count }}</td><td class="small">{% if email.commercial_document_id %}<a href="{% url 'staff_document_view' email.commercial_document_id %}">{{ email.commercial_document.number }}</a>{% elif email.job_card_id %}<a href="{% url 'staff_job_detail' email.job_card_id %}">{{ email.job_card.number }}</a>{% elif email.customer_campaign_recipients.exists %}<span class="staff-status-pill staff-status-pill--neutral">Campaign</span>{% else %}<span class="text-muted">—</span>{% endif %}</td><td class="text-nowrap">{{ email.created_at|date:"M j, Y" }}<small class="d-block text-muted">{{ email.created_at|date:"H:i" }}</small></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_email_log_detail' email.pk %}">Open evidence</a></td></tr>{% empty %}<tr><td colspan="8"><div class="staff-empty-state"><i class="bi bi-envelope-x" aria-hidden="true"></i><strong>No email records found</strong><span>Clear the filters or wait for new outbound email activity.</span></div></td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if is_paginated %}<nav class="staff-pagination" aria-label="Email log pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
+</section>
 {% endblock %}
