@@ -95,6 +95,12 @@ for name in (
     print(name, "=>", staticfiles_storage.url(name))
 '
 
+# Gunicorn is managed by systemd and does not inherit this release shell's
+# environment. Persist the validated revision so the restarted process can
+# expose the exact deployed code through the health endpoints.
+printf '%s\n' "$ALLTECH_RELEASE_SHA" > "${APP_DIR}/.release.tmp"
+mv "${APP_DIR}/.release.tmp" "${APP_DIR}/.release"
+
 log "Restarting ${SERVICE_NAME}"
 sudo systemctl restart "$SERVICE_NAME"
 SERVICE_RESTARTED=1
@@ -102,15 +108,19 @@ sleep 3
 sudo systemctl is-active --quiet "$SERVICE_NAME"
 
 log "Application readiness"
-curl \
-    --fail \
-    --silent \
-    --show-error \
-    --max-time 15 \
-    -H "Host: ${HEALTH_HOST}" \
-    -H "X-Forwarded-Proto: https" \
-    "$HEALTH_URL"
-printf '\n'
+readiness_payload="$({
+    curl \
+        --fail \
+        --silent \
+        --show-error \
+        --max-time 15 \
+        -H "Host: ${HEALTH_HOST}" \
+        -H "X-Forwarded-Proto: https" \
+        "$HEALTH_URL"
+})"
+printf '%s\n' "$readiness_payload"
+[[ "$readiness_payload" == *"\"release\": \"${ALLTECH_RELEASE_SHA}\""* ]] \
+    || fail "Readiness endpoint did not report release ${ALLTECH_RELEASE_SHA}."
 
 sudo systemctl status "$SERVICE_NAME" --no-pager -l
 trap - ERR
