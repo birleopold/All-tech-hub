@@ -1,7 +1,10 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static dashboard_ui %}
 {% block body_class %}staff-workspace-body{% endblock %}
-{% block extra_css %}<link href="{% static 'css/staff_workspace.css' %}" rel="stylesheet">{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/staff_workspace.css' %}" rel="stylesheet">
+<link href="{% static 'css/staff_workspace_refinements.css' %}" rel="stylesheet">
+{% endblock %}
 
 {% block mobile_tabbar %}
 <nav class="staff-mobile-tabbar d-lg-none" aria-label="Staff mobile navigation">
@@ -53,7 +56,7 @@
       <div class="staff-topbar-left">
         <button type="button" class="staff-menu-button d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#staffNavOffcanvas" aria-controls="staffNavOffcanvas" aria-label="Open staff menu"><i class="bi bi-list" aria-hidden="true"></i></button>
         <nav class="staff-breadcrumb" aria-label="Breadcrumb">
-          <a href="{% url 'staff_dashboard' %}">Dashboard</a><i class="bi bi-chevron-right" aria-hidden="true"></i><span>{% block staff_page_name %}Workspace{% endblock %}</span>
+          <a href="{% url 'staff_dashboard' %}">Dashboard</a><i class="bi bi-chevron-right" aria-hidden="true"></i><span>{% block staff_page_name %}{{ resolve_url_name|staff_page_label }}{% endblock %}</span>
         </nav>
       </div>
 
