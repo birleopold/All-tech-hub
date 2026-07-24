@@ -1,83 +1,87 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}Support tickets{% endblock %}
+{% block staff_page_name %}Support tickets{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Support tickets</h1>
-  <span class="badge text-bg-secondary">{{ open_ticket_count }} open</span>
-</div>
-<form method="get" class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <div class="row g-2">
-      <div class="col-md-4">
-        <label class="form-label small" for="t-q">Search</label>
-        <input type="search" class="form-control" id="t-q" name="q" value="{{ request.GET.q }}" placeholder="Reference, subject, customer…">
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div>
+      <p class="staff-page-eyebrow">Customer support</p>
+      <h1>Support tickets</h1>
+      <p>Prioritise customer issues, monitor SLA deadlines and keep every case moving.</p>
+    </div>
+    <div class="staff-page-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'staff_contact_messages' %}"><i class="bi bi-inbox me-1" aria-hidden="true"></i>Contact inbox</a>
+      <a class="btn btn-primary" href="{% url 'staff_ticket_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New ticket</a>
+    </div>
+  </header>
+
+  <div class="staff-summary-grid">
+    <a class="staff-summary-card" href="{% url 'staff_tickets' %}"><span class="staff-summary-icon"><i class="bi bi-life-preserver" aria-hidden="true"></i></span><span><small>All tickets</small><strong>{{ ticket_stats.total }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--teal" href="{% url 'staff_tickets' %}?status=open"><span class="staff-summary-icon"><i class="bi bi-inbox" aria-hidden="true"></i></span><span><small>Open</small><strong>{{ ticket_stats.open }}</strong></span></a>
+    <a class="staff-summary-card" href="{% url 'staff_tickets' %}?status=in_progress"><span class="staff-summary-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span><span><small>In progress</small><strong>{{ ticket_stats.in_progress }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--amber" href="{% url 'staff_tickets' %}?due=overdue"><span class="staff-summary-icon"><i class="bi bi-alarm" aria-hidden="true"></i></span><span><small>Overdue</small><strong>{{ ticket_stats.overdue }}</strong></span></a>
+  </div>
+
+  <form method="get" class="staff-filter-card" role="search">
+    <div class="staff-filter-grid">
+      <div class="staff-filter-field staff-filter-field--wide">
+        <label for="t-q">Search tickets</label>
+        <div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input type="search" class="form-control" id="t-q" name="q" value="{{ request.GET.q }}" placeholder="Reference, subject, customer or description"></div>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small" for="t-status">Status</label>
-        <select name="status" id="t-status" class="form-select">
-          <option value="">All</option>
-          {% for val,label in status_choices %}
-          <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
+      <div class="staff-filter-field">
+        <label for="t-status">Status</label>
+        <select name="status" id="t-status" class="form-select"><option value="">All statuses</option>{% for val,label in status_choices %}<option value="{{ val }}"{% if request.GET.status == val %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small" for="t-priority">Priority</label>
-        <select name="priority" id="t-priority" class="form-select">
-          <option value="">Any</option>
-          {% for val,label in priority_choices %}
-          <option value="{{ val }}" {% if request.GET.priority == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
-        </select>
+      <div class="staff-filter-field">
+        <label for="t-priority">Priority</label>
+        <select name="priority" id="t-priority" class="form-select"><option value="">Any priority</option>{% for val,label in priority_choices %}<option value="{{ val }}"{% if request.GET.priority == val %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small" for="t-assigned">Assigned</label>
-        <select name="assigned_to" id="t-assigned" class="form-select">
-          <option value="">Anyone</option>
-          {% for u in staff_users %}
-          <option value="{{ u.pk }}" {% if request.GET.assigned_to == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_username }}</option>
-          {% endfor %}
-        </select>
+      <div class="staff-filter-field">
+        <label for="t-assigned">Assigned technician</label>
+        <select name="assigned_to" id="t-assigned" class="form-select"><option value="">Anyone</option>{% for u in staff_users %}<option value="{{ u.pk }}"{% if request.GET.assigned_to == u.pk|stringformat:"s" %} selected{% endif %}>{{ u.get_username }}</option>{% endfor %}</select>
       </div>
-      <div class="col-md-2">
-        <label class="form-label small" for="t-due">SLA</label>
-        <select name="due" id="t-due" class="form-select">
-          <option value="">Any</option>
-          <option value="overdue" {% if request.GET.due == 'overdue' %}selected{% endif %}>Overdue</option>
-          <option value="today" {% if request.GET.due == 'today' %}selected{% endif %}>Due today</option>
-          <option value="week" {% if request.GET.due == 'week' %}selected{% endif %}>Due this week</option>
-        </select>
+      <div class="staff-filter-field">
+        <label for="t-due">SLA</label>
+        <select name="due" id="t-due" class="form-select"><option value="">Any deadline</option><option value="overdue"{% if request.GET.due == 'overdue' %} selected{% endif %}>Overdue</option><option value="today"{% if request.GET.due == 'today' %} selected{% endif %}>Due today</option><option value="week"{% if request.GET.due == 'week' %} selected{% endif %}>Due this week</option></select>
       </div>
-      <div class="col-md-2 d-flex align-items-end gap-2">
-        <button class="btn btn-primary" type="submit">Filter</button>
-        <a class="btn btn-outline-secondary" href="{% url 'staff_tickets' %}">Reset</a>
+      <div class="staff-filter-field">
+        <label for="t-sort">Sort by</label>
+        <select name="sort_by" id="t-sort" class="form-select"><option value="">Recently updated</option><option value="created_at"{% if request.GET.sort_by == 'created_at' %} selected{% endif %}>Created date</option><option value="priority"{% if request.GET.sort_by == 'priority' %} selected{% endif %}>Priority</option><option value="status"{% if request.GET.sort_by == 'status' %} selected{% endif %}>Status</option></select>
+      </div>
+      <div class="staff-filter-actions">
+        <button class="btn btn-primary" type="submit">Apply filters</button>
+        {% if request.GET %}<a class="btn btn-outline-secondary" href="{% url 'staff_tickets' %}">Reset</a>{% endif %}
       </div>
     </div>
     {% include "core/_saved_search_tools.html" %}
+  </form>
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header"><div><h2>Support queue</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} tickets{% else %}{{ tickets|length }} ticket{{ tickets|length|pluralize }}{% endif %}</p></div>{% if ticket_stats.urgent %}<span class="staff-status-pill staff-status-pill--danger">{{ ticket_stats.urgent }} urgent</span>{% endif %}</div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Ticket</th><th>Customer</th><th>Status</th><th>Priority</th><th>Assigned</th><th>SLA</th><th>Updated</th><th class="text-end"><span class="visually-hidden">Open</span></th></tr></thead>
+        <tbody>
+          {% for ticket in tickets %}
+          <tr>
+            <td><a class="staff-record-link" href="{% url 'staff_ticket_detail' ticket.pk %}">{{ ticket.reference }}</a><small class="d-block text-muted mt-1">{{ ticket.subject|truncatechars:48 }}</small></td>
+            <td><strong class="d-block fw-semibold">{{ ticket.customer.name }}</strong><small class="text-muted">{{ ticket.get_category_display }}</small></td>
+            <td><span class="staff-status-pill staff-status-pill--{{ ticket.status|staff_status_tone }}">{{ ticket.get_status_display }}</span></td>
+            <td><span class="staff-priority-pill staff-priority-pill--{{ ticket.priority|staff_priority_tone }}">{{ ticket.get_priority_display }}</span></td>
+            <td>{% if ticket.assigned_to %}<span class="staff-person-chip"><span>{{ ticket.assigned_to.get_username|slice:":1"|upper }}</span>{{ ticket.assigned_to.get_username }}</span>{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
+            <td>{% if ticket.due_in_label %}<span class="staff-status-pill staff-status-pill--{% if ticket.is_overdue %}danger{% else %}neutral{% endif %}">{{ ticket.due_in_label }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td class="text-nowrap"><span class="d-block">{{ ticket.updated_at|date:"M j, Y" }}</span><small class="text-muted">{{ ticket.updated_at|date:"H:i" }}</small></td>
+            <td class="text-end"><a class="staff-row-action" href="{% url 'staff_ticket_detail' ticket.pk %}" aria-label="Open ticket {{ ticket.reference }}"><i class="bi bi-chevron-right" aria-hidden="true"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8"><div class="staff-empty-state"><i class="bi bi-life-preserver" aria-hidden="true"></i><strong>No tickets found</strong><span>Clear the filters or create a new support ticket.</span></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-</form>
-<p class="text-end mb-2"><a class="btn btn-primary btn-sm" href="{% url 'staff_ticket_create' %}">New ticket</a></p>
-<div class="table-responsive card shadow-sm border-0">
-  <table class="table table-hover mb-0">
-    <thead class="table-light"><tr><th>Ref</th><th>Subject</th><th>Customer</th><th>Status</th><th>Priority</th><th>Assigned</th><th>SLA</th><th>Updated</th></tr></thead>
-    <tbody>
-      {% for t in tickets %}
-      <tr>
-        <td><a href="{% url 'staff_ticket_detail' t.pk %}">{{ t.reference }}</a></td>
-        <td>{{ t.subject }}</td>
-        <td>{{ t.customer.name }}</td>
-        <td>{{ t.get_status_display }}</td>
-        <td>{{ t.get_priority_display }}</td>
-        <td>{% if t.assigned_to %}{{ t.assigned_to.get_username }}{% else %}—{% endif %}</td>
-        <td class="small">
-          {% if t.due_in_label %}<span class="badge {% if t.is_overdue %}text-bg-danger{% else %}text-bg-light{% endif %}">{{ t.due_in_label }}</span>{% endif %}
-        </td>
-        <td class="text-nowrap small">{{ t.updated_at|date:"Y-m-d H:i" }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="8" class="text-muted">No tickets.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+
+  {% if is_paginated %}<nav class="staff-pagination" aria-label="Ticket pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
+</section>
 {% endblock %}
