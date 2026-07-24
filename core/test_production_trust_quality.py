@@ -1,10 +1,14 @@
+import json
 import os
+import tempfile
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
 from catalog.models import Category, Product
@@ -132,6 +136,41 @@ class ContactAbuseProtectionTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(ContactMessage.objects.count(), 1)
+
+
+class BackupCommandTests(TransactionTestCase):
+    reset_sequences = True
+
+    def test_sqlite_backup_contains_database_manifest_and_checksum(self):
+        if not settings.DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+            self.skipTest("SQLite-specific online backup verification")
+
+        ContactMessage.objects.create(
+            name="Backup Customer",
+            email="backup@example.com",
+            subject="Backup record",
+            message="This row proves the database was populated before backup.",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            backup_root = Path(temporary_directory)
+            with override_settings(BACKUP_ROOT=backup_root):
+                call_command("backup_project", "--retention-days=0")
+
+            backup_directories = list(backup_root.glob("leosoft-*"))
+            self.assertEqual(len(backup_directories), 1)
+            backup_directory = backup_directories[0]
+            database_path = backup_directory / "database.sqlite3"
+            manifest_path = backup_directory / "manifest.json"
+            self.assertTrue(database_path.exists())
+            self.assertGreater(database_path.stat().st_size, 0)
+            self.assertTrue(manifest_path.exists())
+
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            database_record = next(
+                item for item in manifest["files"] if item["name"] == "database.sqlite3"
+            )
+            self.assertEqual(database_record["size_bytes"], database_path.stat().st_size)
+            self.assertEqual(len(database_record["sha256"]), 64)
 
 
 class CatalogueQualityTests(TestCase):
