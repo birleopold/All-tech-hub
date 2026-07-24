@@ -1,4 +1,8 @@
+import json
+
 from django.db.models import Count, Q
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from catalog.models import Category
 from core.models import CompanySettings, StaffNotification, is_open_now
@@ -14,20 +18,21 @@ PUBLIC_QUICK_COLLECTIONS = [
 
 
 def company(request):
-    m = getattr(request, "resolver_match", None)
-    url_name = getattr(m, "url_name", "") or ""
+    match = getattr(request, "resolver_match", None)
+    url_name = getattr(match, "url_name", "") or ""
     company_settings = CompanySettings.load()
-    ctx = {
+    context = {
         "company": company_settings,
         "resolve_url_name": url_name,
     }
     user = getattr(request, "user", None)
     if user is not None and user.is_authenticated and user.is_staff:
-        ctx["staff_unread_notifications"] = StaffNotification.objects.filter(
-            recipient=user, is_read=False
+        context["staff_unread_notifications"] = StaffNotification.objects.filter(
+            recipient=user,
+            is_read=False,
         ).count()
     else:
-        ctx["staff_unread_notifications"] = 0
+        context["staff_unread_notifications"] = 0
 
     path = getattr(request, "path", "") or ""
     public_navigation_enabled = not (
@@ -35,8 +40,8 @@ def company(request):
         or path.startswith("/admin/")
         or url_name.startswith("staff_")
     )
-    ctx["public_navigation_enabled"] = public_navigation_enabled
-    ctx["public_quick_collections"] = PUBLIC_QUICK_COLLECTIONS
+    context["public_navigation_enabled"] = public_navigation_enabled
+    context["public_quick_collections"] = PUBLIC_QUICK_COLLECTIONS
 
     if public_navigation_enabled:
         categories = list(
@@ -61,19 +66,41 @@ def company(request):
                 category.direct_product_count + category.child_product_count
             )
             category.public_subcategories = list(category.subcategories.all()[:8])
-        ctx["public_nav_categories"] = categories
-        ctx["site_is_open"] = is_open_now()
+        context["public_nav_categories"] = categories
+        context["site_is_open"] = is_open_now()
         location_parts = [
             company_settings.address_line,
             company_settings.city,
             company_settings.region,
         ]
-        ctx["public_location_label"] = ", ".join(
+        context["public_location_label"] = ", ".join(
             part.strip() for part in location_parts if part and part.strip()
         )
-    else:
-        ctx["public_nav_categories"] = []
-        ctx["site_is_open"] = False
-        ctx["public_location_label"] = ""
 
-    return ctx
+        home_url = request.build_absolute_uri(reverse("home"))
+        catalogue_url = request.build_absolute_uri(reverse("product_list"))
+        context["website_schema_json"] = mark_safe(
+            json.dumps(
+                {
+                    "@context": "https://schema.org",
+                    "@type": "WebSite",
+                    "name": company_settings.company_name,
+                    "url": home_url,
+                    "potentialAction": {
+                        "@type": "SearchAction",
+                        "target": {
+                            "@type": "EntryPoint",
+                            "urlTemplate": f"{catalogue_url}?q={{search_term_string}}",
+                        },
+                        "query-input": "required name=search_term_string",
+                    },
+                }
+            )
+        )
+    else:
+        context["public_nav_categories"] = []
+        context["site_is_open"] = False
+        context["public_location_label"] = ""
+        context["website_schema_json"] = ""
+
+    return context
