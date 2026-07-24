@@ -1,0 +1,343 @@
+/* Final cross-workspace polish for legacy staff templates and specialist tools. */
+
+.staff-main-panel > h1.h3:first-child,
+.staff-main-panel > .d-flex:first-child h1.h3,
+.staff-main-panel > .d-flex:first-child .h3,
+.staff-main-panel > .d-flex:first-child h1 {
+  color: var(--staff-text);
+  font-size: clamp(1.5rem, 2.3vw, 2rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.staff-main-panel > h1.h3:first-child {
+  margin-bottom: 1rem !important;
+}
+
+.staff-main-panel > .d-flex:first-child {
+  margin-bottom: 1.15rem !important;
+}
+
+.staff-main-panel > .d-flex:first-child > div > p,
+.staff-main-panel > p.text-muted:first-of-type {
+  color: var(--staff-muted) !important;
+  font-size: 0.83rem;
+}
+
+.staff-main-panel .card:not(.staff-panel-card),
+.staff-main-panel .list-group,
+.staff-main-panel .accordion-item {
+  border-color: var(--staff-border) !important;
+  border-radius: 0.88rem !important;
+  box-shadow: 0 0.48rem 1.4rem rgba(24, 39, 61, 0.04) !important;
+}
+
+.staff-main-panel .list-group {
+  overflow: hidden;
+}
+
+.staff-main-panel .list-group-item {
+  padding: 0.85rem 1rem;
+  border-color: #edf1f5;
+}
+
+.staff-main-panel .list-group-item-action:hover {
+  background: #f7fafc;
+}
+
+.staff-main-panel .card > .card-body:first-child > h2:first-child,
+.staff-main-panel .card > .card-body:first-child > h3:first-child,
+.staff-main-panel .card > .card-header h2,
+.staff-main-panel .card > .card-header h3 {
+  color: var(--staff-text);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.staff-main-panel .card-header {
+  padding: 0.9rem 1rem;
+}
+
+.staff-main-panel .card-body {
+  padding: 1rem 1.1rem;
+}
+
+.staff-main-panel .badge {
+  font-weight: 650;
+}
+
+.staff-main-panel .nav-tabs {
+  gap: 0.2rem;
+  padding: 0.3rem;
+  background: #eef3f7;
+  border: 0;
+  border-radius: 0.75rem;
+}
+
+.staff-main-panel .nav-tabs .nav-link {
+  color: #526174;
+  border: 0;
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.staff-main-panel .nav-tabs .nav-link.active {
+  color: var(--staff-teal-dark);
+  background: #fff;
+  box-shadow: 0 0.25rem 0.8rem rgba(24, 39, 61, 0.07);
+}
+
+.staff-main-panel .accordion-button {
+  color: var(--staff-text);
+  background: #fff;
+  font-weight: 650;
+  box-shadow: none;
+}
+
+.staff-main-panel .accordion-button:not(.collapsed) {
+  color: var(--staff-teal-dark);
+  background: rgba(25, 185, 173, 0.07);
+}
+
+.staff-main-panel .form-check-input:checked {
+  background-color: var(--staff-teal);
+  border-color: var(--staff-teal);
+}
+
+.staff-main-panel textarea.form-control {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.staff-main-panel input[type="file"].form-control,
+.staff-main-panel input[type="file"] {
+  max-width: 100%;
+}
+
+.staff-main-panel pre,
+.staff-email-body {
+  overflow: auto;
+  max-height: 32rem;
+  padding: 1rem;
+  color: #253246;
+  background: #f7fafc;
+  border: 1px solid #e5ebf2;
+  border-radius: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.staff-main-panel dl.row {
+  row-gap: 0.25rem;
+}
+
+.staff-main-panel dl.row dt {
+  color: var(--staff-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.staff-main-panel dl.row dd {
+  color: var(--staff-text);
+}
+
+.staff-main-panel details {
+  border-radius: 0.65rem;
+}
+
+.staff-main-panel details[open] > summary {
+  margin-bottom: 0.5rem;
+}
+
+.staff-main-panel .btn-group .btn {
+  white-space: nowrap;
+}
+
+.staff-main-panel .input-group-text {
+  color: #64748b;
+  background: #f7fafc;
+  border-color: #dfe6ee;
+}
+
+/* Job scheduling calendar */
+.cal-cell {
+  position: relative;
+  background: #fbfcfe;
+  border-color: #e6ecf2 !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.cal-cell:hover,
+.cal-cell.border-primary {
+  background: #f2fbfa;
+  border-color: rgba(25, 185, 173, 0.58) !important;
+  box-shadow: inset 0 0 0 1px rgba(25, 185, 173, 0.14);
+}
+
+.cal-job {
+  padding: 0.48rem 0.55rem !important;
+  background: #fff !important;
+  border-color: #dfe6ee !important;
+  border-left: 3px solid var(--staff-teal) !important;
+  border-radius: 0.55rem !important;
+  box-shadow: 0 0.25rem 0.65rem rgba(24, 39, 61, 0.05);
+  cursor: grab;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.cal-job:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.45rem 0.9rem rgba(24, 39, 61, 0.09);
+}
+
+.cal-job.border-danger {
+  border-left-color: #dc3545 !important;
+}
+
+.cal-job:active {
+  cursor: grabbing;
+}
+
+#cal-flash {
+  position: sticky;
+  top: calc(var(--staff-topbar-height) + 0.75rem);
+  z-index: 1020;
+  max-width: 36rem;
+  margin-left: auto;
+  box-shadow: 0 0.7rem 1.8rem rgba(24, 39, 61, 0.12);
+}
+
+/* Reports and analytics */
+.staff-main-panel .display-6 {
+  color: var(--staff-text);
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
+  font-weight: 750;
+  letter-spacing: -0.04em;
+}
+
+.staff-main-panel h2.text-uppercase,
+.staff-main-panel h2.h6.text-muted.text-uppercase,
+.staff-main-panel .text-uppercase.h6 {
+  color: #64748b !important;
+  font-size: 0.7rem !important;
+  font-weight: 750;
+  letter-spacing: 0.065em;
+}
+
+.staff-main-panel .border.rounded.p-2,
+.staff-main-panel .border.rounded.p-3 {
+  border-color: #e7edf3 !important;
+  border-radius: 0.72rem !important;
+  background: #fbfcfe;
+}
+
+/* Formsets and editable tables */
+.staff-main-panel table input,
+.staff-main-panel table select,
+.staff-main-panel table textarea {
+  max-width: 100%;
+}
+
+.staff-main-panel table .form-control-sm,
+.staff-main-panel table .form-select-sm {
+  min-height: 2.25rem;
+}
+
+.staff-main-panel table input[type="checkbox"] {
+  min-width: 1rem;
+}
+
+.staff-main-panel .table tfoot th,
+.staff-main-panel .table tfoot td {
+  background: #fbfcfe;
+  border-color: #e8edf3;
+}
+
+/* Public-email, campaign and automation editors rendered inside staff shell */
+.staff-main-panel form:not(.staff-filter-card):not(.staff-topbar-search) .tox-tinymce,
+.staff-main-panel form:not(.staff-filter-card):not(.staff-topbar-search) .django-ckeditor-widget {
+  width: 100% !important;
+  border-color: #dfe6ee !important;
+  border-radius: 0.65rem;
+}
+
+/* Empty states in legacy tables */
+.staff-main-panel td.text-muted[colspan],
+.staff-main-panel td.text-center.text-muted[colspan] {
+  padding: 2rem 1rem !important;
+}
+
+/* Page-specific specialist surfaces */
+.staff-main-panel .progress {
+  height: 0.55rem;
+  background: #e8eef4;
+  border-radius: 999px;
+}
+
+.staff-main-panel .progress-bar {
+  background: linear-gradient(90deg, var(--staff-teal), var(--staff-teal-dark));
+}
+
+.staff-main-panel canvas {
+  max-width: 100%;
+}
+
+.staff-main-panel iframe {
+  max-width: 100%;
+  border-radius: 0.7rem;
+}
+
+@media (max-width: 991.98px) {
+  .staff-main-panel > .d-flex:first-child {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+
+  .staff-main-panel > .d-flex:first-child > .d-flex,
+  .staff-main-panel > .d-flex:first-child > div:last-child {
+    width: 100%;
+    justify-content: flex-start !important;
+  }
+
+  .cal-cell {
+    min-width: 8.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .staff-main-panel .btn-group {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .staff-main-panel .btn-group > .btn {
+    flex: 1 1 auto;
+    border-radius: 0.55rem !important;
+  }
+
+  .staff-main-panel .card-body {
+    padding: 0.9rem;
+  }
+
+  .staff-main-panel pre,
+  .staff-email-body {
+    font-size: 0.7rem;
+  }
+}
+
+@media print {
+  .cal-job {
+    box-shadow: none;
+  }
+
+  .staff-main-panel .nav-tabs,
+  .staff-main-panel .accordion-button::after {
+    display: none !important;
+  }
+}
