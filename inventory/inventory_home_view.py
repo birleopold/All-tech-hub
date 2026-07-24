@@ -1,6 +1,7 @@
 from django.utils import timezone
 
 from catalog.models import Product
+from catalog.stock_alerts import low_stock_products
 from inventory import views
 from inventory.models import StockAdjustment
 
@@ -15,7 +16,7 @@ class StaffInventoryHomeView(views.InventoryHomeView):
             "products": product_queryset.count(),
             "published": product_queryset.filter(is_published=True).count(),
             "tracked": product_queryset.filter(track_inventory=True).count(),
-            "low_stock": len(context.get("low_stock_items") or []),
+            "low_stock": len(low_stock_products(limit=None)),
             "adjustments_today": StockAdjustment.objects.filter(
                 created_at__date=timezone.localdate()
             ).count(),
