@@ -2,10 +2,11 @@ from django.urls import path
 
 from core import private_views
 from operations import views
+from operations.job_list_view import StaffJobCardListView
 
 urlpatterns = [
     path("jobs/bench/", views.TechnicianBenchView.as_view(), name="staff_job_bench"),
-    path("jobs/", views.JobCardListView.as_view(), name="staff_jobs"),
+    path("jobs/", StaffJobCardListView.as_view(), name="staff_jobs"),
     path("jobs/calendar/", views.JobScheduleCalendarView.as_view(), name="staff_job_calendar"),
     path("jobs/<int:pk>/reschedule/", views.staff_job_reschedule, name="staff_job_reschedule"),
     path("jobs/new/", views.JobCardCreateView.as_view(), name="staff_job_create"),

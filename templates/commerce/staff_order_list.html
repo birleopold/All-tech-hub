@@ -1,34 +1,83 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}Orders{% endblock %}
+{% block staff_page_name %}Shop orders{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">Shop orders</h1>
-<form method="get" class="row g-2 mb-3">
-  <div class="col-auto">
-    <select name="status" class="form-select">
-      <option value="">All statuses</option>
-      {% for val,label in order_status_choices %}
-      <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div>
+      <p class="staff-page-eyebrow">Sales operations</p>
+      <h1>Shop orders</h1>
+      <p>Track new purchases, fulfilment progress, dispatches and completed orders.</p>
+    </div>
+    <div class="staff-page-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'product_list' %}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Open shop</a>
+      <a class="btn btn-primary" href="{% url 'staff_documents' %}"><i class="bi bi-receipt me-1" aria-hidden="true"></i>Documents</a>
+    </div>
+  </header>
+
+  <div class="staff-summary-grid">
+    <a class="staff-summary-card" href="{% url 'staff_orders' %}"><span class="staff-summary-icon"><i class="bi bi-bag" aria-hidden="true"></i></span><span><small>All orders</small><strong>{{ order_stats.total }}</strong></span></a>
+    <a class="staff-summary-card" href="{% url 'staff_orders' %}?queue=active"><span class="staff-summary-icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span><span><small>Active queue</small><strong>{{ order_stats.active }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--teal" href="{% url 'staff_orders' %}?status=dispatched"><span class="staff-summary-icon"><i class="bi bi-truck" aria-hidden="true"></i></span><span><small>Dispatched</small><strong>{{ order_stats.dispatched }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_orders' %}?queue=completed"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Completed</small><strong>{{ order_stats.completed }}</strong></span></a>
   </div>
-  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
-</form>
-<div class="table-responsive card shadow-sm border-0">
-  <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>Reference</th><th>Customer</th><th>Status</th><th>Total</th><th>Placed</th></tr></thead>
-    <tbody>
-      {% for o in orders %}
-      <tr>
-        <td><a href="{% url 'staff_order_detail' o.pk %}">{{ o.reference }}</a></td>
-        <td>{{ o.customer.name }}</td>
-        <td>{{ o.get_status_display }}</td>
-        <td>{{ company.currency_code }} {{ o.total|floatformat:2 }}</td>
-        <td>{{ o.placed_at|date:"Y-m-d H:i" }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5" class="text-muted">No orders yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+
+  <form method="get" class="staff-filter-card" role="search">
+    {% if selected_queue %}<input type="hidden" name="queue" value="{{ selected_queue }}">{% endif %}
+    <div class="staff-filter-grid staff-filter-grid--orders">
+      <div class="staff-filter-field staff-filter-field--wide">
+        <label for="order-search">Search orders</label>
+        <div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="order-search" type="search" name="q" value="{{ q }}" placeholder="Reference, customer, email or phone"></div>
+      </div>
+      <div class="staff-filter-field">
+        <label for="order-status">Status</label>
+        <select id="order-status" name="status" class="form-select">
+          <option value="">All statuses</option>
+          {% for value, label in order_status_choices %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="staff-filter-actions">
+        <button class="btn btn-primary" type="submit">Apply filters</button>
+        {% if q or selected_status or selected_queue %}<a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}">Clear</a>{% endif %}
+      </div>
+    </div>
+  </form>
+
+  <div class="staff-data-card">
+    <div class="staff-data-card-header">
+      <div><h2>Order queue</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} orders{% else %}{{ orders|length }} order{{ orders|length|pluralize }}{% endif %}</p></div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Reference</th><th>Customer</th><th>Status</th><th>Fulfilment</th><th class="text-end">Total</th><th>Placed</th><th class="text-end"><span class="visually-hidden">Open</span></th></tr></thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td><a class="staff-record-link" href="{% url 'staff_order_detail' order.pk %}">{{ order.reference }}</a></td>
+            <td><strong class="d-block fw-semibold">{{ order.customer.name }}</strong><small class="text-muted">{{ order.contact_email }}</small></td>
+            <td><span class="staff-status-pill staff-status-pill--{{ order.status|staff_status_tone }}">{{ order.get_status_display }}</span></td>
+            <td>{{ order.get_fulfillment_type_display }}</td>
+            <td class="text-end fw-semibold">{{ company.currency_code }} {{ order.total|floatformat:2 }}</td>
+            <td class="text-nowrap"><span class="d-block">{{ order.placed_at|date:"M j, Y" }}</span><small class="text-muted">{{ order.placed_at|date:"H:i" }}</small></td>
+            <td class="text-end"><a class="staff-row-action" href="{% url 'staff_order_detail' order.pk %}" aria-label="Open order {{ order.reference }}"><i class="bi bi-chevron-right" aria-hidden="true"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7"><div class="staff-empty-state"><i class="bi bi-bag-x" aria-hidden="true"></i><strong>No orders found</strong><span>Try clearing the filters or wait for new shop activity.</span></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if is_paginated %}
+  <nav class="staff-pagination" aria-label="Order pages">
+    <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+    <div>
+      {% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+      {% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+    </div>
+  </nav>
+  {% endif %}
+</section>
 {% endblock %}

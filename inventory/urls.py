@@ -1,10 +1,11 @@
 from django.urls import path
 
 from inventory import views
+from inventory.inventory_home_view import StaffInventoryHomeView
 from inventory.product_list_view import ProductManageListView
 
 urlpatterns = [
-    path("inventory/", views.InventoryHomeView.as_view(), name="staff_inventory"),
+    path("inventory/", StaffInventoryHomeView.as_view(), name="staff_inventory"),
     path(
         "inventory/movements/",
         views.StockMovementListView.as_view(),

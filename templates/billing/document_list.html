@@ -1,69 +1,96 @@
 {% extends "staff_base.html" %}
+{% load dashboard_ui %}
 {% block title %}Documents{% endblock %}
+{% block staff_page_name %}Quotes &amp; invoices{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-  <div>
-    <h1 class="h3 mb-1">Commercial documents</h1>
-    <p class="text-muted mb-0">Find receipts, invoices, quotations and walk-in documents. Newest documents appear first.</p>
-  </div>
-  <a class="btn btn-primary" href="{% url 'staff_document_create' %}">New document</a>
-</div>
-
-<div class="card border-0 shadow-sm mb-3">
-  <div class="card-body">
-    <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Quick document filters">
-      <a class="btn btn-sm {% if not request.GET.type %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}">All</a>
-      <a class="btn btn-sm {% if request.GET.type == 'receipt' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}?type=receipt">Receipts</a>
-      <a class="btn btn-sm {% if request.GET.type == 'invoice' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}?type=invoice">Invoices</a>
-      <a class="btn btn-sm {% if request.GET.type == 'quote' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'staff_documents' %}?type=quote">Quotations</a>
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div>
+      <p class="staff-page-eyebrow">Sales &amp; billing</p>
+      <h1>Commercial documents</h1>
+      <p>Create and manage quotations, invoices, receipts, delivery notes and customer balances.</p>
     </div>
-    <form method="get" class="row g-2">
-      <div class="col-md-4"><label class="visually-hidden" for="document-search">Search documents</label><input class="form-control" id="document-search" type="search" name="q" value="{{ request.GET.q }}" placeholder="Search number, walk-in name, phone or reference"></div>
-      <div class="col-auto">
-        <label class="visually-hidden" for="document-type-filter">Document type</label>
+    <div class="staff-page-actions">
+      <a class="btn btn-outline-secondary" href="{% url 'staff_payment_reconciliation' %}"><i class="bi bi-bank me-1" aria-hidden="true"></i>Reconciliation</a>
+      <a class="btn btn-primary" href="{% url 'staff_document_create' %}"><i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i>New document</a>
+    </div>
+  </header>
+
+  <div class="staff-summary-grid">
+    <a class="staff-summary-card" href="{% url 'staff_documents' %}"><span class="staff-summary-icon"><i class="bi bi-files" aria-hidden="true"></i></span><span><small>All documents</small><strong>{{ document_stats.total }}</strong></span></a>
+    <a class="staff-summary-card" href="{% url 'staff_documents' %}?status=draft"><span class="staff-summary-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span><span><small>Drafts</small><strong>{{ document_stats.drafts }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--amber" href="{% url 'staff_documents' %}?status=issued"><span class="staff-summary-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span><span><small>Outstanding</small><strong>{{ document_stats.outstanding }}</strong></span></a>
+    <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_documents' %}?status=paid"><span class="staff-summary-icon"><i class="bi bi-check-circle" aria-hidden="true"></i></span><span><small>Paid</small><strong>{{ document_stats.paid }}</strong></span></a>
+  </div>
+
+  <form method="get" class="staff-filter-card" role="search">
+    <div class="staff-quick-filters" aria-label="Quick document filters">
+      <a {% if not request.GET.type %}aria-current="page"{% endif %} href="{% url 'staff_documents' %}">All</a>
+      <a {% if request.GET.type == 'receipt' %}aria-current="page"{% endif %} href="{% url 'staff_documents' %}?type=receipt">Receipts</a>
+      <a {% if request.GET.type == 'invoice' %}aria-current="page"{% endif %} href="{% url 'staff_documents' %}?type=invoice">Invoices</a>
+      <a {% if request.GET.type == 'quote' %}aria-current="page"{% endif %} href="{% url 'staff_documents' %}?type=quote">Quotations</a>
+      <a {% if request.GET.type == 'delivery_note' %}aria-current="page"{% endif %} href="{% url 'staff_documents' %}?type=delivery_note">Delivery notes</a>
+    </div>
+    <div class="staff-filter-grid">
+      <div class="staff-filter-field staff-filter-field--wide">
+        <label for="document-search">Search documents</label>
+        <div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="document-search" type="search" name="q" value="{{ request.GET.q }}" placeholder="Number, customer, phone or reference"></div>
+      </div>
+      <div class="staff-filter-field">
+        <label for="document-type-filter">Document type</label>
         <select id="document-type-filter" name="type" class="form-select">
           <option value="">All types</option>
-          {% for value,label in document_type_choices %}
-          <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
+          {% for value, label in document_type_choices %}<option value="{{ value }}"{% if request.GET.type == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
         </select>
       </div>
-      <div class="col-auto">
-        <label class="visually-hidden" for="document-status-filter">Document status</label>
+      <div class="staff-filter-field">
+        <label for="document-status-filter">Status</label>
         <select id="document-status-filter" name="status" class="form-select">
           <option value="">All statuses</option>
-          {% for val,label in document_status_choices %}
-          <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
-          {% endfor %}
+          {% for value, label in document_status_choices %}<option value="{{ value }}"{% if request.GET.status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
         </select>
       </div>
-      <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Apply filters</button></div>
-      {% if request.GET.q or request.GET.type or request.GET.status %}<div class="col-auto"><a class="btn btn-link" href="{% url 'staff_documents' %}">Clear filters</a></div>{% endif %}
-    </form>
-  </div>
-</div>
+      <div class="staff-filter-actions">
+        <button class="btn btn-primary" type="submit">Apply filters</button>
+        {% if request.GET.q or request.GET.type or request.GET.status %}<a class="btn btn-outline-secondary" href="{% url 'staff_documents' %}">Clear</a>{% endif %}
+      </div>
+    </div>
+  </form>
 
-<div class="table-responsive card shadow-sm border-0">
-  <table class="table table-hover mb-0 align-middle">
-    <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Customer</th><th>Status</th><th>Total</th><th>Date</th><th class="text-end">Actions</th></tr></thead>
-    <tbody>
-      {% for d in documents %}
-      <tr>
-        <td><a href="{% url 'staff_document_view' d.pk %}">{{ d.number }}</a></td>
-        <td>{{ d.get_doc_type_display }}</td>
-        <td>{{ d.display_customer_name }}{% if not d.customer_id %} <span class="badge text-bg-light border">Walk-in</span>{% endif %}</td>
-        <td>{{ d.get_status_display }}</td>
-        <td>{{ company.currency_code }} {{ d.total }}</td>
-        <td>{{ d.created_at|date:"Y-m-d H:i" }}</td>
-        <td class="text-end text-nowrap">
-          <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_document_view' d.pk %}">View</a>
-          <a class="btn btn-sm btn-success" href="{% url 'staff_document_pdf' d.pk %}?download=1">Download PDF</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="7" class="text-muted">No documents match your filters. Clear the filters or create a new document.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <div class="staff-data-card">
+    <div class="staff-data-card-header">
+      <div><h2>Document register</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} documents{% else %}{{ documents|length }} document{{ documents|length|pluralize }}{% endif %}</p></div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead><tr><th>Number</th><th>Type</th><th>Customer</th><th>Status</th><th class="text-end">Total</th><th>Date</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for document in documents %}
+          <tr>
+            <td><a class="staff-record-link" href="{% url 'staff_document_view' document.pk %}">{{ document.number }}</a>{% if document.contact_reference %}<small class="d-block text-muted">{{ document.contact_reference }}</small>{% endif %}</td>
+            <td><span class="staff-document-type"><i class="bi bi-file-earmark-text" aria-hidden="true"></i>{{ document.get_doc_type_display }}</span></td>
+            <td><strong class="d-block fw-semibold">{{ document.display_customer_name }}</strong>{% if not document.customer_id %}<small class="text-muted">Walk-in customer</small>{% endif %}</td>
+            <td><span class="staff-status-pill staff-status-pill--{{ document.status|staff_status_tone }}">{{ document.get_status_display }}</span></td>
+            <td class="text-end fw-semibold">{{ company.currency_code }} {{ document.total|floatformat:2 }}</td>
+            <td class="text-nowrap"><span class="d-block">{{ document.created_at|date:"M j, Y" }}</span><small class="text-muted">{{ document.created_at|date:"H:i" }}</small></td>
+            <td class="text-end text-nowrap"><a class="staff-row-action" href="{% url 'staff_document_view' document.pk %}" aria-label="View {{ document.number }}"><i class="bi bi-eye" aria-hidden="true"></i></a><a class="staff-row-action" href="{% url 'staff_document_pdf' document.pk %}?download=1" aria-label="Download {{ document.number }} PDF"><i class="bi bi-download" aria-hidden="true"></i></a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7"><div class="staff-empty-state"><i class="bi bi-file-earmark-x" aria-hidden="true"></i><strong>No documents found</strong><span>Clear the filters or create a new commercial document.</span><a class="btn btn-sm btn-primary" href="{% url 'staff_document_create' %}">Create document</a></div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if is_paginated %}
+  <nav class="staff-pagination" aria-label="Document pages">
+    <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+    <div>
+      {% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+      {% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+    </div>
+  </nav>
+  {% endif %}
+</section>
 {% endblock %}

@@ -43,6 +43,41 @@ STAFF_PAGE_LABELS = {
     "two_factor_setup": "Two-factor security",
 }
 
+STATUS_TONES = {
+    "pending": "warning",
+    "confirmed": "info",
+    "processing": "info",
+    "ready": "primary",
+    "ready_pickup": "success",
+    "dispatched": "primary",
+    "delivered": "success",
+    "fulfilled": "success",
+    "cancelled": "danger",
+    "draft": "neutral",
+    "issued": "primary",
+    "partial": "warning",
+    "paid": "success",
+    "expired": "danger",
+    "intake": "neutral",
+    "diagnosing": "info",
+    "awaiting_parts": "warning",
+    "in_repair": "primary",
+    "qa": "info",
+    "completed": "success",
+    "open": "primary",
+    "resolved": "success",
+    "closed": "neutral",
+    "failed": "danger",
+    "refunded": "neutral",
+}
+
+PRIORITY_TONES = {
+    "urgent": "danger",
+    "high": "warning",
+    "normal": "primary",
+    "low": "neutral",
+}
+
 
 @register.filter
 def staff_page_label(url_name):
@@ -54,3 +89,17 @@ def staff_page_label(url_name):
     if not name:
         return "Workspace"
     return STAFF_PAGE_LABELS.get(name, name.replace("_", " ").title())
+
+
+@register.filter
+def staff_status_tone(value):
+    """Return a stable visual tone name for workflow statuses."""
+
+    return STATUS_TONES.get(str(value or "").strip().lower(), "neutral")
+
+
+@register.filter
+def staff_priority_tone(value):
+    """Return a stable visual tone name for priority levels."""
+
+    return PRIORITY_TONES.get(str(value or "").strip().lower(), "neutral")

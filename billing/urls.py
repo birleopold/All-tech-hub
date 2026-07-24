@@ -1,9 +1,10 @@
 from django.urls import path
 
 from billing import document_pdf_views, document_workflow_views, views
+from billing.document_list_view import StaffCommercialDocumentListView
 
 urlpatterns = [
-    path("documents/", document_workflow_views.CommercialDocumentListView.as_view(), name="staff_documents"),
+    path("documents/", StaffCommercialDocumentListView.as_view(), name="staff_documents"),
     path(
         "documents/<int:pk>/quote-approve/",
         views.quote_internal_approve,
