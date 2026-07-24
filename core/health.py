@@ -16,7 +16,7 @@ def _health_response(payload: dict, *, status: int = 200) -> JsonResponse:
     return response
 
 
-def _release_label() -> str:
+def _read_release_label() -> str:
     environment_label = (
         os.getenv("ALLTECH_RELEASE_SHA", "").strip()
         or os.getenv("GIT_COMMIT", "").strip()
@@ -32,6 +32,11 @@ def _release_label() -> str:
     return (file_label or "unknown")[:64]
 
 
+# Pin the revision when the worker imports this module. An old worker must not
+# claim a newly written release marker before systemd has actually replaced it.
+RUNNING_RELEASE = _read_release_label()
+
+
 @require_GET
 def live(request):
     """Process liveness check that deliberately avoids external dependencies."""
@@ -40,7 +45,7 @@ def live(request):
         {
             "status": "ok",
             "service": "leosoft-web",
-            "release": _release_label(),
+            "release": RUNNING_RELEASE,
             "timestamp": timezone.now().isoformat(),
         }
     )
@@ -65,7 +70,7 @@ def ready(request):
             "status": "ok" if http_status == 200 else "degraded",
             "service": "leosoft-web",
             "database": database_status,
-            "release": _release_label(),
+            "release": RUNNING_RELEASE,
             "timestamp": timezone.now().isoformat(),
         },
         status=http_status,
