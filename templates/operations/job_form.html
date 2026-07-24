@@ -1,22 +1,26 @@
 {% extends "staff_base.html" %}
-{% block title %}Job{% endblock %}
+{% block title %}{% if object %}Edit {{ object.number }}{% else %}New job card{% endif %}{% endblock %}
+{% block staff_page_name %}{% if object %}Edit job card{% else %}New job card{% endif %}{% endblock %}
 {% block staff_content %}
-<h1 class="h3 mb-3">{% if object %}Edit {{ object.number }}{% else %}New job card{% endif %}</h1>
-<form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm p-4">
-  {% csrf_token %}
-  <div class="row g-3">
-    {% for field in form %}
-    <div class="col-md-6">
-      <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field.errors }}
-      {{ field }}
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading"><p class="staff-page-eyebrow">Service operations</p><h1>{% if object %}Edit {{ object.number }}{% else %}New job card{% endif %}</h1><p>{% if object %}Update the device, assignment, schedule and repair details.{% else %}Capture the customer, device and reported problem for the service team.{% endif %}</p></div>
+    <div class="staff-detail-actions"><a class="btn btn-outline-secondary" href="{% if object %}{% url 'staff_job_detail' object.pk %}{% else %}{% url 'staff_jobs' %}{% endif %}"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel</a></div>
+  </header>
+
+  <form method="post" enctype="multipart/form-data" class="staff-form-shell" novalidate>
+    {% csrf_token %}
+    <div class="staff-form-shell-body">
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="staff-form-grid">
+        {% for field in form %}
+        <div class="staff-form-field{% if field.name == 'description' or field.name == 'problem_reported' or field.name == 'diagnosis' or field.name == 'resolution' or field.name == 'accessories_received' %} staff-form-field--full{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
     </div>
-    {% endfor %}
-  </div>
-  <div class="mt-4 d-flex gap-2">
-    <button type="submit" class="btn btn-primary">Save</button>
-    {% if object %}<a class="btn btn-outline-secondary" href="{% url 'staff_job_detail' object.pk %}">View</a>{% endif %}
-    <a class="btn btn-link" href="{% url 'staff_jobs' %}">Back</a>
-  </div>
-</form>
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Overlapping technician appointments are checked automatically.</span><div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% if object %}{% url 'staff_job_detail' object.pk %}{% else %}{% url 'staff_jobs' %}{% endif %}">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>{% if object %}Save changes{% else %}Create job card{% endif %}</button></div></footer>
+  </form>
+</section>
 {% endblock %}
