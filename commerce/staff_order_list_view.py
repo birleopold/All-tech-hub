@@ -16,10 +16,22 @@ class StaffOrderListView(StaffRequiredMixin, ListView):
     def get_queryset(self):
         queryset = Order.objects.select_related("customer").order_by("-placed_at")
         status = (self.request.GET.get("status") or "").strip()
+        queue = (self.request.GET.get("queue") or "").strip()
         query = (self.request.GET.get("q") or "").strip()
+        terminal_statuses = [
+            Order.STATUS_CANCELLED,
+            Order.STATUS_DELIVERED,
+            Order.STATUS_FULFILLED,
+        ]
 
         if status in dict(Order.STATUS_CHOICES):
             queryset = queryset.filter(status=status)
+        elif queue == "active":
+            queryset = queryset.exclude(status__in=terminal_statuses)
+        elif queue == "completed":
+            queryset = queryset.filter(
+                status__in=[Order.STATUS_DELIVERED, Order.STATUS_FULFILLED]
+            )
         if query:
             queryset = queryset.filter(
                 Q(reference__icontains=query)
@@ -54,6 +66,7 @@ class StaffOrderListView(StaffRequiredMixin, ListView):
             {
                 "order_status_choices": Order.STATUS_CHOICES,
                 "selected_status": (self.request.GET.get("status") or "").strip(),
+                "selected_queue": (self.request.GET.get("queue") or "").strip(),
                 "q": (self.request.GET.get("q") or "").strip(),
                 "order_stats": stats,
                 "querystring": query_params.urlencode(),
