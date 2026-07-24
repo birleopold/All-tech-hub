@@ -1,0 +1,45 @@
+{% load catalog_images %}
+<article class="market-product-card" data-reveal data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{{ p.public_price }}">
+  <div class="market-product-card__media">
+    <a class="market-product-card__image-link" href="{{ p.get_absolute_url }}" aria-label="View {{ p.name }}">
+      {% if p.primary_display_image %}
+        {% if eager %}{% responsive_image p.primary_display_image p.name "" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw" "eager" "high" %}
+        {% else %}{% responsive_image p.primary_display_image p.name "" "(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw" "lazy" "low" %}{% endif %}
+      {% else %}
+        <span class="market-product-card__placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i><small>Image coming soon</small></span>
+      {% endif %}
+    </a>
+    <div class="market-product-card__badges">
+      {% if p.savings_percent %}<span class="market-badge market-badge--deal">Save {{ p.savings_percent }}%</span>{% endif %}
+      {% if p.public_condition %}<span class="market-badge">{{ p.public_condition }}</span>{% endif %}
+      {% if p.kind == 'service' %}<span class="market-badge market-badge--available">Bookable</span>{% elif p.public_available %}<span class="market-badge market-badge--available">In stock</span>{% else %}<span class="market-badge market-badge--muted">Confirm stock</span>{% endif %}
+    </div>
+  </div>
+  <div class="market-product-card__body">
+    <div class="market-product-card__identity">
+      <p>{% if p.public_brand %}<strong>{{ p.public_brand }}</strong><span aria-hidden="true"> · </span>{% endif %}{{ p.category.name }}</p>
+      <h3><a data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+    </div>
+    <p class="market-product-card__description">{{ p.short_description|default:p.description|truncatewords:16 }}</p>
+    <div class="market-product-card__signals">
+      {% if p.public_has_variants %}<span><i class="bi bi-sliders" aria-hidden="true"></i>{{ p.public_variant_count }} option{{ p.public_variant_count|pluralize }}</span>{% endif %}
+      {% if p.sku %}<span><i class="bi bi-upc-scan" aria-hidden="true"></i>{{ p.sku }}</span>{% endif %}
+      {% if p.public_low_stock %}<span class="text-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Low stock</span>{% endif %}
+    </div>
+    <div class="market-product-card__price-row">
+      <div class="market-price">
+        {% if p.public_has_variants %}<small>From</small>{% endif %}
+        <strong>{{ company.currency_code }} {{ p.public_price|floatformat:0 }}</strong>
+        {% if p.public_compare_at_price %}<del>{{ company.currency_code }} {{ p.public_compare_at_price|floatformat:0 }}</del>{% endif %}
+      </div>
+    </div>
+    <div class="market-product-card__actions">
+      <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details</a>
+      {% if show_compare and p.kind == 'physical' %}
+      <form method="post" action="{% url 'product_compare_toggle' p.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn {% if p.pk in compare_product_ids %}btn-primary{% else %}btn-outline-secondary{% endif %}" aria-label="{% if p.pk in compare_product_ids %}Remove {{ p.name }} from comparison{% else %}Compare {{ p.name }}{% endif %}" aria-pressed="{% if p.pk in compare_product_ids %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap" aria-hidden="true"></i></button></form>
+      {% else %}
+      <a class="btn btn-outline-secondary" href="{% url 'contact' %}?type={% if p.kind == 'service' %}support{% else %}product{% endif %}&amp;product={{ p.slug|urlencode }}" aria-label="Ask about {{ p.name }}"><i class="bi bi-chat-dots" aria-hidden="true"></i></a>
+      {% endif %}
+    </div>
+  </div>
+</article>
