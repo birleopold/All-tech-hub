@@ -7,29 +7,104 @@ User = get_user_model()
 
 
 class ContactForm(forms.ModelForm):
+    REQUEST_PRODUCT = "product"
+    REQUEST_QUOTE = "quote"
+    REQUEST_REPAIR = "repair"
+    REQUEST_INSTALLATION = "installation"
+    REQUEST_SUPPORT = "support"
+    REQUEST_OTHER = "other"
+    REQUEST_TYPE_CHOICES = [
+        (REQUEST_PRODUCT, "Product enquiry"),
+        (REQUEST_QUOTE, "Formal quotation"),
+        (REQUEST_REPAIR, "Repair or diagnostics"),
+        (REQUEST_INSTALLATION, "Installation or setup"),
+        (REQUEST_SUPPORT, "Business IT support"),
+        (REQUEST_OTHER, "Other request"),
+    ]
+
+    request_type = forms.ChoiceField(
+        choices=REQUEST_TYPE_CHOICES,
+        label="What can we help with?",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
     class Meta:
         model = ContactMessage
         fields = ("name", "email", "phone", "subject", "message")
         widgets = {
-            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Your name"}),
-            "email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "you@example.com"}),
-            "phone": forms.TextInput(attrs={"class": "form-control", "placeholder": "Phone or WhatsApp number"}),
-            "subject": forms.TextInput(attrs={"class": "form-control", "placeholder": "What do you need help with?"}),
-            "message": forms.Textarea(attrs={"rows": 5, "class": "form-control", "placeholder": "Share product, repair, installation or support details…"}),
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Your name"}
+            ),
+            "email": forms.EmailInput(
+                attrs={"class": "form-control", "placeholder": "you@example.com"}
+            ),
+            "phone": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Phone or WhatsApp number",
+                    "inputmode": "tel",
+                }
+            ),
+            "subject": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "A short summary of what you need",
+                }
+            ),
+            "message": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "class": "form-control",
+                    "placeholder": "Include the product, device, problem, location, timeline or quantity so we can respond accurately…",
+                }
+            ),
         }
         help_texts = {
             "phone": "Useful for quick calls, SMS or WhatsApp follow-up in Uganda.",
+            "message": "Do not include passwords, PINs or other sensitive credentials.",
         }
+
+    field_order = ("request_type", "name", "email", "phone", "subject", "message")
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        request_type = self.cleaned_data.get("request_type", self.REQUEST_OTHER)
+        request_label = dict(self.REQUEST_TYPE_CHOICES).get(request_type, "General enquiry")
+        subject = (instance.subject or "").strip()
+        prefix = f"{request_label}: "
+        if subject and not subject.lower().startswith(prefix.lower()):
+            instance.subject = f"{prefix}{subject}"[:200]
+        if commit:
+            instance.save()
+        return instance
 
 
 class PortalSupportTicketForm(forms.ModelForm):
     class Meta:
         model = SupportTicket
-        fields = ("category", "subject", "description", "priority", "related_order", "related_serial")
+        fields = (
+            "category",
+            "subject",
+            "description",
+            "priority",
+            "related_order",
+            "related_serial",
+        )
         widgets = {
             "category": forms.Select(attrs={"class": "form-select"}),
-            "subject": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Laptop warranty claim or invoice question"}),
-            "description": forms.Textarea(attrs={"class": "form-control", "rows": 5, "placeholder": "Describe the issue, device, error message, or document/order reference…"}),
+            "subject": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "e.g. Laptop warranty claim or invoice question",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 5,
+                    "placeholder": "Describe the issue, device, error message, or document/order reference…",
+                }
+            ),
             "priority": forms.Select(attrs={"class": "form-select"}),
             "related_order": forms.Select(attrs={"class": "form-select"}),
             "related_serial": forms.Select(attrs={"class": "form-select"}),
@@ -56,7 +131,9 @@ class PortalSupportTicketForm(forms.ModelForm):
             ).order_by("-placed_at")
             self.fields["related_serial"].queryset = ProductSerial.objects.filter(
                 sold_to=customer
-            ).select_related("product", "product_variant").order_by("product__name", "serial_number")
+            ).select_related("product", "product_variant").order_by(
+                "product__name", "serial_number"
+            )
         self.fields["category"].help_text = (
             "Choose Return / RMA or Warranty claim if this relates to a purchase."
         )
@@ -103,7 +180,9 @@ class StaffSupportTicketForm(forms.ModelForm):
 
 
 class StaffSavedSearchForm(forms.Form):
-    name = forms.CharField(max_length=100, widget=forms.TextInput(attrs={"class": "form-control"}))
+    name = forms.CharField(
+        max_length=100, widget=forms.TextInput(attrs={"class": "form-control"})
+    )
     params = forms.CharField(widget=forms.HiddenInput())
 
 
@@ -113,7 +192,11 @@ class TicketCommentForm(forms.ModelForm):
         fields = ("body", "is_internal", "attachment")
         widgets = {
             "body": forms.Textarea(
-                attrs={"rows": 3, "class": "form-control", "placeholder": "Add a reply or internal note…"}
+                attrs={
+                    "rows": 3,
+                    "class": "form-control",
+                    "placeholder": "Add a reply or internal note…",
+                }
             ),
             "is_internal": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "attachment": forms.ClearableFileInput(attrs={"class": "form-control"}),
@@ -126,6 +209,10 @@ class PortalTicketReplyForm(forms.ModelForm):
         fields = ("body",)
         widgets = {
             "body": forms.Textarea(
-                attrs={"rows": 4, "class": "form-control", "placeholder": "Reply to the team…"}
+                attrs={
+                    "rows": 4,
+                    "class": "form-control",
+                    "placeholder": "Reply to the team…",
+                }
             ),
         }
