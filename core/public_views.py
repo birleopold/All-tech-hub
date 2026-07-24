@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from catalog.models import Product
 from catalog.presentation import prepare_public_products
@@ -73,7 +74,10 @@ def public_contact_view(request):
 
     initial, contact_product = _contact_initial(request)
     if request.method == "POST":
-        form = ContactForm(request.POST)
+        data = request.POST.copy()
+        if not data.get("request_type"):
+            data["request_type"] = ContactForm.REQUEST_OTHER
+        form = ContactForm(data)
         if form.is_valid():
             contact_message = form.save()
             from marketing.services import create_lead_from_contact
@@ -96,5 +100,6 @@ def public_contact_view(request):
             "is_open_now": is_open_now(),
             "contact_product": contact_product,
             "request_type_choices": ContactForm.REQUEST_TYPE_CHOICES,
+            "contact_canonical_url": request.build_absolute_uri(reverse("contact")),
         },
     )
