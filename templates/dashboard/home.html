@@ -112,21 +112,24 @@
           </div>
           <div class="staff-schedule-header">
             <a class="staff-schedule-nav" href="{% url 'staff_jobs' %}" aria-label="View all jobs"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
-            <span class="staff-schedule-date">{% now "M j" %}</span>
+            <span class="staff-schedule-date">Next appointments</span>
             <a class="staff-schedule-nav" href="{% url 'staff_job_create' %}" aria-label="Create a new job"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
           </div>
           <div class="staff-schedule-list">
-            {% for j in recent_jobs|slice:":5" %}
+            {% for j in upcoming_jobs %}
             <div class="staff-schedule-item">
-              <span class="staff-schedule-time">{{ j.received_on|date:"M j" }}<br>{{ j.received_on|date:"Y" }}</span>
+              <span class="staff-schedule-time">{{ j.scheduled_for|date:"g:i A" }}<br>{{ j.scheduled_for|date:"M j" }}</span>
               <div class="staff-schedule-copy">
-                <a href="{% url 'staff_job_detail' j.pk %}">{{ j.number }}</a>
-                <small>{{ j.customer.name }} · {{ j.status }}</small>
+                <a href="{% url 'staff_job_detail' j.pk %}">{{ j.title|truncatechars:38 }}</a>
+                <small>{{ j.customer.name }}{% if j.assigned_to %} · {{ j.assigned_to.get_short_name|default:j.assigned_to.username }}{% endif %}</small>
               </div>
-              <span class="badge rounded-pill text-bg-light">{{ j.status }}</span>
+              <span class="badge rounded-pill text-bg-light">{{ j.get_status_display }}</span>
             </div>
             {% empty %}
-            <div class="staff-empty-state">No job cards have been created yet.</div>
+            <div class="staff-empty-state">
+              <p class="mb-2">No upcoming service appointments.</p>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_job_create' %}">Schedule a job</a>
+            </div>
             {% endfor %}
           </div>
         </div>
