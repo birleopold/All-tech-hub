@@ -7,6 +7,9 @@ ENV_FILE="${ALLTECH_ENV_FILE:-${APP_DIR}/.env}"
 SERVICE_NAME="${ALLTECH_GUNICORN_SERVICE:-leosoft_gunicorn}"
 HEALTH_URL="${ALLTECH_LOCAL_HEALTH_URL:-http://127.0.0.1:8010/health/ready/}"
 HEALTH_HOST="${ALLTECH_HEALTH_HOST:-leosoftug.com}"
+DEPLOY_BACKUP_ENABLED="${ALLTECH_DEPLOY_BACKUP_ENABLED:-1}"
+DEPLOY_BACKUP_OFFSITE="${ALLTECH_DEPLOY_BACKUP_OFFSITE:-0}"
+BACKUP_RETENTION_DAYS="${ALLTECH_BACKUP_RETENTION_DAYS:-30}"
 SERVICE_RESTARTED=0
 
 log() {
@@ -16,6 +19,13 @@ log() {
 fail() {
     printf '\nERROR: %s\n' "$*" >&2
     return 1
+}
+
+is_true() {
+    case "${1,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
 }
 
 on_error() {
@@ -79,6 +89,17 @@ PY
 python manage.py check --deploy
 python manage.py makemigrations --check --dry-run
 python manage.py audit_project --strict-environment
+
+if is_true "$DEPLOY_BACKUP_ENABLED"; then
+    log "Pre-migration database backup"
+    backup_arguments=(--retention-days "$BACKUP_RETENTION_DAYS")
+    if is_true "$DEPLOY_BACKUP_OFFSITE"; then
+        backup_arguments+=(--offsite)
+    fi
+    python manage.py backup_project "${backup_arguments[@]}"
+else
+    log "Pre-migration backup disabled by ALLTECH_DEPLOY_BACKUP_ENABLED"
+fi
 
 log "Database migrations"
 python manage.py migrate --noinput
