@@ -1,5 +1,4 @@
 import os
-from functools import lru_cache
 from pathlib import Path
 
 from django.conf import settings
@@ -17,7 +16,6 @@ def _health_response(payload: dict, *, status: int = 200) -> JsonResponse:
     return response
 
 
-@lru_cache(maxsize=1)
 def _release_label() -> str:
     environment_label = (
         os.getenv("ALLTECH_RELEASE_SHA", "").strip()
