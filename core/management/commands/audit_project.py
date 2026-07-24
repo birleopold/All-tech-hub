@@ -18,6 +18,11 @@ class Command(BaseCommand):
             help="Return a failure status for unsafe production configuration.",
         )
         parser.add_argument(
+            "--environment-only",
+            action="store_true",
+            help="Skip database-backed catalogue checks during release preflight.",
+        )
+        parser.add_argument(
             "--fail-on-catalogue-critical",
             action="store_true",
             help="Return a failure status when any catalogue listing scores below 60.",
@@ -48,22 +53,24 @@ class Command(BaseCommand):
         for warning in environment_warnings:
             self.stdout.write(self.style.WARNING(f"- {warning}"))
 
-        rows = catalogue_quality_rows()
-        summary = catalogue_quality_summary(rows)
-        self.stdout.write("")
-        self.stdout.write(self.style.MIGRATE_HEADING("Catalogue quality"))
-        self.stdout.write(
-            "Listings: {total} | average: {average_score}% | ready: {ready} | "
-            "attention: {attention} | critical: {critical}".format(**summary)
-        )
-        for issue in summary["issue_counts"][:10]:
-            self.stdout.write(f"- {issue['label']}: {issue['count']}")
-
         failures = []
         if options["strict_environment"] and environment_issues:
             failures.append("unsafe production environment settings")
-        if options["fail_on_catalogue_critical"] and summary["critical"]:
-            failures.append(f"{summary['critical']} critical catalogue listings")
+
+        if not options["environment_only"]:
+            rows = catalogue_quality_rows()
+            summary = catalogue_quality_summary(rows)
+            self.stdout.write("")
+            self.stdout.write(self.style.MIGRATE_HEADING("Catalogue quality"))
+            self.stdout.write(
+                "Listings: {total} | average: {average_score}% | ready: {ready} | "
+                "attention: {attention} | critical: {critical}".format(**summary)
+            )
+            for issue in summary["issue_counts"][:10]:
+                self.stdout.write(f"- {issue['label']}: {issue['count']}")
+            if options["fail_on_catalogue_critical"] and summary["critical"]:
+                failures.append(f"{summary['critical']} critical catalogue listings")
+
         if failures:
             raise CommandError("Audit failed: " + "; ".join(failures))
 
