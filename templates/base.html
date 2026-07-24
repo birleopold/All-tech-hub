@@ -18,9 +18,6 @@
   <meta property="og:url" content="{{ request.build_absolute_uri }}">
   {% if company.logo %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url }}">{% endif %}
   <meta name="twitter:card" content="{% if company.logo %}summary_large_image{% else %}summary{% endif %}">
-  <meta name="twitter:title" content="{{ company.company_name }} — Technology products and services">
-  <meta name="twitter:description" content="{{ company.tagline|default:'Technology products, business solutions, repairs and IT services.' }}">
-  {% if company.logo %}<meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url }}">{% endif %}
   {% endblock %}
   <script type="application/ld+json">{{ local_business_schema_json }}</script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -31,6 +28,7 @@
   <link href="{% static 'css/customer_experience.css' %}" rel="stylesheet">
   <link href="{% static 'css/foundation.css' %}" rel="stylesheet">
   <link href="{% static 'css/public_experience.css' %}" rel="stylesheet">
+  <link href="{% static 'css/marketplace_experience.css' %}" rel="stylesheet">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
   {% block extra_css %}{% endblock %}
 </head>
@@ -41,138 +39,114 @@
       data-privacy-url="{{ growth_settings.privacy_policy_url }}">
   <a class="visually-hidden-focusable position-absolute top-0 start-0 z-3 p-2 m-2 bg-white shadow rounded" href="#main-content">Skip to main content</a>
 
-  <header>
+  <header class="site-header">
     {% with u=resolve_url_name %}
-    <nav class="navbar navbar-expand-lg navbar-dark site-navbar shadow-sm sticky-top" aria-label="Main navigation">
-      <div class="container">
+    {% if public_navigation_enabled %}
+    <div class="market-utility-bar d-none d-lg-block">
+      <div class="container market-utility-bar__inner">
+        <div class="market-utility-bar__group">
+          <span class="market-open-status {% if site_is_open %}is-open{% endif %}"><i class="bi bi-circle-fill" aria-hidden="true"></i>{% if site_is_open %}Open now{% else %}Currently closed{% endif %}</span>
+          {% if public_location_label %}<span><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ public_location_label }}</span>{% endif %}
+          {% if company.phone %}<a href="tel:{{ company.phone|cut:' ' }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ company.phone }}</a>{% endif %}
+        </div>
+        <nav class="market-utility-bar__group" aria-label="Quick support links">
+          <a href="{% url 'portal_repair_intake' %}">Book a repair</a>
+          <a href="{% url 'contact' %}?type=quote">Business quotations</a>
+          <a href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}">Track orders &amp; support</a>
+          {% if social_profiles.whatsapp_url %}<a href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i>WhatsApp</a>{% endif %}
+        </nav>
+      </div>
+    </div>
+
+    <nav class="navbar navbar-expand-xl navbar-dark market-navbar sticky-top" aria-label="Main navigation">
+      <div class="container market-navbar__inner">
         <a class="navbar-brand site-brand fw-semibold" href="{% url 'home' %}">
           <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-cpu"></i></span>
-          <span>{{ company.company_name }}</span>
+          <span class="site-brand__copy"><strong>{{ company.company_name }}</strong><small>Technology &amp; support</small></span>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Toggle main menu">
-          <span class="navbar-toggler-icon" aria-hidden="true"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMain">
-          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item"><a class="nav-link" href="{% url 'product_list' %}" {% if u == 'product_list' and request.GET.kind != 'service' or u == 'product_detail' and product and product.kind != 'service' %}aria-current="page"{% endif %}>Shop</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'product_list' %}?kind=service" {% if u == 'product_list' and request.GET.kind == 'service' or u == 'product_detail' and product and product.kind == 'service' %}aria-current="page"{% endif %}>Services</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'about' %}" {% if u == 'about' %}aria-current="page"{% endif %}>About</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}" {% if u == 'contact' %}aria-current="page"{% endif %}>Contact</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}" {% if 'portal_' in u %}aria-current="page"{% endif %}>Customer portal</a></li>
-            {% if user.is_staff %}<li class="nav-item"><a class="nav-link" href="{% url 'staff_dashboard' %}" {% if 'staff_' in u %}aria-current="page"{% endif %}>Staff</a></li>{% endif %}
-          </ul>
-          {% if not 'staff_' in u %}
-          <form class="site-nav-search position-relative d-none d-xl-flex" method="get" action="{% url 'product_list' %}" role="search">
-            <i class="bi bi-search site-nav-search__icon" aria-hidden="true"></i>
-            <label class="visually-hidden" for="site-nav-search">Search products and services</label>
-            <input class="form-control form-control-sm" id="site-nav-search" name="q" type="search" placeholder="Search catalogue">
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#marketNav" aria-controls="marketNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+
+        <div class="collapse navbar-collapse market-navbar__collapse" id="marketNav">
+          <div class="dropdown market-category-dropdown d-none d-xl-block">
+            <button class="btn market-category-trigger dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>All categories</button>
+            <div class="dropdown-menu market-mega-menu">
+              <div class="market-mega-menu__header"><div><small>Shop by department</small><strong>Technology organised around your needs</strong></div><a href="{% url 'product_list' %}">View everything <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+              <div class="market-mega-menu__grid">
+                {% for category in public_nav_categories %}
+                <section class="market-mega-menu__category">
+                  <a class="market-mega-menu__title" href="{% url 'product_list' %}?category={{ category.slug|urlencode }}"><span>{{ category.name }}</span><small>{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</small></a>
+                  {% if category.public_subcategories %}<nav>{% for subcategory in category.public_subcategories %}<a href="{% url 'product_list' %}?category={{ subcategory.slug|urlencode }}">{{ subcategory.name }}</a>{% endfor %}</nav>{% else %}<p>{{ category.description|default:'Browse products and related solutions.'|truncatewords:12 }}</p>{% endif %}
+                </section>
+                {% endfor %}
+              </div>
+              <div class="market-mega-menu__footer">{% for collection in public_quick_collections %}<a href="{% url 'product_list' %}?collection={{ collection.slug }}"><i class="bi {{ collection.icon }}" aria-hidden="true"></i>{{ collection.label }}</a>{% endfor %}</div>
+            </div>
+          </div>
+
+          <form class="market-global-search" method="get" action="{% url 'product_list' %}" role="search">
+            <label class="visually-hidden" for="market-global-search">Search products, brands, models and services</label>
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input id="market-global-search" name="q" type="search" value="{% if u == 'product_list' %}{{ request.GET.q }}{% endif %}" placeholder="Search laptops, brands, processors, accessories or services">
+            <button type="submit">Search</button>
           </form>
-          {% endif %}
-          <ul class="navbar-nav ms-auto align-items-lg-center">
-            <li class="nav-item"><a class="nav-link" href="{% url 'cart' %}" {% if u == 'cart' or u == 'checkout' %}aria-current="page"{% endif %} {% if cart_item_count %}aria-label="Shopping cart, {{ cart_item_count }} items"{% else %}aria-label="Shopping cart"{% endif %}><i class="bi bi-cart3 me-1" aria-hidden="true"></i>Cart{% if cart_item_count %}<span class="badge text-bg-light ms-1" aria-hidden="true">{{ cart_item_count }}</span>{% endif %}</a></li>
-            {% if user.is_authenticated %}
-            <li class="nav-item"><span class="nav-link disabled small" aria-hidden="true">{{ user.get_username }}</span><span class="visually-hidden">Signed in as {{ user.get_username }}</span></li>
-            <li class="nav-item"><form method="post" action="{% url 'logout' %}" class="d-inline">{% csrf_token %}<button type="submit" class="nav-link bg-transparent border-0 text-start w-100 py-2" aria-label="Log out {{ user.get_username }}">Log out</button></form></li>
-            {% else %}
-            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}" {% if u == 'login' %}aria-current="page"{% endif %}>Staff login</a></li>
-            {% endif %}
+
+          <ul class="navbar-nav market-navbar__actions ms-xl-auto">
+            <li class="nav-item d-xl-none"><a class="nav-link" href="{% url 'product_list' %}"><i class="bi bi-grid me-2" aria-hidden="true"></i>Browse all products</a></li>
+            {% for category in public_nav_categories|slice:':6' %}<li class="nav-item d-xl-none"><a class="nav-link ps-3" href="{% url 'product_list' %}?category={{ category.slug|urlencode }}">{{ category.name }}</a></li>{% endfor %}
+            <li class="nav-item"><a class="market-nav-action" href="{% url 'product_list' %}?kind=service"><i class="bi bi-tools" aria-hidden="true"></i><span><small>Technical</small>Services</span></a></li>
+            <li class="nav-item"><a class="market-nav-action" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}"><i class="bi bi-person-circle" aria-hidden="true"></i><span><small>{% if user.is_authenticated %}Welcome{% else %}Sign in{% endif %}</small>Account</span></a></li>
+            <li class="nav-item"><a class="market-nav-action market-cart-action" href="{% url 'cart' %}" {% if cart_item_count %}aria-label="Shopping cart, {{ cart_item_count }} items"{% else %}aria-label="Shopping cart"{% endif %}><i class="bi bi-cart3" aria-hidden="true"></i><span><small>Your</small>Cart</span>{% if cart_item_count %}<b>{{ cart_item_count }}</b>{% endif %}</a></li>
+            {% if user.is_staff %}<li class="nav-item"><a class="market-nav-action" href="{% url 'staff_dashboard' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i><span><small>Internal</small>Staff</span></a></li>{% endif %}
           </ul>
         </div>
       </div>
     </nav>
+
+    <nav class="market-quick-nav d-none d-xl-block" aria-label="Popular shopping destinations">
+      <div class="container market-quick-nav__inner">
+        <a class="is-emphasis" href="{% url 'product_list' %}?collection=deals"><i class="bi bi-tags" aria-hidden="true"></i>Deals</a>
+        {% for collection in public_quick_collections %}{% if collection.slug != 'deals' %}<a href="{% url 'product_list' %}?collection={{ collection.slug }}">{{ collection.label }}</a>{% endif %}{% endfor %}
+        <a href="{% url 'product_list' %}?kind=service">Repairs &amp; services</a>
+        <a href="{% url 'product_compare' %}">Compare products</a>
+        <a href="{% url 'contact' %}?type=quote">Request a formal quote</a>
+      </div>
+    </nav>
+    {% else %}
+    <nav class="navbar navbar-expand-lg navbar-dark site-navbar shadow-sm sticky-top" aria-label="Staff navigation"><div class="container"><a class="navbar-brand site-brand fw-semibold" href="{% url 'home' %}"><span class="site-brand__mark"><i class="bi bi-cpu"></i></span><span>{{ company.company_name }}</span></a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#staffBaseNav"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="staffBaseNav"><ul class="navbar-nav ms-auto"><li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Public site</a></li><li class="nav-item"><a class="nav-link" href="{% url 'staff_dashboard' %}">Staff workspace</a></li><li class="nav-item"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nav-link bg-transparent border-0" type="submit">Log out</button></form></li></ul></div></div></nav>
+    {% endif %}
     {% endwith %}
   </header>
 
   <main id="main-content" class="flex-grow-1 site-main">
-    {% if messages %}
-    <div class="container mt-3" role="region" aria-live="polite" aria-atomic="true" aria-label="Notifications">
-      {% for message in messages %}<div class="alert alert-{% if 'error' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button></div>{% endfor %}
-    </div>
-    {% endif %}
+    {% if messages %}<div class="container mt-3" role="region" aria-live="polite" aria-atomic="true" aria-label="Notifications">{% for message in messages %}<div class="alert alert-{% if 'error' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button></div>{% endfor %}</div>{% endif %}
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="footer-site py-4 mt-auto d-none d-lg-block">
-    <div class="container small text-muted d-flex flex-wrap justify-content-between gap-3 align-items-center">
-      <span>&copy; {% now "Y" %} {{ company.company_name }}</span>
-      <span class="d-flex flex-wrap gap-2 align-items-center">
-        <a class="link-secondary text-decoration-none" href="{% url 'product_list' %}">Catalogue</a><span aria-hidden="true">·</span>
-        <a class="link-secondary text-decoration-none" href="{% url 'about' %}">About</a><span aria-hidden="true">·</span>
-        <a class="link-secondary text-decoration-none" href="{% url 'contact' %}">Contact</a>
-        {% if company.phone %}<span aria-hidden="true">·</span><a class="link-secondary text-decoration-underline" href="tel:{{ company.phone|cut:' ' }}">{{ company.phone }}</a>{% endif %}
-        {% if company.email %}<span aria-hidden="true">·</span><a class="link-secondary text-decoration-underline" href="mailto:{{ company.email }}">{{ company.email }}</a>{% endif %}
-        {% if growth_settings.privacy_policy_url %}<span aria-hidden="true">·</span><a class="link-secondary text-decoration-underline" href="{{ growth_settings.privacy_policy_url }}">Privacy</a>{% endif %}
-        {% if growth_settings.ga4_measurement_id or growth_settings.clarity_project_id %}<span aria-hidden="true">·</span><button type="button" class="btn btn-link link-secondary p-0 small" data-analytics-consent-reset>Cookie choices</button>{% endif %}
-      </span>
-      {% if social_profiles.facebook_url or social_profiles.instagram_url or social_profiles.tiktok_url or social_profiles.x_url or social_profiles.linkedin_url or social_profiles.youtube_url or social_profiles.whatsapp_url %}
-      <nav class="d-flex gap-3 align-items-center" aria-label="Social media profiles">
-        {% if social_profiles.facebook_url %}<a class="link-secondary" href="{{ social_profiles.facebook_url }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.instagram_url %}<a class="link-secondary" href="{{ social_profiles.instagram_url }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.tiktok_url %}<a class="link-secondary" href="{{ social_profiles.tiktok_url }}" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.x_url %}<a class="link-secondary" href="{{ social_profiles.x_url }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.linkedin_url %}<a class="link-secondary" href="{{ social_profiles.linkedin_url }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.youtube_url %}<a class="link-secondary" href="{{ social_profiles.youtube_url }}" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.whatsapp_url %}<a class="link-secondary" href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="bi bi-whatsapp" aria-hidden="true"></i></a>{% endif %}
-      </nav>
-      {% endif %}
+  {% if public_navigation_enabled %}
+  <footer class="market-footer mt-auto">
+    <div class="container market-footer__grid">
+      <section><a class="market-footer__brand" href="{% url 'home' %}"><span class="site-brand__mark"><i class="bi bi-cpu"></i></span><span><strong>{{ company.company_name }}</strong><small>{{ company.tagline|default:'Technology that works for you.' }}</small></span></a><p>Dependable technology products, repairs, installations and business IT support with clear documentation and human follow-up.</p>{% if company.phone %}<a href="tel:{{ company.phone|cut:' ' }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ company.phone }}</a>{% endif %}{% if company.email %}<a href="mailto:{{ company.email }}"><i class="bi bi-envelope" aria-hidden="true"></i>{{ company.email }}</a>{% endif %}</section>
+      <section><h2>Shop</h2><a href="{% url 'product_list' %}">All products</a><a href="{% url 'product_list' %}?collection=new">New arrivals</a><a href="{% url 'product_list' %}?collection=deals">Current deals</a><a href="{% url 'product_list' %}?collection=refurbished">Refurbished technology</a><a href="{% url 'product_compare' %}">Compare products</a></section>
+      <section><h2>Solutions</h2><a href="{% url 'product_list' %}?collection=student">For students</a><a href="{% url 'product_list' %}?collection=business">For business</a><a href="{% url 'product_list' %}?collection=creative">Creative &amp; technical work</a><a href="{% url 'product_list' %}?kind=service">Repairs &amp; services</a><a href="{% url 'contact' %}?type=quote">Formal quotations</a></section>
+      <section><h2>Customer help</h2><a href="{% url 'contact' %}">Contact the team</a><a href="{% url 'portal_repair_intake' %}">Submit a repair request</a><a href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}">Customer account</a><a href="{% url 'about' %}">About LEOSOFT</a>{% if growth_settings.privacy_policy_url %}<a href="{{ growth_settings.privacy_policy_url }}">Privacy</a>{% endif %}</section>
     </div>
+    <div class="container market-footer__bottom"><span>&copy; {% now 'Y' %} {{ company.company_name }}</span><nav aria-label="Social profiles">{% if social_profiles.facebook_url %}<a href="{{ social_profiles.facebook_url }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}{% if social_profiles.instagram_url %}<a href="{{ social_profiles.instagram_url }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}{% if social_profiles.tiktok_url %}<a href="{{ social_profiles.tiktok_url }}" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>{% endif %}{% if social_profiles.whatsapp_url %}<a href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>{% endif %}</nav></div>
   </footer>
+  {% endif %}
 
   {% block mobile_tabbar %}
-  {% with u=resolve_url_name %}
-  <nav class="mobile-tabbar d-lg-none" aria-label="Primary mobile navigation">
-    <a class="mobile-tabbar__item {% if u == 'home' %}is-active{% endif %}" href="{% url 'home' %}" {% if u == 'home' %}aria-current="page"{% endif %}><i class="bi bi-house-door-fill mobile-tabbar__icon" aria-hidden="true"></i><span>Home</span></a>
-    <a class="mobile-tabbar__item {% if u == 'product_list' and request.GET.kind != 'service' or u == 'product_detail' and product and product.kind != 'service' %}is-active{% endif %}" href="{% url 'product_list' %}" {% if u == 'product_list' and request.GET.kind != 'service' or u == 'product_detail' and product and product.kind != 'service' %}aria-current="page"{% endif %}><i class="bi bi-grid-fill mobile-tabbar__icon" aria-hidden="true"></i><span>Shop</span></a>
-    <a class="mobile-tabbar__item {% if u == 'product_list' and request.GET.kind == 'service' or u == 'product_detail' and product and product.kind == 'service' %}is-active{% endif %}" href="{% url 'product_list' %}?kind=service" {% if u == 'product_list' and request.GET.kind == 'service' or u == 'product_detail' and product and product.kind == 'service' %}aria-current="page"{% endif %}><i class="bi bi-wrench-adjustable mobile-tabbar__icon" aria-hidden="true"></i><span>Services</span></a>
-    <a class="mobile-tabbar__item {% if u == 'cart' or u == 'checkout' %}is-active{% endif %}" href="{% url 'cart' %}" {% if u == 'cart' or u == 'checkout' %}aria-current="page"{% endif %} {% if cart_item_count %}aria-label="Cart, {{ cart_item_count }} items"{% else %}aria-label="Cart"{% endif %}><i class="bi bi-cart3 mobile-tabbar__icon" aria-hidden="true"></i><span>Cart{% if cart_item_count %}<span class="mobile-tabbar__badge" aria-hidden="true">{{ cart_item_count }}</span>{% endif %}</span></a>
-    <a class="mobile-tabbar__item {% if 'portal_' in u %}is-active{% endif %}" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}" {% if 'portal_' in u %}aria-current="page"{% endif %}><i class="bi bi-person-circle mobile-tabbar__icon" aria-hidden="true"></i><span>{% if user.is_authenticated %}Account{% else %}Sign in{% endif %}</span></a>
-  </nav>
-  {% endwith %}
-
-  <footer class="mobile-scroll-footer d-lg-none mt-3">
-    <div class="container py-3">
-      <nav class="mobile-scroll-footer__links" aria-label="Secondary mobile navigation">
-        <a class="btn btn-sm btn-outline-secondary rounded-pill" href="{% url 'about' %}">About</a>
-        <a class="btn btn-sm btn-outline-secondary rounded-pill" href="{% url 'contact' %}">Contact</a>
-        {% if growth_settings.privacy_policy_url %}<a class="btn btn-sm btn-outline-secondary rounded-pill" href="{{ growth_settings.privacy_policy_url }}">Privacy</a>{% endif %}
-        {% if user.is_authenticated %}
-          <a class="btn btn-sm btn-outline-secondary rounded-pill" href="{% url 'portal_home' %}">Account</a>
-          {% if user.is_staff %}<a class="btn btn-sm btn-outline-primary rounded-pill" href="{% url 'staff_dashboard' %}">Staff</a>{% endif %}
-          <form method="post" action="{% url 'logout' %}" class="mobile-scroll-footer__logout">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill">Log out</button></form>
-        {% else %}
-          <a class="btn btn-sm btn-outline-secondary rounded-pill" href="{% url 'portal_login' %}">Customer sign in</a>
-          <a class="btn btn-sm btn-outline-secondary rounded-pill" href="{% url 'login' %}">Staff login</a>
-        {% endif %}
-        {% if growth_settings.ga4_measurement_id or growth_settings.clarity_project_id %}<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" data-analytics-consent-reset>Cookie choices</button>{% endif %}
-      </nav>
-      {% if social_profiles.facebook_url or social_profiles.instagram_url or social_profiles.tiktok_url or social_profiles.x_url or social_profiles.linkedin_url or social_profiles.youtube_url or social_profiles.whatsapp_url %}
-      <nav class="mobile-scroll-footer__social" aria-label="Social media profiles">
-        {% if social_profiles.facebook_url %}<a class="link-secondary" href="{{ social_profiles.facebook_url }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.instagram_url %}<a class="link-secondary" href="{{ social_profiles.instagram_url }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.tiktok_url %}<a class="link-secondary" href="{{ social_profiles.tiktok_url }}" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.x_url %}<a class="link-secondary" href="{{ social_profiles.x_url }}" target="_blank" rel="noopener noreferrer" aria-label="X"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.linkedin_url %}<a class="link-secondary" href="{{ social_profiles.linkedin_url }}" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.youtube_url %}<a class="link-secondary" href="{{ social_profiles.youtube_url }}" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i class="bi bi-youtube" aria-hidden="true"></i></a>{% endif %}
-        {% if social_profiles.whatsapp_url %}<a class="link-secondary" href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="bi bi-whatsapp" aria-hidden="true"></i></a>{% endif %}
-      </nav>
-      {% endif %}
-      <p class="text-center small text-muted mb-0 mt-2">&copy; {% now "Y" %} {{ company.company_name }}{% if company.phone %} · <a class="link-secondary text-decoration-underline" href="tel:{{ company.phone|cut:' ' }}">{{ company.phone }}</a>{% endif %}{% if company.email %} · <a class="link-secondary text-decoration-underline" href="mailto:{{ company.email }}">{{ company.email }}</a>{% endif %}</p>
-    </div>
-  </footer>
+  {% if public_navigation_enabled %}{% with u=resolve_url_name %}<nav class="mobile-tabbar d-xl-none" aria-label="Primary mobile navigation"><a class="mobile-tabbar__item {% if u == 'home' %}is-active{% endif %}" href="{% url 'home' %}"><i class="bi bi-house-door-fill mobile-tabbar__icon"></i><span>Home</span></a><a class="mobile-tabbar__item {% if u == 'product_list' %}is-active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-grid-fill mobile-tabbar__icon"></i><span>Shop</span></a><a class="mobile-tabbar__item" href="{% url 'product_list' %}?collection=deals"><i class="bi bi-tags-fill mobile-tabbar__icon"></i><span>Deals</span></a><a class="mobile-tabbar__item {% if u == 'cart' or u == 'checkout' %}is-active{% endif %}" href="{% url 'cart' %}"><i class="bi bi-cart3 mobile-tabbar__icon"></i><span>Cart{% if cart_item_count %}<span class="mobile-tabbar__badge">{{ cart_item_count }}</span>{% endif %}</span></a><a class="mobile-tabbar__item {% if 'portal_' in u %}is-active{% endif %}" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}"><i class="bi bi-person-circle mobile-tabbar__icon"></i><span>Account</span></a></nav>{% endwith %}{% endif %}
   {% endblock %}
 
-  <div id="analytics-consent-banner" class="fixed-bottom p-3" hidden>
-    <div class="container"><div class="card border-0 shadow-lg"><div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-      <div><strong>Help us improve LEOSOFT</strong><p class="small text-muted mb-0">With your permission, we use Google Analytics and Microsoft Clarity to understand shopping activity and improve the website. We do not load them when you decline.{% if growth_settings.privacy_policy_url %} <a href="{{ growth_settings.privacy_policy_url }}">Privacy information</a>.{% endif %}</p></div>
-      <div class="d-flex gap-2 flex-shrink-0"><button type="button" class="btn btn-outline-secondary" data-analytics-consent-decline>Decline</button><button type="button" class="btn btn-primary" data-analytics-consent-accept>Allow analytics</button></div>
-    </div></div></div>
-  </div>
+  <div id="analytics-consent-banner" class="fixed-bottom p-3" hidden><div class="container"><div class="card border-0 shadow-lg"><div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3"><div><strong>Help us improve LEOSOFT</strong><p class="small text-muted mb-0">With your permission, we use analytics to understand shopping activity and improve the website.{% if growth_settings.privacy_policy_url %} <a href="{{ growth_settings.privacy_policy_url }}">Privacy information</a>.{% endif %}</p></div><div class="d-flex gap-2 flex-shrink-0"><button type="button" class="btn btn-outline-secondary" data-analytics-consent-decline>Decline</button><button type="button" class="btn btn-primary" data-analytics-consent-accept>Allow analytics</button></div></div></div></div></div>
 
   {{ analytics_page_events|json_script:"growth-page-events" }}
   {{ analytics_pending_events|json_script:"growth-pending-events" }}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   <script src="{% static 'js/alltech_ui.js' %}" defer></script>
   <script src="{% static 'js/public_experience.js' %}" defer></script>
+  <script src="{% static 'js/marketplace_experience.js' %}" defer></script>
   <script src="{% static 'js/pwa.js' %}" defer></script>
   {% with u=resolve_url_name %}{% if 'staff_' in u %}<script src="{% static 'js/staff_documents.js' %}" defer></script>{% endif %}{% endwith %}
   <script src="{% static 'js/marketing_analytics.js' %}" defer></script>

@@ -1,25 +1,162 @@
 from django.contrib import messages
+from django.db.models import Count, F, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from catalog.discovery import new_rotation_seed, order_for_discovery
 from catalog.models import Product
 from catalog.presentation import prepare_public_products
 from core.forms import ContactForm
 from core.models import hours_summary, is_open_now
 from core.views import HomeView
+from growth.models import ProductGrowthData
 
 
 class PublicHomeView(HomeView):
-    """Homepage with card-ready products prepared from prefetched relations."""
+    """Marketplace-style homepage with fast, card-ready discovery collections."""
+
+    PURPOSE_COLLECTIONS = [
+        {
+            "slug": "student",
+            "title": "For students",
+            "description": "Dependable laptops and essentials for learning, research and coursework.",
+            "icon": "bi-mortarboard",
+        },
+        {
+            "slug": "business",
+            "title": "For business",
+            "description": "Professional computers and workplace technology for productive teams.",
+            "icon": "bi-briefcase",
+        },
+        {
+            "slug": "creative",
+            "title": "Creative and technical work",
+            "description": "Performance options for design, engineering, editing and demanding software.",
+            "icon": "bi-bezier2",
+        },
+        {
+            "slug": "gaming",
+            "title": "Gaming and performance",
+            "description": "Powerful computers, graphics capability and performance-focused equipment.",
+            "icon": "bi-controller",
+        },
+        {
+            "slug": "home",
+            "title": "Home and everyday use",
+            "description": "Simple, practical technology for communication, entertainment and daily tasks.",
+            "icon": "bi-house-door",
+        },
+        {
+            "slug": "available",
+            "title": "Available now",
+            "description": "Start with products currently available to order and services ready to book.",
+            "icon": "bi-check-circle",
+        },
+    ]
+
+    BUDGET_COLLECTIONS = [
+        {
+            "title": "Under UGX 1 million",
+            "description": "Entry-level and budget-friendly options.",
+            "max_price": "1000000",
+        },
+        {
+            "title": "UGX 1–2 million",
+            "description": "Balanced choices for school, home and office work.",
+            "min_price": "1000000",
+            "max_price": "2000000",
+        },
+        {
+            "title": "UGX 2–4 million",
+            "description": "Stronger performance and premium business features.",
+            "min_price": "2000000",
+            "max_price": "4000000",
+        },
+        {
+            "title": "Premium performance",
+            "description": "High-end systems for demanding professional work.",
+            "min_price": "4000000",
+        },
+    ]
+
+    @staticmethod
+    def _published_products():
+        return (
+            Product.objects.filter(is_published=True)
+            .select_related("category", "category__parent", "growth_data")
+            .prefetch_related("gallery_images", "variants")
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        published = self._published_products()
+
+        featured_products = published.filter(
+            kind=Product.KIND_PHYSICAL,
+            is_featured=True,
+        )
+        if not featured_products.exists():
+            featured_products = published.filter(kind=Product.KIND_PHYSICAL)
+        featured_services = published.filter(
+            kind=Product.KIND_SERVICE,
+            is_featured=True,
+        )
+        if not featured_services.exists():
+            featured_services = published.filter(kind=Product.KIND_SERVICE)
+
         context["featured_products"] = prepare_public_products(
-            context.get("featured_products", [])
+            order_for_discovery(featured_products, new_rotation_seed())[:8]
         )
         context["featured_services"] = prepare_public_products(
-            context.get("featured_services", [])
+            order_for_discovery(featured_services, new_rotation_seed())[:6]
         )
+        context["new_arrivals"] = prepare_public_products(
+            published.filter(kind=Product.KIND_PHYSICAL).order_by("-created_at", "-pk")[:8]
+        )
+        context["deal_products"] = prepare_public_products(
+            published.filter(kind=Product.KIND_PHYSICAL)
+            .filter(
+                Q(compare_at_price__gt=F("price"))
+                | Q(variants__compare_at_price__gt=F("variants__price"))
+            )
+            .distinct()
+            .order_by("-updated_at", "name")[:8]
+        )
+        context["refurbished_products"] = prepare_public_products(
+            published.filter(
+                kind=Product.KIND_PHYSICAL,
+                growth_data__condition=ProductGrowthData.CONDITION_REFURBISHED,
+            ).order_by("-is_featured", "-updated_at")[:8]
+        )
+        context["brand_collections"] = list(
+            ProductGrowthData.objects.filter(
+                product__is_published=True,
+                product__kind=Product.KIND_PHYSICAL,
+                brand__gt="",
+            )
+            .values("brand")
+            .annotate(product_count=Count("product_id", distinct=True))
+            .order_by("-product_count", "brand")[:10]
+        )
+        context["purpose_collections"] = self.PURPOSE_COLLECTIONS
+        context["budget_collections"] = self.BUDGET_COLLECTIONS
+        context["condition_guide"] = [
+            {
+                "name": "New",
+                "code": ProductGrowthData.CONDITION_NEW,
+                "copy": "New equipment presented as supplied by the manufacturer or distributor.",
+            },
+            {
+                "name": "Refurbished",
+                "code": ProductGrowthData.CONDITION_REFURBISHED,
+                "copy": "Previously owned equipment prepared for resale and clearly identified.",
+            },
+            {
+                "name": "Used",
+                "code": ProductGrowthData.CONDITION_USED,
+                "copy": "Pre-owned equipment whose condition should be confirmed before purchase.",
+            },
+        ]
         return context
 
 
