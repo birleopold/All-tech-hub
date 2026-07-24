@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static catalog_images %}
 {% block title %}{{ product.name }}{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body public-product-page{% endblock %}
 {% block meta %}
 <meta name="description" content="{{ meta_description }}">
 <link rel="canonical" href="{{ canonical_url }}">
@@ -10,71 +11,195 @@
 <meta property="og:description" content="{{ meta_description }}">
 <meta property="og:url" content="{{ canonical_url }}">
 {% if social_image_url %}<meta property="og:image" content="{{ social_image_url }}">{% endif %}
-<meta property="product:price:amount" content="{{ product.price }}">
+<meta property="product:price:amount" content="{% if product.public_has_variants and product.public_min_price %}{{ product.public_min_price }}{% else %}{{ product.price }}{% endif %}">
 <meta property="product:price:currency" content="{{ company.currency_code }}">
 <meta name="twitter:card" content="{% if social_image_url %}summary_large_image{% else %}summary{% endif %}">
 <meta name="twitter:title" content="{{ share_title }}">
 <meta name="twitter:description" content="{{ meta_description }}">
 {% if social_image_url %}<meta name="twitter:image" content="{{ social_image_url }}">{% endif %}
 {% endblock %}
+{% block extra_css %}<link href="{% static 'css/public_detail_contact.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 <script type="application/ld+json">{{ product_schema_json }}</script>
-<section class="catalog-hero mb-4">
+
+<section class="detail-hero">
   <div class="container py-4 py-lg-5">
-    <nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a class="text-white-75" href="{% url 'home' %}">Home</a></li><li class="breadcrumb-item"><a class="text-white-75" href="{% url 'product_list' %}">Catalog</a></li><li class="breadcrumb-item active text-white" aria-current="page">{{ product.name|truncatechars:42 }}</li></ol></nav>
-    <div class="row g-4 align-items-end"><div class="col-lg-8">{% if product.kind == 'service' %}<span class="badge badge-kind-service mb-3">Service</span>{% else %}<span class="badge badge-kind-product mb-3">Product</span>{% endif %}<h1 class="display-6 fw-bold mb-2">{{ product.name }}</h1><p class="text-white-75 mb-0">{{ product.short_description|default:product.category.name }}</p></div><div class="col-lg-4 text-lg-end"><div class="d-flex gap-2 justify-content-lg-end flex-wrap">{% if product.kind == 'physical' %}<a class="btn btn-outline-light" href="{% url 'product_compare' %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>Compare list{% if compare_count %} ({{ compare_count }}){% endif %}</a>{% endif %}<a class="btn btn-light" href="{% url 'contact' %}">Request a formal quote</a></div></div></div>
+    <nav class="detail-breadcrumb mb-4" aria-label="Breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'product_list' %}">Catalogue</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'product_list' %}?category={{ product.category.slug|urlencode }}">{{ product.category.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ product.name|truncatechars:42 }}</li>
+      </ol>
+    </nav>
+    <div class="row g-4 align-items-end">
+      <div class="col-lg-8">
+        <p class="detail-eyebrow"><i class="bi {% if product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i>{% if product.kind == 'service' %}Professional service{% else %}Technology product{% endif %}</p>
+        <h1 class="detail-title">{{ product.name }}</h1>
+        <p class="detail-summary mb-0">{{ product.short_description|default:product.description|truncatewords:35|default:"Clear pricing, availability and support from the LEOSOFT team." }}</p>
+        <div class="detail-hero-meta">
+          <span class="detail-hero-pill"><i class="bi bi-grid" aria-hidden="true"></i>{{ product.category.name }}</span>
+          {% if product_growth_data and product_growth_data.brand %}<span class="detail-hero-pill"><i class="bi bi-patch-check" aria-hidden="true"></i>{{ product_growth_data.brand }}</span>{% endif %}
+          {% if product_growth_data %}<span class="detail-hero-pill"><i class="bi bi-box-seam" aria-hidden="true"></i>{{ product_growth_data.get_condition_display }}</span>{% endif %}
+          {% if product.public_available %}<span class="detail-hero-pill"><i class="bi bi-check-circle" aria-hidden="true"></i>{% if product.kind == 'service' %}Booking available{% else %}Available now{% endif %}</span>{% endif %}
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="detail-hero-actions justify-content-lg-end">
+          <a class="btn btn-light" href="#product-buy-panel"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% else %}bi-cart3{% endif %} me-2" aria-hidden="true"></i>{% if product.kind == 'service' %}Book service{% else %}Buy or enquire{% endif %}</a>
+          <a class="btn btn-outline-light" href="{% url 'contact' %}?type=quote&amp;product={{ product.slug|urlencode }}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Formal quote</a>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
-<div class="container pb-5 product-detail-page">
+<div class="container product-detail-shell">
   <div class="row g-4 align-items-start">
     <div class="col-lg-7">
-      <div class="card border-0 shadow-sm overflow-hidden mb-4">
-        <div class="product-detail-image-wrap bg-white" id="pd-main-wrap">{% if product.primary_display_image %}{% responsive_image product.primary_display_image product.name "img-fluid w-100 product-detail-image" "(max-width: 991px) 100vw, 58vw" "eager" "high" %}{% else %}<div class="product-detail-placeholder" id="pd-main-img"><i class="bi {% if product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i><span>No image yet</span></div>{% endif %}</div>
-        {% if product.gallery_images.all %}<div class="card-body border-top"><div class="d-flex flex-wrap gap-2" aria-label="Product images">{% if product.image %}<button type="button" class="btn btn-light border p-0 pd-thumb product-detail-thumb" data-src="{{ product.image.url }}" aria-label="Show main image of {{ product.name }}"><img src="{{ product.image.url }}" class="w-100 h-100 object-fit-cover" alt="" loading="lazy" decoding="async"></button>{% endif %}{% for gi in product.gallery_images.all %}{% if gi.image %}<button type="button" class="btn btn-light border p-0 pd-thumb product-detail-thumb" data-src="{{ gi.image.url }}" aria-label="Show {% if gi.alt_text %}{{ gi.alt_text }}{% else %}another view of {{ product.name }}{% endif %}"><img src="{{ gi.image.url }}" class="w-100 h-100 object-fit-cover" alt="" loading="lazy" decoding="async"></button>{% endif %}{% endfor %}</div></div>{% endif %}
-      </div>
-      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h4 mb-3">Overview</h2><div class="prose product-description">{{ product.description|linebreaks }}</div>{% if not product.description %}<p class="text-muted mb-0">More details will be added soon. Contact the team for specifications and availability.</p>{% endif %}</div></div>
-      <div class="row g-3 mb-4">
-        <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span><h3 class="h6 mt-3">Clear documents</h3><p class="small text-muted mb-0">Quotes, receipts and invoices can be prepared for accountability.</p></div></div></div>
-        <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><h3 class="h6 mt-3">Guided support</h3><p class="small text-muted mb-0">Ask before buying or booking so you get the right solution.</p></div></div></div>
-        <div class="col-md-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><h3 class="h6 mt-3">After-sales care</h3><p class="small text-muted mb-0">The team can help with setup, service follow-up and support.</p></div></div></div>
-      </div>
+      <section class="product-gallery-card" aria-label="{{ product.name }} gallery">
+        <div class="product-gallery-stage" id="pd-main-wrap">
+          {% if product.public_display_image %}
+            {% responsive_image product.public_display_image product.name "product-detail-image" "(max-width: 991px) 100vw, 58vw" "eager" "high" %}
+            <div class="product-gallery-toolbar"><button class="product-gallery-tool" type="button" data-product-zoom aria-label="Open a larger view of {{ product.name }}"><i class="bi bi-arrows-fullscreen" aria-hidden="true"></i></button></div>
+            {% if gallery_count %}<span class="product-gallery-count"><i class="bi bi-images" aria-hidden="true"></i>{{ gallery_count }} image{{ gallery_count|pluralize }}</span>{% endif %}
+          {% else %}
+            <div class="product-detail-placeholder" id="pd-main-img"><i class="bi {% if product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i><span>Image coming soon</span></div>
+          {% endif %}
+        </div>
+        {% if gallery_count > 1 %}
+        <div class="product-gallery-thumbs" aria-label="Choose a product image">
+          {% for gi in product.gallery_images.all %}{% if gi.image %}<button type="button" class="pd-thumb" data-src="{{ gi.image.url }}" data-alt="{% if gi.alt_text %}{{ gi.alt_text }}{% else %}{{ product.name }} image {{ forloop.counter }}{% endif %}" aria-label="Show {% if gi.alt_text %}{{ gi.alt_text }}{% else %}image {{ forloop.counter }} of {{ product.name }}{% endif %}"><img src="{{ gi.image.url }}" alt="" loading="lazy" decoding="async"></button>{% endif %}{% endfor %}
+          {% if product.image %}<button type="button" class="pd-thumb" data-src="{{ product.image.url }}" data-alt="{{ product.name }}" aria-label="Show another image of {{ product.name }}"><img src="{{ product.image.url }}" alt="" loading="lazy" decoding="async"></button>{% endif %}
+        </div>
+        {% endif %}
+      </section>
+
+      {% if product.public_display_image %}
+      <dialog class="product-gallery-dialog" id="product-gallery-dialog" aria-label="Large product image">
+        <div class="product-gallery-dialog__body">
+          <form method="dialog"><button class="product-gallery-dialog__close" type="submit" aria-label="Close image"><i class="bi bi-x-lg" aria-hidden="true"></i></button></form>
+          <img data-product-dialog-image src="" alt="">
+        </div>
+      </dialog>
+      {% endif %}
+
+      <nav class="product-section-nav" aria-label="Product page sections">
+        <a href="#overview">Overview</a><a href="#details">Details</a><a href="#reviews">Reviews{% if review_summary.count %} ({{ review_summary.count }}){% endif %}</a>{% if recent_products %}<a href="#recently-viewed">Recently viewed</a>{% endif %}
+      </nav>
+
+      <section class="product-info-card" id="overview">
+        <p class="product-section-kicker">Product overview</p>
+        <h2 class="product-section-title">What to know before you decide</h2>
+        {% if product.description %}<div class="product-description">{{ product.description|linebreaks }}</div>{% else %}<p class="product-description mb-0">Detailed specifications are being prepared. Contact the team for configuration, compatibility, warranty and availability guidance before ordering.</p>{% endif %}
+      </section>
+
+      <section class="product-info-card" id="details">
+        <p class="product-section-kicker">Clear details</p>
+        <h2 class="product-section-title">Product information</h2>
+        <dl class="product-spec-grid">
+          <div class="product-spec-item"><dt>Type</dt><dd>{{ product.get_kind_display }}</dd></div>
+          <div class="product-spec-item"><dt>Category</dt><dd>{{ product.category.name }}</dd></div>
+          {% if product_growth_data and product_growth_data.brand %}<div class="product-spec-item"><dt>Brand</dt><dd>{{ product_growth_data.brand }}</dd></div>{% endif %}
+          {% if product_growth_data %}<div class="product-spec-item"><dt>Condition</dt><dd>{{ product_growth_data.get_condition_display }}</dd></div>{% endif %}
+          {% if product.sku %}<div class="product-spec-item"><dt>SKU</dt><dd>{{ product.sku }}</dd></div>{% endif %}
+          {% if product.public_has_variants %}<div class="product-spec-item"><dt>Options</dt><dd>{{ product.public_variant_count }} available</dd></div>{% endif %}
+          {% if product.service_duration_hours %}<div class="product-spec-item"><dt>Estimated duration</dt><dd>{{ product.service_duration_hours }} hour{{ product.service_duration_hours|pluralize }}</dd></div>{% endif %}
+          <div class="product-spec-item"><dt>Availability</dt><dd>{% if product.kind == 'service' %}By booking{% elif product.public_available %}In stock{% else %}Confirm with team{% endif %}</dd></div>
+        </dl>
+      </section>
+
+      <section class="product-info-card" aria-labelledby="confidence-heading">
+        <p class="product-section-kicker">Buy with confidence</p>
+        <h2 class="product-section-title" id="confidence-heading">Support around the purchase</h2>
+        <div class="product-confidence-grid">
+          <div class="product-confidence-item"><span class="product-confidence-icon"><i class="bi bi-file-earmark-check" aria-hidden="true"></i></span><strong>Clear documentation</strong><p>Request a formal quotation, invoice and receipt for personal or organisational accountability.</p></div>
+          <div class="product-confidence-item"><span class="product-confidence-icon"><i class="bi bi-sliders" aria-hidden="true"></i></span><strong>Guided selection</strong><p>Confirm specifications, compatibility and the best option before committing your budget.</p></div>
+          <div class="product-confidence-item"><span class="product-confidence-icon"><i class="bi bi-headset" aria-hidden="true"></i></span><strong>After-sales help</strong><p>Get assistance with setup, installation, service follow-up and practical support.</p></div>
+        </div>
+      </section>
     </div>
 
     <div class="col-lg-5">
-      <aside class="card border-0 shadow-sm product-purchase-card mb-4"><div class="card-body p-4">
-        <p class="small text-muted mb-1">{{ product.category.name }}</p><h2 class="h4 mb-3">{% if product.kind == 'service' %}Book this service{% else %}Buy or enquire{% endif %}</h2>
-        {% if review_summary.count %}<p class="mb-3"><span class="text-warning" aria-label="{{ review_summary.avg }} of 5 stars">{% for s in rating_stars %}{% if s <= review_summary.avg|floatformat:0|add:0 %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span><a href="#reviews" class="small text-muted ms-1 text-decoration-none">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a></p>{% endif %}
-        {% if product.has_sellable_variants %}<p class="fs-3 fw-semibold mb-1" id="pd-price-label">From {{ company.currency_code }} {{ product.min_active_variant_price }}</p><p class="small text-muted mb-3">Choose an option below to confirm price and stock.</p>{% else %}<p class="fs-3 fw-semibold mb-1">{{ company.currency_code }} {{ product.price }}</p>{% if product.compare_at_price %}<p class="small text-muted text-decoration-line-through mb-3">{{ company.currency_code }} {{ product.compare_at_price }}</p>{% endif %}{% endif %}
-        <div class="vstack gap-2 mb-3">{% if product.kind == 'service' %}<div class="product-detail-status text-primary bg-primary-subtle"><i class="bi bi-calendar-check" aria-hidden="true"></i> Available for booking</div>{% elif product.available_to_sell %}<div class="product-detail-status text-success bg-success-subtle"><i class="bi bi-check-circle" aria-hidden="true"></i> Available to sell</div>{% else %}<div class="product-detail-status text-secondary bg-light"><i class="bi bi-info-circle" aria-hidden="true"></i> Ask for availability</div>{% endif %}{% if product.is_low_stock %}<div class="product-detail-status text-warning bg-warning-subtle"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Low stock</div>{% endif %}{% if product.kind == 'physical' and not product.has_sellable_variants and product.track_inventory %}<div class="small text-muted">Stock on hand: {{ product.stock_quantity }}</div>{% endif %}{% if product.service_duration_hours %}<div class="small text-muted">Estimated duration: {{ product.service_duration_hours }} hour{{ product.service_duration_hours|pluralize }}</div>{% endif %}{% if product.sku %}<div class="small text-muted">SKU: {{ product.sku }}</div>{% endif %}</div>
-        <div class="d-flex gap-2 flex-wrap mb-3">{% if user.is_authenticated and user.customer_profile %}<form method="post" action="{% url 'portal_wishlist_add' product.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn btn-sm btn-outline-secondary" aria-label="Save {{ product.name }} to your wishlist"><i class="bi bi-heart me-1" aria-hidden="true"></i>Wishlist</button></form>{% endif %}{% if product.kind == 'physical' %}<form method="post" action="{% url 'product_compare_toggle' product.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn btn-sm {% if is_in_compare %}btn-primary{% else %}btn-outline-primary{% endif %}" aria-pressed="{% if is_in_compare %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>{% if is_in_compare %}Selected for comparison{% else %}Compare{% endif %}</button></form>{% endif %}</div>
-        {% if product.available_to_sell %}<form method="post" action="{% url 'cart_add' product.id %}" class="vstack gap-3">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">{% if product.has_sellable_variants %}<div><label class="form-label" for="variant_id">Choose option</label><select name="variant_id" id="variant_id" class="form-select" required><option value="" disabled selected>Select…</option>{% for v in product.variants.all %}{% if v.is_active %}<option value="{{ v.id }}" data-price="{{ v.price }}" data-currency="{{ company.currency_code }}" data-stock="{{ v.stock_quantity }}" data-track="{% if v.track_inventory %}1{% else %}0{% endif %}">{{ v.name }} — {{ company.currency_code }} {{ v.price }}{% if v.track_inventory %} ({{ v.stock_quantity }} in stock){% endif %}</option>{% endif %}{% endfor %}</select></div>{% endif %}{% if product.kind == 'service' %}<input type="hidden" name="quantity" value="1"><button type="submit" class="btn btn-primary btn-lg w-100">Book service</button>{% else %}<div class="row g-2 align-items-end"><div class="col-4"><label class="form-label small" for="quantity">Qty</label><input id="quantity" type="number" name="quantity" value="1" min="1" class="form-control"></div><div class="col-8 d-grid"><button type="submit" class="btn btn-primary btn-lg">Add to cart</button></div></div>{% endif %}</form>{% else %}<a class="btn btn-primary btn-lg w-100" href="{% url 'contact' %}">Ask for availability</a>{% endif %}
-        <a class="btn btn-outline-secondary w-100 mt-2" href="{% url 'contact' %}">Ask a question</a>
-      </div></aside>
+      <aside class="product-buy-card" id="product-buy-panel" aria-labelledby="buy-heading">
+        <div class="product-buy-card__header"><p class="product-category-label">{{ product.category.name }}</p><h2 class="product-buy-heading" id="buy-heading">{% if product.kind == 'service' %}Book this service{% else %}Purchase options{% endif %}</h2></div>
+        <div class="product-buy-card__body">
+          {% if review_summary.count %}<div class="product-rating-row"><span class="product-rating-stars" aria-label="{{ review_summary.avg }} out of 5 stars">{% for s in rating_stars %}{% if s <= rounded_review_rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span><a href="#reviews">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a></div>{% endif %}
+          <p class="product-price" id="pd-price-label">{% if product.public_has_variants and product.public_min_price %}From {{ company.currency_code }} {{ product.public_min_price }}{% else %}{{ company.currency_code }} {{ product.price }}{% endif %}</p>
+          {% if product.compare_at_price %}<p class="product-price-note"><span class="text-decoration-line-through">{{ company.currency_code }} {{ product.compare_at_price }}</span> previous comparison price</p>{% elif product.public_has_variants %}<p class="product-price-note">Select an option to confirm its exact price and stock.</p>{% else %}<p class="product-price-note">Price shown before any delivery or optional setup charges.</p>{% endif %}
+
+          <div class="product-status-stack">
+            <div class="product-status-line {% if product.public_available %}is-available{% endif %}"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% elif product.public_available %}bi-check-circle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>{% if product.kind == 'service' %}Available for booking{% elif product.public_available %}Available to order{% else %}Contact the team to confirm availability{% endif %}</div>
+            {% if product.public_low_stock %}<div class="product-status-line is-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Low stock — confirm before travelling or paying</div>{% endif %}
+            {% if product.kind == 'physical' and not product.public_has_variants and product.track_inventory and product.public_available %}<div class="product-status-line"><i class="bi bi-box-seam" aria-hidden="true"></i>{{ product.stock_quantity }} unit{{ product.stock_quantity|pluralize }} recorded on hand</div>{% endif %}
+          </div>
+
+          {% if product.public_available %}
+          <form method="post" action="{% url 'cart_add' product.id %}" class="vstack gap-3">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+            {% if product.public_has_variants %}<div><label class="form-label fw-semibold" for="variant_id">Choose an option</label><select name="variant_id" id="variant_id" class="form-select" required><option value="" disabled selected>Select configuration…</option>{% for v in product.variants.all %}{% if v.is_active %}<option value="{{ v.id }}" data-price="{{ v.price }}" data-currency="{{ company.currency_code }}" data-stock="{{ v.stock_quantity }}" data-track="{% if v.track_inventory %}1{% else %}0{% endif %}">{{ v.name }} — {{ company.currency_code }} {{ v.price }}{% if v.track_inventory %} ({{ v.stock_quantity }} available){% endif %}</option>{% endif %}{% endfor %}</select></div>{% endif %}
+            {% if product.kind == 'service' %}<input type="hidden" name="quantity" value="1"><button type="submit" class="btn btn-primary product-primary-action w-100"><i class="bi bi-calendar-check me-2" aria-hidden="true"></i>Add service to request</button>{% else %}<div class="row g-2 align-items-end"><div class="col-4"><label class="form-label fw-semibold" for="quantity">Quantity</label><input id="quantity" type="number" name="quantity" value="1" min="1" class="form-control"></div><div class="col-8 d-grid"><button type="submit" class="btn btn-primary product-primary-action"><i class="bi bi-cart-plus me-2" aria-hidden="true"></i>Add to cart</button></div></div>{% endif %}
+          </form>
+          {% else %}
+          <a class="btn btn-primary product-primary-action w-100" href="{% url 'contact' %}?type=product&amp;product={{ product.slug|urlencode }}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>Ask about availability</a>
+          {% endif %}
+
+          <div class="product-secondary-actions">
+            {% if product.kind == 'physical' %}<form method="post" action="{% url 'product_compare_toggle' product.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn {% if is_in_compare %}btn-primary{% else %}btn-outline-primary{% endif %} w-100" aria-pressed="{% if is_in_compare %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>{% if is_in_compare %}In comparison{% else %}Compare{% endif %}</button></form>{% endif %}
+            {% if user.is_authenticated and user.customer_profile %}<form method="post" action="{% url 'portal_wishlist_add' product.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn btn-outline-secondary w-100"><i class="bi bi-heart me-1" aria-hidden="true"></i>Save</button></form>{% else %}<a class="btn btn-outline-secondary" href="{% url 'contact' %}?type=product&amp;product={{ product.slug|urlencode }}"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Ask</a>{% endif %}
+          </div>
+
+          <div class="product-buy-assurance"><span><i class="bi bi-check2-circle" aria-hidden="true"></i>Confirm final availability before payment</span><span><i class="bi bi-check2-circle" aria-hidden="true"></i>Formal documents available on request</span><span><i class="bi bi-check2-circle" aria-hidden="true"></i>Support available before and after purchase</span></div>
+        </div>
+      </aside>
+
+      <section class="product-support-card">
+        <p class="product-section-kicker">Need a human answer?</p><h2 class="h5 fw-bold">Talk to the team before you decide</h2><p class="small text-muted mb-0">Ask about specifications, upgrades, compatibility, delivery, setup or a quotation for multiple units.</p>
+        <div class="product-support-actions"><a class="btn btn-primary" href="{% url 'contact' %}?type=quote&amp;product={{ product.slug|urlencode }}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Request formal quote</a><a class="btn btn-outline-primary" href="{% url 'contact' %}?type=product&amp;product={{ product.slug|urlencode }}"><i class="bi bi-chat-square-text me-2" aria-hidden="true"></i>Ask a product question</a></div>
+      </section>
 
       {% if product.kind == 'physical' and growth_settings.back_in_stock_enabled %}
-      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
-        <p class="text-uppercase small fw-semibold text-primary mb-1">Product alerts</p><h2 class="h5 mb-2">Tell me when something changes</h2><p class="small text-muted">Choose a back-in-stock alert or enter a target price. Each subscription is voluntary and can be stopped from the email.</p>
+      <section class="product-alert-card">
+        <p class="product-section-kicker">Product alerts</p><h2 class="h5 fw-bold">Get an availability or price update</h2><p class="small text-muted">Subscriptions are voluntary and include an unsubscribe option.</p>
         <form method="post" action="{% url 'growth_stock_alert_subscribe' product.slug %}" class="vstack gap-2">{% csrf_token %}
-          <label class="form-label small mb-0" for="stock-alert-email">Email</label><input class="form-control" id="stock-alert-email" type="email" name="email" required placeholder="you@example.com">
-          <label class="form-label small mb-0" for="stock-alert-phone">Phone or WhatsApp <span class="text-muted">(optional)</span></label><input class="form-control" id="stock-alert-phone" type="text" name="phone" maxlength="64" placeholder="2567XXXXXXXX">
-          <label class="form-label small mb-0" for="stock-alert-type">Alert type</label><select class="form-select" id="stock-alert-type" name="alert_type">{% if not product.available_to_sell %}<option value="back_in_stock">Notify me when available</option>{% endif %}<option value="price_drop">Notify me at my target price</option></select>
-          <label class="form-label small mb-0" for="stock-alert-price">Target price in {{ company.currency_code }} <span class="text-muted">(required for price alert)</span></label><input class="form-control" id="stock-alert-price" type="number" name="target_price" min="0" step="0.01" placeholder="e.g. 1500000">
+          <label class="form-label small fw-semibold mb-0" for="stock-alert-email">Email address</label><input class="form-control" id="stock-alert-email" type="email" name="email" required placeholder="you@example.com">
+          <label class="form-label small fw-semibold mb-0" for="stock-alert-phone">Phone or WhatsApp <span class="text-muted fw-normal">optional</span></label><input class="form-control" id="stock-alert-phone" type="text" name="phone" maxlength="64" placeholder="2567XXXXXXXX">
+          <label class="form-label small fw-semibold mb-0" for="stock-alert-type">Alert type</label><select class="form-select" id="stock-alert-type" name="alert_type">{% if not product.public_available %}<option value="back_in_stock">Notify me when available</option>{% endif %}<option value="price_drop">Notify me at my target price</option></select>
+          <label class="form-label small fw-semibold mb-0" for="stock-alert-price">Target price in {{ company.currency_code }}</label><input class="form-control" id="stock-alert-price" type="number" name="target_price" min="0" step="0.01" placeholder="e.g. 1500000">
           <button class="btn btn-outline-primary mt-2" type="submit"><i class="bi bi-bell me-1" aria-hidden="true"></i>Create alert</button>
         </form>
-      </div></div>
+      </section>
       {% endif %}
 
-      <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><p class="text-uppercase small fw-semibold text-primary mb-1">Help others discover it</p><h2 class="h5 mb-2">Share this {% if product.kind == 'service' %}service{% else %}product{% endif %}</h2><p class="small text-muted">Every link includes campaign tags so future analytics can identify the sharing channel.</p><div class="row g-2" aria-label="Social sharing options"><div class="col-6"><a class="btn btn-success w-100" href="{{ share_links.whatsapp }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>WhatsApp</a></div><div class="col-6"><a class="btn btn-primary w-100" href="{{ share_links.facebook }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-facebook me-1" aria-hidden="true"></i>Facebook</a></div><div class="col-6"><a class="btn btn-dark w-100" href="{{ share_links.x }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-twitter-x me-1" aria-hidden="true"></i>X</a></div><div class="col-6"><a class="btn btn-outline-primary w-100" href="{{ share_links.linkedin }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-linkedin me-1" aria-hidden="true"></i>LinkedIn</a></div><div class="col-6"><a class="btn btn-outline-primary w-100" href="{{ share_links.telegram }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-telegram me-1" aria-hidden="true"></i>Telegram</a></div>{% if share_links.pinterest %}<div class="col-6"><a class="btn btn-outline-danger w-100" href="{{ share_links.pinterest }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-pinterest me-1" aria-hidden="true"></i>Pinterest</a></div>{% endif %}<div class="col-6"><a class="btn btn-outline-secondary w-100" href="{{ share_links.email }}"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Email</a></div><div class="col-6"><button class="btn btn-outline-secondary w-100" type="button" data-share-copy data-share-url="{{ copy_share_url }}"><i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Copy link</button></div><div class="col-12"><button class="btn btn-outline-primary w-100" type="button" data-share-native data-share-title="{{ share_title }}" data-share-text="{{ share_text }}" data-share-url="{{ native_share_url }}"><i class="bi bi-share me-1" aria-hidden="true"></i>Share to Instagram, TikTok or more apps</button></div></div><p class="small text-muted mb-0 mt-3" id="share-status" role="status" aria-live="polite"></p></div></div>
-      <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h5 mb-3">Why buy through {{ company.company_name }}?</h2><ul class="list-unstyled vstack gap-2 mb-0 small text-muted"><li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Clear pricing and formal documents</li><li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Support for products, repairs and installations</li><li><i class="bi bi-check2-circle text-success me-2" aria-hidden="true"></i>Help choosing the right option before payment</li></ul></div></div>
+      <section class="product-share-card">
+        <p class="product-section-kicker">Share</p><h2 class="h5 fw-bold">Send this item to someone</h2>
+        <div class="product-share-grid" aria-label="Sharing options">
+          <a class="btn btn-success" href="{{ share_links.whatsapp }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>WhatsApp</a>
+          <a class="btn btn-outline-primary" href="{{ share_links.email }}"><i class="bi bi-envelope me-1" aria-hidden="true"></i>Email</a>
+          <button class="btn btn-outline-secondary" type="button" data-share-copy data-share-url="{{ copy_share_url }}"><i class="bi bi-link-45deg me-1" aria-hidden="true"></i>Copy</button>
+          <button class="btn btn-outline-secondary" type="button" data-share-native data-share-title="{{ share_title }}" data-share-text="{{ share_text }}" data-share-url="{{ native_share_url }}"><i class="bi bi-share me-1" aria-hidden="true"></i>More</button>
+          <a class="btn btn-outline-primary" href="{{ share_links.facebook }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-facebook me-1" aria-hidden="true"></i>Facebook</a>
+          <a class="btn btn-outline-primary" href="{{ share_links.linkedin }}" target="_blank" rel="noopener noreferrer nofollow"><i class="bi bi-linkedin me-1" aria-hidden="true"></i>LinkedIn</a>
+        </div><p class="product-share-status mb-0" id="share-status" aria-live="polite"></p>
+      </section>
     </div>
   </div>
 
-  {% if recent_products %}
-  <section class="mt-5" aria-labelledby="recent-products-heading"><div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Continue exploring</p><h2 class="h3 mb-0" id="recent-products-heading">Recently viewed</h2></div><a class="small" href="{% url 'product_list' %}">Browse the full catalog</a></div><div class="row g-3">{% for item in recent_products %}<div class="col-sm-6 col-lg-3"><article class="card card-product h-100"><div class="catalog-card-image-wrap">{% if item.primary_display_image %}{% responsive_image item.primary_display_image item.name "card-img-top object-fit-cover catalog-card-image" "(max-width: 575px) 100vw, 25vw" "lazy" "low" %}{% else %}<div class="catalog-card-placeholder"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}</div><div class="card-body d-flex flex-column"><p class="small text-muted mb-1">{{ item.category.name }}</p><h3 class="h6"><a class="stretched-link text-decoration-none text-dark" href="{{ item.get_absolute_url }}">{{ item.name }}</a></h3><p class="fw-semibold mt-auto mb-0">{% if item.has_sellable_variants and item.min_active_variant_price %}From {% endif %}{{ company.currency_code }} {% if item.has_sellable_variants and item.min_active_variant_price %}{{ item.min_active_variant_price }}{% else %}{{ item.price }}{% endif %}</p></div></article></div>{% endfor %}</div></section>
-  {% endif %}
+  <section class="mt-5" id="reviews" aria-labelledby="reviews-heading">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="product-section-kicker mb-1">Customer voice</p><h2 class="product-section-title mb-0" id="reviews-heading">Reviews</h2></div>{% if review_summary.count %}<span class="text-muted"><strong>{{ review_summary.avg }}</strong> / 5 from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</span>{% else %}<span class="text-muted small">No reviews yet — be the first.</span>{% endif %}</div>
+    <div class="row g-4">
+      <div class="col-lg-7"><div class="product-review-card">{% for r in reviews %}<article class="product-review-item"><div class="product-review-meta"><div><strong>{{ r.display_name }}</strong><p class="small text-muted mb-0">{{ r.created_at|date:"j M Y" }}</p></div><span class="product-rating-stars" aria-label="{{ r.rating }} out of 5 stars">{% for s in rating_stars %}{% if s <= r.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span></div>{% if r.is_verified_purchase %}<p class="product-review-verified mt-2 mb-1"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verified purchase</p>{% endif %}{% if r.title %}<h3 class="h6 mt-2 mb-1">{{ r.title }}</h3>{% endif %}<p class="mb-0 text-muted">{{ r.body|linebreaksbr }}</p></article>{% empty %}<div class="text-center py-4"><i class="bi bi-chat-square-heart display-6 text-primary" aria-hidden="true"></i><h3 class="h5 mt-3">No published reviews yet</h3><p class="text-muted mb-0">Share a genuine experience to help another customer decide.</p></div>{% endfor %}</div></div>
+      <div class="col-lg-5"><div class="product-review-card"><p class="product-section-kicker">Your experience</p><h3 class="h5 fw-bold mb-3">Write a review</h3><form method="post" action="{% url 'product_review_submit' product.slug %}" class="vstack gap-2">{% csrf_token %}<label class="form-label small fw-semibold" for="review-name">Your name</label><input type="text" name="author_name" id="review-name" class="form-control" maxlength="120" placeholder="How should we list you?"><label class="form-label small fw-semibold mt-2" for="review-rating">Rating</label><select name="rating" id="review-rating" class="form-select" required><option value="">Choose rating…</option><option value="5">★★★★★ — Excellent</option><option value="4">★★★★ — Good</option><option value="3">★★★ — Fair</option><option value="2">★★ — Poor</option><option value="1">★ — Very poor</option></select><label class="form-label small fw-semibold mt-2" for="review-body">Your review</label><textarea name="body" id="review-body" rows="5" class="form-control" required minlength="5" maxlength="1000" placeholder="What should another customer know?"></textarea><button type="submit" class="btn btn-outline-primary mt-2">Submit for review</button><p class="small text-muted mb-0">Reviews are published after a moderation check.</p></form></div></div>
+    </div>
+  </section>
 
-  <section class="mt-5" id="reviews"><div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Customer voice</p><h2 class="h3 mb-0">Reviews</h2></div>{% if review_summary.count %}<span class="text-muted"><strong>{{ review_summary.avg }}</strong> / 5 from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</span>{% else %}<span class="text-muted small">No reviews yet — be the first.</span>{% endif %}</div><div class="row g-4"><div class="col-lg-7"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4">{% for r in reviews %}<div class="border-bottom pb-3 mb-3"><div class="d-flex justify-content-between align-items-center"><strong>{{ r.display_name }}</strong><span class="text-warning" aria-label="{{ r.rating }} of 5 stars">{% for s in rating_stars %}{% if s <= r.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span></div><p class="small text-muted mb-1">{{ r.created_at|date:"Y-m-d" }}{% if r.is_verified_purchase %} · verified purchase{% endif %}</p>{% if r.title %}<p class="mb-1"><strong>{{ r.title }}</strong></p>{% endif %}<p class="mb-0">{{ r.body|linebreaksbr }}</p></div>{% empty %}<p class="text-muted mb-0">Be the first to share your experience with this item or service.</p>{% endfor %}</div></div></div><div class="col-lg-5"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h3 class="h5 mb-3">Write a review</h3><form method="post" action="{% url 'product_review_submit' product.slug %}" class="vstack gap-2">{% csrf_token %}<label class="form-label small text-muted mb-1" for="review-name">Your name</label><input type="text" name="author_name" id="review-name" class="form-control" maxlength="120" placeholder="How should we list you?"><label class="form-label small text-muted mb-1 mt-2" for="review-rating">Rating</label><select name="rating" id="review-rating" class="form-select" required><option value="">Choose…</option><option value="5">★★★★★ — Excellent</option><option value="4">★★★★ — Good</option><option value="3">★★★ — OK</option><option value="2">★★ — Poor</option><option value="1">★ — Awful</option></select><label class="form-label small text-muted mb-1 mt-2" for="review-body">Your review</label><textarea name="body" id="review-body" rows="4" class="form-control" required minlength="5" maxlength="1000" placeholder="What did you like or dislike?"></textarea><button type="submit" class="btn btn-outline-primary mt-2">Submit review</button><p class="small text-muted mb-0">Reviews are published after a quick moderation check.</p></form></div></div></div></div></section>
+  {% if recent_products %}
+  <section class="mt-5" id="recently-viewed" aria-labelledby="recent-products-heading">
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-3"><div><p class="product-section-kicker mb-1">Continue exploring</p><h2 class="product-section-title mb-0" id="recent-products-heading">Recently viewed</h2></div><a class="btn btn-sm btn-outline-primary" href="{% url 'product_list' %}">Browse full catalogue</a></div>
+    <div class="row g-3">{% for item in recent_products %}<div class="col-sm-6 col-lg-3"><article class="product-recent-card"><div class="product-recent-card__image">{% if item.public_display_image %}{% responsive_image item.public_display_image item.name "" "(max-width: 575px) 100vw, 25vw" "lazy" "low" %}{% else %}<div class="catalog-card-placeholder h-100"><i class="bi bi-laptop" aria-hidden="true"></i></div>{% endif %}</div><div class="p-3"><p class="small text-muted mb-1">{{ item.category.name }}</p><h3 class="h6 mb-2"><a class="stretched-link text-decoration-none text-dark" href="{{ item.get_absolute_url }}">{{ item.name }}</a></h3><p class="fw-bold mb-0">{% if item.public_has_variants and item.public_min_price %}From {% endif %}{{ company.currency_code }} {% if item.public_has_variants and item.public_min_price %}{{ item.public_min_price }}{% else %}{{ item.price }}{% endif %}</p></div></article></div>{% endfor %}</div>
+  </section>
+  {% endif %}
 </div>
+
+<div class="product-mobile-action" aria-label="Quick buying action"><div class="product-mobile-action__price"><small>{% if product.kind == 'service' %}Starting price{% else %}Price{% endif %}</small>{% if product.public_has_variants and product.public_min_price %}From {% endif %}{{ company.currency_code }} {% if product.public_has_variants and product.public_min_price %}{{ product.public_min_price }}{% else %}{{ product.price }}{% endif %}</div><a class="btn btn-light" href="#product-buy-panel">{% if product.kind == 'service' %}Book{% else %}Buy / enquire{% endif %}</a></div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/social_share.js' %}" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/social_share.js' %}" defer></script><script src="{% static 'js/public_detail_contact.js' %}" defer></script>{% endblock %}
