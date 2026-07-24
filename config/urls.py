@@ -12,6 +12,11 @@ from core import api_views as core_api
 from core import auth_views as core_auth
 from core import health as core_health
 
+handler400 = "core.error_views.bad_request"
+handler403 = "core.error_views.permission_denied"
+handler404 = "core.error_views.page_not_found"
+handler500 = "core.error_views.server_error"
+
 site_maps = {
     "products-and-services": ProductSitemap,
     "static": StaticViewSitemap,
