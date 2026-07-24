@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
+from core.backups import latest_backup_status
 
 
 class Command(BaseCommand):
@@ -110,5 +111,15 @@ class Command(BaseCommand):
         if getattr(settings, "CONTENT_SECURITY_POLICY_REPORT_ONLY", True):
             warnings.append(
                 "Content Security Policy is report-only and is not yet enforcing violations."
+            )
+
+        backup = latest_backup_status()
+        if not backup.exists:
+            warnings.append("No completed local backup was found.")
+        elif not backup.healthy:
+            warnings.append(f"Latest backup needs review: {backup.detail}.")
+        elif backup.age_hours is not None and backup.age_hours > 48:
+            warnings.append(
+                f"Latest verified backup is {round(backup.age_hours)} hours old."
             )
         return warnings
