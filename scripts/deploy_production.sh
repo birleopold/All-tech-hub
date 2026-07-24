@@ -7,6 +7,7 @@ ENV_FILE="${ALLTECH_ENV_FILE:-${APP_DIR}/.env}"
 SERVICE_NAME="${ALLTECH_GUNICORN_SERVICE:-leosoft_gunicorn}"
 HEALTH_URL="${ALLTECH_LOCAL_HEALTH_URL:-http://127.0.0.1:8010/health/ready/}"
 HEALTH_HOST="${ALLTECH_HEALTH_HOST:-leosoftug.com}"
+SERVICE_RESTARTED=0
 
 log() {
     printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -20,7 +21,13 @@ fail() {
 on_error() {
     local exit_code=$?
     printf '\nDeployment stopped before completion (exit %s).\n' "$exit_code" >&2
-    printf 'The Gunicorn service was not deliberately restarted after a failed preflight step.\n' >&2
+    if [[ "$SERVICE_RESTARTED" -eq 0 ]]; then
+        printf 'Gunicorn was not restarted because a release preflight step failed.\n' >&2
+    else
+        printf 'Gunicorn was restarted, but post-restart verification failed.\n' >&2
+        sudo systemctl status "$SERVICE_NAME" --no-pager -l >&2 || true
+        sudo journalctl -u "$SERVICE_NAME" -n 60 --no-pager >&2 || true
+    fi
     exit "$exit_code"
 }
 trap on_error ERR
@@ -48,9 +55,10 @@ if [[ "${DJANGO_SETTINGS_MODULE:-}" != "config.settings" ]]; then
 fi
 export DJANGO_SETTINGS_MODULE="config.settings"
 export ALLTECH_ENV="production"
+export ALLTECH_RELEASE_SHA="${ALLTECH_RELEASE_SHA:-$(git rev-parse --short HEAD 2>/dev/null || printf unknown)}"
 
 log "Release preflight"
-printf 'Commit: %s\n' "$(git rev-parse --short HEAD 2>/dev/null || printf unknown)"
+printf 'Commit: %s\n' "$ALLTECH_RELEASE_SHA"
 printf 'Settings: %s\n' "$DJANGO_SETTINGS_MODULE"
 printf 'Environment: %s\n' "$ALLTECH_ENV"
 
@@ -70,6 +78,7 @@ PY
 
 python manage.py check --deploy
 python manage.py makemigrations --check --dry-run
+python manage.py audit_project --strict-environment
 
 log "Database migrations"
 python manage.py migrate --noinput
@@ -88,6 +97,7 @@ for name in (
 
 log "Restarting ${SERVICE_NAME}"
 sudo systemctl restart "$SERVICE_NAME"
+SERVICE_RESTARTED=1
 sleep 3
 sudo systemctl is-active --quiet "$SERVICE_NAME"
 
