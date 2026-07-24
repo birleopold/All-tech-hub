@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
 
@@ -13,3 +14,16 @@ class DashboardAccessTests(TestCase):
         self.client.force_login(user)
         response = self.client.get(reverse("staff_dashboard"))
         self.assertEqual(response.status_code, 200)
+
+    def test_staff_dashboard_renders_shared_workspace_interface(self):
+        user = User.objects.create_user("workspace", password="pw", is_staff=True)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("staff_dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, static("css/staff_workspace.css"))
+        self.assertContains(response, 'class="staff-app"')
+        self.assertContains(response, "Sales &amp; billing")
+        self.assertContains(response, "Recent activity feed")
+        self.assertContains(response, "Service schedule")
