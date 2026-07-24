@@ -15,7 +15,7 @@ log() {
 
 fail() {
     printf '\nERROR: %s\n' "$*" >&2
-    exit 1
+    return 1
 }
 
 on_error() {
@@ -108,7 +108,7 @@ sleep 3
 sudo systemctl is-active --quiet "$SERVICE_NAME"
 
 log "Application readiness"
-readiness_payload="$({
+readiness_payload="$(
     curl \
         --fail \
         --silent \
@@ -117,10 +117,11 @@ readiness_payload="$({
         -H "Host: ${HEALTH_HOST}" \
         -H "X-Forwarded-Proto: https" \
         "$HEALTH_URL"
-})"
+)"
 printf '%s\n' "$readiness_payload"
-[[ "$readiness_payload" == *"\"release\": \"${ALLTECH_RELEASE_SHA}\""* ]] \
-    || fail "Readiness endpoint did not report release ${ALLTECH_RELEASE_SHA}."
+if [[ "$readiness_payload" != *"\"release\": \"${ALLTECH_RELEASE_SHA}\""* ]]; then
+    fail "Readiness endpoint did not report release ${ALLTECH_RELEASE_SHA}."
+fi
 
 sudo systemctl status "$SERVICE_NAME" --no-pager -l
 trap - ERR
