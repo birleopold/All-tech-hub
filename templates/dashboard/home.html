@@ -15,7 +15,7 @@
     </div>
   </div>
 
-  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews %}
+  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention %}
   <div class="staff-alert-strip" role="status">
     <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
     <div>
@@ -26,6 +26,7 @@
       {% if low_stock_count %}{% if overdue_jobs or overdue_tickets %}<span aria-hidden="true"> · </span>{% endif %}<a href="{% url 'staff_products' %}?low=1">{{ low_stock_count }} low-stock item{{ low_stock_count|pluralize }}</a>{% endif %}
       {% if unhandled_contacts %}{% if overdue_jobs or overdue_tickets or low_stock_count %}<span aria-hidden="true"> · </span>{% endif %}<a href="{% url 'staff_contact_messages' %}?handled=0">{{ unhandled_contacts }} unhandled contact{{ unhandled_contacts|pluralize }}</a>{% endif %}
       {% if pending_reviews %}{% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts %}<span aria-hidden="true"> · </span>{% endif %}<a href="/admin/catalog/productreview/?is_published__exact=0">{{ pending_reviews }} review{{ pending_reviews|pluralize }} pending</a>{% endif %}
+      {% if catalogue_quality.critical or catalogue_quality.attention %}{% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews %}<span aria-hidden="true"> · </span>{% endif %}<a href="{% url 'staff_catalogue_quality' %}">{{ catalogue_quality.critical }} critical and {{ catalogue_quality.attention }} incomplete catalogue listing{{ catalogue_quality.attention|add:catalogue_quality.critical|pluralize }}</a>{% endif %}
     </div>
   </div>
   {% endif %}
@@ -141,9 +142,10 @@
     <div class="col-lg-4">
       <div class="card staff-panel-card h-100">
         <div class="card-body">
-          <div class="staff-panel-heading"><h2>Operational health</h2><a href="{% url 'staff_reports' %}">Reports</a></div>
+          <div class="staff-panel-heading"><h2>Operational health</h2><a href="{% url 'staff_catalogue_quality' %}">Catalogue</a></div>
           <div class="staff-health-list">
             <div class="staff-health-row"><span>Low stock</span><a href="{% url 'staff_products' %}?low=1" class="badge rounded-pill {% if low_stock_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ low_stock_count }}</a></div>
+            <div class="staff-health-row"><span>Catalogue quality</span><a href="{% url 'staff_catalogue_quality' %}" class="badge rounded-pill {% if catalogue_quality.critical %}text-bg-danger{% elif catalogue_quality.attention %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ catalogue_quality.average_score }}%</a></div>
             <div class="staff-health-row"><span>Overdue jobs</span><a href="{% url 'staff_jobs' %}?due=overdue" class="badge rounded-pill {% if overdue_jobs %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_jobs }}</a></div>
             <div class="staff-health-row"><span>Overdue tickets</span><a href="{% url 'staff_tickets' %}?due=overdue" class="badge rounded-pill {% if overdue_tickets %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_tickets }}</a></div>
             <div class="staff-health-row"><span>Contact inbox</span><a href="{% url 'staff_contact_messages' %}?handled=0" class="badge rounded-pill {% if unhandled_contacts %}text-bg-primary{% else %}text-bg-light text-dark{% endif %}">{{ unhandled_contacts }}</a></div>
