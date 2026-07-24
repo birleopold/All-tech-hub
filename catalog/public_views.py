@@ -1,20 +1,124 @@
 from __future__ import annotations
 
+import json
+import re
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
-from django.db.models import Count, F, Max, Min, Q
+from django.db.models import (
+    Case,
+    Count,
+    DecimalField,
+    Exists,
+    F,
+    IntegerField,
+    Max,
+    Min,
+    OuterRef,
+    Q,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce
+from django.http import JsonResponse
 from django.urls import reverse
+from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_GET
 
 from catalog.discovery import discovery_seed_for_request, order_for_discovery
-from catalog.models import Category, Product
+from catalog.models import Category, Product, ProductVariant
 from catalog.presentation import prepare_public_products
 from catalog.views import ProductListView
+from core.models import CompanySettings
 from growth.models import ProductGrowthData
 
 
+_SEARCH_SPLIT = re.compile(r"[^\w.+-]+", re.UNICODE)
+_PRICE_FIELD = DecimalField(max_digits=12, decimal_places=2)
+
+
+def _public_catalog_queryset():
+    return (
+        Product.objects.filter(is_published=True)
+        .select_related("category", "category__parent", "growth_data")
+        .prefetch_related("gallery_images", "variants")
+    )
+
+
+def _annotate_marketplace_values(queryset):
+    active_variants = ProductVariant.objects.filter(
+        product_id=OuterRef("pk"),
+        is_active=True,
+    )
+    sellable_variants = active_variants.filter(
+        Q(track_inventory=False) | Q(stock_quantity__gt=0)
+    )
+    return queryset.annotate(
+        _has_active_variants=Exists(active_variants),
+        _has_sellable_variant=Exists(sellable_variants),
+        _effective_price=Coalesce(
+            Min("variants__price", filter=Q(variants__is_active=True)),
+            F("price"),
+            output_field=_PRICE_FIELD,
+        ),
+    )
+
+
+def _available_products_query() -> Q:
+    return (
+        Q(kind=Product.KIND_SERVICE)
+        | Q(_has_active_variants=True, _has_sellable_variant=True)
+        | Q(_has_active_variants=False, track_inventory=False)
+        | Q(_has_active_variants=False, stock_quantity__gt=0)
+    )
+
+
+def _search_tokens(value: str) -> tuple[str, ...]:
+    tokens: list[str] = []
+    for token in _SEARCH_SPLIT.split((value or "").strip()):
+        cleaned = token.strip()
+        if len(cleaned) < 2 or cleaned.lower() in {item.lower() for item in tokens}:
+            continue
+        tokens.append(cleaned)
+        if len(tokens) == 8:
+            break
+    return tuple(tokens)
+
+
+def _search_token_query(token: str) -> Q:
+    return (
+        Q(name__icontains=token)
+        | Q(short_description__icontains=token)
+        | Q(description__icontains=token)
+        | Q(sku__icontains=token)
+        | Q(variants__sku__icontains=token)
+        | Q(variants__name__icontains=token)
+        | Q(category__name__icontains=token)
+        | Q(category__parent__name__icontains=token)
+        | Q(growth_data__brand__icontains=token)
+        | Q(growth_data__mpn__icontains=token)
+    )
+
+
+def _apply_search(queryset, query_text: str):
+    for token in _search_tokens(query_text):
+        queryset = queryset.filter(_search_token_query(token))
+    return queryset
+
+
+def _search_relevance(query_text: str):
+    return Case(
+        When(sku__iexact=query_text, then=Value(0)),
+        When(name__iexact=query_text, then=Value(1)),
+        When(name__istartswith=query_text, then=Value(2)),
+        When(growth_data__brand__iexact=query_text, then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField(),
+    )
+
+
 class PublicProductListView(ProductListView):
-    """Marketplace-style catalogue with useful filters and card-ready data."""
+    """Marketplace catalogue with accurate pricing, stock and relevant search."""
 
     COLLECTIONS = {
         "featured": {
@@ -70,26 +174,45 @@ class PublicProductListView(ProductListView):
     }
 
     KEYWORD_COLLECTIONS = {
-        "business": ("business", "office", "professional", "workstation", "thinkpad", "probook", "elitebook", "latitude"),
-        "student": ("student", "school", "learning", "coursework", "study", "budget", "chromebook"),
-        "creative": ("graphics", "design", "editing", "engineering", "cad", "creator", "precision", "workstation"),
+        "business": (
+            "business",
+            "office",
+            "professional",
+            "workstation",
+            "thinkpad",
+            "probook",
+            "elitebook",
+            "latitude",
+        ),
+        "student": (
+            "student",
+            "school",
+            "learning",
+            "coursework",
+            "study",
+            "budget",
+            "chromebook",
+        ),
+        "creative": (
+            "graphics",
+            "design",
+            "editing",
+            "engineering",
+            "cad",
+            "creator",
+            "precision",
+            "workstation",
+        ),
         "gaming": ("gaming", "game", "rtx", "gtx", "omen", "legion", "loq", "rog"),
         "home": ("home", "everyday", "personal", "family", "basic"),
     }
 
-    @staticmethod
-    def _available_query() -> Q:
-        return (
-            Q(kind=Product.KIND_SERVICE)
-            | Q(track_inventory=False)
-            | Q(stock_quantity__gt=0)
-            | Q(variants__is_active=True, variants__track_inventory=False)
-            | Q(
-                variants__is_active=True,
-                variants__track_inventory=True,
-                variants__stock_quantity__gt=0,
-            )
-        )
+    SORT_OPTIONS = {
+        "newest": ("-created_at", "-pk"),
+        "price_low": ("_effective_price", "name", "pk"),
+        "price_high": ("-_effective_price", "name", "pk"),
+        "name": ("name", "pk"),
+    }
 
     @staticmethod
     def _decimal_param(value: str) -> Decimal | None:
@@ -103,100 +226,100 @@ class PublicProductListView(ProductListView):
     def _keyword_query(keywords: tuple[str, ...]) -> Q:
         query = Q()
         for keyword in keywords:
-            query |= (
-                Q(name__icontains=keyword)
-                | Q(short_description__icontains=keyword)
-                | Q(description__icontains=keyword)
-                | Q(category__name__icontains=keyword)
-                | Q(category__parent__name__icontains=keyword)
-                | Q(growth_data__brand__icontains=keyword)
-            )
+            query |= _search_token_query(keyword)
         return query
 
     def get_queryset(self):
-        qs = (
-            Product.objects.filter(is_published=True)
-            .select_related("category", "category__parent", "growth_data")
-            .prefetch_related("gallery_images", "variants")
-        )
+        queryset = _public_catalog_queryset()
 
         kind = (self.request.GET.get("kind") or "").strip()
         if kind in (Product.KIND_PHYSICAL, Product.KIND_SERVICE):
-            qs = qs.filter(kind=kind)
+            queryset = queryset.filter(kind=kind)
 
         category = (self.request.GET.get("category") or "").strip()
         if category:
-            qs = qs.filter(
+            queryset = queryset.filter(
                 Q(category__slug=category) | Q(category__parent__slug=category)
             )
 
         query_text = (self.request.GET.get("q") or "").strip()
         if query_text:
-            qs = qs.filter(
-                Q(name__icontains=query_text)
-                | Q(short_description__icontains=query_text)
-                | Q(description__icontains=query_text)
-                | Q(sku__icontains=query_text)
-                | Q(variants__sku__icontains=query_text)
-                | Q(category__name__icontains=query_text)
-                | Q(category__parent__name__icontains=query_text)
-                | Q(growth_data__brand__icontains=query_text)
-            )
+            queryset = _apply_search(queryset, query_text)
 
         brand = (self.request.GET.get("brand") or "").strip()
         if brand:
-            qs = qs.filter(growth_data__brand__iexact=brand)
+            queryset = queryset.filter(growth_data__brand__iexact=brand)
 
         condition = (self.request.GET.get("condition") or "").strip().lower()
         valid_conditions = {value for value, _ in ProductGrowthData.CONDITION_CHOICES}
         if condition in valid_conditions:
-            qs = qs.filter(growth_data__condition=condition)
-        else:
-            condition = ""
-
-        minimum_price = self._decimal_param(self.request.GET.get("min_price", ""))
-        maximum_price = self._decimal_param(self.request.GET.get("max_price", ""))
-        if minimum_price is not None:
-            qs = qs.filter(Q(price__gte=minimum_price) | Q(variants__price__gte=minimum_price))
-        if maximum_price is not None:
-            qs = qs.filter(Q(price__lte=maximum_price) | Q(variants__price__lte=maximum_price))
-
-        available_only = (self.request.GET.get("available") or "").strip() in {"1", "true", "yes"}
-        if available_only:
-            qs = qs.filter(self._available_query())
+            queryset = queryset.filter(growth_data__condition=condition)
 
         collection = (self.request.GET.get("collection") or "").strip().lower()
         if collection not in self.COLLECTIONS:
             collection = ""
         if collection == "featured":
-            qs = qs.filter(is_featured=True)
+            queryset = queryset.filter(is_featured=True)
         elif collection == "deals":
-            qs = qs.filter(
+            queryset = queryset.filter(
                 Q(compare_at_price__gt=F("price"))
                 | Q(variants__compare_at_price__gt=F("variants__price"))
             )
         elif collection == "refurbished":
-            qs = qs.filter(growth_data__condition=ProductGrowthData.CONDITION_REFURBISHED)
-        elif collection == "available":
-            qs = qs.filter(self._available_query())
+            queryset = queryset.filter(
+                growth_data__condition=ProductGrowthData.CONDITION_REFURBISHED
+            )
         elif collection in self.KEYWORD_COLLECTIONS:
-            qs = qs.filter(self._keyword_query(self.KEYWORD_COLLECTIONS[collection]))
+            queryset = queryset.filter(
+                self._keyword_query(self.KEYWORD_COLLECTIONS[collection])
+            )
 
-        qs = qs.distinct()
+        queryset = _annotate_marketplace_values(queryset.distinct())
+
+        minimum_price = self._decimal_param(self.request.GET.get("min_price", ""))
+        maximum_price = self._decimal_param(self.request.GET.get("max_price", ""))
+        if minimum_price is not None:
+            queryset = queryset.filter(_effective_price__gte=minimum_price)
+        if maximum_price is not None:
+            queryset = queryset.filter(_effective_price__lte=maximum_price)
+
+        available_only = (self.request.GET.get("available") or "").strip() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if available_only or collection == "available":
+            queryset = queryset.filter(_available_products_query())
+
         requested_sort = (self.request.GET.get("sort") or "").strip()
         ordering = self.SORT_OPTIONS.get(requested_sort)
         if ordering:
             self.current_sort = requested_sort
             self.rotation_seed = ""
-            return qs.order_by(*ordering)
+            return queryset.order_by(*ordering)
         if collection == "new":
             self.current_sort = "newest"
             self.rotation_seed = ""
-            return qs.order_by("-created_at", "-pk")
+            return queryset.order_by("-created_at", "-pk")
+        if query_text:
+            self.current_sort = "relevance"
+            self.rotation_seed = ""
+            return queryset.annotate(
+                _search_rank=_search_relevance(query_text)
+            ).order_by("_search_rank", "name", "pk")
 
         self.current_sort = ""
         self.rotation_seed = discovery_seed_for_request(self.request, "catalog")
-        return order_for_discovery(qs, self.rotation_seed)
+        return order_for_discovery(queryset, self.rotation_seed)
+
+    def _remove_filter_url(self, *keys: str) -> str:
+        params = self.request.GET.copy()
+        for key in (*keys, "page", "view"):
+            if key in params:
+                del params[key]
+        base_url = reverse("product_list")
+        encoded = params.urlencode()
+        return f"{base_url}?{encoded}" if encoded else base_url
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -219,14 +342,28 @@ class PublicProductListView(ProductListView):
         ]
 
         current_collection = (self.request.GET.get("collection") or "").strip().lower()
-        context["current_collection"] = current_collection if current_collection in self.COLLECTIONS else ""
-        context["current_collection_details"] = self.COLLECTIONS.get(context["current_collection"])
+        context["current_collection"] = (
+            current_collection if current_collection in self.COLLECTIONS else ""
+        )
+        context["current_collection_details"] = self.COLLECTIONS.get(
+            context["current_collection"]
+        )
         context["current_brand"] = (self.request.GET.get("brand") or "").strip()
-        context["current_condition"] = (self.request.GET.get("condition") or "").strip().lower()
-        context["current_min_price"] = (self.request.GET.get("min_price") or "").strip()
-        context["current_max_price"] = (self.request.GET.get("max_price") or "").strip()
-        context["current_available"] = (self.request.GET.get("available") or "").strip() in {"1", "true", "yes"}
-        context["catalog_price_range"] = published.filter(kind=Product.KIND_PHYSICAL).aggregate(
+        context["current_condition"] = (
+            self.request.GET.get("condition") or ""
+        ).strip().lower()
+        context["current_min_price"] = (
+            self.request.GET.get("min_price") or ""
+        ).strip()
+        context["current_max_price"] = (
+            self.request.GET.get("max_price") or ""
+        ).strip()
+        context["current_available"] = (
+            self.request.GET.get("available") or ""
+        ).strip() in {"1", "true", "yes"}
+        context["catalog_price_range"] = published.filter(
+            kind=Product.KIND_PHYSICAL
+        ).aggregate(
             minimum=Min("price"),
             maximum=Max("price"),
         )
@@ -257,12 +394,169 @@ class PublicProductListView(ProductListView):
         }
         context["marketplace_filters_active"] = any(filter_params.values())
         context["catalog_noindex"] = bool(
-            context.get("catalog_noindex")
-            or context["marketplace_filters_active"]
+            context.get("catalog_noindex") or context["marketplace_filters_active"]
+        )
+
+        active_filters: list[dict[str, str]] = []
+        if context.get("search_q"):
+            active_filters.append(
+                {
+                    "label": f'Search: “{context["search_q"]}”',
+                    "icon": "bi-search",
+                    "remove_url": self._remove_filter_url("q"),
+                }
+            )
+        if context.get("current_kind"):
+            active_filters.append(
+                {
+                    "label": context["current_kind"].title(),
+                    "icon": "bi-box-seam",
+                    "remove_url": self._remove_filter_url("kind"),
+                }
+            )
+        if selected_category:
+            active_filters.append(
+                {
+                    "label": selected_category.name,
+                    "icon": "bi-grid",
+                    "remove_url": self._remove_filter_url("category"),
+                }
+            )
+        if context["current_collection_details"]:
+            active_filters.append(
+                {
+                    "label": context["current_collection_details"]["label"],
+                    "icon": context["current_collection_details"]["icon"],
+                    "remove_url": self._remove_filter_url("collection"),
+                }
+            )
+        if context["current_brand"]:
+            active_filters.append(
+                {
+                    "label": f'Brand: {context["current_brand"]}',
+                    "icon": "bi-patch-check",
+                    "remove_url": self._remove_filter_url("brand"),
+                }
+            )
+        if context["current_condition"]:
+            active_filters.append(
+                {
+                    "label": f'Condition: {context["current_condition"].title()}',
+                    "icon": "bi-box",
+                    "remove_url": self._remove_filter_url("condition"),
+                }
+            )
+        if context["current_min_price"] or context["current_max_price"]:
+            active_filters.append(
+                {
+                    "label": "Price range",
+                    "icon": "bi-cash-stack",
+                    "remove_url": self._remove_filter_url("min_price", "max_price"),
+                }
+            )
+        if context["current_available"]:
+            active_filters.append(
+                {
+                    "label": "Available now",
+                    "icon": "bi-check-circle",
+                    "remove_url": self._remove_filter_url("available"),
+                }
+            )
+        if context.get("current_sort") and context["current_sort"] not in {
+            "",
+            "relevance",
+        }:
+            active_filters.append(
+                {
+                    "label": "Custom sorting",
+                    "icon": "bi-sort-down",
+                    "remove_url": self._remove_filter_url("sort"),
+                }
+            )
+        context["active_filter_items"] = active_filters
+
+        if not context["products"]:
+            fallback_queryset = _annotate_marketplace_values(
+                _public_catalog_queryset().filter(kind=Product.KIND_PHYSICAL)
+            ).filter(_available_products_query())
+            context["fallback_products"] = prepare_public_products(
+                fallback_queryset.order_by("-is_featured", "-updated_at", "name")[:4]
+            )
+        else:
+            context["fallback_products"] = []
+
+        item_list = {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "name": (
+                context["current_collection_details"]["label"]
+                if context["current_collection_details"]
+                else "LEOSOFT technology catalogue"
+            ),
+            "numberOfItems": context["paginator"].count,
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": context["page_obj"].start_index() + index,
+                    "name": product.name,
+                    "url": self.request.build_absolute_uri(product.get_absolute_url()),
+                }
+                for index, product in enumerate(context["products"])
+            ],
+        }
+        context["catalog_item_list_json"] = mark_safe(json.dumps(item_list))
+
+        breadcrumb_items = [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": self.request.build_absolute_uri(reverse("home")),
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Catalogue",
+                "item": self.request.build_absolute_uri(reverse("product_list")),
+            },
+        ]
+        if selected_category:
+            breadcrumb_items.append(
+                {
+                    "@type": "ListItem",
+                    "position": len(breadcrumb_items) + 1,
+                    "name": selected_category.name,
+                    "item": self.request.build_absolute_uri(
+                        f'{reverse("product_list")}?{urlencode({"category": selected_category.slug})}'
+                    ),
+                }
+            )
+        elif context["current_collection_details"]:
+            breadcrumb_items.append(
+                {
+                    "@type": "ListItem",
+                    "position": len(breadcrumb_items) + 1,
+                    "name": context["current_collection_details"]["label"],
+                    "item": self.request.build_absolute_uri(
+                        f'{reverse("product_list")}?{urlencode({"collection": context["current_collection"]})}'
+                    ),
+                }
+            )
+        context["catalog_breadcrumb_json"] = mark_safe(
+            json.dumps(
+                {
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": breadcrumb_items,
+                }
+            )
         )
 
         canonical_params = {}
-        if context.get("current_kind") in (Product.KIND_PHYSICAL, Product.KIND_SERVICE):
+        if context.get("current_kind") in (
+            Product.KIND_PHYSICAL,
+            Product.KIND_SERVICE,
+        ):
             canonical_params["kind"] = context["current_kind"]
         if context.get("current_category"):
             canonical_params["category"] = context["current_category"]
@@ -276,3 +570,110 @@ class PublicProductListView(ProductListView):
             canonical = f"{canonical}?{urlencode(canonical_params)}"
         context["catalog_canonical_url"] = canonical
         return context
+
+
+@require_GET
+def public_catalog_suggestions(request):
+    """Return small, cacheable catalogue suggestions for accessible search UIs."""
+
+    query_text = (request.GET.get("q") or "").strip()
+    empty_payload = {
+        "query": query_text,
+        "products": [],
+        "categories": [],
+        "brands": [],
+        "search_url": reverse("product_list"),
+    }
+    if len(query_text) < 2:
+        return JsonResponse(empty_payload)
+
+    queryset = _apply_search(_public_catalog_queryset(), query_text).distinct()
+    queryset = _annotate_marketplace_values(queryset).annotate(
+        _search_rank=_search_relevance(query_text)
+    ).order_by("_search_rank", "name", "pk")
+    products = prepare_public_products(queryset[:6])
+    company = CompanySettings.load()
+
+    product_rows = []
+    for product in products:
+        image_url = ""
+        if product.primary_display_image:
+            try:
+                image_url = product.primary_display_image.url
+            except Exception:
+                image_url = ""
+        product_rows.append(
+            {
+                "name": product.name,
+                "url": product.get_absolute_url(),
+                "category": product.category.name,
+                "brand": product.public_brand,
+                "condition": product.public_condition,
+                "kind": product.kind,
+                "price": str(product.public_price),
+                "currency": company.currency_code,
+                "available": product.public_available,
+                "image": image_url,
+            }
+        )
+
+    category_query = Q(name__icontains=query_text) | Q(
+        description__icontains=query_text
+    )
+    category_rows = list(
+        Category.objects.filter(category_query)
+        .annotate(
+            direct_count=Count(
+                "products",
+                filter=Q(products__is_published=True),
+                distinct=True,
+            ),
+            child_count=Count(
+                "subcategories__products",
+                filter=Q(subcategories__products__is_published=True),
+                distinct=True,
+            ),
+        )
+        .annotate(product_count=F("direct_count") + F("child_count"))
+        .filter(product_count__gt=0)
+        .values("name", "slug", "product_count")
+        .order_by("name")[:4]
+    )
+    categories = [
+        {
+            "name": row["name"],
+            "url": f'{reverse("product_list")}?{urlencode({"category": row["slug"]})}',
+            "count": row["product_count"],
+        }
+        for row in category_rows
+    ]
+
+    brand_rows = list(
+        ProductGrowthData.objects.filter(
+            product__is_published=True,
+            brand__icontains=query_text,
+        )
+        .exclude(brand="")
+        .values("brand")
+        .annotate(product_count=Count("product_id", distinct=True))
+        .order_by("brand")[:4]
+    )
+    brands = [
+        {
+            "name": row["brand"],
+            "url": f'{reverse("product_list")}?{urlencode({"brand": row["brand"]})}',
+            "count": row["product_count"],
+        }
+        for row in brand_rows
+    ]
+
+    payload = {
+        "query": query_text,
+        "products": product_rows,
+        "categories": categories,
+        "brands": brands,
+        "search_url": f'{reverse("product_list")}?{urlencode({"q": query_text})}',
+    }
+    response = JsonResponse(payload)
+    response["Cache-Control"] = "public, max-age=60"
+    return response
