@@ -1,9 +1,10 @@
 from django.urls import path
 
 from catalog import views
+from catalog.public_views import PublicProductListView
 
 urlpatterns = [
-    path("", views.ProductListView.as_view(), name="product_list"),
+    path("", PublicProductListView.as_view(), name="product_list"),
     path("compare/", views.product_compare, name="product_compare"),
     path("compare/clear/", views.product_compare_clear, name="product_compare_clear"),
     path(
