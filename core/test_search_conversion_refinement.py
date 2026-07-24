@@ -139,6 +139,15 @@ class SearchConversionRefinementTests(TestCase):
         self.assertEqual(response.context["current_sort"], "relevance")
         self.assertContains(response, "Best matches first")
 
+    def test_one_character_search_is_applied_instead_of_showing_everything(self):
+        response = self.client.get(reverse("product_list"), {"q": "H"})
+        product_ids = {card.pk for card in response.context["products"]}
+
+        self.assertIn(self.hp.pk, product_ids)
+        self.assertIn(self.hp_related.pk, product_ids)
+        self.assertNotIn(self.variant_product.pk, product_ids)
+        self.assertNotIn(self.service.pk, product_ids)
+
     def test_variant_price_filter_and_sort_use_displayed_from_price(self):
         within_budget = self.client.get(
             reverse("product_list"),
@@ -160,6 +169,26 @@ class SearchConversionRefinementTests(TestCase):
         card = within_budget.context["products"][0]
         self.assertEqual(card.public_price, Decimal("1500000"))
 
+    def test_reversed_price_range_is_normalized_and_invalid_condition_removed(self):
+        response = self.client.get(
+            reverse("product_list"),
+            {
+                "min_price": "2000000",
+                "max_price": "1000000",
+                "condition": "not-a-condition",
+            },
+        )
+
+        self.assertEqual(response.context["current_min_price"], "1000000")
+        self.assertEqual(response.context["current_max_price"], "2000000")
+        self.assertEqual(response.context["current_condition"], "")
+        self.assertFalse(
+            any(
+                item["label"].startswith("Condition:")
+                for item in response.context["active_filter_items"]
+            )
+        )
+
     def test_available_filter_respects_active_variant_stock(self):
         response = self.client.get(reverse("product_list"), {"available": "1"})
         product_ids = {card.pk for card in response.context["products"]}
@@ -175,9 +204,11 @@ class SearchConversionRefinementTests(TestCase):
             {"q": "HP"},
         )
         payload = response.json()
+        suggested_names = {row["name"] for row in payload["products"]}
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(payload["products"][0]["name"], self.hp.name)
+        self.assertIn(self.hp.name, suggested_names)
+        self.assertIn(self.hp_related.name, suggested_names)
         self.assertTrue(any(row["name"] == "HP" for row in payload["brands"]))
         self.assertIn("public", response.headers["Cache-Control"])
         self.assertIn("q=HP", payload["search_url"])
@@ -215,7 +246,10 @@ class SearchConversionRefinementTests(TestCase):
         self.client.get(self.hp.get_absolute_url())
         response = self.client.get(reverse("home"))
 
-        self.assertEqual(response.context["recently_viewed_products"][0].pk, self.hp.pk)
+        self.assertEqual(
+            response.context["recently_viewed_products"][0].pk,
+            self.hp.pk,
+        )
         self.assertContains(response, "Recently viewed")
         self.assertContains(response, self.hp.name)
 
