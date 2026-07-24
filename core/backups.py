@@ -20,31 +20,63 @@ class BackupStatus:
 
 
 def latest_backup_status(root: Path | None = None) -> BackupStatus:
-    backup_root = Path(root or settings.BACKUP_ROOT).expanduser().resolve()
-    if not backup_root.exists():
-        return BackupStatus(False, False, None, None, None, "Backup directory is missing")
+    try:
+        backup_root = Path(root or settings.BACKUP_ROOT).expanduser().resolve()
+        if not backup_root.exists():
+            return BackupStatus(
+                False,
+                False,
+                None,
+                None,
+                None,
+                "Backup directory is missing",
+            )
+        candidates = [
+            path for path in backup_root.glob("leosoft-*") if path.is_dir()
+        ]
+    except OSError:
+        return BackupStatus(
+            False,
+            False,
+            None,
+            None,
+            None,
+            "Backup storage is inaccessible",
+        )
 
-    candidates = [
-        path for path in backup_root.glob("leosoft-*") if path.is_dir()
-    ]
     if not candidates:
         return BackupStatus(False, False, None, None, None, "No completed backup found")
 
-    latest = max(candidates, key=lambda path: path.stat().st_mtime)
-    created_at = datetime.fromtimestamp(
-        latest.stat().st_mtime,
-        tz=timezone.get_current_timezone(),
-    )
+    try:
+        latest = max(candidates, key=lambda path: path.stat().st_mtime)
+        created_at = datetime.fromtimestamp(
+            latest.stat().st_mtime,
+            tz=timezone.get_current_timezone(),
+        )
+    except OSError:
+        return BackupStatus(
+            True,
+            False,
+            None,
+            None,
+            None,
+            "Backup metadata is inaccessible",
+        )
+
     age_hours = max(0.0, (timezone.now() - created_at).total_seconds() / 3600)
     manifest_path = latest / "manifest.json"
-    if not manifest_path.exists():
+    try:
+        manifest_exists = manifest_path.exists()
+    except OSError:
+        manifest_exists = False
+    if not manifest_exists:
         return BackupStatus(
             True,
             False,
             latest,
             created_at,
             age_hours,
-            "Manifest is missing",
+            "Manifest is missing or inaccessible",
         )
 
     try:
@@ -81,11 +113,11 @@ def latest_backup_status(root: Path | None = None) -> BackupStatus:
             )
         file_path = latest / str(record["name"])
         expected_size = record.get("size_bytes")
-        if (
-            not file_path.exists()
-            or not isinstance(expected_size, int)
-            or file_path.stat().st_size != expected_size
-        ):
+        try:
+            actual_size = file_path.stat().st_size
+        except OSError:
+            actual_size = None
+        if not isinstance(expected_size, int) or actual_size != expected_size:
             return BackupStatus(
                 True,
                 False,
