@@ -15,7 +15,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--strict-environment",
             action="store_true",
-            help="Return a failure status when a production configuration gap is found.",
+            help="Return a failure status for unsafe production configuration.",
         )
         parser.add_argument(
             "--fail-on-catalogue-critical",
@@ -25,6 +25,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         environment_issues = self._environment_issues()
+        environment_warnings = self._environment_warnings()
         self.stdout.write(self.style.MIGRATE_HEADING("Environment"))
         self.stdout.write(
             f"ALLTECH_ENV: {os.getenv('ALLTECH_ENV', 'development')}"
@@ -33,13 +34,19 @@ class Command(BaseCommand):
             f"DJANGO_SETTINGS_MODULE: {os.getenv('DJANGO_SETTINGS_MODULE', '<unset>')}"
         )
         self.stdout.write(f"DEBUG: {settings.DEBUG}")
-        self.stdout.write(f"Allowed hosts: {', '.join(settings.ALLOWED_HOSTS) or '<none>'}")
+        self.stdout.write(
+            f"Allowed hosts: {', '.join(settings.ALLOWED_HOSTS) or '<none>'}"
+        )
         self.stdout.write(f"Public base URL: {settings.PUBLIC_BASE_URL}")
         if environment_issues:
             for issue in environment_issues:
-                self.stdout.write(self.style.WARNING(f"- {issue}"))
+                self.stdout.write(self.style.ERROR(f"- {issue}"))
         else:
-            self.stdout.write(self.style.SUCCESS("Production configuration checks passed."))
+            self.stdout.write(
+                self.style.SUCCESS("Blocking production configuration checks passed.")
+            )
+        for warning in environment_warnings:
+            self.stdout.write(self.style.WARNING(f"- {warning}"))
 
         rows = catalogue_quality_rows()
         summary = catalogue_quality_summary(rows)
@@ -54,7 +61,7 @@ class Command(BaseCommand):
 
         failures = []
         if options["strict_environment"] and environment_issues:
-            failures.append("production environment gaps")
+            failures.append("unsafe production environment settings")
         if options["fail_on_catalogue_critical"] and summary["critical"]:
             failures.append(f"{summary['critical']} critical catalogue listings")
         if failures:
@@ -75,10 +82,26 @@ class Command(BaseCommand):
         if not settings.CSRF_TRUSTED_ORIGINS:
             issues.append("ALLTECH_CSRF_TRUSTED_ORIGINS is empty.")
         if not settings.PUBLIC_BASE_URL.startswith("https://"):
-            issues.append("ALLTECH_PUBLIC_BASE_URL should use HTTPS.")
-        static_backend = settings.STORAGES["staticfiles"]["BACKEND"]
+            issues.append("ALLTECH_PUBLIC_BASE_URL must use HTTPS.")
+        storages = getattr(settings, "STORAGES", {})
+        static_backend = storages.get("staticfiles", {}).get("BACKEND", "")
         if not static_backend.endswith("ManifestStaticFilesStorage"):
             issues.append("Production static storage is not manifest-backed.")
-        if settings.EMAIL_BACKEND.endswith("console.EmailBackend"):
-            issues.append("Email is still using the console backend.")
         return issues
+
+    @staticmethod
+    def _environment_warnings() -> list[str]:
+        warnings: list[str] = []
+        production = os.getenv("ALLTECH_ENV", "development").lower() == "production"
+        if not production:
+            return warnings
+        if settings.EMAIL_BACKEND.endswith("console.EmailBackend"):
+            warnings.append(
+                "Email uses the console backend; customer notifications will not leave "
+                "the server until SMTP is configured."
+            )
+        if getattr(settings, "CONTENT_SECURITY_POLICY_REPORT_ONLY", True):
+            warnings.append(
+                "Content Security Policy is report-only and is not yet enforcing violations."
+            )
+        return warnings
