@@ -39,6 +39,16 @@ class ProductCommerceProfile(models.Model):
         default=False,
         help_text="Confirm that the public gallery shows the actual unit or stock being sold.",
     )
+    identity_verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When brand, exact model and product identifiers were checked.",
+    )
+    condition_verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When new, refurbished or used condition was physically confirmed.",
+    )
     delivery_note = models.CharField(max_length=240, blank=True)
     stock_confirmed_at = models.DateTimeField(null=True, blank=True)
     price_verified_at = models.DateTimeField(null=True, blank=True)
@@ -121,6 +131,10 @@ class ProductCommerceProfile(models.Model):
             missing.append("condition")
         if not gtin and not (brand and mpn):
             missing.append("GTIN or brand and MPN")
+        if not self.identity_verified_at:
+            missing.append("identity verification")
+        if not self.condition_verified_at:
+            missing.append("condition verification")
         if condition in {"used", "refurbished"} and not self.condition_notes.strip():
             missing.append("condition notes")
         if not self.actual_photos:
@@ -135,7 +149,7 @@ class ProductCommerceProfile(models.Model):
 
     @property
     def merchant_readiness_score(self) -> int:
-        checks = 12
+        checks = 14
         missing = len(self.merchant_missing_fields())
         return max(0, round(((checks - min(checks, missing)) / checks) * 100))
 
@@ -145,6 +159,8 @@ class ProductCommerceProfile(models.Model):
 
     def mark_verified_now(self) -> None:
         now = timezone.now()
+        self.identity_verified_at = now
+        self.condition_verified_at = now
         self.stock_confirmed_at = now
         self.price_verified_at = now
 
