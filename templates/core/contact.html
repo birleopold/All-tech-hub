@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Contact {{ company.company_name|default:"LEOSOFT" }}{% endblock %}
+{% block title %}Contact {{ company.company_name|default:"LEOSOFT" }} | Technology sales and IT support{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body public-contact-page{% endblock %}
 {% block meta %}
-<meta name="description" content="Contact {{ company.company_name }} for technology products, formal quotations, repairs, installation and business IT support in Uganda.">
-<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<meta name="description" content="Contact {{ company.company_name }} for computers, accessories, formal quotations, repairs, installation and business IT support in Uganda.">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="{{ contact_canonical_url|default:seo_default_canonical_url }}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="{{ seo_og_locale|default:'en_UG' }}">
+<meta property="og:site_name" content="{{ company.company_name }}">
 <meta property="og:title" content="Contact {{ company.company_name }}">
-<meta property="og:description" content="Request products, quotations, repairs, installation and professional IT support.">
-<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:description" content="Request technology products, formal quotations, repairs, installation and professional IT support.">
+<meta property="og:url" content="{{ contact_canonical_url|default:seo_default_canonical_url }}">
+{% if seo_default_image_url %}<meta property="og:image" content="{{ seo_default_image_url }}"><meta property="og:image:alt" content="Contact {{ company.company_name }}">{% endif %}
+<meta name="twitter:card" content="{% if seo_default_image_url %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="Contact {{ company.company_name }}">
+<meta name="twitter:description" content="Request technology products, quotations, repairs, installation and IT support.">
+{% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="Contact {{ company.company_name }}">{% endif %}
+{% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
 {% endblock %}
 {% block extra_css %}<link href="{% static 'css/public_detail_contact.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
@@ -56,9 +65,7 @@
         <p class="product-section-kicker">Send a clear request</p>
         <h2 class="contact-section-title" id="contact-form-heading">How can the team help?</h2>
         <p class="contact-form-intro">Provide enough information for an accurate first response. For products, include quantity and preferred specifications. For repairs, include the device model, symptoms and any error message.</p>
-
         {% if contact_product %}<div class="contact-product-context"><span class="contact-product-context__icon"><i class="bi {% if contact_product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></span><span><small class="text-muted d-block">Request linked to</small><strong>{{ contact_product.name }}</strong></span><a class="btn btn-sm btn-outline-primary ms-auto" href="{{ contact_product.get_absolute_url }}">View item</a></div>{% endif %}
-
         {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
         <form method="post" class="contact-field-grid" data-submit-progress>{% csrf_token %}{{ form.website }}
           <div class="contact-field--full"><label class="form-label" for="{{ form.request_type.id_for_label }}">{{ form.request_type.label }}</label>{{ form.request_type.errors }}{{ form.request_type }}</div>
@@ -79,26 +86,12 @@
         {% if company.email %}<a class="contact-method-card" href="mailto:{{ company.email }}"><span class="contact-method-icon"><i class="bi bi-envelope" aria-hidden="true"></i></span><strong>Email</strong><span>{{ company.email }}</span></a>{% endif %}
         {% if company.address_line or company.city %}<div class="contact-method-card"><span class="contact-method-icon"><i class="bi bi-geo-alt" aria-hidden="true"></i></span><strong>Location</strong><span>{% if company.address_line %}{{ company.address_line }}{% endif %}{% if company.address_line and company.city %}, {% endif %}{{ company.city }}{% if company.region %}, {{ company.region }}{% endif %}</span></div>{% endif %}
       </div>
-
-      <section class="contact-side-card">
-        <div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><p class="product-section-kicker mb-1">Availability</p><h2 class="h5 fw-bold mb-0">Business hours</h2></div><span class="badge rounded-pill {% if is_open_now %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if is_open_now %}Open{% else %}Closed{% endif %}</span></div>
-        <dl class="contact-hours-list">{% for h in business_hours %}<div class="contact-hours-row"><dt>{{ h.get_weekday_display }}</dt><dd>{{ h.display_hours }}{% if h.note %}<small class="text-muted d-block fw-normal">{{ h.note }}</small>{% endif %}</dd></div>{% empty %}<div class="contact-hours-row"><dt>Hours</dt><dd>Being updated</dd></div>{% endfor %}</dl>
-      </section>
-
-      <section class="contact-side-card">
-        <p class="product-section-kicker">Specialised routes</p><h2 class="h5 fw-bold">Use the right workspace</h2><p class="small text-muted">Existing customers can use structured routes for repairs, orders and ongoing support.</p>
-        <div class="contact-fast-links">
-          <a class="contact-fast-link" href="{% url 'portal_repair_intake' %}"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>Submit a repair request<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-          <a class="contact-fast-link" href="{% url 'product_list' %}?kind=service"><i class="bi bi-tools" aria-hidden="true"></i>Browse professional services<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-          <a class="contact-fast-link" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}"><i class="bi bi-person-circle" aria-hidden="true"></i>Open customer portal<i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-        </div>
-      </section>
+      <section class="contact-side-card"><div class="d-flex justify-content-between align-items-center gap-2 mb-3"><div><p class="product-section-kicker mb-1">Availability</p><h2 class="h5 fw-bold mb-0">Business hours</h2></div><span class="badge rounded-pill {% if is_open_now %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if is_open_now %}Open{% else %}Closed{% endif %}</span></div><dl class="contact-hours-list">{% for h in business_hours %}<div class="contact-hours-row"><dt>{{ h.get_weekday_display }}</dt><dd>{{ h.display_hours }}{% if h.note %}<small class="text-muted d-block fw-normal">{{ h.note }}</small>{% endif %}</dd></div>{% empty %}<div class="contact-hours-row"><dt>Hours</dt><dd>Being updated</dd></div>{% endfor %}</dl></section>
+      <section class="contact-side-card"><p class="product-section-kicker">Specialised routes</p><h2 class="h5 fw-bold">Use the right workspace</h2><p class="small text-muted">Existing customers can use structured routes for repairs, orders and ongoing support.</p><div class="contact-fast-links"><a class="contact-fast-link" href="{% url 'portal_repair_intake' %}"><i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>Submit a repair request<i class="bi bi-arrow-right" aria-hidden="true"></i></a><a class="contact-fast-link" href="{% url 'service_list' %}"><i class="bi bi-tools" aria-hidden="true"></i>Browse professional services<i class="bi bi-arrow-right" aria-hidden="true"></i></a><a class="contact-fast-link" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}"><i class="bi bi-person-circle" aria-hidden="true"></i>Open customer portal<i class="bi bi-arrow-right" aria-hidden="true"></i></a></div></section>
     </div>
   </div>
 
-  <section class="contact-process-card" aria-labelledby="contact-process-heading">
-    <div class="row g-4 align-items-center"><div class="col-lg-4"><p class="product-section-kicker">What happens next</p><h2 class="contact-section-title mb-2" id="contact-process-heading">A clear path from message to action</h2><p class="text-muted mb-0">Your request becomes a recorded lead for staff review and follow-up.</p></div><div class="col-lg-8"><div class="contact-process-grid"><div class="contact-process-step"><span class="contact-step-number">1</span><strong>Review</strong><p>The team reads the details and identifies the product, service or technical need.</p></div><div class="contact-process-step"><span class="contact-step-number">2</span><strong>Clarify</strong><p>You may be contacted for specifications, photos, quantities, location or timing.</p></div><div class="contact-process-step"><span class="contact-step-number">3</span><strong>Next step</strong><p>Receive availability, guidance, a formal quote or instructions for service intake.</p></div></div></div></div>
-  </section>
+  <section class="contact-process-card" aria-labelledby="contact-process-heading"><div class="row g-4 align-items-center"><div class="col-lg-4"><p class="product-section-kicker">What happens next</p><h2 class="contact-section-title mb-2" id="contact-process-heading">A clear path from message to action</h2><p class="text-muted mb-0">Your request becomes a recorded lead for staff review and follow-up.</p></div><div class="col-lg-8"><div class="contact-process-grid"><div class="contact-process-step"><span class="contact-step-number">1</span><strong>Review</strong><p>The team reads the details and identifies the product, service or technical need.</p></div><div class="contact-process-step"><span class="contact-step-number">2</span><strong>Clarify</strong><p>You may be contacted for specifications, photos, quantities, location or timing.</p></div><div class="contact-process-step"><span class="contact-step-number">3</span><strong>Next step</strong><p>Receive availability, guidance, a formal quote or instructions for service intake.</p></div></div></div></div></section>
 </div>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'js/public_detail_contact.js' %}" defer></script>{% endblock %}
