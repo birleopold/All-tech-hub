@@ -27,14 +27,14 @@ urlpatterns = [
         name="django.contrib.sitemaps.views.sitemap",
     ),
     path(
-        "sitemaps/<slug:section>.xml",
-        seo_feeds.seo_sitemap,
-        name="seo_sitemap",
-    ),
-    path(
         "sitemaps/commercial.xml",
         merchandising_seo.commercial_sitemap,
         name="commercial_sitemap",
+    ),
+    path(
+        "sitemaps/<slug:section>.xml",
+        seo_feeds.seo_sitemap,
+        name="seo_sitemap",
     ),
     path("image-sitemap.xml", seo_feeds.image_sitemap, name="image_sitemap"),
     path(
