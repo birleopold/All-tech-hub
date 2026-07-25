@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from urllib.parse import urlencode
-
 from django.http import Http404
 from django.urls import reverse
 from django.utils.text import slugify
@@ -90,6 +88,18 @@ class SEOProductListView(RefinedPublicProductListView):
             return reverse("service_list")
         return reverse("product_list")
 
+    @staticmethod
+    def _canonical_primary_key(context: dict) -> str:
+        if context.get("selected_category"):
+            return "category"
+        if context.get("current_collection"):
+            return "collection"
+        if context.get("current_brand"):
+            return "brand"
+        if context.get("current_kind"):
+            return "kind"
+        return ""
+
     def _page_copy(self, context: dict) -> dict[str, str]:
         company = CompanySettings.load()
         selected_category = context.get("selected_category")
@@ -110,14 +120,12 @@ class SEOProductListView(RefinedPublicProductListView):
             )
             eyebrow = "Technology category"
         elif collection:
-            subject = collection["label"]
-            title = f"{subject} in Uganda | {company.company_name}"
+            title = f"{collection['label']} in Uganda | {company.company_name}"
             description = collection["description"]
-            heading = subject
+            heading = collection["label"]
             intro = collection["description"]
             eyebrow = "Curated technology collection"
         elif brand:
-            subject = brand
             title = f"{brand} computers and technology in Uganda | {company.company_name}"
             description = (
                 f"Browse available {brand} computers and technology from {company.company_name}. "
@@ -169,13 +177,20 @@ class SEOProductListView(RefinedPublicProductListView):
             "eyebrow": eyebrow,
         }
 
-    def _pagination_url(self, landing_path: str, page_number: int) -> str:
+    def _pagination_parameters(self, context: dict, page_number: int | None = None):
         parameters = self.request.GET.copy()
         parameters.pop("view", None)
-        if page_number <= 1:
+        primary_key = self._canonical_primary_key(context)
+        if primary_key:
+            parameters.pop(primary_key, None)
+        if page_number is None or page_number <= 1:
             parameters.pop("page", None)
         else:
             parameters["page"] = str(page_number)
+        return parameters
+
+    def _pagination_url(self, context: dict, landing_path: str, page_number: int) -> str:
+        parameters = self._pagination_parameters(context, page_number)
         encoded = parameters.urlencode()
         return public_url(f"{landing_path}?{encoded}" if encoded else landing_path)
 
@@ -193,7 +208,11 @@ class SEOProductListView(RefinedPublicProductListView):
             if value and key not in {"view"}
         }
         extra_filters = active_keys - route_keys
-        indexable_landing = not bool(extra_filters)
+        primary_count = sum(
+            bool(self.request.GET.get(key))
+            for key in ("category", "collection", "brand", "kind")
+        )
+        indexable_landing = not bool(extra_filters) and primary_count <= 1
         if context.get("search_q") or context.get("current_sort") not in {"", "relevance"}:
             indexable_landing = False
         if context.get("current_min_price") or context.get("current_max_price"):
@@ -255,6 +274,7 @@ class SEOProductListView(RefinedPublicProductListView):
                 }
             )
 
+        pagination_parameters = self._pagination_parameters(context)
         context.update(
             {
                 "catalog_page_title": copy["title"],
@@ -265,6 +285,7 @@ class SEOProductListView(RefinedPublicProductListView):
                 "catalog_canonical_url": canonical_url,
                 "catalog_noindex": not indexable_landing,
                 "catalog_social_image_url": social_image,
+                "catalog_pagination_suffix": pagination_parameters.urlencode(),
                 "catalog_item_list_json": script_safe_json(item_list),
                 "catalog_breadcrumb_json": script_safe_json(
                     {
@@ -274,12 +295,12 @@ class SEOProductListView(RefinedPublicProductListView):
                     }
                 ),
                 "catalog_prev_url": (
-                    self._pagination_url(landing_path, page_number - 1)
+                    self._pagination_url(context, landing_path, page_number - 1)
                     if context["page_obj"].has_previous()
                     else ""
                 ),
                 "catalog_next_url": (
-                    self._pagination_url(landing_path, page_number + 1)
+                    self._pagination_url(context, landing_path, page_number + 1)
                     if context["page_obj"].has_next()
                     else ""
                 ),
