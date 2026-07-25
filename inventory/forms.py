@@ -2,7 +2,105 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from catalog.models import ProductVariant
+from growth.models import ProductGrowthData
 from inventory.models import StockAdjustment
+from merchandising.models import ProductCommerceProfile
+
+
+def _style_model_form(form):
+    for field in form.fields.values():
+        widget = field.widget
+        if isinstance(widget, forms.CheckboxInput):
+            css_class = "form-check-input"
+        elif isinstance(widget, forms.Select):
+            css_class = "form-select"
+        else:
+            css_class = "form-control"
+        existing = widget.attrs.get("class", "")
+        widget.attrs["class"] = f"{existing} {css_class}".strip()
+
+
+class ProductGrowthDataForm(forms.ModelForm):
+    """Search, condition and Merchant identity metadata for one product."""
+
+    class Meta:
+        model = ProductGrowthData
+        fields = (
+            "brand",
+            "condition",
+            "gtin",
+            "mpn",
+            "google_product_category",
+            "custom_label_0",
+            "shipping_label",
+        )
+        widgets = {
+            "gtin": forms.TextInput(attrs={"inputmode": "numeric"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _style_model_form(self)
+
+
+class ProductCommerceProfileForm(forms.ModelForm):
+    """Inspected specifications, delivery facts and Merchant safety controls."""
+
+    VERIFICATION_FIELDS = (
+        "identity_verified_at",
+        "condition_verified_at",
+        "stock_confirmed_at",
+        "price_verified_at",
+    )
+
+    class Meta:
+        model = ProductCommerceProfile
+        fields = (
+            "processor_family",
+            "processor_generation",
+            "ram_capacity",
+            "ram_type",
+            "storage_capacity",
+            "storage_type",
+            "screen_size",
+            "screen_resolution",
+            "touchscreen",
+            "graphics",
+            "operating_system",
+            "battery_health_note",
+            "keyboard_condition",
+            "charger_included",
+            "accessories_included",
+            "warranty_months",
+            "condition_notes",
+            "actual_photos",
+            "delivery_note",
+            "identity_verified_at",
+            "condition_verified_at",
+            "stock_confirmed_at",
+            "price_verified_at",
+            "merchant_enabled",
+            "merchant_shipping_price",
+            "merchant_free_shipping",
+        )
+        widgets = {
+            "condition_notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in self.VERIFICATION_FIELDS:
+            self.fields[field_name].widget = forms.DateTimeInput(
+                format="%Y-%m-%dT%H:%M",
+                attrs={"type": "datetime-local"},
+            )
+            self.fields[field_name].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields["merchant_enabled"].disabled = True
+        self.fields["merchant_enabled"].help_text = (
+            "Merchant approval is locked here. Enable it only after the readiness "
+            "audit confirms that every required fact is accurate."
+        )
+        _style_model_form(self)
 
 
 class JobStockUseForm(forms.ModelForm):
