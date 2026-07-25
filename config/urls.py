@@ -20,6 +20,11 @@ urlpatterns = [
     path("robots.txt", core_seo.robots_txt, name="robots_txt"),
     path("sitemap.xml", seo_feeds.sitemap_index, name="sitemap_index"),
     path(
+        "sitemap.xml",
+        seo_feeds.sitemap_index,
+        name="django.contrib.sitemaps.views.sitemap",
+    ),
+    path(
         "sitemaps/<slug:section>.xml",
         seo_feeds.seo_sitemap,
         name="seo_sitemap",
