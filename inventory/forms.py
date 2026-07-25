@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from catalog.models import ProductVariant
+from catalog.models import Product, ProductVariant
 from growth.models import ProductGrowthData
 from inventory.models import StockAdjustment
 from merchandising.models import ProductCommerceProfile
@@ -18,6 +18,33 @@ def _style_model_form(form):
             css_class = "form-control"
         existing = widget.attrs.get("class", "")
         widget.attrs["class"] = f"{existing} {css_class}".strip()
+
+
+class ProductCommercialCoreForm(forms.ModelForm):
+    """Core public facts reviewed alongside feed and inspection metadata."""
+
+    class Meta:
+        model = Product
+        fields = (
+            "name",
+            "sku",
+            "short_description",
+            "description",
+            "price",
+            "compare_at_price",
+            "track_inventory",
+            "stock_quantity",
+            "is_published",
+            "is_featured",
+        )
+        widgets = {
+            "short_description": forms.Textarea(attrs={"rows": 2}),
+            "description": forms.Textarea(attrs={"rows": 5}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _style_model_form(self)
 
 
 class ProductGrowthDataForm(forms.ModelForm):
