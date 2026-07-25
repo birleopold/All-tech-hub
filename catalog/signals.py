@@ -7,7 +7,7 @@ from catalog.responsive_images import (
     generate_responsive_variants,
     purge_responsive_name,
 )
-from catalog.watermarks import watermark_pending_model_image
+from catalog.studio_watermarks import watermark_pending_model_image
 
 
 def _old_image_name(sender, instance) -> str:
