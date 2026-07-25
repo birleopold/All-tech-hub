@@ -25,19 +25,23 @@ def public_base_url() -> str:
 
 
 def public_url(path_or_url: str = "/", query: Mapping[str, object] | None = None) -> str:
-    """Build an absolute public URL without inheriting request host or tracking data."""
+    """Build a stable absolute URL without inheriting request host or tracking data."""
 
     value = (path_or_url or "/").strip()
     parsed = urlsplit(value)
     if parsed.scheme in {"http", "https"} and parsed.netloc:
-        path = parsed.path or "/"
+        absolute = urlunsplit((parsed.scheme, parsed.netloc, parsed.path or "/", "", ""))
     else:
         path = value if value.startswith("/") else f"/{value}"
+        absolute = urljoin(f"{public_base_url()}/", path.lstrip("/"))
 
-    absolute = urljoin(f"{public_base_url()}/", path.lstrip("/"))
     if query:
         encoded = urlencode(
-            [(key, str(value)) for key, value in query.items() if value not in {None, ""}]
+            [
+                (key, str(item))
+                for key, item in query.items()
+                if item is not None and item != ""
+            ]
         )
         if encoded:
             absolute = f"{absolute}?{encoded}"
