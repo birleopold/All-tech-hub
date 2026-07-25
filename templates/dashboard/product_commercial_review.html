@@ -1,0 +1,71 @@
+{% extends "staff_base.html" %}
+{% block title %}Commercial review — {{ product.name }}{% endblock %}
+{% block staff_page_name %}Commercial product review{% endblock %}
+{% block staff_content %}
+<section class="staff-page">
+  <header class="staff-detail-header">
+    <div class="staff-detail-heading">
+      <p class="staff-page-eyebrow">Catalogue governance</p>
+      <h1>{{ product.name }}</h1>
+      <p>Review the exact selling facts customers and Google rely on. Do not enter assumed specifications or verification dates.</p>
+    </div>
+    <div class="staff-detail-actions">
+      <a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{{ product.get_absolute_url }}"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Public page</a>
+      <a class="btn btn-outline-secondary" href="{% url 'staff_product_edit' product.pk %}"><i class="bi bi-images me-1" aria-hidden="true"></i>Images &amp; variants</a>
+      <a class="btn btn-outline-secondary" href="{% url 'staff_catalogue_quality' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Quality list</a>
+    </div>
+  </header>
+
+  <div class="staff-record-hero mb-4">
+    <div class="staff-record-hero-grid">
+      <div class="staff-record-stat"><small>Merchant readiness</small><strong>{{ merchant_readiness_score }}%</strong><span>{% if merchant_ready %}Eligible after final feed review{% else %}Still requires verified facts{% endif %}</span></div>
+      <div class="staff-record-stat"><small>Publication</small><strong>{% if product.is_published %}Published{% else %}Hidden{% endif %}</strong><span>{% if product.is_featured %}Featured product{% else %}Standard listing{% endif %}</span></div>
+      <div class="staff-record-stat"><small>Current price</small><strong>{{ company.currency_code }} {{ product.price|floatformat:0 }}</strong><span>{% if product.compare_at_price %}Compare at {{ product.compare_at_price|floatformat:0 }}{% else %}No comparison price{% endif %}</span></div>
+      <div class="staff-record-stat"><small>Availability</small><strong>{% if product.available_to_sell %}Available{% else %}Out of stock{% endif %}</strong><span>{% if product.has_sellable_variants %}{{ product.active_variant_count }} active variants{% else %}{{ product.stock_quantity }} base units{% endif %}</span></div>
+    </div>
+  </div>
+
+  {% if merchant_missing_fields %}
+  <div class="card staff-panel-card mb-4">
+    <div class="card-body">
+      <div class="staff-panel-heading"><h2>Merchant gaps still blocking approval</h2><span class="badge text-bg-warning">{{ merchant_missing_fields|length }} remaining</span></div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for item in merchant_missing_fields %}<span class="badge rounded-pill text-bg-light text-dark">{{ item }}</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>All strict-readiness fields are complete. Inspect the public page and Merchant feed before enabling publication.</div>
+  {% endif %}
+
+  <form method="post" class="staff-form-shell" novalidate>
+    {% csrf_token %}
+
+    <div class="staff-section-card-header"><div><h2>Public selling facts</h2><p>Name, SKU, descriptions, price, stock and visibility</p></div><i class="bi bi-shop text-muted" aria-hidden="true"></i></div>
+    {% if core_form.non_field_errors %}<div class="alert alert-danger mx-3 mt-3">{{ core_form.non_field_errors }}</div>{% endif %}
+    <div class="staff-form-shell-body"><div class="staff-form-grid">
+      {% for field in core_form %}<div class="staff-form-field{% if field.name == 'short_description' or field.name == 'description' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}
+    </div></div>
+
+    <div class="staff-section-card-header"><div><h2>Identity, condition and feed metadata</h2><p>Use the manufacturer’s exact brand and identifier. Do not invent a GTIN or MPN.</p></div><i class="bi bi-upc-scan text-muted" aria-hidden="true"></i></div>
+    {% if growth_form.non_field_errors %}<div class="alert alert-danger mx-3 mt-3">{{ growth_form.non_field_errors }}</div>{% endif %}
+    <div class="staff-form-shell-body"><div class="staff-form-grid">
+      {% for field in growth_form %}<div class="staff-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}
+    </div></div>
+
+    <div class="staff-section-card-header"><div><h2>Inspected specifications and delivery</h2><p>Record only facts confirmed from the exact unit, packaging, diagnostics or supplier documentation.</p></div><i class="bi bi-clipboard2-check text-muted" aria-hidden="true"></i></div>
+    {% if commerce_form.non_field_errors %}<div class="alert alert-danger mx-3 mt-3">{{ commerce_form.non_field_errors }}</div>{% endif %}
+    <div class="staff-form-shell-body">
+      <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>Verification dates are evidence of a real check. Leave them blank until identity, condition, stock and price have actually been confirmed.</div>
+      <div class="staff-form-grid">
+        {% for field in commerce_form %}<div class="staff-form-field{% if field.name == 'condition_notes' or field.name == 'delivery_note' or field.name == 'battery_health_note' or field.name == 'accessories_included' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}
+      </div>
+    </div>
+
+    <footer class="staff-form-footer">
+      <span class="text-muted small"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>All commercial facts save together. Merchant approval remains locked until a separate readiness review.</span>
+      <div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_catalogue_quality' %}">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>Save reviewed facts</button></div>
+    </footer>
+  </form>
+</section>
+{% endblock %}
