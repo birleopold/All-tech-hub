@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET
 
 from catalog.seo_feeds import GOOGLE_NS
 from catalog.strict_merchant_feed import strict_google_merchant_feed as base_strict_feed
+from core.models import CompanySettings
 from merchandising.models import ProductCommerceProfile
 
 
@@ -44,6 +45,7 @@ def strict_google_merchant_feed(request):
         response["X-Merchant-Readiness"] = "schema-unavailable"
         return response
 
+    company = CompanySettings.load()
     root = ET.fromstring(response.content)
     namespace = {"g": GOOGLE_NS}
     channel = root.find("./channel")
@@ -63,9 +65,8 @@ def strict_google_merchant_feed(request):
             if shipping is not None:
                 price = shipping.find("g:price", namespace)
                 if price is not None:
-                    currency = profile.product.price.currency if hasattr(profile.product.price, "currency") else "UGX"
                     value = 0 if profile.merchant_free_shipping else profile.merchant_shipping_price
-                    price.text = f"{value or 0:.2f} {currency}"
+                    price.text = f"{value or 0:.2f} {company.currency_code}"
 
     payload = ET.tostring(root, encoding="utf-8", xml_declaration=True)
     corrected = HttpResponse(payload, content_type="application/rss+xml; charset=utf-8")
