@@ -176,10 +176,26 @@ def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCa
         except ObjectDoesNotExist:
             commerce_profile = None
 
-        brand = (getattr(growth_data, "brand", "") or "").strip()
-        condition_code = (getattr(growth_data, "condition", "") or "").strip()
+        identity_verified = bool(
+            commerce_profile and commerce_profile.identity_verified_at
+        )
+        condition_verified = bool(
+            commerce_profile and commerce_profile.condition_verified_at
+        )
+        brand = (
+            (getattr(growth_data, "brand", "") or "").strip()
+            if identity_verified
+            else ""
+        )
+        condition_code = (
+            (getattr(growth_data, "condition", "") or "").strip()
+            if condition_verified
+            else ""
+        )
         condition_label = (
-            growth_data.get_condition_display() if growth_data and condition_code else ""
+            growth_data.get_condition_display()
+            if growth_data and condition_code
+            else ""
         )
 
         display_price = min_price if min_price is not None else product.price
