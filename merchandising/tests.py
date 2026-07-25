@@ -4,7 +4,7 @@ from decimal import Decimal
 from unittest.mock import PropertyMock, patch
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -45,6 +45,7 @@ class CommercialSeedTests(TestCase):
         self.assertEqual(page.title, "Staff-edited laptop hub")
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class CommercialPageTests(TestCase):
     @classmethod
     def setUpTestData(cls):
