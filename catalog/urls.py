@@ -42,7 +42,11 @@ urlpatterns = [
         views.product_compare_toggle,
         name="product_compare_toggle",
     ),
-    path("item/<slug:slug>/", PublicProductDetailView.as_view(), name="product_detail"),
+    path(
+        "item/<slug:slug>/",
+        PublicProductDetailView.as_view(template_name="catalog/seo_product_detail.html"),
+        name="product_detail",
+    ),
     path(
         "item/<slug:slug>/review/",
         views.product_review_submit,
