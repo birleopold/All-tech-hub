@@ -30,7 +30,9 @@ class CommercialSeedTests(TestCase):
         self.assertGreaterEqual(BuyingGuide.objects.count(), 15)
         self.assertGreaterEqual(DeliveryZone.objects.count(), 4)
         self.assertTrue(
-            CommercialLandingPage.objects.get(slug="laptop-prices-in-uganda").faqs.exists()
+            CommercialLandingPage.objects.get(
+                slug="laptop-prices-in-uganda"
+            ).faqs.exists()
         )
 
     def test_seed_preserves_staff_edits_without_refresh(self):
@@ -66,6 +68,7 @@ class CommercialPageTests(TestCase):
             mpn="LAT-7420-I7",
             condition=ProductGrowthData.CONDITION_REFURBISHED,
         )
+        verified_at = timezone.now()
         ProductCommerceProfile.objects.create(
             product=cls.product,
             processor_family="Intel Core i7",
@@ -76,7 +79,10 @@ class CommercialPageTests(TestCase):
             actual_photos=True,
             warranty_months=6,
             condition_notes="Tested refurbished unit with light signs of normal use.",
-            stock_confirmed_at=timezone.now(),
+            identity_verified_at=verified_at,
+            condition_verified_at=verified_at,
+            stock_confirmed_at=verified_at,
+            price_verified_at=verified_at,
         )
 
     def test_root_commercial_page_uses_live_catalogue_and_faq_schema(self):
@@ -111,6 +117,8 @@ class CommercialPageTests(TestCase):
         )
         card = prepare_public_products([product])[0]
         self.assertTrue(card.public_actual_photos)
+        self.assertEqual(card.public_brand, "Dell")
+        self.assertEqual(card.public_condition, "Refurbished")
         self.assertEqual(card.public_warranty_months, 6)
         self.assertEqual(card.public_processor_summary, "Intel Core i7 11th Gen")
         self.assertEqual(card.public_memory_storage_summary, "16GB / 512GB SSD")
@@ -165,7 +173,11 @@ class MerchantReadinessTests(TestCase):
         self.profile.identity_verified_at = now
         self.profile.condition_verified_at = now
         self.profile.save(
-            update_fields=["identity_verified_at", "condition_verified_at", "updated_at"]
+            update_fields=[
+                "identity_verified_at",
+                "condition_verified_at",
+                "updated_at",
+            ]
         )
         with patch.object(
             Product,
