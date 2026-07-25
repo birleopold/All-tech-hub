@@ -84,8 +84,8 @@ class CommercialPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Laptop Prices in Uganda")
         self.assertContains(response, self.product.name)
-        self.assertContains(response, '"@type": "FAQPage"')
-        self.assertContains(response, "https://testserver/laptop-prices-in-uganda/")
+        self.assertContains(response, '"@type":"FAQPage"')
+        self.assertContains(response, "https://leosoftug.com/laptop-prices-in-uganda/")
 
     def test_brand_page_filters_live_products(self):
         response = self.client.get("/dell-laptops-uganda/")
@@ -119,7 +119,7 @@ class CommercialPageTests(TestCase):
         guide = BuyingGuide.objects.first()
         response = self.client.get(guide.get_absolute_url())
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '"@type": "Article"')
+        self.assertContains(response, '"@type":"Article"')
         sitemap = self.client.get(reverse("commercial_sitemap"))
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, "/laptop-prices-in-uganda/")
@@ -164,7 +164,9 @@ class MerchantReadinessTests(TestCase):
         now = timezone.now()
         self.profile.identity_verified_at = now
         self.profile.condition_verified_at = now
-        self.profile.save(update_fields=["identity_verified_at", "condition_verified_at", "updated_at"])
+        self.profile.save(
+            update_fields=["identity_verified_at", "condition_verified_at", "updated_at"]
+        )
         with patch.object(
             Product,
             "primary_display_image",
