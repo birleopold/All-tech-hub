@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/merchandising.js' %}" defer></script>{% endblock %}
