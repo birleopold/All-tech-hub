@@ -137,6 +137,24 @@ LOYALTY_PLATINUM_POINTS = max(
     int(os.getenv("ALLTECH_LOYALTY_PLATINUM_POINTS", "1500")),
 )
 PUBLIC_BASE_URL = os.getenv("ALLTECH_PUBLIC_BASE_URL", "https://leosoftug.com").rstrip("/")
+SEO_DEFAULT_TITLE = os.getenv(
+    "ALLTECH_SEO_DEFAULT_TITLE",
+    "LEOSOFT UG LTD — Computers, technology and IT support in Uganda",
+).strip()
+SEO_DEFAULT_DESCRIPTION = os.getenv(
+    "ALLTECH_SEO_DEFAULT_DESCRIPTION",
+    (
+        "Shop computers and accessories, compare dependable options, request formal "
+        "quotations, and book repairs, installations and business IT support in Uganda."
+    ),
+).strip()
+SEO_DEFAULT_IMAGE_URL = os.getenv("ALLTECH_SEO_DEFAULT_IMAGE_URL", "").strip()
+SEO_TWITTER_SITE = os.getenv("ALLTECH_SEO_TWITTER_SITE", "").strip()
+BING_SITE_VERIFICATION_TOKEN = os.getenv(
+    "ALLTECH_BING_SITE_VERIFICATION_TOKEN", ""
+).strip()
+INDEXNOW_ENABLED = env_bool("ALLTECH_INDEXNOW_ENABLED", False)
+INDEXNOW_KEY = os.getenv("ALLTECH_INDEXNOW_KEY", "").strip()
 CUSTOMER_CAMPAIGN_SEND_ENABLED = env_bool(
     "ALLTECH_CUSTOMER_CAMPAIGN_SEND_ENABLED",
     False,
