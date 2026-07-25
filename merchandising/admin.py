@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
 from merchandising.models import (
     BuyingGuide,
@@ -41,9 +41,15 @@ class BuyingGuideAdmin(admin.ModelAdmin):
     date_hierarchy = "published_at"
 
 
-@admin.action(description="Mark selected records as price and stock verified now")
+@admin.action(description="Mark identity, condition, price and stock verified now")
 def mark_verified_now(modeladmin, request, queryset):
-    queryset.update(stock_confirmed_at=timezone.now(), price_verified_at=timezone.now())
+    now = timezone.now()
+    queryset.update(
+        identity_verified_at=now,
+        condition_verified_at=now,
+        stock_confirmed_at=now,
+        price_verified_at=now,
+    )
 
 
 @admin.action(description="Disable Merchant publication for selected records")
@@ -60,9 +66,16 @@ class ProductCommerceProfileAdmin(admin.ModelAdmin):
         "readiness_badge",
         "actual_photos",
         "warranty_months",
+        "condition_verified_at",
         "stock_confirmed_at",
     )
-    list_filter = ("merchant_enabled", "actual_photos", "merchant_free_shipping", "charger_included")
+    list_filter = (
+        "merchant_enabled",
+        "actual_photos",
+        "merchant_free_shipping",
+        "charger_included",
+        "condition_verified_at",
+    )
     search_fields = (
         "product__name",
         "product__sku",
@@ -90,6 +103,7 @@ class ProductCommerceProfileAdmin(admin.ModelAdmin):
             "charger_included",
             "accessories_included",
             "warranty_months",
+            ("identity_verified_at", "condition_verified_at"),
         )}),
         ("Availability and delivery", {"fields": (
             "delivery_note",
@@ -126,7 +140,11 @@ class ProductCommerceProfileAdmin(admin.ModelAdmin):
         missing = obj.merchant_missing_fields()
         if not missing:
             return "Ready for strict Merchant publication."
-        return format_html("<strong>{}% ready</strong><br>{}", obj.merchant_readiness_score, "<br>".join(f"• {item}" for item in missing))
+        return format_html(
+            "<strong>{}% ready</strong><br>{}",
+            obj.merchant_readiness_score,
+            format_html_join("", "• {}<br>", ((item,) for item in missing)),
+        )
 
 
 @admin.register(DeliveryZone)
