@@ -1,0 +1,34 @@
+<section class="market-section">
+  <div class="container">
+    <div class="market-section-heading" data-reveal>
+      <div class="market-section-heading__copy">
+        <p class="market-kicker">Condition transparency</p>
+        <h2 class="market-section-title">Know what each condition label means</h2>
+        <p class="market-section-intro">Condition labels support better decisions, but customers should still review the actual product description and photographs.</p>
+      </div>
+      <a class="market-section-link" href="{% url 'buying_guide' %}">Read the buying guide <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="market-condition-grid">
+      {% for condition in condition_guide %}
+      <a class="market-condition-card" href="{% url 'physical_product_list' %}?condition={{ condition.code }}">
+        <span>{{ condition.name }}</span>
+        <strong>{{ condition.name }} technology</strong>
+        <p>{{ condition.copy }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="public-section--compact pb-5">
+  <div class="container">
+    <div class="public-cta" data-reveal>
+      <div>
+        <p class="public-eyebrow mb-2">Need a recommendation?</p>
+        <h2>Tell us the purpose, budget and preferred specifications.</h2>
+        <p>The team can help narrow the catalogue, confirm availability and prepare a formal quotation.</p>
+      </div>
+      <a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}?type=product">Talk to the team <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+  </div>
+</section>
