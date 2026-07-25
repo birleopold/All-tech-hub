@@ -1,16 +1,22 @@
 {% extends "base.html" %}
-{% block title %}{{ company.company_name|default:"LEOSOFT UG LTD" }} — Computers, technology and IT support in Uganda{% endblock %}
+{% block title %}{{ seo_default_title }}{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body public-home-page marketplace-home-page{% endblock %}
 {% block meta %}
-<meta name="description" content="Shop computers, accessories and dependable technology, compare options, request formal quotations, and book repairs or professional IT support from {{ company.company_name|default:'LEOSOFT UG LTD' }}.">
-<link rel="canonical" href="{{ request.build_absolute_uri }}">
+<meta name="description" content="{{ seo_default_description }}">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="{{ seo_default_canonical_url }}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="{{ seo_og_locale|default:'en_UG' }}">
 <meta property="og:site_name" content="{{ company.company_name }}">
-<meta property="og:title" content="{{ company.company_name }} — Technology organised around your needs">
-<meta property="og:description" content="Computers, accessories, repairs, installations and professional IT support from one accountable team.">
-<meta property="og:url" content="{{ request.build_absolute_uri }}">
-{% if company.logo %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ company.logo.url }}">{% endif %}
-<meta name="twitter:card" content="{% if company.logo %}summary_large_image{% else %}summary{% endif %}">
+<meta property="og:title" content="{{ seo_default_title }}">
+<meta property="og:description" content="{{ seo_default_description }}">
+<meta property="og:url" content="{{ seo_default_canonical_url }}">
+{% if seo_default_image_url %}<meta property="og:image" content="{{ seo_default_image_url }}"><meta property="og:image:alt" content="{{ company.company_name }} technology products and IT support">{% endif %}
+<meta name="twitter:card" content="{% if seo_default_image_url %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ seo_default_title }}">
+<meta name="twitter:description" content="{{ seo_default_description }}">
+{% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="{{ company.company_name }} technology products and IT support">{% endif %}
+{% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
 {% endblock %}
 {% block content %}
 <section class="market-home-hero">
@@ -28,16 +34,16 @@
           <div id="market-hero-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
           <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
         </form>
-        <div class="market-hero-popular" aria-label="Popular searches"><span>Popular:</span><a href="{% url 'product_list' %}?q=laptop">Laptops</a><a href="{% url 'product_list' %}?q=core+i5">Core i5</a><a href="{% url 'product_list' %}?q=ssd">SSD storage</a><a href="{% url 'product_list' %}?collection=student">Student options</a><a href="{% url 'product_list' %}?collection=business">Business computers</a></div>
+        <div class="market-hero-popular" aria-label="Popular searches"><span>Popular:</span><a href="{% url 'product_list' %}?q=laptop">Laptops</a><a href="{% url 'product_list' %}?q=core+i5">Core i5</a><a href="{% url 'product_list' %}?q=ssd">SSD storage</a><a href="{% url 'product_collection' 'student' %}">Student options</a><a href="{% url 'product_collection' 'business' %}">Business computers</a></div>
       </div>
       <div class="col-lg-5" data-reveal data-reveal-delay="2">
         <div class="market-hero-panel">
           <div class="market-hero-panel__head"><div><small>Start with your goal</small><strong>What are you looking for today?</strong></div><span>{% if site_is_open %}Team online{% else %}Send a request{% endif %}</span></div>
           <div class="market-hero-panel__links">
-            <a href="{% url 'product_list' %}?kind=physical"><i class="bi bi-laptop"></i><span><strong>Buy computers and accessories</strong><small>Browse prices, condition, stock and product options</small></span><i class="bi bi-arrow-up-right"></i></a>
-            <a href="{% url 'product_list' %}?collection=deals"><i class="bi bi-tags"></i><span><strong>See current deals</strong><small>Genuine reduced prices and highlighted catalogue offers</small></span><i class="bi bi-arrow-up-right"></i></a>
-            <a href="{% url 'product_list' %}?kind=service"><i class="bi bi-tools"></i><span><strong>Book repair or technical support</strong><small>Diagnostics, installation, networking and IT services</small></span><i class="bi bi-arrow-up-right"></i></a>
-            <a href="{% url 'contact' %}?type=quote"><i class="bi bi-file-earmark-text"></i><span><strong>Request a formal quotation</strong><small>For schools, businesses, organisations and personal purchases</small></span><i class="bi bi-arrow-up-right"></i></a>
+            <a href="{% url 'physical_product_list' %}"><i class="bi bi-laptop" aria-hidden="true"></i><span><strong>Buy computers and accessories</strong><small>Browse prices, condition, stock and product options</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            <a href="{% url 'product_collection' 'deals' %}"><i class="bi bi-tags" aria-hidden="true"></i><span><strong>See current deals</strong><small>Genuine reduced prices and highlighted catalogue offers</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            <a href="{% url 'service_list' %}"><i class="bi bi-tools" aria-hidden="true"></i><span><strong>Book repair or technical support</strong><small>Diagnostics, installation, networking and IT services</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+            <a href="{% url 'contact' %}?type=quote"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span><strong>Request a formal quotation</strong><small>For schools, businesses, organisations and personal purchases</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
           </div>
         </div>
       </div>
@@ -45,107 +51,25 @@
   </div>
 </section>
 
-{% if catalog_categories %}
-<section class="market-section market-section--soft">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by department</p><h2 class="market-section-title">Start with a category</h2><p class="market-section-intro">Move quickly from a broad technology need to the products and services that matter.</p></div><a class="market-section-link" href="{% url 'product_list' %}">View all categories <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-category-rail">
-      {% for category in catalog_categories %}
-      <a class="market-category-tile" href="{% url 'product_list' %}?category={{ category.slug|urlencode }}" data-reveal>
-        {% if forloop.counter == 1 %}<i class="bi bi-laptop"></i>{% elif forloop.counter == 2 %}<i class="bi bi-pc-display"></i>{% elif forloop.counter == 3 %}<i class="bi bi-router"></i>{% elif forloop.counter == 4 %}<i class="bi bi-printer"></i>{% elif forloop.counter == 5 %}<i class="bi bi-device-ssd"></i>{% elif forloop.counter == 6 %}<i class="bi bi-mouse"></i>{% else %}<i class="bi bi-grid"></i>{% endif %}
-        <strong>{{ category.name }}</strong><small>{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</small>
-      </a>
-      {% endfor %}
-    </div>
-  </div>
-</section>
-{% endif %}
+{% if catalog_categories %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by department</p><h2 class="market-section-title">Start with a category</h2><p class="market-section-intro">Move quickly from a broad technology need to the products and services that matter.</p></div><a class="market-section-link" href="{% url 'product_list' %}">View all categories <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-category-rail">{% for category in catalog_categories %}<a class="market-category-tile" href="{% url 'product_category' category.slug %}" data-reveal>{% if forloop.counter == 1 %}<i class="bi bi-laptop" aria-hidden="true"></i>{% elif forloop.counter == 2 %}<i class="bi bi-pc-display" aria-hidden="true"></i>{% elif forloop.counter == 3 %}<i class="bi bi-router" aria-hidden="true"></i>{% elif forloop.counter == 4 %}<i class="bi bi-printer" aria-hidden="true"></i>{% elif forloop.counter == 5 %}<i class="bi bi-device-ssd" aria-hidden="true"></i>{% elif forloop.counter == 6 %}<i class="bi bi-mouse" aria-hidden="true"></i>{% else %}<i class="bi bi-grid" aria-hidden="true"></i>{% endif %}<strong>{{ category.name }}</strong><small>{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</small></a>{% endfor %}</div></div></section>{% endif %}
 
-{% if deal_products %}
-<section class="market-section">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Current value</p><h2 class="market-section-title">Deals worth checking</h2><p class="market-section-intro">Products showing a genuine previous comparison price above the current public price.</p></div><a class="market-section-link" href="{% url 'product_list' %}?collection=deals">View all deals <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-product-grid">{% for p in deal_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if deal_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Current value</p><h2 class="market-section-title">Deals worth checking</h2><p class="market-section-intro">Products showing a genuine previous comparison price above the current public price.</p></div><a class="market-section-link" href="{% url 'product_collection' 'deals' %}">View all deals <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in deal_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div></div></section>{% endif %}
 
-<section class="market-section market-section--soft">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by purpose</p><h2 class="market-section-title">Choose according to the job</h2><p class="market-section-intro">Start with how the technology will be used, then compare specifications and budget.</p></div></div>
-    <div class="market-purpose-grid">{% for collection in purpose_collections %}<a class="market-purpose-card" href="{% url 'product_list' %}?collection={{ collection.slug }}" data-reveal><i class="bi {{ collection.icon }}"></i><h3>{{ collection.title }}</h3><p>{{ collection.description }}</p></a>{% endfor %}</div>
-  </div>
-</section>
+<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by purpose</p><h2 class="market-section-title">Choose according to the job</h2><p class="market-section-intro">Start with how the technology will be used, then compare specifications and budget.</p></div></div><div class="market-purpose-grid">{% for collection in purpose_collections %}<a class="market-purpose-card" href="{% url 'product_collection' collection.slug %}" data-reveal><i class="bi {{ collection.icon }}" aria-hidden="true"></i><h3>{{ collection.title }}</h3><p>{{ collection.description }}</p></a>{% endfor %}</div></div></section>
 
-{% if featured_products %}
-<section class="market-section">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Team selections</p><h2 class="market-section-title">Featured technology</h2><p class="market-section-intro">A rotating selection of useful computers, accessories and equipment from the live catalogue.</p></div><a class="market-section-link" href="{% url 'product_list' %}?collection=featured">Shop featured products <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-product-grid">{% for p in featured_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if featured_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Team selections</p><h2 class="market-section-title">Featured technology</h2><p class="market-section-intro">A rotating selection of useful computers, accessories and equipment from the live catalogue.</p></div><a class="market-section-link" href="{% url 'product_collection' 'featured' %}">Shop featured products <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in featured_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div></div></section>{% endif %}
 
-{% if brand_collections %}
-<section class="market-section market-section--soft">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by brand</p><h2 class="market-section-title">Find familiar technology brands</h2><p class="market-section-intro">Brand filters are generated from verified product catalogue data.</p></div></div>
-    <div class="market-brand-grid">{% for brand in brand_collections %}<a class="market-brand-card" href="{% url 'product_list' %}?brand={{ brand.brand|urlencode }}"><strong>{{ brand.brand }}</strong><small>{{ brand.product_count }} product{{ brand.product_count|pluralize }}</small></a>{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if brand_collections %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by brand</p><h2 class="market-section-title">Find familiar technology brands</h2><p class="market-section-intro">Brand pages are generated from verified product catalogue data.</p></div></div><div class="market-brand-grid">{% for brand in brand_collections %}<a class="market-brand-card" href="{% url 'product_brand' brand.slug %}"><strong>{{ brand.brand }}</strong><small>{{ brand.product_count }} product{{ brand.product_count|pluralize }}</small></a>{% endfor %}</div></div></section>{% endif %}
 
-<section class="market-section">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by budget</p><h2 class="market-section-title">Narrow the options before comparing</h2><p class="market-section-intro">Use a practical price range, then refine by category, brand, condition and availability.</p></div></div>
-    <div class="market-budget-grid">{% for budget in budget_collections %}<a class="market-budget-card" href="{% url 'product_list' %}?kind=physical{% if budget.min_price %}&amp;min_price={{ budget.min_price }}{% endif %}{% if budget.max_price %}&amp;max_price={{ budget.max_price }}{% endif %}"><strong>{{ budget.title }}</strong><p>{{ budget.description }}</p></a>{% endfor %}</div>
-  </div>
-</section>
+<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by budget</p><h2 class="market-section-title">Narrow the options before comparing</h2><p class="market-section-intro">Use a practical price range, then refine by category, brand, condition and availability.</p></div></div><div class="market-budget-grid">{% for budget in budget_collections %}<a class="market-budget-card" href="{% url 'physical_product_list' %}?{% if budget.min_price %}min_price={{ budget.min_price }}{% endif %}{% if budget.min_price and budget.max_price %}&amp;{% endif %}{% if budget.max_price %}max_price={{ budget.max_price }}{% endif %}"><strong>{{ budget.title }}</strong><p>{{ budget.description }}</p></a>{% endfor %}</div></div></section>
 
-{% if new_arrivals %}
-<section class="market-section market-section--soft">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Recently added</p><h2 class="market-section-title">New arrivals</h2><p class="market-section-intro">The latest physical products published in the LEOSOFT catalogue.</p></div><a class="market-section-link" href="{% url 'product_list' %}?collection=new">See all new arrivals <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-product-grid">{% for p in new_arrivals %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if new_arrivals %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Recently added</p><h2 class="market-section-title">New arrivals</h2><p class="market-section-intro">The latest physical products published in the LEOSOFT catalogue.</p></div><a class="market-section-link" href="{% url 'product_collection' 'new' %}">See all new arrivals <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in new_arrivals %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div></div></section>{% endif %}
 
-{% if recently_viewed_products %}
-<section class="market-section">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Continue exploring</p><h2 class="market-section-title">Recently viewed</h2><p class="market-section-intro">Return to products and services you opened during recent catalogue visits.</p></div><a class="market-section-link" href="{% url 'product_list' %}">Browse full catalogue <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-product-grid">{% for p in recently_viewed_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if recently_viewed_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Continue exploring</p><h2 class="market-section-title">Recently viewed</h2><p class="market-section-intro">Return to products and services you opened during recent catalogue visits.</p></div><a class="market-section-link" href="{% url 'product_list' %}">Browse full catalogue <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in recently_viewed_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div></div></section>{% endif %}
 
-{% if refurbished_products %}
-<section class="market-section">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Clearly identified condition</p><h2 class="market-section-title">Refurbished technology</h2><p class="market-section-intro">Pre-owned technology presented with a clear condition label so customers know what they are considering.</p></div><a class="market-section-link" href="{% url 'product_list' %}?collection=refurbished">Browse refurbished products <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-product-grid">{% for p in refurbished_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if refurbished_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Clearly identified condition</p><h2 class="market-section-title">Refurbished technology</h2><p class="market-section-intro">Pre-owned technology presented with a clear condition label so customers know what they are considering.</p></div><a class="market-section-link" href="{% url 'product_collection' 'refurbished' %}">Browse refurbished products <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in refurbished_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=False show_compare=False %}{% endfor %}</div></div></section>{% endif %}
 
-{% if featured_services %}
-<section class="market-section market-section--soft">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Services and support</p><h2 class="market-section-title">Technology support beyond the sale</h2><p class="market-section-intro">Repairs, installation, diagnostics, networking and business support can be requested through the same accountable system.</p></div><a class="market-section-link" href="{% url 'product_list' %}?kind=service">View all services <i class="bi bi-arrow-right"></i></a></div>
-    <div class="market-purpose-grid">{% for p in featured_services %}<a class="market-purpose-card" href="{{ p.get_absolute_url }}"><i class="bi {% if forloop.counter == 1 %}bi-tools{% elif forloop.counter == 2 %}bi-router{% elif forloop.counter == 3 %}bi-shield-check{% else %}bi-gear{% endif %}"></i><h3>{{ p.name }}</h3><p>{{ p.short_description|default:p.description|truncatewords:22 }} · From {{ company.currency_code }} {{ p.public_price|floatformat:0 }}</p></a>{% endfor %}</div>
-  </div>
-</section>
-{% endif %}
+{% if featured_services %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Services and support</p><h2 class="market-section-title">Technology support beyond the sale</h2><p class="market-section-intro">Repairs, installation, diagnostics, networking and business support can be requested through the same accountable system.</p></div><a class="market-section-link" href="{% url 'service_list' %}">View all services <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-purpose-grid">{% for p in featured_services %}<a class="market-purpose-card" href="{{ p.get_absolute_url }}"><i class="bi {% if forloop.counter == 1 %}bi-tools{% elif forloop.counter == 2 %}bi-router{% elif forloop.counter == 3 %}bi-shield-check{% else %}bi-gear{% endif %}" aria-hidden="true"></i><h3>{{ p.name }}</h3><p>{{ p.short_description|default:p.description|truncatewords:22 }} · From {{ company.currency_code }} {{ p.public_price|floatformat:0 }}</p></a>{% endfor %}</div></div></section>{% endif %}
 
-<section class="market-section">
-  <div class="container">
-    <div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Condition transparency</p><h2 class="market-section-title">Know what each condition label means</h2><p class="market-section-intro">Condition labels support better decisions, but customers should still review the actual product description and photographs.</p></div></div>
-    <div class="market-condition-grid">{% for condition in condition_guide %}<a class="market-condition-card" href="{% url 'product_list' %}?condition={{ condition.code }}"><span>{{ condition.name }}</span><strong>{{ condition.name }} technology</strong><p>{{ condition.copy }}</p></a>{% endfor %}</div>
-  </div>
-</section>
-
-<section class="public-section--compact pb-5">
-  <div class="container"><div class="public-cta" data-reveal><div><p class="public-eyebrow mb-2">Need a recommendation?</p><h2>Tell us the purpose, budget and preferred specifications.</h2><p>The team can help narrow the catalogue, confirm availability and prepare a formal quotation.</p></div><a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}?type=product">Talk to the team <i class="bi bi-arrow-right"></i></a></div></div>
-</section>
+{% include "core/_home_condition_and_cta.html" %}
 {% endblock %}

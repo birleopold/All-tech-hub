@@ -1,11 +1,8 @@
-import json
-
-from django.utils.safestring import mark_safe
-
 from catalog.models import Product
 from commerce import cart as cart_mod
 from commerce.models import Order
 from core.models import CompanySettings
+from core.seo import html_language, og_locale, public_url, script_safe_json
 from growth.models import GrowthSettings
 from growth.services import (
     ANALYTICS_SESSION_KEY,
@@ -97,14 +94,12 @@ def _page_analytics_events(request, company) -> list[dict]:
     return []
 
 
-def growth_context(request):
-    growth = GrowthSettings.load()
-    pending = request.session.pop(ANALYTICS_SESSION_KEY, [])
-    if pending:
-        request.session.modified = True
+def _organization_schema(request, company, growth, social) -> str:
+    match = getattr(request, "resolver_match", None)
+    url_name = getattr(match, "url_name", "") or ""
+    if url_name not in {"home", "about", "contact", "buying_guide"}:
+        return ""
 
-    company = CompanySettings.load()
-    social = SocialProfileSettings.load()
     same_as = [
         value
         for value in (
@@ -118,18 +113,47 @@ def growth_context(request):
         )
         if value
     ]
+    home_url = public_url("/")
     schema = {
         "@context": "https://schema.org",
-        "@type": "ComputerStore",
+        "@type": ["OnlineStore", "ComputerStore"],
+        "@id": f"{home_url}#organization",
         "name": company.legal_name or company.company_name,
-        "url": company.website or request.build_absolute_uri("/"),
+        "alternateName": company.company_name,
+        "url": home_url,
+        "description": company.tagline
+        or "Technology products, repairs and professional IT support.",
+        "areaServed": {
+            "@type": "Country",
+            "name": company.country or "Uganda",
+        },
+        "currenciesAccepted": company.currency_code,
+        "knowsAbout": [
+            "Computers",
+            "Laptops",
+            "Computer accessories",
+            "Computer repair",
+            "IT installation",
+            "Business IT support",
+        ],
     }
     if company.logo:
-        schema["logo"] = request.build_absolute_uri(company.logo.url)
-    if company.phone:
-        schema["telephone"] = company.phone
-    if company.email:
-        schema["email"] = company.email
+        schema["logo"] = public_url(company.logo.url)
+        schema["image"] = public_url(company.logo.url)
+    if company.phone or company.email:
+        contact_point = {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "availableLanguage": [growth.merchant_language or "en"],
+            "areaServed": growth.merchant_country or "UG",
+        }
+        if company.phone:
+            contact_point["telephone"] = company.phone
+            schema["telephone"] = company.phone
+        if company.email:
+            contact_point["email"] = company.email
+            schema["email"] = company.email
+        schema["contactPoint"] = contact_point
     if growth.google_place_id:
         schema["identifier"] = growth.google_place_id
     if growth.google_business_profile_url:
@@ -143,14 +167,54 @@ def growth_context(request):
             "addressLocality": company.city,
             "addressRegion": company.region,
             "postalCode": company.postal_code,
-            "addressCountry": company.country,
+            "addressCountry": company.country or growth.merchant_country,
         }
+    if growth.merchant_shipping_service:
+        schema["hasShippingService"] = {
+            "@type": "ShippingService",
+            "@id": f"{home_url}#shipping-policy",
+            "name": growth.merchant_shipping_service,
+            "fulfillmentType": "https://schema.org/FulfillmentTypeDelivery",
+            "shippingConditions": {
+                "@type": "ShippingConditions",
+                "shippingDestination": {
+                    "@type": "DefinedRegion",
+                    "addressCountry": growth.merchant_country,
+                },
+                "shippingRate": {
+                    "@type": "MonetaryAmount",
+                    "value": str(growth.merchant_shipping_price),
+                    "currency": company.currency_code,
+                },
+            },
+        }
+    return script_safe_json(schema)
 
+
+def growth_context(request):
+    growth = GrowthSettings.load()
+    pending = request.session.pop(ANALYTICS_SESSION_KEY, [])
+    if pending:
+        request.session.modified = True
+
+    company = CompanySettings.load()
+    social = SocialProfileSettings.load()
     return {
         "growth_settings": growth,
         "analytics_pending_events": pending if isinstance(pending, list) else [],
         "analytics_page_events": _page_analytics_events(request, company),
-        "local_business_schema_json": mark_safe(
-            json.dumps(schema, separators=(",", ":")).replace("</", "<\\/")
+        "local_business_schema_json": _organization_schema(
+            request,
+            company,
+            growth,
+            social,
+        ),
+        "seo_html_language": html_language(
+            growth.merchant_language,
+            growth.merchant_country,
+        ),
+        "seo_og_locale": og_locale(
+            growth.merchant_language,
+            growth.merchant_country,
         ),
     }

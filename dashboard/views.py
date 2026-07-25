@@ -12,6 +12,7 @@ from core.backups import latest_backup_status
 from core.filters import apply_job_filters, apply_ticket_filters
 from core.mixins import StaffRequiredMixin
 from core.models import ContactMessage, SupportTicket
+from core.seo_audit import seo_audit_snapshot
 from operations.models import JobCard, JobFeedback
 
 
@@ -86,6 +87,11 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
             or backup_status.age_hours is None
             or backup_status.age_hours > 48
         )
+        seo_snapshot = seo_audit_snapshot()
+        ctx["seo_score"] = seo_snapshot["score"]
+        ctx["seo_requires_attention"] = bool(
+            seo_snapshot["critical"] or seo_snapshot["warnings"]
+        )
         return ctx
 
 
@@ -137,4 +143,13 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
                 "current_publication": publication,
             }
         )
+        return context
+
+
+class SEOControlCenterView(StaffRequiredMixin, TemplateView):
+    template_name = "dashboard/seo_control_center.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["seo"] = seo_audit_snapshot()
         return context

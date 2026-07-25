@@ -1,5 +1,22 @@
 {% extends "base.html" %}
-{% block title %}About {{ company.company_name|default:"ALLTECH Hub" }}{% endblock %}
+{% block title %}About {{ company.company_name|default:"LEOSOFT UG LTD" }} | Technology retail and IT support{% endblock %}
+{% block meta %}
+<meta name="description" content="Learn how {{ company.company_name }} provides computers, accessories, repairs, installations, business IT support and accountable customer documentation in Uganda.">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="{{ seo_default_canonical_url }}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="{{ seo_og_locale|default:'en_UG' }}">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="About {{ company.company_name }}">
+<meta property="og:description" content="Technology retail, practical technical service and accountable customer support in Uganda.">
+<meta property="og:url" content="{{ seo_default_canonical_url }}">
+{% if seo_default_image_url %}<meta property="og:image" content="{{ seo_default_image_url }}"><meta property="og:image:alt" content="About {{ company.company_name }}">{% endif %}
+<meta name="twitter:card" content="{% if seo_default_image_url %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="About {{ company.company_name }}">
+<meta name="twitter:description" content="Technology retail, repairs, installations and business IT support in Uganda.">
+{% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="About {{ company.company_name }}">{% endif %}
+{% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
+{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">

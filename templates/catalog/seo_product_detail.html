@@ -1,0 +1,24 @@
+{% extends "catalog/product_detail.html" %}
+{% block title %}{{ share_title }}{% endblock %}
+{% block meta %}
+<meta name="description" content="{{ meta_description }}">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="{{ canonical_url }}">
+<meta property="og:type" content="product">
+<meta property="og:locale" content="{{ seo_og_locale|default:'en_UG' }}">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="{{ share_title }}">
+<meta property="og:description" content="{{ meta_description }}">
+<meta property="og:url" content="{{ canonical_url }}">
+{% if social_image_url %}<meta property="og:image" content="{{ social_image_url }}"><meta property="og:image:alt" content="{{ product.name }}">{% endif %}
+<meta property="product:price:amount" content="{{ product.public_price }}">
+<meta property="product:price:currency" content="{{ company.currency_code }}">
+<meta property="product:availability" content="{% if product.public_available %}in stock{% else %}out of stock{% endif %}">
+{% if product.public_brand %}<meta property="product:brand" content="{{ product.public_brand }}">{% endif %}
+{% if product.public_condition %}<meta property="product:condition" content="{{ product.public_condition|lower }}">{% endif %}
+<meta name="twitter:card" content="{% if social_image_url %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ share_title }}">
+<meta name="twitter:description" content="{{ meta_description }}">
+{% if social_image_url %}<meta name="twitter:image" content="{{ social_image_url }}"><meta name="twitter:image:alt" content="{{ product.name }}">{% endif %}
+{% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
+{% endblock %}

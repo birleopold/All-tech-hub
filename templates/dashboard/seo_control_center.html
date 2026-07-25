@@ -1,0 +1,58 @@
+{% extends "staff_base.html" %}
+{% block title %}SEO control center{% endblock %}
+{% block staff_page_name %}SEO control center{% endblock %}
+{% block staff_content %}
+<section class="staff-dashboard">
+  <div class="staff-dashboard-header">
+    <div>
+      <p class="text-primary small fw-semibold text-uppercase mb-1">Search discoverability</p>
+      <h1>SEO readiness and indexing</h1>
+      <p class="text-muted mb-0">Technical eligibility, discovery endpoints and catalogue data that influence how search engines understand LEOSOFT.</p>
+    </div>
+    <div class="staff-dashboard-actions">
+      <a class="btn btn-primary" href="{{ seo.endpoints.sitemap_index }}" target="_blank" rel="noopener noreferrer">Open sitemap</a>
+      <a class="btn btn-outline-primary" href="{% url 'staff_catalogue_quality' %}">Catalogue quality</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">SEO readiness</p><p class="staff-metric-value">{{ seo.score }}%</p><p class="staff-metric-subtext">Technical and content configuration</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Published listings</p><p class="staff-metric-value">{{ seo.metrics.published_listings }}</p><p class="staff-metric-subtext">Products and services search engines may discover</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Public categories</p><p class="staff-metric-value">{{ seo.metrics.public_categories }}</p><p class="staff-metric-subtext">Clean category landing pages</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Critical issues</p><p class="staff-metric-value">{{ seo.critical|length }}</p><p class="staff-metric-subtext">Must be fixed before relying on indexing</p></div></div></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-xl-7">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body">
+          <div class="staff-panel-heading"><h2>Configuration and content actions</h2></div>
+          {% if seo.critical %}<div class="alert alert-danger"><strong>Critical</strong><ul class="mb-0 mt-2">{% for item in seo.critical %}<li>{{ item }}</li>{% endfor %}</ul></div>{% endif %}
+          {% if seo.warnings %}<div class="vstack gap-2">{% for item in seo.warnings %}<div class="d-flex gap-2 align-items-start border rounded p-3"><i class="bi bi-exclamation-triangle-fill text-warning mt-1" aria-hidden="true"></i><span>{{ item }}</span></div>{% endfor %}</div>{% else %}<div class="alert alert-success mb-0">No outstanding SEO readiness warnings were detected.</div>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-5">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body">
+          <div class="staff-panel-heading"><h2>Configured signals</h2></div>
+          <div class="staff-health-list">{% for item in seo.successes %}<div class="staff-health-row"><span>{{ item }}</span><span class="badge rounded-pill text-bg-success">Ready</span></div>{% empty %}<div class="staff-empty-state">Complete the configuration actions to build verified signals.</div>{% endfor %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card staff-panel-card h-100"><div class="card-body"><div class="staff-panel-heading"><h2>Discovery endpoints</h2></div><div class="staff-health-list">{% for endpoint in seo.endpoint_rows %}<div class="staff-health-row"><span>{{ endpoint.label }}</span><a href="{{ endpoint.url }}" target="_blank" rel="noopener noreferrer">Open <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>{% endfor %}</div></div></div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card staff-panel-card h-100"><div class="card-body"><div class="staff-panel-heading"><h2>Catalogue SEO gaps</h2><a href="{% url 'staff_catalogue_quality' %}">Improve products</a></div><div class="staff-health-list"><div class="staff-health-row"><span>Products without images</span><span class="badge rounded-pill {% if seo.metrics.products_without_images %}text-bg-danger{% else %}text-bg-success{% endif %}">{{ seo.metrics.products_without_images }}</span></div><div class="staff-health-row"><span>Listings without descriptions</span><span class="badge rounded-pill {% if seo.metrics.products_without_description %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.products_without_description }}</span></div><div class="staff-health-row"><span>Physical products without SKUs</span><span class="badge rounded-pill {% if seo.metrics.physical_without_sku %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_sku }}</span></div><div class="staff-health-row"><span>Products without brand</span><span class="badge rounded-pill {% if seo.metrics.physical_without_brand %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_brand }}</span></div><div class="staff-health-row"><span>Manufacturer identifiers missing</span><span class="badge rounded-pill {% if seo.metrics.physical_without_identifiers %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_identifiers }}</span></div><div class="staff-health-row"><span>Categories without descriptions</span><span class="badge rounded-pill {% if seo.metrics.categories_without_description %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.categories_without_description }}</span></div></div></div></div>
+    </div>
+  </div>
+
+  <div class="card staff-panel-card"><div class="card-body"><div class="staff-panel-heading"><h2>Server commands</h2></div><p class="text-muted">Use these commands after meaningful catalogue or content changes.</p><pre class="bg-dark text-light rounded p-3 mb-2"><code>python manage.py audit_seo
+python manage.py submit_indexnow --recent-hours 24 --dry-run
+python manage.py submit_indexnow --recent-hours 24</code></pre><p class="small text-muted mb-0">A successful technical setup makes pages eligible for discovery. Ranking growth still depends on useful original content, accurate product data, customer trust, links and sustained performance.</p></div></div>
+</section>
+{% endblock %}

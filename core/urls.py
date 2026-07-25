@@ -12,7 +12,7 @@ urlpatterns = [
     path("about/", views.AboutView.as_view(), name="about"),
     path(
         "buying-guide/",
-        TemplateView.as_view(template_name="core/buying_guide.html"),
+        TemplateView.as_view(template_name="core/seo_buying_guide.html"),
         name="buying_guide",
     ),
     path("contact/", public_contact_view, name="contact"),

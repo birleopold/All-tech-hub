@@ -51,11 +51,12 @@
     </div>
   </details>
 
-  <details class="staff-nav-group" {% if u == 'staff_reports' or u == 'staff_conversion_lifecycle' or 'staff_marketing' in u or 'staff_growth' in u %}open{% endif %}>
+  <details class="staff-nav-group" {% if u == 'staff_reports' or u == 'staff_conversion_lifecycle' or u == 'staff_seo' or 'staff_marketing' in u or 'staff_growth' in u %}open{% endif %}>
     <summary><span><i class="bi bi-bar-chart-fill" aria-hidden="true"></i>Reports &amp; growth</span><i class="bi bi-chevron-down staff-nav-chevron" aria-hidden="true"></i></summary>
     <div class="staff-nav-submenu">
       <a class="staff-nav-link" href="{% url 'staff_reports' %}" {% if u == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a>
       <a class="staff-nav-link" href="{% url 'staff_conversion_lifecycle' %}" {% if u == 'staff_conversion_lifecycle' %}aria-current="page"{% endif %}>Conversion lifecycle</a>
+      <a class="staff-nav-link" href="{% url 'staff_seo' %}" {% if u == 'staff_seo' %}aria-current="page"{% endif %}>SEO control center</a>
       <a class="staff-nav-link" href="{% url 'staff_marketing_dashboard' %}" {% if 'staff_marketing' in u and 'staff_growth' not in u %}aria-current="page"{% endif %}>Marketing automation</a>
       <a class="staff-nav-link" href="{% url 'staff_growth_dashboard' %}" {% if 'staff_growth' in u %}aria-current="page"{% endif %}>Growth analytics</a>
     </div>

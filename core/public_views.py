@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.db.models import Count, F, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.text import slugify
 
 from catalog.discovery import new_rotation_seed, order_for_discovery
 from catalog.experience import recent_products
@@ -9,6 +10,7 @@ from catalog.models import Product
 from catalog.presentation import prepare_public_products
 from core.forms import ContactForm
 from core.models import hours_summary, is_open_now
+from core.seo import public_url
 from core.views import HomeView
 from growth.models import ProductGrowthData
 
@@ -132,7 +134,7 @@ class PublicHomeView(HomeView):
         context["recently_viewed_products"] = prepare_public_products(
             recent_products(self.request, limit=8)
         )
-        context["brand_collections"] = list(
+        brand_rows = list(
             ProductGrowthData.objects.filter(
                 product__is_published=True,
                 product__kind=Product.KIND_PHYSICAL,
@@ -142,6 +144,9 @@ class PublicHomeView(HomeView):
             .annotate(product_count=Count("product_id", distinct=True))
             .order_by("-product_count", "brand")[:10]
         )
+        for brand in brand_rows:
+            brand["slug"] = slugify(brand["brand"])
+        context["brand_collections"] = brand_rows
         context["purpose_collections"] = self.PURPOSE_COLLECTIONS
         context["budget_collections"] = self.BUDGET_COLLECTIONS
         context["condition_guide"] = [
@@ -241,6 +246,6 @@ def public_contact_view(request):
             "is_open_now": is_open_now(),
             "contact_product": contact_product,
             "request_type_choices": ContactForm.REQUEST_TYPE_CHOICES,
-            "contact_canonical_url": request.build_absolute_uri(reverse("contact")),
+            "contact_canonical_url": public_url(reverse("contact")),
         },
     )
