@@ -100,6 +100,20 @@
       if (event.target === galleryDialog) galleryDialog.close();
     });
 
+    // Merchant and structured-data variant links use ?variant=<id>. Keep the
+    // customer-facing selector aligned with the exact item represented by that URL.
+    const requestedVariant = new URLSearchParams(window.location.search).get("variant");
+    const variantSelect = document.getElementById("variant_id");
+    if (variantSelect && requestedVariant && /^\d+$/.test(requestedVariant)) {
+      const matchingOption = Array.from(variantSelect.options).find(
+        (option) => option.value === requestedVariant,
+      );
+      if (matchingOption && !matchingOption.disabled) {
+        variantSelect.value = requestedVariant;
+        variantSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+
     const contactType = document.getElementById("id_request_type");
     const subject = document.getElementById("id_subject");
     const message = document.getElementById("id_message");
