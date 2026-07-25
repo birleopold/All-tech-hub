@@ -95,7 +95,7 @@ class PublicBuyingGuideTests(TestCase):
 
     def test_buying_guide_is_discoverable_from_navigation_and_sitemap(self):
         home = self.client.get(reverse("home"))
-        sitemap = self.client.get(reverse("django.contrib.sitemaps.views.sitemap"))
+        sitemap = self.client.get(reverse("seo_sitemap", args=["static"]))
 
         self.assertContains(home, reverse("buying_guide"))
         self.assertEqual(sitemap.status_code, 200)
