@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from merchandising.constants import commercial_page_path
+
 
 class ProductCommerceProfile(models.Model):
     """Customer-facing specifications and Merchant publication controls."""
@@ -185,7 +187,7 @@ class CommercialLandingPage(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
-        return reverse("commercial_landing", kwargs={"slug": self.slug})
+        return commercial_page_path(self.slug)
 
     @property
     def keyword_list(self) -> list[str]:
@@ -272,7 +274,12 @@ class SearchQueryInsight(models.Model):
 
     class Meta:
         ordering = ["-impressions", "position", "query"]
-        indexes = [models.Index(fields=["query", "date_end"])]
+        indexes = [
+            models.Index(
+                fields=["query", "date_end"],
+                name="merch_query_date_idx",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.query
