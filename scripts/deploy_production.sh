@@ -107,6 +107,9 @@ python manage.py migrate --noinput
 log "Post-migration project audit"
 python manage.py audit_project
 
+log "Search discoverability audit"
+python manage.py audit_seo --strict
+
 log "Static asset manifest"
 python manage.py collectstatic --noinput
 python manage.py shell -c '
