@@ -1,0 +1,4 @@
+# Optional AI background-removal runtime for the product image studio.
+# Install this in addition to the normal locked application requirements.
+-r requirements.lock
+rembg[cpu]==2.0.77
