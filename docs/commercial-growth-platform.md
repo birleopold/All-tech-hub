@@ -1,6 +1,6 @@
 # LEOSOFT commercial growth platform
 
-This release implements the commercial-discovery, catalogue-quality and content-authority programme on an isolated feature branch. It does not automatically correct legacy product facts: staff must verify each physical product before strict Merchant publication is enabled.
+This release implements the commercial-discovery, catalogue-quality and content-authority programme. It does not automatically correct legacy product facts: staff must verify each physical product before strict Merchant publication is enabled.
 
 ## Included capabilities
 
@@ -12,7 +12,7 @@ This release implements the commercial-discovery, catalogue-quality and content-
 - Search Console CSV query reporting in staff administration.
 - Product identity, condition, price and stock verification timestamps.
 - Merchant readiness scoring and an optional strict feed gate.
-- Bulk CSV catalogue correction, media audit and catalogue-readiness audit commands.
+- Review-ready CSV export, bulk CSV catalogue correction, media audit and catalogue-readiness audit commands.
 - Commercial sitemap coverage.
 
 ## Deployment sequence
@@ -29,7 +29,7 @@ python manage.py check
 python manage.py migrate --noinput
 python manage.py seed_commercial_growth
 python manage.py create_commerce_profiles --published-only
-python manage.py test merchandising
+python manage.py test merchandising --keepdb --noinput
 python manage.py audit_commercial_catalogue --only-published --csv var/catalogue-readiness.csv
 python manage.py audit_catalog_media
 python manage.py collectstatic --noinput
@@ -83,18 +83,58 @@ python manage.py audit_commercial_catalogue --only-published --fail-on-incomplet
 
 The report highlights missing brands, condition verification, identifiers, images, descriptions, commercial profiles, actual-photo confirmation, stock or price checks, shipping decisions, out-of-stock records and repeated watermark filename prefixes.
 
-## Bulk product correction
+## Product review export
 
-Start with a dry run:
+Create a working CSV for the first 30 published physical products, prioritising featured and available products:
 
 ```bash
-python manage.py import_product_commerce_csv docs/product-commerce-import-template.csv --dry-run
+python manage.py export_product_commerce_csv \
+  --output var/top-30-product-review.csv \
+  --limit 30
 ```
 
-Apply reviewed rows and mark all four verification dates at the import time:
+Useful alternatives:
 
 ```bash
-python manage.py import_product_commerce_csv var/reviewed-products.csv --verify-now
+# Export only products currently available to sell.
+python manage.py export_product_commerce_csv \
+  --output var/in-stock-product-review.csv \
+  --limit 30 \
+  --in-stock-only
+
+# Export every published physical product.
+python manage.py export_product_commerce_csv \
+  --output var/all-published-product-review.csv \
+  --limit 0
+
+# Include unpublished products and sort alphabetically.
+python manage.py export_product_commerce_csv \
+  --output var/full-catalogue-review.csv \
+  --limit 0 \
+  --include-unpublished \
+  --order name
+```
+
+The exported file contains current importable values plus review-only columns for product name, category, public URL, sellable status, image status, variant counts, readiness score, missing fields and staff notes. Review-only columns are ignored safely by the importer, so the same CSV can be corrected and re-imported.
+
+Do not use `--verify-now` until the exact product identity, condition, price and stock have been physically or operationally checked.
+
+## Bulk product correction
+
+Start with a dry run of the reviewed export:
+
+```bash
+python manage.py import_product_commerce_csv \
+  var/top-30-product-review.csv \
+  --dry-run
+```
+
+Apply approved rows and mark all four verification dates at the import time:
+
+```bash
+python manage.py import_product_commerce_csv \
+  var/top-30-product-review.csv \
+  --verify-now
 ```
 
 Rows are matched by SKU first and slug second. Invalid rows are rejected atomically without retaining partial updates.
@@ -127,10 +167,12 @@ The command is deliberately non-destructive. It reports missing files, repeated 
 1. Seed commercial pages and guides.
 2. Create missing commerce profiles.
 3. Audit published catalogue records.
-4. Correct product condition, brand, identifiers, stock and price.
-5. Add inspected specifications, condition notes, warranty and delivery information.
-6. Confirm actual photos and verification dates.
-7. Review the top products and high-intent hubs in a browser.
-8. Inspect the Merchant XML in audit-only mode.
-9. Enable strict readiness only after the eligible records are accurate.
-10. Continue publishing and updating practical guides from real customer and technical experience.
+4. Export the first 30 priority products to a review CSV.
+5. Correct product condition, brand, identifiers, stock and price.
+6. Add inspected specifications, condition notes, warranty and delivery information.
+7. Dry-run the CSV import and resolve every invalid row.
+8. Apply approved rows and confirm actual photos and verification dates.
+9. Review the top products and high-intent hubs in a browser.
+10. Inspect the Merchant XML in audit-only mode.
+11. Enable strict readiness only after the eligible records are accurate.
+12. Continue publishing and updating practical guides from real customer and technical experience.
