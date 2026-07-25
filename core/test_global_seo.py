@@ -130,7 +130,7 @@ class GlobalSEOTests(TestCase):
     def test_clean_category_collection_brand_and_service_landings_are_indexable(self):
         cases = (
             (reverse("product_category", args=[self.category.slug]), "Laptops in Uganda"),
-            (reverse("product_collection", args=["business"]), "Business technology"),
+            (reverse("product_collection", args=["business"]), "For business"),
             (reverse("product_brand", args=["hp"]), "HP computers"),
             (reverse("physical_product_list"), "Computers and technology products"),
             (reverse("service_list"), "Computer repairs and IT services"),
