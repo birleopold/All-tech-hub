@@ -1,5 +1,5 @@
 from django.urls import path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView
 
 from core import views
 from core.public_service_worker import service_worker
@@ -12,7 +12,7 @@ urlpatterns = [
     path("about/", views.AboutView.as_view(), name="about"),
     path(
         "buying-guide/",
-        TemplateView.as_view(template_name="core/seo_buying_guide.html"),
+        RedirectView.as_view(pattern_name="buying_guide_list", permanent=True),
         name="buying_guide",
     ),
     path("contact/", public_contact_view, name="contact"),
