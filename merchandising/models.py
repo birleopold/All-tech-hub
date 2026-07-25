@@ -31,7 +31,11 @@ class ProductCommerceProfile(models.Model):
     operating_system = models.CharField(max_length=120, blank=True)
     battery_health_note = models.CharField(max_length=220, blank=True)
     keyboard_condition = models.CharField(max_length=180, blank=True)
-    charger_included = models.BooleanField(default=True)
+    charger_included = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Leave unknown until the exact charger or power adapter is checked.",
+    )
     accessories_included = models.CharField(max_length=220, blank=True)
     warranty_months = models.PositiveIntegerField(default=0)
     condition_notes = models.TextField(blank=True)
@@ -95,7 +99,10 @@ class ProductCommerceProfile(models.Model):
         values.extend((label, value) for label, value in fields if value)
         if self.touchscreen is not None:
             values.append(("Touchscreen", "Yes" if self.touchscreen else "No"))
-        values.append(("Charger included", "Yes" if self.charger_included else "No"))
+        if self.charger_included is not None:
+            values.append(
+                ("Charger included", "Yes" if self.charger_included else "No")
+            )
         if self.warranty_months:
             values.append(("Warranty", f"{self.warranty_months} month(s)"))
         return values
