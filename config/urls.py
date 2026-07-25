@@ -2,38 +2,35 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.contrib.sitemaps.views import sitemap as sitemap_view
 from django.urls import include, path
-from django.views.generic import TemplateView
 
 from billing import views as billing_views
-from catalog.sitemaps import ProductSitemap, StaticViewSitemap
+from catalog import seo_feeds
 from core import api_views as core_api
 from core import auth_views as core_auth
 from core import health as core_health
+from core import seo_views as core_seo
 
 handler400 = "core.error_views.bad_request"
 handler403 = "core.error_views.permission_denied"
 handler404 = "core.error_views.page_not_found"
 handler500 = "core.error_views.server_error"
 
-site_maps = {
-    "products-and-services": ProductSitemap,
-    "static": StaticViewSitemap,
-}
-
 urlpatterns = [
+    path("robots.txt", core_seo.robots_txt, name="robots_txt"),
+    path("sitemap.xml", seo_feeds.sitemap_index, name="sitemap_index"),
     path(
-        "robots.txt",
-        TemplateView.as_view(template_name="robots.txt", content_type="text/plain"),
-        name="robots_txt",
+        "sitemaps/<slug:section>.xml",
+        seo_feeds.seo_sitemap,
+        name="seo_sitemap",
     ),
+    path("image-sitemap.xml", seo_feeds.image_sitemap, name="image_sitemap"),
     path(
-        "sitemap.xml",
-        sitemap_view,
-        {"sitemaps": site_maps},
-        name="django.contrib.sitemaps.views.sitemap",
+        "feeds/google-merchant.xml",
+        seo_feeds.google_merchant_feed,
+        name="google_merchant_feed",
     ),
+    path("indexnow-key.txt", core_seo.indexnow_key, name="indexnow_key"),
     path("health/live/", core_health.live, name="health_live"),
     path("health/ready/", core_health.ready, name="health_ready"),
     path("healthz/", core_health.healthz, name="healthz"),
