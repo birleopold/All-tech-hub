@@ -72,8 +72,9 @@ class ProductCommercialReviewView(StaffRequiredMixin, View):
         product = self.get_product(pk)
         forms = self.build_forms(product, data=request.POST)
         core_form, growth_form, commerce_form = forms
+        validation_results = [form.is_valid() for form in forms]
 
-        if all(form.is_valid() for form in forms):
+        if all(validation_results):
             with transaction.atomic():
                 product = core_form.save()
                 growth = growth_form.save(commit=False)
