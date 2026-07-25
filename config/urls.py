@@ -6,11 +6,12 @@ from django.urls import include, path
 
 from billing import views as billing_views
 from catalog import seo_feeds
-from catalog.strict_merchant_feed import strict_google_merchant_feed
 from core import api_views as core_api
 from core import auth_views as core_auth
 from core import health as core_health
 from core import seo_views as core_seo
+from merchandising import seo_views as merchandising_seo
+from merchandising.merchant import strict_google_merchant_feed
 
 handler400 = "core.error_views.bad_request"
 handler403 = "core.error_views.permission_denied"
@@ -19,11 +20,16 @@ handler500 = "core.error_views.server_error"
 
 urlpatterns = [
     path("robots.txt", core_seo.robots_txt, name="robots_txt"),
-    path("sitemap.xml", seo_feeds.sitemap_index, name="sitemap_index"),
+    path("sitemap.xml", merchandising_seo.sitemap_index, name="sitemap_index"),
     path(
         "sitemap.xml",
-        seo_feeds.sitemap_index,
+        merchandising_seo.sitemap_index,
         name="django.contrib.sitemaps.views.sitemap",
+    ),
+    path(
+        "sitemaps/commercial.xml",
+        merchandising_seo.commercial_sitemap,
+        name="commercial_sitemap",
     ),
     path(
         "sitemaps/<slug:section>.xml",
@@ -84,6 +90,7 @@ urlpatterns = [
     path("marketing/", include("growth.public_urls")),
     path("staff/marketing/growth/", include("growth.staff_urls")),
     path("staff/marketing/", include("marketing.staff_urls")),
+    path("", include("merchandising.urls")),
     path("", include("core.urls")),
     path("catalog/", include("catalog.urls")),
     path("cart/", include("commerce.urls")),

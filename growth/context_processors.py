@@ -97,7 +97,17 @@ def _page_analytics_events(request, company) -> list[dict]:
 def _organization_schema(request, company, growth, social) -> str:
     match = getattr(request, "resolver_match", None)
     url_name = getattr(match, "url_name", "") or ""
-    if url_name not in {"home", "about", "contact", "buying_guide"}:
+    organization_pages = {
+        "home",
+        "about",
+        "contact",
+        "buying_guide",
+        "buying_guide_list",
+        "buying_guide_detail",
+        "commercial_landing",
+        "delivery_zones",
+    }
+    if url_name not in organization_pages and not url_name.startswith("commercial_"):
         return ""
 
     same_as = [
@@ -169,7 +179,7 @@ def _organization_schema(request, company, growth, social) -> str:
             "postalCode": company.postal_code,
             "addressCountry": company.country or growth.merchant_country,
         }
-    if growth.merchant_shipping_service:
+    if growth.merchant_shipping_service and growth.merchant_shipping_price > 0:
         schema["hasShippingService"] = {
             "@type": "ShippingService",
             "@id": f"{home_url}#shipping-policy",

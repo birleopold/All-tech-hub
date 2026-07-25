@@ -16,6 +16,7 @@ class PublicProductCard:
 
     product: Product
     primary_display_image: Any
+    commerce_profile: Any
     has_sellable_variants: bool
     min_active_variant_price: Decimal | None
     active_variant_count: int
@@ -32,8 +33,6 @@ class PublicProductCard:
     def __getattr__(self, name: str):
         return getattr(self.product, name)
 
-    # Public-page aliases keep detailed templates explicit while retaining the
-    # original card attribute names used by the homepage and catalogue.
     @property
     def public_display_image(self):
         return self.primary_display_image
@@ -74,14 +73,58 @@ class PublicProductCard:
     def public_compare_at_price(self) -> Decimal | None:
         return self.display_compare_at_price
 
+    @property
+    def public_actual_photos(self) -> bool:
+        return bool(self.commerce_profile and self.commerce_profile.actual_photos)
+
+    @property
+    def public_warranty_months(self) -> int:
+        return int(getattr(self.commerce_profile, "warranty_months", 0) or 0)
+
+    @property
+    def public_stock_confirmed_at(self):
+        return getattr(self.commerce_profile, "stock_confirmed_at", None)
+
+    @property
+    def public_processor_summary(self) -> str:
+        if not self.commerce_profile:
+            return ""
+        return " ".join(
+            value
+            for value in (
+                self.commerce_profile.processor_family,
+                self.commerce_profile.processor_generation,
+            )
+            if value
+        ).strip()
+
+    @property
+    def public_memory_storage_summary(self) -> str:
+        if not self.commerce_profile:
+            return ""
+        return " / ".join(
+            value
+            for value in (
+                self.commerce_profile.ram_capacity,
+                " ".join(
+                    value
+                    for value in (
+                        self.commerce_profile.storage_capacity,
+                        self.commerce_profile.storage_type,
+                    )
+                    if value
+                ).strip(),
+            )
+            if value
+        ).strip()
+
 
 def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCard]:
     """Build public proxies using already-prefetched relations.
 
     Product cards historically called model helpers that issued filtered related
     queries for every item. These proxies calculate image, price, condition,
-    discount, variant and stock values in memory so public grids remain fast as
-    the catalogue grows.
+    discount, variant, stock and inspected commerce values in memory.
     """
 
     prepared: list[PublicProductCard] = []
@@ -128,11 +171,31 @@ def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCa
             growth_data = product.growth_data
         except ObjectDoesNotExist:
             growth_data = None
+        try:
+            commerce_profile = product.commerce_profile
+        except ObjectDoesNotExist:
+            commerce_profile = None
 
-        brand = (getattr(growth_data, "brand", "") or "").strip()
-        condition_code = (getattr(growth_data, "condition", "") or "").strip()
+        identity_verified = bool(
+            commerce_profile and commerce_profile.identity_verified_at
+        )
+        condition_verified = bool(
+            commerce_profile and commerce_profile.condition_verified_at
+        )
+        brand = (
+            (getattr(growth_data, "brand", "") or "").strip()
+            if identity_verified
+            else ""
+        )
+        condition_code = (
+            (getattr(growth_data, "condition", "") or "").strip()
+            if condition_verified
+            else ""
+        )
         condition_label = (
-            growth_data.get_condition_display() if growth_data and condition_code else ""
+            growth_data.get_condition_display()
+            if growth_data and condition_code
+            else ""
         )
 
         display_price = min_price if min_price is not None else product.price
@@ -166,6 +229,7 @@ def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCa
                     if gallery_images
                     else product.image if product.image else None
                 ),
+                commerce_profile=commerce_profile,
                 has_sellable_variants=has_variants,
                 min_active_variant_price=min_price,
                 active_variant_count=len(active_variants),

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ seo_default_title }}{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body public-home-page marketplace-home-page{% endblock %}
 {% block meta %}
@@ -18,6 +19,7 @@
 {% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="{{ company.company_name }} technology products and IT support">{% endif %}
 {% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
 {% endblock %}
+{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 <section class="market-home-hero">
   <div class="container market-home-hero__inner">
@@ -34,7 +36,7 @@
           <div id="market-hero-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
           <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
         </form>
-        <div class="market-hero-popular" aria-label="Popular searches"><span>Popular:</span><a href="{% url 'product_list' %}?q=laptop">Laptops</a><a href="{% url 'product_list' %}?q=core+i5">Core i5</a><a href="{% url 'product_list' %}?q=ssd">SSD storage</a><a href="{% url 'product_collection' 'student' %}">Student options</a><a href="{% url 'product_collection' 'business' %}">Business computers</a></div>
+        <div class="market-hero-popular" aria-label="Popular searches"><span>Popular:</span><a href="/laptop-prices-in-uganda/">Laptop prices</a><a href="/dell-laptops-uganda/">Dell laptops</a><a href="/hp-laptops-uganda/">HP laptops</a><a href="/student-laptops-uganda/">Student laptops</a><a href="/refurbished-laptops-uganda/">Refurbished</a></div>
       </div>
       <div class="col-lg-5" data-reveal data-reveal-delay="2">
         <div class="market-hero-panel">
@@ -71,5 +73,6 @@
 
 {% if featured_services %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Services and support</p><h2 class="market-section-title">Technology support beyond the sale</h2><p class="market-section-intro">Repairs, installation, diagnostics, networking and business support can be requested through the same accountable system.</p></div><a class="market-section-link" href="{% url 'service_list' %}">View all services <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-purpose-grid">{% for p in featured_services %}<a class="market-purpose-card" href="{{ p.get_absolute_url }}"><i class="bi {% if forloop.counter == 1 %}bi-tools{% elif forloop.counter == 2 %}bi-router{% elif forloop.counter == 3 %}bi-shield-check{% else %}bi-gear{% endif %}" aria-hidden="true"></i><h3>{{ p.name }}</h3><p>{{ p.short_description|default:p.description|truncatewords:22 }} · From {{ company.currency_code }} {{ p.public_price|floatformat:0 }}</p></a>{% endfor %}</div></div></section>{% endif %}
 
+{% include "merchandising/_home_sections.html" %}
 {% include "core/_home_condition_and_cta.html" %}
 {% endblock %}

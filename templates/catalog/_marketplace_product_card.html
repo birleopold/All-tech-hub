@@ -12,6 +12,7 @@
     <div class="market-product-card__badges">
       {% if p.savings_percent %}<span class="market-badge market-badge--deal">Save {{ p.savings_percent }}%</span>{% endif %}
       {% if p.public_condition %}<span class="market-badge">{{ p.public_condition }}</span>{% endif %}
+      {% if p.public_actual_photos %}<span class="market-badge"><i class="bi bi-camera-fill" aria-hidden="true"></i> Actual photos</span>{% endif %}
       {% if p.kind == 'service' %}<span class="market-badge market-badge--available">Bookable</span>{% elif p.public_available %}<span class="market-badge market-badge--available">In stock</span>{% else %}<span class="market-badge market-badge--muted">Confirm stock</span>{% endif %}
     </div>
   </div>
@@ -21,9 +22,12 @@
       <h3><a data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
     </div>
     <p class="market-product-card__description">{{ p.short_description|default:p.description|truncatewords:16 }}</p>
+    {% if p.public_processor_summary or p.public_memory_storage_summary %}<div class="market-product-card__decision-specs">{% if p.public_processor_summary %}<span><i class="bi bi-cpu" aria-hidden="true"></i>{{ p.public_processor_summary }}</span>{% endif %}{% if p.public_memory_storage_summary %}<span><i class="bi bi-memory" aria-hidden="true"></i>{{ p.public_memory_storage_summary }}</span>{% endif %}</div>{% endif %}
     <div class="market-product-card__signals">
       {% if p.public_has_variants %}<span><i class="bi bi-sliders" aria-hidden="true"></i>{{ p.public_variant_count }} option{{ p.public_variant_count|pluralize }}</span>{% endif %}
+      {% if p.public_warranty_months %}<span><i class="bi bi-shield-check" aria-hidden="true"></i>{{ p.public_warranty_months }}-month warranty</span>{% endif %}
       {% if p.sku %}<span><i class="bi bi-upc-scan" aria-hidden="true"></i>{{ p.sku }}</span>{% endif %}
+      {% if p.public_stock_confirmed_at %}<span><i class="bi bi-clock-history" aria-hidden="true"></i>Stock checked {{ p.public_stock_confirmed_at|timesince }} ago</span>{% endif %}
       {% if p.public_low_stock %}<span class="text-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Low stock</span>{% endif %}
     </div>
     <div class="market-product-card__price-row">
@@ -35,14 +39,15 @@
     </div>
     <div class="market-product-card__actions">
       <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details</a>
+      <details class="market-card-quick-view"><summary class="btn btn-outline-secondary" aria-label="Quick view {{ p.name }}" title="Quick view"><i class="bi bi-eye" aria-hidden="true"></i></summary><div class="market-card-quick-view__panel"><p class="market-kicker">Quick view</p><h4>{{ p.name }}</h4><p>{{ p.short_description|default:p.description|truncatewords:34 }}</p><dl><div><dt>Condition</dt><dd>{{ p.public_condition|default:'Confirm with team' }}</dd></div><div><dt>Price</dt><dd>{% if p.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ p.public_price|floatformat:0 }}</dd></div>{% if p.public_processor_summary %}<div><dt>Processor</dt><dd>{{ p.public_processor_summary }}</dd></div>{% endif %}{% if p.public_memory_storage_summary %}<div><dt>Memory and storage</dt><dd>{{ p.public_memory_storage_summary }}</dd></div>{% endif %}<div><dt>Availability</dt><dd>{% if p.public_available %}Available to order{% else %}Confirm availability{% endif %}</dd></div></dl><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary btn-sm" href="{{ p.get_absolute_url }}">Full details</a><a class="btn btn-outline-primary btn-sm" href="{% url 'contact' %}?type=product&amp;product={{ p.slug|urlencode }}">Ask the team</a></div></div></details>
       {% if p.kind == 'physical' and p.public_available and not p.public_has_variants %}
       <form method="post" action="{% url 'cart_add' p.pk %}" class="market-quick-add-form" data-market-quick-add>{% csrf_token %}<input type="hidden" name="quantity" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-primary market-quick-add-button" aria-label="Add {{ p.name }} to cart" title="Add to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i></button></form>
       {% endif %}
       {% if show_compare and p.kind == 'physical' %}
       <form method="post" action="{% url 'product_compare_toggle' p.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn {% if p.pk in compare_product_ids %}btn-primary{% else %}btn-outline-secondary{% endif %}" aria-label="{% if p.pk in compare_product_ids %}Remove {{ p.name }} from comparison{% else %}Compare {{ p.name }}{% endif %}" aria-pressed="{% if p.pk in compare_product_ids %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap" aria-hidden="true"></i></button></form>
-      {% elif p.kind == 'service' or not p.public_available or p.public_has_variants %}
-      <a class="btn btn-outline-secondary" href="{% url 'contact' %}?type={% if p.kind == 'service' %}support{% else %}product{% endif %}&amp;product={{ p.slug|urlencode }}" aria-label="Ask about {{ p.name }}"><i class="bi bi-chat-dots" aria-hidden="true"></i></a>
       {% endif %}
+      {% if user.is_authenticated %}<form method="post" action="{% url 'portal_wishlist_add' p.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-secondary" aria-label="Save {{ p.name }} to wishlist" title="Save"><i class="bi bi-heart" aria-hidden="true"></i></button></form>{% else %}<a class="btn btn-outline-secondary" href="{% url 'portal_login' %}?next={{ request.get_full_path|urlencode }}" aria-label="Sign in to save {{ p.name }}" title="Save"><i class="bi bi-heart" aria-hidden="true"></i></a>{% endif %}
+      {% if social_profiles.whatsapp_url %}<a class="btn btn-outline-success" href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="Ask about {{ p.name }} on WhatsApp" title="WhatsApp enquiry"><i class="bi bi-whatsapp" aria-hidden="true"></i></a>{% elif p.kind == 'service' or not p.public_available or p.public_has_variants %}<a class="btn btn-outline-secondary" href="{% url 'contact' %}?type={% if p.kind == 'service' %}support{% else %}product{% endif %}&amp;product={{ p.slug|urlencode }}" aria-label="Ask about {{ p.name }}"><i class="bi bi-chat-dots" aria-hidden="true"></i></a>{% endif %}
     </div>
   </div>
 </article>
