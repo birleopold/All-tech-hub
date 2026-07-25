@@ -121,7 +121,8 @@ def _organization_schema(request, company, growth, social) -> str:
         "name": company.legal_name or company.company_name,
         "alternateName": company.company_name,
         "url": home_url,
-        "description": company.tagline or "Technology products, repairs and professional IT support.",
+        "description": company.tagline
+        or "Technology products, repairs and professional IT support.",
         "areaServed": {
             "@type": "Country",
             "name": company.country or "Uganda",
@@ -167,11 +168,6 @@ def _organization_schema(request, company, growth, social) -> str:
             "addressRegion": company.region,
             "postalCode": company.postal_code,
             "addressCountry": company.country or growth.merchant_country,
-        }
-    if growth.merchant_return_policy_url:
-        schema["hasMerchantReturnPolicy"] = {
-            "@type": "MerchantReturnPolicy",
-            "merchantReturnLink": growth.merchant_return_policy_url,
         }
     if growth.merchant_shipping_service:
         schema["hasShippingService"] = {
