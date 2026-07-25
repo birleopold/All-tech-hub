@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from datetime import timedelta
 from pathlib import Path
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -8,7 +9,6 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from catalog.models import Product
-from merchandising.models import ProductCommerceProfile
 
 
 class Command(BaseCommand):
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         if options["only_published"]:
             queryset = queryset.filter(is_published=True)
 
-        stale_before = timezone.now() - timezone.timedelta(days=max(1, options["stale_days"]))
+        stale_before = timezone.now() - timedelta(days=max(1, options["stale_days"]))
         rows = []
         issue_counts: dict[str, int] = {}
         ready = 0
@@ -74,21 +74,32 @@ class Command(BaseCommand):
                 issues.append("missing GTIN or brand+MPN")
             if not image:
                 issues.append("missing image")
-            if image_name and image_name.rsplit("/", 1)[-1].lower().startswith(("wm_wm_", "wm-wm-")):
+            if image_name and image_name.rsplit("/", 1)[-1].lower().startswith(
+                ("wm_wm_", "wm-wm-")
+            ):
                 issues.append("repeated watermark filename")
             if not product.short_description and not product.description:
                 issues.append("missing description")
-            if product.track_inventory and product.stock_quantity == 0 and not product.has_sellable_variants():
+            if (
+                product.track_inventory
+                and product.stock_quantity == 0
+                and not product.has_sellable_variants()
+            ):
                 issues.append("out of stock")
+
+            identity_verified = ""
+            condition_verified = ""
+            stock_verified = ""
+            price_verified = ""
             if profile is None:
                 issues.append("missing commercial profile")
                 readiness = 0
                 merchant_enabled = False
-                stock_verified = ""
-                price_verified = ""
             else:
                 merchant_enabled = profile.merchant_enabled
                 readiness = profile.merchant_readiness_score
+                identity_verified = profile.identity_verified_at
+                condition_verified = profile.condition_verified_at
                 stock_verified = profile.stock_confirmed_at
                 price_verified = profile.price_verified_at
                 if profile.stock_confirmed_at and profile.stock_confirmed_at < stale_before:
@@ -121,14 +132,20 @@ class Command(BaseCommand):
                     "image": image_name,
                     "merchant_enabled": merchant_enabled,
                     "merchant_readiness": readiness,
+                    "identity_verified_at": identity_verified,
+                    "condition_verified_at": condition_verified,
                     "stock_verified_at": stock_verified,
                     "price_verified_at": price_verified,
                     "issues": "; ".join(issues),
                 }
             )
 
-        self.stdout.write(f"Audited {len(rows)} physical products; {ready} are strict-Merchant ready.")
-        for issue, count in sorted(issue_counts.items(), key=lambda item: (-item[1], item[0])):
+        self.stdout.write(
+            f"Audited {len(rows)} physical products; {ready} are strict-Merchant ready."
+        )
+        for issue, count in sorted(
+            issue_counts.items(), key=lambda item: (-item[1], item[0])
+        ):
             self.stdout.write(f"  {count:>4}  {issue}")
 
         csv_path = options.get("csv_path")
@@ -136,9 +153,25 @@ class Command(BaseCommand):
             destination = Path(csv_path).expanduser()
             destination.parent.mkdir(parents=True, exist_ok=True)
             fieldnames = list(rows[0].keys()) if rows else [
-                "id", "sku", "slug", "product", "published", "category", "brand",
-                "condition", "gtin", "mpn", "stock", "image", "merchant_enabled",
-                "merchant_readiness", "stock_verified_at", "price_verified_at", "issues",
+                "id",
+                "sku",
+                "slug",
+                "product",
+                "published",
+                "category",
+                "brand",
+                "condition",
+                "gtin",
+                "mpn",
+                "stock",
+                "image",
+                "merchant_enabled",
+                "merchant_readiness",
+                "identity_verified_at",
+                "condition_verified_at",
+                "stock_verified_at",
+                "price_verified_at",
+                "issues",
             ]
             with destination.open("w", encoding="utf-8", newline="") as handle:
                 writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -148,5 +181,7 @@ class Command(BaseCommand):
 
         incomplete = sum(1 for row in rows if row["issues"])
         if options["fail_on_incomplete"] and incomplete:
-            self.stderr.write(self.style.ERROR(f"{incomplete} product(s) require catalogue review."))
+            self.stderr.write(
+                self.style.ERROR(f"{incomplete} product(s) require catalogue review.")
+            )
             raise SystemExit(1)
