@@ -6,6 +6,7 @@ from django.urls import include, path
 
 from billing import views as billing_views
 from catalog import seo_feeds
+from catalog.strict_merchant_feed import strict_google_merchant_feed
 from core import api_views as core_api
 from core import auth_views as core_auth
 from core import health as core_health
@@ -32,7 +33,7 @@ urlpatterns = [
     path("image-sitemap.xml", seo_feeds.image_sitemap, name="image_sitemap"),
     path(
         "feeds/google-merchant.xml",
-        seo_feeds.google_merchant_feed,
+        strict_google_merchant_feed,
         name="google_merchant_feed",
     ),
     path("indexnow-key.txt", core_seo.indexnow_key, name="indexnow_key"),
