@@ -3,7 +3,7 @@ from django.urls import path
 from catalog import views
 from catalog.refined_public_views import public_catalog_suggestions
 from catalog.seo_views import SEOProductListView
-from catalog.strict_seo_detail import StrictSEOProductDetailView
+from merchandising.detail import MerchandisedProductDetailView
 
 urlpatterns = [
     path("", SEOProductListView.as_view(), name="product_list"),
@@ -44,7 +44,7 @@ urlpatterns = [
     ),
     path(
         "item/<slug:slug>/",
-        StrictSEOProductDetailView.as_view(
+        MerchandisedProductDetailView.as_view(
             template_name="catalog/seo_product_detail.html"
         ),
         name="product_detail",
