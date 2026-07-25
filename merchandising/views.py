@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from django.db.models import Max, Min, Q
-from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.views.generic import DetailView, ListView, TemplateView
@@ -10,29 +9,8 @@ from catalog.models import Product
 from catalog.presentation import prepare_public_products
 from core.models import CompanySettings
 from core.seo import meta_description, meta_title, public_url, script_safe_json
+from merchandising.constants import commercial_page_path
 from merchandising.models import BuyingGuide, CommercialLandingPage, DeliveryZone
-
-
-ROOT_COMMERCIAL_SLUGS = {
-    "laptop-prices-in-uganda",
-    "dell-laptops-uganda",
-    "hp-laptops-uganda",
-    "lenovo-laptops-uganda",
-    "macbook-prices-in-uganda",
-    "refurbished-laptops-uganda",
-    "business-laptops-uganda",
-    "student-laptops-uganda",
-    "gaming-laptops-uganda",
-    "desktop-computer-prices-in-uganda",
-    "printer-prices-in-uganda",
-    "wifi-router-prices-in-uganda",
-}
-
-
-def commercial_page_path(slug: str) -> str:
-    if slug in ROOT_COMMERCIAL_SLUGS:
-        return f"/{slug}/"
-    return reverse("commercial_landing", kwargs={"slug": slug})
 
 
 def _published_products():
@@ -62,11 +40,19 @@ def _term_query(term: str) -> Q:
 def _catalogue_for_page(page: CommercialLandingPage):
     queryset = _published_products()
     if page.brand:
-        queryset = queryset.filter(growth_data__brand__iexact=page.brand.strip())
+        queryset = queryset.filter(
+            growth_data__brand__iexact=page.brand.strip(),
+            commerce_profile__identity_verified_at__isnull=False,
+        )
     if page.condition:
-        queryset = queryset.filter(growth_data__condition=page.condition.strip().lower())
+        queryset = queryset.filter(
+            growth_data__condition=page.condition.strip().lower(),
+            commerce_profile__condition_verified_at__isnull=False,
+        )
 
-    category_terms = [item.strip() for item in page.category_keywords.split(",") if item.strip()]
+    category_terms = [
+        item.strip() for item in page.category_keywords.split(",") if item.strip()
+    ]
     if category_terms:
         category_query = Q()
         for term in category_terms:
@@ -77,7 +63,9 @@ def _catalogue_for_page(page: CommercialLandingPage):
             )
         queryset = queryset.filter(category_query)
 
-    search_terms = [item.strip() for item in page.search_terms.split(",") if item.strip()]
+    search_terms = [
+        item.strip() for item in page.search_terms.split(",") if item.strip()
+    ]
     if search_terms:
         search_query = Q()
         for term in search_terms:
@@ -185,7 +173,9 @@ class CommercialLandingPageView(TemplateView):
                 "price_max": price_summary["maximum"],
                 "faqs": faqs,
                 "related_guides": related_guides,
-                "page_title": meta_title(f"{self.page.title} | {company.company_name}", limit=72),
+                "page_title": meta_title(
+                    f"{self.page.title} | {company.company_name}", limit=72
+                ),
                 "page_description": meta_description(self.page.meta_description),
                 "canonical_url": canonical_url,
                 "item_list_json": script_safe_json(item_list),
@@ -203,16 +193,21 @@ class BuyingGuideListView(ListView):
     paginate_by = 18
 
     def get_queryset(self):
-        return BuyingGuide.objects.filter(is_published=True).order_by("-published_at", "-id")
+        return BuyingGuide.objects.filter(is_published=True).order_by(
+            "-published_at", "-id"
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         company = CompanySettings.load()
         context.update(
             {
-                "page_title": meta_title(f"Technology buying guides | {company.company_name}"),
+                "page_title": meta_title(
+                    f"Technology buying guides | {company.company_name}"
+                ),
                 "page_description": meta_description(
-                    "Practical technology buying, maintenance and procurement guides written and reviewed by the LEOSOFT technical team in Uganda."
+                    "Practical technology buying, maintenance and procurement guides "
+                    "written and reviewed by the LEOSOFT technical team in Uganda."
                 ),
                 "canonical_url": public_url(reverse("buying_guide_list")),
             }
@@ -238,7 +233,9 @@ class BuyingGuideDetailView(DetailView):
         products = _published_products()
         if product_query:
             products = products.filter(product_query)
-        products = prepare_public_products(products.distinct().order_by("-is_featured", "name")[:8])
+        products = prepare_public_products(
+            products.distinct().order_by("-is_featured", "name")[:8]
+        )
         related_pages = CommercialLandingPage.objects.filter(is_published=True)
         if guide.keyword_list:
             page_query = Q()
@@ -271,7 +268,9 @@ class BuyingGuideDetailView(DetailView):
             {
                 "related_products": products,
                 "related_commercial_pages": related_pages,
-                "page_title": meta_title(f"{guide.title} | {company.company_name}", limit=72),
+                "page_title": meta_title(
+                    f"{guide.title} | {company.company_name}", limit=72
+                ),
                 "page_description": meta_description(guide.excerpt),
                 "canonical_url": canonical_url,
                 "article_schema_json": script_safe_json(article_schema),
@@ -288,10 +287,15 @@ class DeliveryZoneListView(TemplateView):
         company = CompanySettings.load()
         context.update(
             {
-                "zones": DeliveryZone.objects.filter(is_active=True).order_by("sort_order", "name"),
-                "page_title": meta_title(f"Technology delivery areas | {company.company_name}"),
+                "zones": DeliveryZone.objects.filter(is_active=True).order_by(
+                    "sort_order", "name"
+                ),
+                "page_title": meta_title(
+                    f"Technology delivery areas | {company.company_name}"
+                ),
                 "page_description": meta_description(
-                    "Review LEOSOFT delivery areas, indicative charges and collection guidance before ordering technology in Uganda."
+                    "Review LEOSOFT delivery areas, indicative charges and collection "
+                    "guidance before ordering technology in Uganda."
                 ),
                 "canonical_url": public_url(reverse("delivery_zones")),
             }
