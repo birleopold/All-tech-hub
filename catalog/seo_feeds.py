@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from xml.etree import ElementTree as ET
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, Max, Q
 from django.http import Http404, HttpResponse
 from django.urls import reverse
@@ -161,13 +162,15 @@ def image_sitemap(request):
         images: list[tuple[str, str]] = []
         if product.image:
             images.append((public_url(product.image.url), product.name))
+        known_urls = {item[0] for item in images}
         for position, gallery in enumerate(product.gallery_images.all(), start=1):
             if not gallery.image:
                 continue
             title = clean_text(gallery.alt_text) or f"{product.name} image {position}"
             image_url = public_url(gallery.image.url)
-            if image_url not in {item[0] for item in images}:
+            if image_url not in known_urls:
                 images.append((image_url, title))
+                known_urls.add(image_url)
         if not images:
             continue
         url_node = _add_url(root, public_url(product.get_absolute_url()), product.updated_at)
@@ -208,15 +211,19 @@ def _append_merchant_item(
     available: bool,
     variant=None,
 ):
-    item = ET.SubElement(channel, "item")
-    ET.SubElement(item, "title").text = clean_text(title)[:150]
-    ET.SubElement(item, "link").text = link
-    ET.SubElement(item, "description").text = meta_description(
+    clean_title = clean_text(title)[:150]
+    description = meta_description(
         product.short_description or product.description,
         fallback=f"{product.category.name} available from {company.company_name}.",
         limit=5000,
     )
+    item = ET.SubElement(channel, "item")
+    ET.SubElement(item, "title").text = clean_title
+    ET.SubElement(item, "link").text = link
+    ET.SubElement(item, "description").text = description
     _g(item, "id", item_id)
+    _g(item, "title", clean_title)
+    _g(item, "description", description)
     _g(item, "link", link)
     _g(item, "image_link", _product_image(product))
     _g(item, "availability", "in_stock" if available else "out_of_stock")
@@ -231,7 +238,11 @@ def _append_merchant_item(
     if variant is not None:
         _g(item, "item_group_id", product.sku or f"LEOSOFT-{product.pk}")
         _g(item, "mpn", metadata.mpn if metadata else "")
-        _g(item, "identifier_exists", "yes" if variant.sku or (metadata and metadata.mpn) else "no")
+        _g(
+            item,
+            "identifier_exists",
+            "yes" if variant.sku or (metadata and metadata.mpn) else "no",
+        )
     else:
         _g(item, "gtin", metadata.gtin if metadata else "")
         _g(item, "mpn", metadata.mpn if metadata else "")
