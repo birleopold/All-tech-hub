@@ -1,11 +1,13 @@
 import json
 
+from django.conf import settings
 from django.db.models import Count, Q
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from catalog.models import Category
 from core.models import CompanySettings, StaffNotification, is_open_now
+from core.seo import meta_description, meta_title, public_url
 
 
 PUBLIC_QUICK_COLLECTIONS = [
@@ -31,9 +33,38 @@ def company(request):
     match = getattr(request, "resolver_match", None)
     url_name = getattr(match, "url_name", "") or ""
     company_settings = CompanySettings.load()
+    default_title = meta_title(
+        getattr(settings, "SEO_DEFAULT_TITLE", ""),
+        fallback=f"{company_settings.company_name} — Technology products and IT support",
+    )
+    default_description = meta_description(
+        getattr(settings, "SEO_DEFAULT_DESCRIPTION", ""),
+        fallback=(
+            company_settings.tagline
+            or "Computers, accessories, repairs, installations and business IT support."
+        ),
+    )
+    configured_image = (getattr(settings, "SEO_DEFAULT_IMAGE_URL", "") or "").strip()
+    if configured_image:
+        default_image = public_url(configured_image)
+    elif company_settings.logo:
+        default_image = public_url(company_settings.logo.url)
+    else:
+        default_image = ""
+
     context = {
         "company": company_settings,
         "resolve_url_name": url_name,
+        "seo_default_title": default_title,
+        "seo_default_description": default_description,
+        "seo_default_canonical_url": public_url(getattr(request, "path", "/") or "/"),
+        "seo_default_image_url": default_image,
+        "seo_twitter_site": (getattr(settings, "SEO_TWITTER_SITE", "") or "").strip(),
+        "bing_site_verification_token": (
+            getattr(settings, "BING_SITE_VERIFICATION_TOKEN", "") or ""
+        ).strip(),
+        "seo_image_sitemap_url": public_url("/image-sitemap.xml"),
+        "seo_merchant_feed_url": public_url("/feeds/google-merchant.xml"),
     }
     user = getattr(request, "user", None)
     if user is not None and user.is_authenticated and user.is_staff:
@@ -87,24 +118,29 @@ def company(request):
             part.strip() for part in location_parts if part and part.strip()
         )
 
-        home_url = request.build_absolute_uri(reverse("home"))
-        catalogue_url = request.build_absolute_uri(reverse("product_list"))
-        context["website_schema_json"] = _script_safe_json(
-            {
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                "name": company_settings.company_name,
-                "url": home_url,
-                "potentialAction": {
-                    "@type": "SearchAction",
-                    "target": {
-                        "@type": "EntryPoint",
-                        "urlTemplate": f"{catalogue_url}?q={{search_term_string}}",
+        if url_name == "home":
+            home_url = public_url(reverse("home"))
+            catalogue_url = public_url(reverse("product_list"))
+            context["website_schema_json"] = _script_safe_json(
+                {
+                    "@context": "https://schema.org",
+                    "@type": "WebSite",
+                    "@id": f"{home_url}#website",
+                    "name": company_settings.company_name,
+                    "url": home_url,
+                    "inLanguage": "en-UG",
+                    "potentialAction": {
+                        "@type": "SearchAction",
+                        "target": {
+                            "@type": "EntryPoint",
+                            "urlTemplate": f"{catalogue_url}?q={{search_term_string}}",
+                        },
+                        "query-input": "required name=search_term_string",
                     },
-                    "query-input": "required name=search_term_string",
-                },
-            }
-        )
+                }
+            )
+        else:
+            context["website_schema_json"] = ""
     else:
         context["public_nav_categories"] = []
         context["site_is_open"] = False
