@@ -118,6 +118,6 @@ class StaffCommercialReviewTests(TestCase):
         self.assertTrue(
             AuditEvent.objects.filter(
                 verb="catalog.commercial_profile_reviewed",
-                target_object_id=str(self.product.pk),
+                target_id=self.product.pk,
             ).exists()
         )
