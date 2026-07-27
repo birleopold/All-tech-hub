@@ -1,26 +1,31 @@
 {% extends "staff_base.html" %}
+{% load static %}
 {% block title %}SEO control center{% endblock %}
 {% block staff_page_name %}SEO control center{% endblock %}
+{% block extra_css %}{{ block.super }}<link href="{% static 'css/catalogue_growth_operations.css' %}" rel="stylesheet">{% endblock %}
 {% block staff_content %}
 <section class="staff-dashboard">
   <div class="staff-dashboard-header">
     <div>
       <p class="text-primary small fw-semibold text-uppercase mb-1">Search discoverability</p>
-      <h1>SEO readiness and indexing</h1>
-      <p class="text-muted mb-0">Technical eligibility, discovery endpoints and catalogue data that influence how search engines understand LEOSOFT.</p>
+      <h1>SEO, Merchant and search opportunities</h1>
+      <p class="text-muted mb-0">Track technical eligibility, product-feed readiness and the Google queries closest to stronger positions.</p>
     </div>
     <div class="staff-dashboard-actions">
       <a class="btn btn-primary" href="{{ seo.endpoints.sitemap_index }}" target="_blank" rel="noopener noreferrer">Open sitemap</a>
-      <a class="btn btn-outline-primary" href="{% url 'staff_catalogue_quality' %}">Catalogue quality</a>
+      <a class="btn btn-outline-primary" href="{% url 'staff_catalogue_bulk_enrichment' %}">Bulk enrichment</a>
+      <a class="btn btn-outline-secondary" href="{% url 'staff_catalogue_quality' %}">Catalogue quality</a>
     </div>
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">SEO readiness</p><p class="staff-metric-value">{{ seo.score }}%</p><p class="staff-metric-subtext">Technical and content configuration</p></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Published listings</p><p class="staff-metric-value">{{ seo.metrics.published_listings }}</p><p class="staff-metric-subtext">Products and services search engines may discover</p></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Public categories</p><p class="staff-metric-value">{{ seo.metrics.public_categories }}</p><p class="staff-metric-subtext">Clean category landing pages</p></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card h-100"><div class="card-body"><p class="staff-metric-label">Critical issues</p><p class="staff-metric-value">{{ seo.critical|length }}</p><p class="staff-metric-subtext">Must be fixed before relying on indexing</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card catalogue-growth-metric"><div class="card-body"><p class="staff-metric-label">SEO readiness</p><p class="staff-metric-value">{{ seo.score }}%</p><p class="staff-metric-subtext">Technical and content configuration</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card catalogue-growth-metric"><div class="card-body"><p class="staff-metric-label">Merchant readiness</p><p class="staff-metric-value">{{ merchant.average_score }}%</p><p class="staff-metric-subtext">Average across physical products</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card catalogue-growth-metric"><div class="card-body"><p class="staff-metric-label">Strict-feed ready</p><p class="staff-metric-value">{{ merchant.ready }}</p><p class="staff-metric-subtext">Of {{ merchant.total_products }} physical products</p></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card catalogue-growth-metric"><div class="card-body"><p class="staff-metric-label">Search opportunities</p><p class="staff-metric-value">{{ search_opportunities|length }}</p><p class="staff-metric-subtext">Imported queries worth improving</p></div></div></div>
   </div>
+
+  {% if merchant.enabled_blocked %}<div class="alert alert-danger d-flex gap-3 align-items-start"><i class="bi bi-exclamation-octagon-fill fs-4" aria-hidden="true"></i><div><strong>{{ merchant.enabled_blocked }} Merchant-enabled product{{ merchant.enabled_blocked|pluralize }} still have blocking gaps.</strong><p class="mb-0">They remain excluded when strict readiness is active. Correct their facts before relying on Google Merchant publication.</p></div></div>{% endif %}
 
   <div class="row g-3 mb-4">
     <div class="col-xl-7">
@@ -36,7 +41,7 @@
       <div class="card staff-panel-card h-100">
         <div class="card-body">
           <div class="staff-panel-heading"><h2>Configured signals</h2></div>
-          <div class="staff-health-list">{% for item in seo.successes %}<div class="staff-health-row"><span>{{ item }}</span><span class="badge rounded-pill text-bg-success">Ready</span></div>{% empty %}<div class="staff-empty-state">Complete the configuration actions to build verified signals.</div>{% endfor %}</div>
+          <div class="staff-health-list">{% for item in seo.successes %}<div class="staff-health-row"><span>{{ item }}</span><span class="badge rounded-pill text-bg-success">Ready</span></div>{% empty %}<div class="staff-empty-state">Complete the configuration actions to build verified signals.</div>{% endfor %}<div class="staff-health-row"><span>Strict Merchant feed</span><span class="badge rounded-pill {% if merchant.strict_mode %}text-bg-success{% else %}text-bg-secondary{% endif %}">{% if merchant.strict_mode %}Enabled{% else %}Audit only{% endif %}</span></div></div>
         </div>
       </div>
     </div>
@@ -47,12 +52,57 @@
       <div class="card staff-panel-card h-100"><div class="card-body"><div class="staff-panel-heading"><h2>Discovery endpoints</h2></div><div class="staff-health-list">{% for endpoint in seo.endpoint_rows %}<div class="staff-health-row"><span>{{ endpoint.label }}</span><a href="{{ endpoint.url }}" target="_blank" rel="noopener noreferrer">Open <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a></div>{% endfor %}</div></div></div>
     </div>
     <div class="col-lg-6">
-      <div class="card staff-panel-card h-100"><div class="card-body"><div class="staff-panel-heading"><h2>Catalogue SEO gaps</h2><a href="{% url 'staff_catalogue_quality' %}">Improve products</a></div><div class="staff-health-list"><div class="staff-health-row"><span>Products without images</span><span class="badge rounded-pill {% if seo.metrics.products_without_images %}text-bg-danger{% else %}text-bg-success{% endif %}">{{ seo.metrics.products_without_images }}</span></div><div class="staff-health-row"><span>Listings without descriptions</span><span class="badge rounded-pill {% if seo.metrics.products_without_description %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.products_without_description }}</span></div><div class="staff-health-row"><span>Physical products without SKUs</span><span class="badge rounded-pill {% if seo.metrics.physical_without_sku %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_sku }}</span></div><div class="staff-health-row"><span>Products without brand</span><span class="badge rounded-pill {% if seo.metrics.physical_without_brand %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_brand }}</span></div><div class="staff-health-row"><span>Manufacturer identifiers missing</span><span class="badge rounded-pill {% if seo.metrics.physical_without_identifiers %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_identifiers }}</span></div><div class="staff-health-row"><span>Categories without descriptions</span><span class="badge rounded-pill {% if seo.metrics.categories_without_description %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.categories_without_description }}</span></div></div></div></div>
+      <div class="card staff-panel-card h-100"><div class="card-body"><div class="staff-panel-heading"><h2>Catalogue SEO gaps</h2><a href="{% url 'staff_catalogue_bulk_enrichment' %}">Correct repeated gaps</a></div><div class="staff-health-list"><div class="staff-health-row"><span>Products without images</span><span class="badge rounded-pill {% if seo.metrics.products_without_images %}text-bg-danger{% else %}text-bg-success{% endif %}">{{ seo.metrics.products_without_images }}</span></div><div class="staff-health-row"><span>Listings without descriptions</span><span class="badge rounded-pill {% if seo.metrics.products_without_description %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.products_without_description }}</span></div><div class="staff-health-row"><span>Physical products without SKUs</span><span class="badge rounded-pill {% if seo.metrics.physical_without_sku %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_sku }}</span></div><div class="staff-health-row"><span>Products without brand</span><span class="badge rounded-pill {% if seo.metrics.physical_without_brand %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_brand }}</span></div><div class="staff-health-row"><span>Manufacturer identifiers missing</span><span class="badge rounded-pill {% if seo.metrics.physical_without_identifiers %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.physical_without_identifiers }}</span></div><div class="staff-health-row"><span>Categories without descriptions</span><span class="badge rounded-pill {% if seo.metrics.categories_without_description %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ seo.metrics.categories_without_description }}</span></div></div></div></div>
     </div>
   </div>
 
-  <div class="card staff-panel-card"><div class="card-body"><div class="staff-panel-heading"><h2>Server commands</h2></div><p class="text-muted">Use these commands after meaningful catalogue or content changes.</p><pre class="bg-dark text-light rounded p-3 mb-2"><code>python manage.py audit_seo
+  <div class="row g-3 mb-4">
+    <div class="col-xl-5">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body">
+          <div class="staff-panel-heading"><h2>Merchant blockers</h2><a href="{% url 'staff_catalogue_bulk_enrichment' %}?gap=merchant_not_ready">Open workspace</a></div>
+          <div class="staff-health-list">{% for item in merchant.missing_counts %}<div class="staff-health-row"><span>{{ item.label }}</span><span class="badge rounded-pill text-bg-light text-dark">{{ item.count }}</span></div>{% empty %}<div class="staff-empty-state">No Merchant-readiness blockers were detected.</div>{% endfor %}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-7">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body p-0">
+          <div class="staff-panel-heading p-3 border-bottom"><h2>Lowest-readiness products</h2><span class="text-muted small">Review exact facts individually</span></div>
+          <div class="table-responsive"><table class="table align-middle mb-0 catalogue-growth-table"><thead><tr><th>Product</th><th>Score</th><th>Top blockers</th><th class="text-end">Action</th></tr></thead><tbody>{% for row in merchant.priority_rows %}<tr><td><strong>{{ row.product.name }}</strong><small class="text-muted d-block">{{ row.product.category.name }}</small></td><td><span class="badge rounded-pill {% if row.score >= 80 %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ row.score }}%</span></td><td><small>{{ row.missing|slice:':3'|join:', ' }}</small></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_product_commercial_review' row.product.pk %}">Review</a></td></tr>{% empty %}<tr><td colspan="4"><div class="staff-empty-state py-4">No physical products found.</div></td></tr>{% endfor %}</tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-xl-5">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body">
+          <div class="staff-panel-heading"><h2>Import Google query data</h2></div>
+          <p class="text-muted">Export the <strong>Queries</strong> table as CSV from Google Search Console Performance, then upload it here. This stores no Search Console credentials.</p>
+          <form method="post" enctype="multipart/form-data" class="vstack gap-3">{% csrf_token %}
+            {% if search_console_form.non_field_errors %}<div class="alert alert-danger">{{ search_console_form.non_field_errors }}</div>{% endif %}
+            <div><label class="form-label" for="{{ search_console_form.csv_file.id_for_label }}">{{ search_console_form.csv_file.label }}</label>{{ search_console_form.csv_file }}{{ search_console_form.csv_file.errors }}<div class="form-text">{{ search_console_form.csv_file.help_text }}</div></div>
+            <div class="row g-2"><div class="col-6"><label class="form-label" for="{{ search_console_form.date_start.id_for_label }}">Report start</label>{{ search_console_form.date_start }}{{ search_console_form.date_start.errors }}</div><div class="col-6"><label class="form-label" for="{{ search_console_form.date_end.id_for_label }}">Report end</label>{{ search_console_form.date_end }}{{ search_console_form.date_end.errors }}</div></div>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-upload me-1" aria-hidden="true"></i>Import query report</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-7">
+      <div class="card staff-panel-card h-100">
+        <div class="card-body p-0">
+          <div class="staff-panel-heading p-3 border-bottom"><h2>Queries closest to growth</h2><span class="text-muted small">Prioritised by impressions, position and CTR</span></div>
+          <div class="table-responsive"><table class="table align-middle mb-0 catalogue-growth-table"><thead><tr><th>Query</th><th>Visibility</th><th>Position</th><th>CTR</th><th>Impressions</th></tr></thead><tbody>{% for row in search_opportunities %}<tr><td class="catalogue-growth-query"><strong>{{ row.insight.query }}</strong>{% if row.insight.page %}<a class="catalogue-growth-url small" href="{{ row.insight.page }}" target="_blank" rel="noopener noreferrer">{{ row.insight.page }}</a>{% endif %}</td><td><span class="badge rounded-pill text-bg-light text-dark">{{ row.stage }}</span></td><td>{{ row.insight.position|floatformat:1 }}</td><td>{{ row.ctr_percent|floatformat:2 }}%</td><td>{{ row.insight.impressions }}</td></tr>{% empty %}<tr><td colspan="5"><div class="staff-empty-state py-4">Import a Search Console Queries CSV to reveal pages and phrases closest to stronger positions.</div></td></tr>{% endfor %}</tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card staff-panel-card"><div class="card-body"><div class="staff-panel-heading"><h2>Server commands</h2></div><p class="text-muted">Use these after meaningful catalogue or content changes.</p><pre class="bg-dark text-light rounded p-3 mb-2"><code>python manage.py audit_seo
+python manage.py audit_merchant
 python manage.py submit_indexnow --recent-hours 24 --dry-run
-python manage.py submit_indexnow --recent-hours 24</code></pre><p class="small text-muted mb-0">A successful technical setup makes pages eligible for discovery. Ranking growth still depends on useful original content, accurate product data, customer trust, links and sustained performance.</p></div></div>
+python manage.py submit_indexnow --recent-hours 24</code></pre><p class="small text-muted mb-0">Technical eligibility does not guarantee ranking. Accurate product facts, useful original content, availability, customer trust and credible references still determine sustainable growth.</p></div></div>
 </section>
 {% endblock %}

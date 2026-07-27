@@ -1,5 +1,7 @@
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Avg, Q
+from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import TemplateView
 
@@ -13,6 +15,12 @@ from core.filters import apply_job_filters, apply_ticket_filters
 from core.mixins import StaffRequiredMixin
 from core.models import ContactMessage, SupportTicket
 from core.seo_audit import seo_audit_snapshot
+from merchandising.forms import SearchConsoleCSVImportForm
+from merchandising.services import (
+    import_search_console_csv,
+    merchant_readiness_snapshot,
+    search_opportunity_rows,
+)
 from operations.models import JobCard, JobFeedback
 
 
@@ -152,4 +160,35 @@ class SEOControlCenterView(StaffRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["seo"] = seo_audit_snapshot()
+        context["merchant"] = merchant_readiness_snapshot(row_limit=10)
+        context["search_opportunities"] = search_opportunity_rows(limit=20)
+        context["search_console_form"] = kwargs.get(
+            "search_console_form", SearchConsoleCSVImportForm()
+        )
         return context
+
+    def post(self, request, *args, **kwargs):
+        form = SearchConsoleCSVImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                result = import_search_console_csv(
+                    uploaded_file=form.cleaned_data["csv_file"],
+                    date_start=form.cleaned_data.get("date_start"),
+                    date_end=form.cleaned_data.get("date_end"),
+                )
+            except ValueError as exc:
+                form.add_error("csv_file", str(exc))
+            else:
+                messages.success(
+                    request,
+                    (
+                        "Search Console data imported: "
+                        f"{result['created']} created, {result['updated']} updated and "
+                        f"{result['skipped']} skipped."
+                    ),
+                )
+                return redirect("staff_seo")
+        messages.error(request, "Correct the Search Console import form.")
+        return self.render_to_response(
+            self.get_context_data(search_console_form=form)
+        )

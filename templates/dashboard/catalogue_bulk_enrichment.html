@@ -1,0 +1,95 @@
+{% extends "staff_base.html" %}
+{% load static %}
+{% block title %}Bulk catalogue enrichment{% endblock %}
+{% block staff_page_name %}Bulk catalogue enrichment{% endblock %}
+{% block extra_css %}{{ block.super }}<link href="{% static 'css/catalogue_growth_operations.css' %}" rel="stylesheet">{% endblock %}
+{% block staff_content %}
+<section class="staff-dashboard">
+  <div class="staff-dashboard-header">
+    <div>
+      <p class="text-primary small fw-semibold text-uppercase mb-1">Catalogue operations</p>
+      <h1>Correct repeated product gaps safely</h1>
+      <p class="text-muted mb-0">Apply only facts that are genuinely shared by the selected products. Manufacturer identifiers and physical inspection results still require product-by-product verification.</p>
+    </div>
+    <div class="staff-dashboard-actions">
+      <a class="btn btn-outline-primary" href="{% url 'staff_catalogue_quality' %}">Catalogue quality</a>
+      <a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Product register</a>
+    </div>
+  </div>
+
+  <div class="alert alert-warning d-flex gap-3 align-items-start" role="alert">
+    <i class="bi bi-shield-exclamation fs-4" aria-hidden="true"></i>
+    <div><strong>Do not bulk-invent product facts.</strong><p class="mb-0">Use brand, condition, warranty, shipping and verification actions only when every selected item was checked. This workflow never generates GTINs or manufacturer part numbers and never enables Merchant publication.</p></div>
+  </div>
+
+  <div class="card staff-panel-card mb-4">
+    <div class="card-body">
+      <div class="staff-panel-heading"><h2>Find products</h2><a href="{% url 'staff_catalogue_bulk_enrichment' %}">Reset</a></div>
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-lg-7"><label class="form-label" for="bulk-search">Search products</label><input id="bulk-search" class="form-control" type="search" name="q" value="{{ current_query }}" placeholder="Product, SKU, category, brand or MPN"></div>
+        <div class="col-lg-3"><label class="form-label" for="bulk-gap">Show a specific gap</label><select id="bulk-gap" class="form-select" name="gap"><option value="" {% if not current_gap %}selected{% endif %}>All physical products</option><option value="no_sku" {% if current_gap == 'no_sku' %}selected{% endif %}>Missing internal SKU</option><option value="no_brand" {% if current_gap == 'no_brand' %}selected{% endif %}>Missing brand</option><option value="no_profile" {% if current_gap == 'no_profile' %}selected{% endif %}>Missing commercial profile</option><option value="no_alt" {% if current_gap == 'no_alt' %}selected{% endif %}>Missing gallery alt text</option><option value="out_of_stock" {% if current_gap == 'out_of_stock' %}selected{% endif %}>Tracked and unavailable</option><option value="merchant_not_ready" {% if current_gap == 'merchant_not_ready' %}selected{% endif %}>Not Merchant ready</option></select></div>
+        <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply filter</button></div>
+      </form>
+    </div>
+  </div>
+
+  <form method="post" data-catalogue-bulk-form>{% csrf_token %}
+    {% if bulk_form.non_field_errors %}<div class="alert alert-danger">{{ bulk_form.non_field_errors }}</div>{% endif %}
+    {% if bulk_form.product_ids.errors %}<div class="alert alert-danger">{{ bulk_form.product_ids.errors }}</div>{% endif %}
+    <div class="row g-4 align-items-start">
+      <div class="col-xl-8">
+        <div class="card staff-panel-card">
+          <div class="card-body p-0">
+            <div class="d-flex align-items-center justify-content-between gap-3 p-3 border-bottom">
+              <div><strong>{{ matching_count }} matching product{{ matching_count|pluralize }}</strong><small class="text-muted d-block">Select only products that genuinely share the actions chosen on the right.</small></div>
+              <div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" type="button" data-select-visible>Select visible</button><button class="btn btn-sm btn-outline-secondary" type="button" data-clear-visible>Clear</button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="table align-middle mb-0 catalogue-growth-table">
+                <thead><tr><th class="ps-3"><span class="visually-hidden">Select</span></th><th>Product</th><th>Current facts</th><th>Readiness</th><th class="text-end pe-3">Review</th></tr></thead>
+                <tbody>
+                  {% for row in enrichment_rows %}
+                  <tr>
+                    <td class="ps-3"><input class="form-check-input" type="checkbox" name="product_ids" value="{{ row.product.pk }}" aria-label="Select {{ row.product.name }}" data-bulk-product></td>
+                    <td><strong class="d-block">{{ row.product.name }}</strong><small class="text-muted">{{ row.product.category.name }}{% if row.product.sku %} · {{ row.product.sku }}{% else %} · No SKU{% endif %}</small></td>
+                    <td><div class="d-flex flex-wrap gap-1">{% if row.brand %}<span class="badge text-bg-light">{{ row.brand }}</span>{% else %}<span class="badge text-bg-warning">No brand</span>{% endif %}{% if row.condition %}<span class="badge text-bg-light">{{ row.condition }}</span>{% endif %}{% if row.missing_alt %}<span class="badge text-bg-warning">Alt text missing</span>{% endif %}{% if row.available %}<span class="badge text-bg-success">Available</span>{% else %}<span class="badge text-bg-secondary">Unavailable</span>{% endif %}</div></td>
+                    <td><span class="badge rounded-pill {% if row.merchant_score == 100 %}text-bg-success{% elif row.merchant_score >= 60 %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ row.merchant_score }}%</span><small class="text-muted d-block mt-1">{{ row.quality.score }}% listing quality</small></td>
+                    <td class="text-end pe-3"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_product_commercial_review' row.product.pk %}">Commercial review</a></td>
+                  </tr>
+                  {% empty %}<tr><td colspan="5"><div class="staff-empty-state py-5">No products match this filter.</div></td></tr>{% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {% if is_paginated %}<nav class="mt-4" aria-label="Bulk enrichment product pages"><ul class="pagination justify-content-center"><li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">{% if page_obj.has_previous %}<a class="page-link" href="?page={{ page_obj.previous_page_number }}&amp;q={{ current_query|urlencode }}&amp;gap={{ current_gap|urlencode }}">Previous</a>{% else %}<span class="page-link">Previous</span>{% endif %}</li><li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ paginator.num_pages }}</span></li><li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">{% if page_obj.has_next %}<a class="page-link" href="?page={{ page_obj.next_page_number }}&amp;q={{ current_query|urlencode }}&amp;gap={{ current_gap|urlencode }}">Next</a>{% else %}<span class="page-link">Next</span>{% endif %}</li></ul></nav>{% endif %}
+      </div>
+
+      <div class="col-xl-4">
+        <aside class="card staff-panel-card sticky-xl-top catalogue-bulk-actions">
+          <div class="card-body">
+            <div class="staff-panel-heading"><h2>Actions to apply</h2></div>
+            <div class="vstack gap-3">
+              <div><label class="form-label" for="{{ bulk_form.brand.id_for_label }}">Verified shared brand</label>{{ bulk_form.brand }}{{ bulk_form.brand.errors }}<div class="form-text">{{ bulk_form.brand.help_text }}</div></div>
+              <div><label class="form-label" for="{{ bulk_form.condition.id_for_label }}">Verified shared condition</label>{{ bulk_form.condition }}{{ bulk_form.condition.errors }}</div>
+              <div class="row g-2"><div class="col-6"><label class="form-label" for="{{ bulk_form.warranty_months.id_for_label }}">Warranty months</label>{{ bulk_form.warranty_months }}{{ bulk_form.warranty_months.errors }}</div><div class="col-6"><label class="form-label" for="{{ bulk_form.shipping_mode.id_for_label }}">Shipping</label>{{ bulk_form.shipping_mode }}{{ bulk_form.shipping_mode.errors }}</div></div>
+              <div><label class="form-label" for="{{ bulk_form.merchant_shipping_price.id_for_label }}">Verified shipping price</label>{{ bulk_form.merchant_shipping_price }}{{ bulk_form.merchant_shipping_price.errors }}</div>
+              <div><label class="form-label" for="{{ bulk_form.delivery_note.id_for_label }}">Shared delivery note</label>{{ bulk_form.delivery_note }}{{ bulk_form.delivery_note.errors }}</div>
+
+              <fieldset class="border rounded p-3"><legend class="float-none w-auto px-2 fs-6 fw-semibold">Safe completion actions</legend>{% for field in bulk_form %}{% if field.name == 'generate_missing_sku' or field.name == 'fill_blank_alt_text' or field.name == 'confirm_actual_photos' %}<div class="form-check mb-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}</fieldset>
+
+              <fieldset class="border rounded p-3"><legend class="float-none w-auto px-2 fs-6 fw-semibold">Record checks completed now</legend>{% for field in bulk_form %}{% if field.name == 'verify_identity' or field.name == 'verify_condition' or field.name == 'verify_stock' or field.name == 'verify_price' %}<div class="form-check mb-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}</div>{% endif %}{% endfor %}</fieldset>
+
+              <div class="form-check border border-danger-subtle rounded p-3 ps-5">{{ bulk_form.unpublish_out_of_stock }}<label class="form-check-label fw-semibold" for="{{ bulk_form.unpublish_out_of_stock.id_for_label }}">{{ bulk_form.unpublish_out_of_stock.label }}</label><div class="form-text">{{ bulk_form.unpublish_out_of_stock.help_text }}</div></div>
+              <button class="btn btn-primary btn-lg" type="submit" data-bulk-submit disabled><i class="bi bi-check2-square me-2" aria-hidden="true"></i>Apply to selected products</button>
+              <p class="small text-muted mb-0" data-bulk-selection-status>No products selected.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/catalogue_bulk_enrichment.js' %}" defer></script>{% endblock %}

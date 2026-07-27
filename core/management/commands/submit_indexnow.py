@@ -17,6 +17,8 @@ from catalog.models import Category, Product
 from catalog.public_views import PublicProductListView
 from core.seo import public_base_url, public_url
 from growth.models import ProductGrowthData
+from merchandising.growth_views import catalogue_for_growth_page
+from merchandising.models import BuyingGuide, CommercialLandingPage, DeliveryZone
 
 
 class Command(BaseCommand):
@@ -37,7 +39,10 @@ class Command(BaseCommand):
         parser.add_argument(
             "--all-indexable",
             action="store_true",
-            help="Include public static, product, category, collection and brand URLs.",
+            help=(
+                "Include public static, product, category, collection, brand, "
+                "commercial and editorial URLs."
+            ),
         )
         parser.add_argument(
             "--dry-run",
@@ -57,7 +62,9 @@ class Command(BaseCommand):
         products = Product.objects.filter(is_published=True)
         if options["recent_hours"] is not None:
             hours = max(1, options["recent_hours"])
-            products = products.filter(updated_at__gte=timezone.now() - timedelta(hours=hours))
+            products = products.filter(
+                updated_at__gte=timezone.now() - timedelta(hours=hours)
+            )
             urls.extend(public_url(product.get_absolute_url()) for product in products)
         elif options["all_products"]:
             urls.extend(public_url(product.get_absolute_url()) for product in products)
@@ -71,6 +78,7 @@ class Command(BaseCommand):
                     "physical_product_list",
                     "service_list",
                     "buying_guide",
+                    "buying_guide_list",
                     "about",
                     "contact",
                 )
@@ -103,6 +111,18 @@ class Command(BaseCommand):
                 if slugify(brand)
             )
             urls.extend(public_url(product.get_absolute_url()) for product in products)
+
+            for page in CommercialLandingPage.objects.filter(is_published=True).order_by(
+                "pk"
+            ):
+                if catalogue_for_growth_page(page).exists():
+                    urls.append(public_url(page.get_absolute_url()))
+            urls.extend(
+                public_url(guide.get_absolute_url())
+                for guide in BuyingGuide.objects.filter(is_published=True).order_by("pk")
+            )
+            if DeliveryZone.objects.filter(is_active=True).exists():
+                urls.append(public_url(reverse("delivery_zones")))
 
         urls = self._validated_urls(urls)
         if not urls:
@@ -139,7 +159,9 @@ class Command(BaseCommand):
         if status not in {200, 202}:
             raise CommandError(f"Unexpected IndexNow response: HTTP {status}")
         self.stdout.write(
-            self.style.SUCCESS(f"IndexNow accepted {len(urls)} canonical URLs (HTTP {status}).")
+            self.style.SUCCESS(
+                f"IndexNow accepted {len(urls)} canonical URLs (HTTP {status})."
+            )
         )
 
     @staticmethod
@@ -149,7 +171,10 @@ class Command(BaseCommand):
         seen = set()
         for value in values:
             parsed = urlsplit(value)
-            if parsed.scheme not in {"http", "https"} or parsed.netloc.lower() != canonical_host:
+            if (
+                parsed.scheme not in {"http", "https"}
+                or parsed.netloc.lower() != canonical_host
+            ):
                 raise CommandError(f"URL is outside the configured public host: {value}")
             normalized = value.split("#", 1)[0]
             if normalized not in seen:

@@ -10,8 +10,9 @@ from django.views.decorators.http import require_GET
 
 from catalog import seo_feeds
 from core.seo import public_url
+from merchandising.constants import commercial_page_path
+from merchandising.growth_views import catalogue_for_growth_page
 from merchandising.models import BuyingGuide, CommercialLandingPage, DeliveryZone
-from merchandising.views import commercial_page_path
 
 
 @require_GET
@@ -29,16 +30,29 @@ def sitemap_index(request):
         sitemap = ET.SubElement(root, f"{{{seo_feeds.SITEMAP_NS}}}sitemap")
         ET.SubElement(sitemap, f"{{{seo_feeds.SITEMAP_NS}}}loc").text = commercial_url
         try:
-            page_update = CommercialLandingPage.objects.filter(is_published=True).aggregate(value=Max("updated_at"))["value"]
-            guide_update = BuyingGuide.objects.filter(is_published=True).aggregate(value=Max("updated_at"))["value"]
-            latest = max((value for value in (page_update, guide_update) if value), default=None)
+            page_update = CommercialLandingPage.objects.filter(
+                is_published=True
+            ).aggregate(value=Max("updated_at"))["value"]
+            guide_update = BuyingGuide.objects.filter(is_published=True).aggregate(
+                value=Max("updated_at")
+            )["value"]
+            latest = max(
+                (value for value in (page_update, guide_update) if value),
+                default=None,
+            )
         except (OperationalError, ProgrammingError):
             latest = None
         if latest:
-            ET.SubElement(sitemap, f"{{{seo_feeds.SITEMAP_NS}}}lastmod").text = latest.isoformat(timespec="seconds")
+            ET.SubElement(
+                sitemap,
+                f"{{{seo_feeds.SITEMAP_NS}}}lastmod",
+            ).text = latest.isoformat(timespec="seconds")
     payload = ET.tostring(root, encoding="utf-8", xml_declaration=True)
     corrected = HttpResponse(payload, content_type="application/xml; charset=utf-8")
-    corrected["Cache-Control"] = response.get("Cache-Control", "public, max-age=3600")
+    corrected["Cache-Control"] = response.get(
+        "Cache-Control",
+        "public, max-age=3600",
+    )
     return corrected
 
 
@@ -49,10 +63,21 @@ def commercial_sitemap(request):
         pages = CommercialLandingPage.objects.filter(is_published=True).order_by("pk")
         guides = BuyingGuide.objects.filter(is_published=True).order_by("pk")
         for page in pages:
-            seo_feeds._add_url(root, public_url(commercial_page_path(page.slug)), page.updated_at)
+            # Keep useful staff/customer sourcing pages available, but only advertise
+            # commercial hubs to search engines once live catalogue evidence exists.
+            if catalogue_for_growth_page(page).exists():
+                seo_feeds._add_url(
+                    root,
+                    public_url(commercial_page_path(page.slug)),
+                    page.updated_at,
+                )
         seo_feeds._add_url(root, public_url(reverse("buying_guide_list")))
         for guide in guides:
-            seo_feeds._add_url(root, public_url(guide.get_absolute_url()), guide.updated_at)
+            seo_feeds._add_url(
+                root,
+                public_url(guide.get_absolute_url()),
+                guide.updated_at,
+            )
         if DeliveryZone.objects.filter(is_active=True).exists():
             seo_feeds._add_url(root, public_url(reverse("delivery_zones")))
     except (OperationalError, ProgrammingError):

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body commercial-page{% endblock %}
+{% block meta %}
+<meta name="description" content="{{ page_description }}">
+{% if product_count %}<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">{% else %}<meta name="robots" content="noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">{% endif %}
+<link rel="canonical" href="{{ canonical_url }}">
+{% if prev_url %}<link rel="prev" href="{{ prev_url }}">{% endif %}
+{% if next_url %}<link rel="next" href="{{ next_url }}">{% endif %}
+<meta property="og:type" content="website">
+<meta property="og:locale" content="{{ seo_og_locale|default:'en_UG' }}">
+<meta property="og:site_name" content="{{ company.company_name }}">
+<meta property="og:title" content="{{ page_title }}">
+<meta property="og:description" content="{{ page_description }}">
+<meta property="og:url" content="{{ canonical_url }}">
+{% if social_image_url %}<meta property="og:image" content="{{ social_image_url }}"><meta property="og:image:alt" content="{{ commercial_page.title }}">{% endif %}
+<meta name="twitter:card" content="{% if social_image_url %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:title" content="{{ page_title }}">
+<meta name="twitter:description" content="{{ page_description }}">
+{% if social_image_url %}<meta name="twitter:image" content="{{ social_image_url }}"><meta name="twitter:image:alt" content="{{ commercial_page.title }}">{% endif %}
+{% endblock %}
+{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet">{% endblock %}
+{% block content %}
+<script type="application/ld+json">{{ item_list_json }}</script>
+<script type="application/ld+json">{{ breadcrumb_json }}</script>
+{% if faq_schema_json %}<script type="application/ld+json">{{ faq_schema_json }}</script>{% endif %}
+
+<section class="commercial-hero">
+  <div class="container">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <p class="public-eyebrow">{{ commercial_page.eyebrow|default:'Technology buying in Uganda' }}</p>
+        <h1>{{ commercial_page.title }}{% if page_obj.number > 1 %} — Page {{ page_obj.number }}{% endif %}</h1>
+        <p class="commercial-hero__lead">{{ commercial_page.intro }}</p>
+        <div class="d-flex flex-wrap gap-2 mt-4"><a class="btn btn-light btn-lg" href="{{ commercial_page.hero_cta_url }}" data-analytics-commercial-cta>{{ commercial_page.hero_cta }}</a><a class="btn btn-outline-light btn-lg" href="#available-products">Compare available options</a></div>
+        <div class="commercial-hero__stats">
+          <div class="commercial-stat"><strong>{{ product_count }}</strong><span>matching catalogue item{{ product_count|pluralize }}</span></div>
+          <div class="commercial-stat"><strong>{{ available_count }}</strong><span>currently available to order</span></div>
+          <div class="commercial-stat"><strong>{% if price_min %}{{ company.currency_code }} {{ price_min|floatformat:0 }}{% else %}Ask for price{% endif %}</strong><span>current starting price</span></div>
+          <div class="commercial-stat"><strong>LEOSOFT</strong><span>quotation and after-sales support</span></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <aside class="commercial-trust-card">
+          <p class="market-kicker">Buy with clarity</p><h2>Product information that supports a real decision</h2>
+          <ul class="commercial-trust-list"><li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Prices include the cheapest active configuration where variants exist.</span></li><li><i class="bi bi-images" aria-hidden="true"></i><span>Actual-product photos and condition can be confirmed before payment.</span></li><li><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Formal quotations are available for schools, NGOs and businesses.</span></li><li><i class="bi bi-headset" aria-hidden="true"></i><span>Technical guidance, setup and after-sales support remain available.</span></li></ul>
+        </aside>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if commercial_page.buying_guidance %}<section class="commercial-section commercial-section--soft"><div class="container"><div class="commercial-section__head"><div><p class="market-kicker">Buying guidance</p><h2>How to choose well</h2></div></div><div class="commercial-copy-card">{{ commercial_page.buying_guidance|linebreaks }}</div></div></section>{% endif %}
+
+<section class="commercial-section" id="available-products">
+  <div class="container">
+    <div class="commercial-section__head"><div><p class="market-kicker">Live catalogue</p><h2>Available products and current prices</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} matching items. {% endif %}Confirm final stock, exact configuration and delivery before paying or travelling.</p></div><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Open full catalogue</a></div>
+    <div class="market-product-grid">{% for p in products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=True %}{% empty %}<div class="commercial-copy-card"><h3 class="h5 fw-bold">No matching product is published yet</h3><p class="mb-3">The page remains useful for guidance, but live matching stock has not been added or confirmed. It stays out of search indexes until catalogue evidence supports it.</p><a class="btn btn-primary" href="{% url 'contact' %}?type=product">Ask the team to source an option</a></div>{% endfor %}</div>
+
+    {% if is_paginated %}<nav class="mt-5" aria-label="{{ commercial_page.title }} pages"><ul class="pagination justify-content-center gap-1">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link rounded px-3" href="{% if page_obj.previous_page_number == 1 %}{{ commercial_page.get_absolute_url }}{% else %}?page={{ page_obj.previous_page_number }}{% endif %}" rel="prev">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link rounded">{{ page_obj.number }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link rounded px-3" href="?page={{ page_obj.next_page_number }}" rel="next">Next</a></li>{% endif %}</ul><p class="text-center text-muted small">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p></nav>{% endif %}
+  </div>
+</section>
+
+{% if related_commercial_pages %}<section class="commercial-section commercial-section--soft"><div class="container"><div class="commercial-section__head"><div><p class="market-kicker">Continue comparing</p><h2>Related technology price and buying hubs</h2><p>Move between closely related brands, use cases and product categories without starting a new search.</p></div></div><div class="commercial-link-grid">{% for page in related_commercial_pages %}<a class="commercial-link-card" href="{{ page.get_absolute_url }}"><span class="market-kicker">Buying hub</span><strong>{{ page.title }}</strong><small>{{ page.meta_description }}</small></a>{% endfor %}</div></div></section>{% endif %}
+
+{% if related_guides %}<section class="commercial-section"><div class="container"><div class="commercial-section__head"><div><p class="market-kicker">LEOSOFT knowledge centre</p><h2>Read before you buy</h2><p>Practical guides help customers compare specifications, condition, maintenance and long-term value.</p></div><a class="market-section-link" href="{% url 'buying_guide_list' %}">View all guides <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="commercial-link-grid">{% for guide in related_guides %}<a class="commercial-link-card" href="{{ guide.get_absolute_url }}"><span class="market-kicker">Buying guide</span><strong>{{ guide.title }}</strong><small>{{ guide.excerpt }}</small></a>{% endfor %}</div></div></section>{% endif %}
+
+{% if faqs %}<section class="commercial-section commercial-section--soft"><div class="container"><div class="commercial-section__head"><div><p class="market-kicker">Common questions</p><h2>Answers before you order</h2></div></div><div class="commercial-faq">{% for faq in faqs %}<details><summary>{{ faq.question }}</summary><p>{{ faq.answer }}</p></details>{% endfor %}</div></div></section>{% endif %}
+
+<section class="commercial-section"><div class="container"><div class="commercial-copy-card d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3"><div><p class="market-kicker">Need a specific configuration?</p><h2 class="h3 fw-bold">Get a recommendation and formal quotation</h2><p class="mb-0">Share the intended use, budget, preferred brand and minimum specifications. The team can recommend a practical option without guessing.</p></div><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary" href="{% url 'contact' %}?type=quote">Request quotation</a>{% if social_profiles.whatsapp_url %}<a class="btn btn-outline-success" href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>WhatsApp</a>{% endif %}</div></div></div></section>
+{% endblock %}
