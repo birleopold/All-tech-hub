@@ -47,7 +47,6 @@ class ProductImageInteractionTests(TestCase):
             ),
             alt_text="Animated Gallery Laptop front view",
             sort_order=1,
-            is_customer_visible=True,
         )
         ProductImage.objects.create(
             product=cls.product,
@@ -58,7 +57,6 @@ class ProductImageInteractionTests(TestCase):
             ),
             alt_text="Animated Gallery Laptop side view",
             sort_order=2,
-            is_customer_visible=True,
         )
 
     def test_product_detail_exposes_multiple_gallery_thumbnails(self):
