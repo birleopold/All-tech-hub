@@ -75,6 +75,8 @@
   fill: #78dff5;
   stroke: rgba(255, 255, 255, 0.44);
   stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
   animation: home-tech-node-pulse 3.8s ease-in-out infinite;
 }
 
@@ -84,10 +86,6 @@
 
 .home-tech-ambient__node--three circle:last-child {
   animation-delay: -2.5s;
-}
-
-.home-tech-ambient__rack {
-  animation: home-tech-rack-float 11s ease-in-out infinite;
 }
 
 .home-tech-ambient__rack-shadow {
@@ -228,15 +226,6 @@
   stroke-linecap: round;
 }
 
-.home-tech-ambient__satellite {
-  animation: home-tech-satellite-float 8s ease-in-out infinite;
-}
-
-.home-tech-ambient__satellite--two {
-  animation-delay: -3.5s;
-  animation-duration: 10s;
-}
-
 @keyframes home-tech-data-flow {
   to {
     stroke-dashoffset: -190;
@@ -251,15 +240,6 @@
   50% {
     opacity: 0.95;
     transform: scale(1.08);
-  }
-}
-
-@keyframes home-tech-rack-float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
   }
 }
 
@@ -302,15 +282,6 @@
   }
   62%, 72% {
     opacity: 0.68;
-  }
-}
-
-@keyframes home-tech-satellite-float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
   }
 }
 
