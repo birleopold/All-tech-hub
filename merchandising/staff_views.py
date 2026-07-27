@@ -18,9 +18,12 @@ from inventory.forms import (
     ProductCommercialCoreForm,
     ProductGrowthDataForm,
 )
+from merchandising.enrichment import (
+    apply_bulk_catalogue_enrichment,
+    product_inventory_state,
+)
 from merchandising.forms import BulkCatalogueEnrichmentForm
 from merchandising.models import ProductCommerceProfile
-from merchandising.services import apply_bulk_catalogue_enrichment
 
 
 class ProductCommercialReviewView(StaffRequiredMixin, View):
@@ -127,16 +130,6 @@ class CatalogueBulkEnrichmentView(StaffRequiredMixin, View):
             .order_by("name", "pk")
         )
 
-    @staticmethod
-    def _is_available(product: Product) -> bool:
-        active_variants = [variant for variant in product.variants.all() if variant.is_active]
-        if active_variants:
-            return any(
-                (not variant.track_inventory) or int(variant.stock_quantity) > 0
-                for variant in active_variants
-            )
-        return (not product.track_inventory) or int(product.stock_quantity) > 0
-
     def filtered_products(self, request):
         queryset = self.base_queryset()
         query = (request.GET.get("q") or "").strip()
@@ -173,14 +166,17 @@ class CatalogueBulkEnrichmentView(StaffRequiredMixin, View):
                 image.image and not image.alt_text.strip()
                 for image in product.gallery_images.all()
             )
-            available = self._is_available(product)
+            inventory_managed, available = product_inventory_state(product)
+            condition_verified = bool(
+                profile is not None and profile.condition_verified_at
+            )
             matches_gap = {
                 "": True,
                 "no_sku": not product.sku.strip(),
                 "no_brand": growth is None or not growth.brand.strip(),
                 "no_profile": profile is None,
                 "no_alt": missing_alt,
-                "out_of_stock": product.track_inventory and not available,
+                "out_of_stock": inventory_managed and not available,
                 "merchant_not_ready": bool(merchant_missing),
             }.get(gap, True)
             if not matches_gap:
@@ -190,12 +186,18 @@ class CatalogueBulkEnrichmentView(StaffRequiredMixin, View):
                     "product": product,
                     "quality": quality_by_id[product.pk],
                     "brand": growth.brand if growth else "",
-                    "condition": growth.get_condition_display() if growth else "",
+                    "condition": (
+                        growth.get_condition_display()
+                        if growth and condition_verified
+                        else ""
+                    ),
+                    "condition_unverified": bool(growth and not condition_verified),
                     "profile": profile,
                     "merchant_score": profile.merchant_readiness_score if profile else 0,
                     "merchant_missing": merchant_missing,
                     "missing_alt": missing_alt,
                     "available": available,
+                    "inventory_managed": inventory_managed,
                 }
             )
         return rows
