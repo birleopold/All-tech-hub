@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Bulk catalogue enrichment{% endblock %}
 {% block staff_page_name %}Bulk catalogue enrichment{% endblock %}
-{% block extra_css %}<link href="{% static 'css/catalogue_growth_operations.css' %}" rel="stylesheet">{% endblock %}
+{% block extra_css %}{{ block.super }}<link href="{% static 'css/catalogue_growth_operations.css' %}" rel="stylesheet">{% endblock %}
 {% block staff_content %}
 <section class="staff-dashboard">
   <div class="staff-dashboard-header">
