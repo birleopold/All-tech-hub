@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load catalog_images %}
+{% load catalog_images humanize %}
 {% block title %}Compare products{% endblock %}
 {% block meta %}
 <meta name="description" content="Compare selected LEOSOFT products side by side by price, availability, category and options.">
@@ -42,7 +42,7 @@
       </thead>
       <tbody>
         <tr><th scope="row">Category</th>{% for product in products %}<td>{{ product.category.name }}</td>{% endfor %}</tr>
-        <tr><th scope="row">Price</th>{% for product in products %}<td class="fw-semibold">{% if product.has_sellable_variants and product.min_active_variant_price %}From {% endif %}{{ company.currency_code }} {% if product.has_sellable_variants and product.min_active_variant_price %}{{ product.min_active_variant_price }}{% else %}{{ product.price }}{% endif %}</td>{% endfor %}</tr>
+        <tr><th scope="row">Price</th>{% for product in products %}<td class="fw-semibold">{% if product.has_sellable_variants and product.min_active_variant_price %}From {% endif %}{{ company.currency_code }} {% if product.has_sellable_variants and product.min_active_variant_price %}{{ product.min_active_variant_price|floatformat:0|intcomma }}{% else %}{{ product.price|floatformat:0|intcomma }}{% endif %}</td>{% endfor %}</tr>
         <tr><th scope="row">Availability</th>{% for product in products %}<td>{% if product.available_to_sell %}<span class="badge text-bg-success">In stock</span>{% else %}<span class="badge text-bg-secondary">Ask availability</span>{% endif %}{% if product.is_low_stock %} <span class="badge text-bg-warning">Low stock</span>{% endif %}</td>{% endfor %}</tr>
         <tr><th scope="row">Options</th>{% for product in products %}<td>{% if product.has_sellable_variants %}{{ product.active_variant_count }} option{{ product.active_variant_count|pluralize }}{% else %}Standard item{% endif %}</td>{% endfor %}</tr>
         <tr><th scope="row">Summary</th>{% for product in products %}<td>{{ product.short_description|default:product.description|truncatewords:28 }}</td>{% endfor %}</tr>

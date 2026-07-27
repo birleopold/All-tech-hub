@@ -1,4 +1,4 @@
-{% load catalog_images %}
+{% load catalog_images humanize %}
 <article class="market-product-card" data-reveal data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{{ p.public_price }}">
   <div class="market-product-card__media">
     <a class="market-product-card__image-link" href="{{ p.get_absolute_url }}" aria-label="View {{ p.name }}">
@@ -33,13 +33,13 @@
     <div class="market-product-card__price-row">
       <div class="market-price">
         {% if p.public_has_variants %}<small>From</small>{% endif %}
-        <strong>{{ company.currency_code }} {{ p.public_price|floatformat:0 }}</strong>
-        {% if p.public_compare_at_price %}<del>{{ company.currency_code }} {{ p.public_compare_at_price|floatformat:0 }}</del>{% endif %}
+        <strong>{{ company.currency_code }} {{ p.public_price|floatformat:0|intcomma }}</strong>
+        {% if p.public_compare_at_price %}<del>{{ company.currency_code }} {{ p.public_compare_at_price|floatformat:0|intcomma }}</del>{% endif %}
       </div>
     </div>
     <div class="market-product-card__actions">
       <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details</a>
-      <details class="market-card-quick-view"><summary class="btn btn-outline-secondary" aria-label="Quick view {{ p.name }}" title="Quick view"><i class="bi bi-eye" aria-hidden="true"></i></summary><div class="market-card-quick-view__panel"><p class="market-kicker">Quick view</p><h4>{{ p.name }}</h4><p>{{ p.short_description|default:p.description|truncatewords:34 }}</p><dl><div><dt>Condition</dt><dd>{{ p.public_condition|default:'Confirm with team' }}</dd></div><div><dt>Price</dt><dd>{% if p.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ p.public_price|floatformat:0 }}</dd></div>{% if p.public_processor_summary %}<div><dt>Processor</dt><dd>{{ p.public_processor_summary }}</dd></div>{% endif %}{% if p.public_memory_storage_summary %}<div><dt>Memory and storage</dt><dd>{{ p.public_memory_storage_summary }}</dd></div>{% endif %}<div><dt>Availability</dt><dd>{% if p.public_available %}Available to order{% else %}Confirm availability{% endif %}</dd></div></dl><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary btn-sm" href="{{ p.get_absolute_url }}">Full details</a><a class="btn btn-outline-primary btn-sm" href="{% url 'contact' %}?type=product&amp;product={{ p.slug|urlencode }}">Ask the team</a></div></div></details>
+      <details class="market-card-quick-view"><summary class="btn btn-outline-secondary" aria-label="Quick view {{ p.name }}" title="Quick view"><i class="bi bi-eye" aria-hidden="true"></i></summary><div class="market-card-quick-view__panel"><p class="market-kicker">Quick view</p><h4>{{ p.name }}</h4><p>{{ p.short_description|default:p.description|truncatewords:34 }}</p><dl><div><dt>Condition</dt><dd>{{ p.public_condition|default:'Confirm with team' }}</dd></div><div><dt>Price</dt><dd>{% if p.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ p.public_price|floatformat:0|intcomma }}</dd></div>{% if p.public_processor_summary %}<div><dt>Processor</dt><dd>{{ p.public_processor_summary }}</dd></div>{% endif %}{% if p.public_memory_storage_summary %}<div><dt>Memory and storage</dt><dd>{{ p.public_memory_storage_summary }}</dd></div>{% endif %}<div><dt>Availability</dt><dd>{% if p.public_available %}Available to order{% else %}Confirm availability{% endif %}</dd></div></dl><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary btn-sm" href="{{ p.get_absolute_url }}">Full details</a><a class="btn btn-outline-primary btn-sm" href="{% url 'contact' %}?type=product&amp;product={{ p.slug|urlencode }}">Ask the team</a></div></div></details>
       {% if p.kind == 'physical' and p.public_available and not p.public_has_variants %}
       <form method="post" action="{% url 'cart_add' p.pk %}" class="market-quick-add-form" data-market-quick-add>{% csrf_token %}<input type="hidden" name="quantity" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-primary market-quick-add-button" aria-label="Add {{ p.name }} to cart" title="Add to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i></button></form>
       {% endif %}

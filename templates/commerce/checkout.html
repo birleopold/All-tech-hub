@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}Checkout{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
@@ -64,15 +65,15 @@
             {% for row in checkout_lines %}
             <li class="list-group-item d-flex justify-content-between px-0">
               <span>{{ row.qty }}× {{ row.line.label }}</span>
-              <strong>{{ company.currency_code }} {{ row.line_total }}</strong>
+              <strong>{{ company.currency_code }} {{ row.line_total|floatformat:0|intcomma }}</strong>
             </li>
             {% endfor %}
           </ul>
-          <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ subtotal }}</strong></div>
-          {% if discount %}<div class="d-flex justify-content-between small mb-2 text-success"><span>Discount{% if coupon %} ({{ coupon.code }}){% endif %}</span><strong>−{{ company.currency_code }} {{ discount }}</strong></div>{% endif %}
-          <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ tax_amount }}</strong></div>
+          <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ subtotal|floatformat:0|intcomma }}</strong></div>
+          {% if discount %}<div class="d-flex justify-content-between small mb-2 text-success"><span>Discount{% if coupon %} ({{ coupon.code }}){% endif %}</span><strong>−{{ company.currency_code }} {{ discount|floatformat:0|intcomma }}</strong></div>{% endif %}
+          <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ tax_amount|floatformat:0|intcomma }}</strong></div>
           <hr>
-          <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ total }}</strong></div>
+          <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div>
         </div>
       </aside>
 
