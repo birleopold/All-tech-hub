@@ -19,7 +19,7 @@
 {% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="{{ company.company_name }} technology products and IT support">{% endif %}
 {% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
 {% endblock %}
-{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet"><link href="{% static 'css/home_tech_ambient.css' %}" rel="stylesheet">{% endblock %}
+{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet"><link href="{% static 'css/home_tech_ambient.css' %}" rel="stylesheet"><link href="{% static 'css/home_engagement.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 <section class="market-home-hero">
   {% include "core/_home_tech_ambient.html" %}
@@ -51,8 +51,11 @@
         </div>
       </div>
     </div>
+    <a class="home-scroll-invitation" href="#homepage-discovery" aria-label="Continue to homepage discovery options"><span class="home-scroll-invitation__mouse" aria-hidden="true"></span><span>Explore below</span></a>
   </div>
 </section>
+
+{% include "core/_home_engagement_intro.html" %}
 
 {% if catalog_categories %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by department</p><h2 class="market-section-title">Start with a category</h2><p class="market-section-intro">Move quickly from a broad technology need to the products and services that matter.</p></div><a class="market-section-link" href="{% url 'product_list' %}">View all categories <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-category-rail">{% for category in catalog_categories %}<a class="market-category-tile" href="{% url 'product_category' category.slug %}" data-reveal>{% if forloop.counter == 1 %}<i class="bi bi-laptop" aria-hidden="true"></i>{% elif forloop.counter == 2 %}<i class="bi bi-pc-display" aria-hidden="true"></i>{% elif forloop.counter == 3 %}<i class="bi bi-router" aria-hidden="true"></i>{% elif forloop.counter == 4 %}<i class="bi bi-printer" aria-hidden="true"></i>{% elif forloop.counter == 5 %}<i class="bi bi-device-ssd" aria-hidden="true"></i>{% elif forloop.counter == 6 %}<i class="bi bi-mouse" aria-hidden="true"></i>{% else %}<i class="bi bi-grid" aria-hidden="true"></i>{% endif %}<strong>{{ category.name }}</strong><small>{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</small></a>{% endfor %}</div></div></section>{% endif %}
 
@@ -61,6 +64,8 @@
 <section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by purpose</p><h2 class="market-section-title">Choose according to the job</h2><p class="market-section-intro">Start with how the technology will be used, then compare specifications and budget.</p></div></div><div class="market-purpose-grid">{% for collection in purpose_collections %}<a class="market-purpose-card" href="{% url 'product_collection' collection.slug %}" data-reveal><i class="bi {{ collection.icon }}" aria-hidden="true"></i><h3>{{ collection.title }}</h3><p>{{ collection.description }}</p></a>{% endfor %}</div></div></section>
 
 {% if featured_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Team selections</p><h2 class="market-section-title">Featured technology</h2><p class="market-section-intro">A rotating selection of useful computers, accessories and equipment from the live catalogue.</p></div><a class="market-section-link" href="{% url 'product_collection' 'featured' %}">Shop featured products <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in featured_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div></div></section>{% endif %}
+
+{% include "core/_home_engagement_story.html" %}
 
 {% if brand_collections %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by brand</p><h2 class="market-section-title">Find familiar technology brands</h2><p class="market-section-intro">Brand pages are generated from verified product catalogue data.</p></div></div><div class="market-brand-grid">{% for brand in brand_collections %}<a class="market-brand-card" href="{% url 'product_brand' brand.slug %}"><strong>{{ brand.brand }}</strong><small>{{ brand.product_count }} product{{ brand.product_count|pluralize }}</small></a>{% endfor %}</div></div></section>{% endif %}
 

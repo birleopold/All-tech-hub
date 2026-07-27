@@ -124,6 +124,8 @@ for name in (
     "css/marketplace_experience.css",
     "css/search_conversion_refinement.css",
     "css/catalogue_growth_operations.css",
+    "css/home_tech_ambient.css",
+    "css/home_engagement.css",
     "js/marketplace_experience.js",
     "js/catalogue_bulk_enrichment.js",
 ):

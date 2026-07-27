@@ -1,0 +1,58 @@
+<section class="home-confidence-story" aria-labelledby="home-confidence-title">
+  <div class="container">
+    <div class="home-confidence-story__shell">
+      <div class="home-confidence-story__lead" data-reveal>
+        <p class="public-eyebrow">More than a product listing</p>
+        <h2 id="home-confidence-title">Keep exploring with a clearer path from interest to support.</h2>
+        <p>LEOSOFT connects catalogue discovery, practical comparison, formal documentation and technical help so the relationship does not end when a product is selected.</p>
+        <div class="home-confidence-story__metrics" aria-label="Live catalogue summary">
+          <div><strong>{{ catalog_stats.total|default:0 }}</strong><span>published catalogue options</span></div>
+          <div><strong>{{ catalog_stats.products|default:0 }}</strong><span>physical technology products</span></div>
+          <div><strong>{{ catalog_stats.services|default:0 }}</strong><span>service and support options</span></div>
+        </div>
+        <div class="home-confidence-story__actions">
+          <a class="btn btn-light" href="{% url 'buying_guide_list' %}">Explore buying guides</a>
+          <a class="btn btn-outline-light" href="{% url 'contact' %}?type=product">Ask for a recommendation</a>
+        </div>
+      </div>
+
+      <ol class="home-confidence-steps" aria-label="Customer journey">
+        <li data-reveal>
+          <span class="home-confidence-steps__number">1</span>
+          <span class="home-confidence-steps__icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+          <div><strong>Discover</strong><p>Search products, services, price hubs, brands and use-based collections.</p></div>
+        </li>
+        <li data-reveal data-reveal-delay="1">
+          <span class="home-confidence-steps__number">2</span>
+          <span class="home-confidence-steps__icon"><i class="bi bi-sliders" aria-hidden="true"></i></span>
+          <div><strong>Compare</strong><p>Review price, condition, specifications, availability and practical alternatives.</p></div>
+        </li>
+        <li data-reveal data-reveal-delay="2">
+          <span class="home-confidence-steps__number">3</span>
+          <span class="home-confidence-steps__icon"><i class="bi bi-chat-square-check" aria-hidden="true"></i></span>
+          <div><strong>Confirm</strong><p>Ask questions, verify the exact option and request written quotation details.</p></div>
+        </li>
+        <li data-reveal data-reveal-delay="3">
+          <span class="home-confidence-steps__number">4</span>
+          <span class="home-confidence-steps__icon"><i class="bi bi-headset" aria-hidden="true"></i></span>
+          <div><strong>Stay supported</strong><p>Return for setup, upgrades, repairs, warranty guidance and business IT support.</p></div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="home-curiosity" aria-labelledby="home-curiosity-title">
+  <div class="container">
+    <div class="home-curiosity__heading" data-reveal>
+      <div><p class="market-kicker">Questions worth exploring</p><h2 id="home-curiosity-title">Make a better decision before spending</h2></div>
+      <a class="market-section-link" href="{% url 'buying_guide_list' %}">Open the knowledge centre <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="home-curiosity__rail">
+      <a href="{% url 'buying_guide_detail' 'how-to-choose-a-laptop-in-uganda' %}"><span>01</span><strong>Which laptop fits my real work?</strong><small>Start with workload, not the badge.</small></a>
+      <a href="{% url 'buying_guide_detail' 'how-to-inspect-a-refurbished-laptop' %}"><span>02</span><strong>How do I inspect a refurbished laptop?</strong><small>Review condition, battery, ports and warranty.</small></a>
+      <a href="{% url 'buying_guide_detail' '8gb-vs-16gb-ram-laptop-guide' %}"><span>03</span><strong>Do I need 8GB or 16GB RAM?</strong><small>Match memory to applications and multitasking.</small></a>
+      <a href="{% url 'buying_guide_detail' 'ssd-vs-hdd-storage-guide' %}"><span>04</span><strong>Should I choose SSD or HDD storage?</strong><small>Compare speed, capacity, durability and cost.</small></a>
+    </div>
+  </div>
+</section>
