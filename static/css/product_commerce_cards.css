@@ -1,1 +1,25 @@
 .market-product-card__decision-specs{display:grid;gap:.35rem;margin:.65rem 0}.market-product-card__decision-specs span{display:flex;align-items:center;gap:.4rem;color:#31485d;font-size:.82rem;line-height:1.35}.market-product-card__decision-specs i{color:#0d7c71}.market-card-quick-view{position:relative}.market-card-quick-view>summary{list-style:none;display:inline-flex;align-items:center;justify-content:center}.market-card-quick-view>summary::-webkit-details-marker{display:none}.market-card-quick-view__panel{position:absolute;z-index:45;right:0;bottom:calc(100% + .7rem);width:min(340px,82vw);padding:1.15rem;border:1px solid #d6e0e7;border-radius:1rem;background:#fff;box-shadow:0 22px 60px rgba(13,35,54,.22);color:#1d3347}.market-card-quick-view__panel:after{content:"";position:absolute;right:1rem;bottom:-.45rem;width:.8rem;height:.8rem;background:#fff;border-right:1px solid #d6e0e7;border-bottom:1px solid #d6e0e7;transform:rotate(45deg)}.market-card-quick-view__panel h4{font-size:1rem;font-weight:800}.market-card-quick-view__panel p{font-size:.86rem;line-height:1.55;color:#5d7081}.market-card-quick-view__panel dl{display:grid;gap:.45rem;margin:0 0 1rem}.market-card-quick-view__panel dl div{display:grid;grid-template-columns:minmax(82px,.7fr) 1.3fr;gap:.6rem;font-size:.8rem}.market-card-quick-view__panel dt{color:#758493;font-weight:600}.market-card-quick-view__panel dd{margin:0;color:#23394c;font-weight:700}.market-card-quick-view[open]>summary{background:#e8f3f1;border-color:#7db4aa;color:#145e55}@media(max-width:575px){.market-card-quick-view__panel{position:fixed;inset:auto 1rem 5.25rem 1rem;width:auto;max-height:70vh;overflow:auto}.market-card-quick-view__panel:after{display:none}}
+
+/* Loaded after the base product-detail stylesheet, so these declarations keep
+   the pointer-responsive gallery transform from being replaced by the legacy
+   card hover scale. */
+.public-product-page .product-gallery-stage .product-detail-image {
+  transform: translate3d(var(--gallery-shift-x, 0px), var(--gallery-shift-y, 0px), 0)
+    scale(var(--gallery-scale, 1)) !important;
+  transform-origin: var(--gallery-pointer-x, 50%) var(--gallery-pointer-y, 50%);
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 260ms ease,
+    opacity 180ms ease !important;
+}
+
+.public-product-page .product-gallery-stage.is-changing .product-detail-image {
+  opacity: 0.25;
+  transform: translate3d(0, 5px, 0) scale(0.985) !important;
+}
+
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .public-product-page .product-gallery-stage .product-detail-image {
+    transform: none !important;
+  }
+}
