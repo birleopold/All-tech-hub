@@ -32,6 +32,20 @@ def _has_public_image(product: Product) -> bool:
     return any(image.image for image in product.gallery_images.all())
 
 
+def _existing_growth(product: Product):
+    try:
+        return product.growth_data
+    except ObjectDoesNotExist:
+        return None
+
+
+def _existing_profile(product: Product):
+    try:
+        return product.commerce_profile
+    except ObjectDoesNotExist:
+        return None
+
+
 @transaction.atomic
 def apply_bulk_catalogue_enrichment(*, products, cleaned_data: dict, actor) -> dict:
     now = timezone.now()
@@ -42,100 +56,152 @@ def apply_bulk_catalogue_enrichment(*, products, cleaned_data: dict, actor) -> d
     warranty_months = cleaned_data.get("warranty_months")
     shipping_mode = cleaned_data.get("shipping_mode") or ""
     shipping_price = cleaned_data.get("merchant_shipping_price")
+    profile_action_requested = any(
+        (
+            warranty_months is not None,
+            bool(delivery_note),
+            bool(shipping_mode),
+            bool(cleaned_data.get("confirm_actual_photos")),
+            bool(cleaned_data.get("verify_identity")),
+            bool(cleaned_data.get("verify_condition")),
+            bool(cleaned_data.get("verify_stock")),
+            bool(cleaned_data.get("verify_price")),
+        )
+    )
 
-    product_list = list(products)
-    for product in product_list:
+    for product in list(products):
         product_fields: list[str] = []
-        growth, growth_created = ProductGrowthData.objects.get_or_create(product=product)
-        profile, profile_created = ProductCommerceProfile.objects.get_or_create(product=product)
-        if growth_created:
-            counts["growth_profiles_created"] += 1
-        if profile_created:
-            counts["commerce_profiles_created"] += 1
-
         growth_fields: list[str] = []
         profile_fields: list[str] = []
+        growth = _existing_growth(product)
+        profile = _existing_profile(product)
 
-        if brand and growth.brand != brand:
-            growth.brand = brand
-            growth_fields.append("brand")
-            counts["brands_updated"] += 1
-        if condition and growth.condition != condition:
-            growth.condition = condition
-            growth_fields.append("condition")
-            counts["conditions_updated"] += 1
+        if (brand or condition) and growth is None:
+            growth = ProductGrowthData.objects.create(
+                product=product,
+                brand=brand,
+                condition=condition or ProductGrowthData.CONDITION_NEW,
+            )
+            counts["growth_profiles_created"] += 1
+            if brand:
+                counts["brands_updated"] += 1
+            if condition:
+                counts["conditions_updated"] += 1
+        elif growth is not None:
+            if brand and growth.brand != brand:
+                growth.brand = brand
+                growth_fields.append("brand")
+                counts["brands_updated"] += 1
+            if condition and growth.condition != condition:
+                growth.condition = condition
+                growth_fields.append("condition")
+                counts["conditions_updated"] += 1
+
+        if profile_action_requested and profile is None:
+            profile = ProductCommerceProfile.objects.create(product=product)
+            counts["commerce_profiles_created"] += 1
 
         if cleaned_data.get("generate_missing_sku") and not product.sku.strip():
             product.sku = f"LS-{product.pk:06d}"
             product_fields.append("sku")
             counts["skus_generated"] += 1
 
-        if warranty_months is not None and profile.warranty_months != warranty_months:
-            profile.warranty_months = warranty_months
-            profile_fields.append("warranty_months")
-            counts["warranties_updated"] += 1
-        if delivery_note and profile.delivery_note != delivery_note:
-            profile.delivery_note = delivery_note
-            profile_fields.append("delivery_note")
-            counts["delivery_notes_updated"] += 1
+        if profile is not None:
+            if warranty_months is not None and profile.warranty_months != warranty_months:
+                profile.warranty_months = warranty_months
+                profile_fields.append("warranty_months")
+                counts["warranties_updated"] += 1
+            if delivery_note and profile.delivery_note != delivery_note:
+                profile.delivery_note = delivery_note
+                profile_fields.append("delivery_note")
+                counts["delivery_notes_updated"] += 1
 
-        if shipping_mode == "free":
-            if not profile.merchant_free_shipping or profile.merchant_shipping_price is not None:
-                profile.merchant_free_shipping = True
-                profile.merchant_shipping_price = None
-                profile_fields.extend(
-                    field
-                    for field in ("merchant_free_shipping", "merchant_shipping_price")
-                    if field not in profile_fields
-                )
-                counts["shipping_updated"] += 1
-        elif shipping_mode == "price":
-            if profile.merchant_free_shipping or profile.merchant_shipping_price != shipping_price:
-                profile.merchant_free_shipping = False
-                profile.merchant_shipping_price = shipping_price
-                profile_fields.extend(
-                    field
-                    for field in ("merchant_free_shipping", "merchant_shipping_price")
-                    if field not in profile_fields
-                )
-                counts["shipping_updated"] += 1
+            if shipping_mode == "free":
+                if (
+                    not profile.merchant_free_shipping
+                    or profile.merchant_shipping_price is not None
+                ):
+                    profile.merchant_free_shipping = True
+                    profile.merchant_shipping_price = None
+                    profile_fields.extend(
+                        field
+                        for field in (
+                            "merchant_free_shipping",
+                            "merchant_shipping_price",
+                        )
+                        if field not in profile_fields
+                    )
+                    counts["shipping_updated"] += 1
+            elif shipping_mode == "price":
+                if (
+                    profile.merchant_free_shipping
+                    or profile.merchant_shipping_price != shipping_price
+                ):
+                    profile.merchant_free_shipping = False
+                    profile.merchant_shipping_price = shipping_price
+                    profile_fields.extend(
+                        field
+                        for field in (
+                            "merchant_free_shipping",
+                            "merchant_shipping_price",
+                        )
+                        if field not in profile_fields
+                    )
+                    counts["shipping_updated"] += 1
 
-        if cleaned_data.get("confirm_actual_photos"):
-            if _has_public_image(product):
-                if not profile.actual_photos:
-                    profile.actual_photos = True
-                    profile_fields.append("actual_photos")
-                    counts["actual_photos_confirmed"] += 1
-            else:
-                counts["actual_photos_skipped"] += 1
+            if cleaned_data.get("confirm_actual_photos"):
+                if _has_public_image(product):
+                    if not profile.actual_photos:
+                        profile.actual_photos = True
+                        profile_fields.append("actual_photos")
+                        counts["actual_photos_confirmed"] += 1
+                else:
+                    counts["actual_photos_skipped"] += 1
 
-        effective_brand = brand or (growth.brand or "").strip()
-        if cleaned_data.get("verify_identity"):
-            if effective_brand:
-                profile.identity_verified_at = now
-                profile_fields.append("identity_verified_at")
-                counts["identity_verified"] += 1
-            else:
-                counts["identity_verification_skipped"] += 1
+            effective_brand = brand or (
+                (growth.brand or "").strip() if growth is not None else ""
+            )
+            if cleaned_data.get("verify_identity"):
+                if effective_brand:
+                    profile.identity_verified_at = now
+                    profile_fields.append("identity_verified_at")
+                    counts["identity_verified"] += 1
+                else:
+                    counts["identity_verification_skipped"] += 1
 
-        if cleaned_data.get("verify_condition"):
-            if condition or growth.condition:
-                profile.condition_verified_at = now
-                profile_fields.append("condition_verified_at")
-                counts["condition_verified"] += 1
-            else:
-                counts["condition_verification_skipped"] += 1
-        if cleaned_data.get("verify_stock"):
-            profile.stock_confirmed_at = now
-            profile_fields.append("stock_confirmed_at")
-            counts["stock_verified"] += 1
-        if cleaned_data.get("verify_price"):
-            profile.price_verified_at = now
-            profile_fields.append("price_verified_at")
-            counts["price_verified"] += 1
+            # A bulk verification must name the condition explicitly. This prevents
+            # the model's legacy default of "new" from becoming verified by accident.
+            if cleaned_data.get("verify_condition"):
+                if condition:
+                    profile.condition_verified_at = now
+                    profile_fields.append("condition_verified_at")
+                    counts["condition_verified"] += 1
+                else:
+                    counts["condition_verification_skipped"] += 1
+            if cleaned_data.get("verify_stock"):
+                profile.stock_confirmed_at = now
+                profile_fields.append("stock_confirmed_at")
+                counts["stock_verified"] += 1
+            if cleaned_data.get("verify_price"):
+                profile.price_verified_at = now
+                profile_fields.append("price_verified_at")
+                counts["price_verified"] += 1
 
         if cleaned_data.get("fill_blank_alt_text"):
-            condition_label = growth.get_condition_display() if growth.condition else ""
+            condition_for_alt = condition
+            if (
+                not condition_for_alt
+                and growth is not None
+                and profile is not None
+                and profile.condition_verified_at
+            ):
+                condition_for_alt = growth.condition
+            condition_label = ""
+            if condition_for_alt:
+                condition_label = dict(ProductGrowthData.CONDITION_CHOICES).get(
+                    condition_for_alt,
+                    "",
+                )
             descriptor = f" {condition_label.lower()}" if condition_label else ""
             for position, image in enumerate(product.gallery_images.all(), start=1):
                 if image.image and not image.alt_text.strip():
@@ -158,10 +224,14 @@ def apply_bulk_catalogue_enrichment(*, products, cleaned_data: dict, actor) -> d
         if product_fields:
             product_fields.append("updated_at")
             product.save(update_fields=list(dict.fromkeys(product_fields)))
-        if growth_fields:
-            growth.save(update_fields=list(dict.fromkeys(growth_fields + ["updated_at"])))
-        if profile_fields:
-            profile.save(update_fields=list(dict.fromkeys(profile_fields + ["updated_at"])))
+        if growth is not None and growth_fields:
+            growth.save(
+                update_fields=list(dict.fromkeys(growth_fields + ["updated_at"]))
+            )
+        if profile is not None and profile_fields:
+            profile.save(
+                update_fields=list(dict.fromkeys(profile_fields + ["updated_at"]))
+            )
         counts["products_processed"] += 1
 
     log_audit_event(
@@ -192,13 +262,11 @@ def merchant_readiness_snapshot(*, row_limit: int = 12) -> dict:
     score_total = 0
 
     for product in products:
-        try:
-            profile = product.commerce_profile
-        except ObjectDoesNotExist:
-            profile = None
+        profile = _existing_profile(product)
         if profile is None:
-            score = 0
-            missing = ["commercial profile"]
+            audit_profile = ProductCommerceProfile(product=product)
+            score = audit_profile.merchant_readiness_score
+            missing = audit_profile.merchant_missing_fields()
             merchant_enabled = False
         else:
             profile_count += 1
@@ -263,19 +331,30 @@ def _parse_nonnegative_integer(value: str) -> int:
     return max(0, parsed)
 
 
-def _parse_decimal(value: str, *, percentage: bool = False) -> Decimal:
+def _parse_decimal(value: str) -> Decimal:
     if not value:
         return Decimal("0")
     cleaned = value.replace(",", "").strip()
-    is_percent = cleaned.endswith("%")
-    cleaned = cleaned.rstrip("%").strip()
     try:
         parsed = Decimal(cleaned)
     except InvalidOperation as exc:
         raise ValueError(f"Invalid numeric value: {value}") from exc
-    if percentage or is_percent:
-        parsed = parsed / Decimal("100")
     return max(Decimal("0"), parsed)
+
+
+def _parse_ctr(value: str) -> Decimal:
+    if not value:
+        return Decimal("0")
+    cleaned = value.replace(",", "").strip()
+    has_percent = cleaned.endswith("%")
+    cleaned = cleaned.rstrip("%").strip()
+    try:
+        parsed = Decimal(cleaned)
+    except InvalidOperation as exc:
+        raise ValueError(f"Invalid CTR value: {value}") from exc
+    if has_percent or parsed > 1:
+        parsed = parsed / Decimal("100")
+    return min(Decimal("1"), max(Decimal("0"), parsed))
 
 
 @transaction.atomic
@@ -298,7 +377,11 @@ def import_search_console_csv(*, uploaded_file, date_start=None, date_end=None) 
     skipped = 0
     for row_number, row in enumerate(reader, start=2):
         query = _value(row, headers, query_aliases)[:500]
-        page = _value(row, headers, ("top pages", "page", "pages", "landing page"))[:200]
+        page = _value(
+            row,
+            headers,
+            ("top pages", "page", "pages", "landing page"),
+        )[:200]
         if not query:
             skipped += 1
             continue
@@ -309,14 +392,21 @@ def import_search_console_csv(*, uploaded_file, date_start=None, date_end=None) 
             impressions = _parse_nonnegative_integer(
                 _value(row, headers, ("impressions", "impression"))
             )
-            ctr = _parse_decimal(
-                _value(row, headers, ("ctr", "click through rate", "click-through rate")),
-                percentage=True,
+            ctr = _parse_ctr(
+                _value(
+                    row,
+                    headers,
+                    ("ctr", "click through rate", "click-through rate"),
+                )
             )
             position = _parse_decimal(
-                _value(row, headers, ("position", "average position", "avg position"))
+                _value(
+                    row,
+                    headers,
+                    ("position", "average position", "avg position"),
+                )
             )
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             raise ValueError(f"Row {row_number}: {exc}") from exc
 
         _, was_created = SearchQueryInsight.objects.update_or_create(
