@@ -10,6 +10,39 @@
   };
 
   ready(() => {
+    const moneyFormatter = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+    });
+
+    const formatCurrencyText = (value) =>
+      String(value || "").replace(
+        /(\b[A-Z]{3}\s+)(\d+(?:\.\d+)?)/g,
+        (_match, currency, amount) => `${currency}${moneyFormatter.format(Number(amount))}`,
+      );
+
+    const formatVisibleProductPrices = () => {
+      const priceLabel = document.getElementById("pd-price-label");
+      if (priceLabel) priceLabel.textContent = formatCurrencyText(priceLabel.textContent);
+
+      document.querySelectorAll(".product-mobile-action__price").forEach((element) => {
+        element.childNodes.forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            node.textContent = formatCurrencyText(node.textContent);
+          }
+        });
+      });
+
+      const variantSelect = document.getElementById("variant_id");
+      variantSelect?.querySelectorAll("option[data-price]").forEach((option) => {
+        if (option.dataset.formattedPrice === "1") return;
+        option.textContent = formatCurrencyText(option.textContent);
+        option.dataset.formattedPrice = "1";
+      });
+    };
+
+    formatVisibleProductPrices();
+
     const galleryDialog = document.getElementById("product-gallery-dialog");
     const zoomButton = document.querySelector("[data-product-zoom]");
     const dialogImage = galleryDialog?.querySelector("[data-product-dialog-image]");
@@ -113,6 +146,10 @@
         variantSelect.dispatchEvent(new Event("change", { bubbles: true }));
       }
     }
+
+    variantSelect?.addEventListener("change", () => {
+      window.requestAnimationFrame(formatVisibleProductPrices);
+    });
 
     const contactType = document.getElementById("id_request_type");
     const subject = document.getElementById("id_subject");
