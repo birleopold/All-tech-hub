@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Bulk catalogue enrichment{% endblock %}
 {% block staff_page_name %}Bulk catalogue enrichment{% endblock %}
+{% block extra_css %}<link href="{% static 'css/catalogue_growth_operations.css' %}" rel="stylesheet">{% endblock %}
 {% block staff_content %}
 <section class="staff-dashboard">
   <div class="staff-dashboard-header">
@@ -44,7 +45,7 @@
               <div class="d-flex gap-2"><button class="btn btn-sm btn-outline-primary" type="button" data-select-visible>Select visible</button><button class="btn btn-sm btn-outline-secondary" type="button" data-clear-visible>Clear</button></div>
             </div>
             <div class="table-responsive">
-              <table class="table align-middle mb-0">
+              <table class="table align-middle mb-0 catalogue-growth-table">
                 <thead><tr><th class="ps-3"><span class="visually-hidden">Select</span></th><th>Product</th><th>Current facts</th><th>Readiness</th><th class="text-end pe-3">Review</th></tr></thead>
                 <tbody>
                   {% for row in enrichment_rows %}
@@ -66,7 +67,7 @@
       </div>
 
       <div class="col-xl-4">
-        <aside class="card staff-panel-card sticky-xl-top" style="top: 1rem;">
+        <aside class="card staff-panel-card sticky-xl-top catalogue-bulk-actions">
           <div class="card-body">
             <div class="staff-panel-heading"><h2>Actions to apply</h2></div>
             <div class="vstack gap-3">
