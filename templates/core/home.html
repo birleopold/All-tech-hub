@@ -19,9 +19,10 @@
 {% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="{{ company.company_name }} technology products and IT support">{% endif %}
 {% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
 {% endblock %}
-{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet">{% endblock %}
+{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet"><link href="{% static 'css/home_tech_ambient.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 <section class="market-home-hero">
+  {% include "core/_home_tech_ambient.html" %}
   <div class="container market-home-hero__inner">
     <div class="row align-items-center g-5">
       <div class="col-lg-7" data-reveal>
