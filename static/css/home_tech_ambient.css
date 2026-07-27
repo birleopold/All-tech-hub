@@ -1,0 +1,340 @@
+.market-home-hero__inner {
+  position: relative;
+  z-index: 2;
+}
+
+.home-tech-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-tech-ambient__scene {
+  position: absolute;
+  top: 0;
+  right: -2.5vw;
+  width: min(78rem, 72vw);
+  height: 100%;
+  opacity: 0.46;
+  filter: saturate(1.08);
+}
+
+.home-tech-ambient__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, #071b2f 0%, rgba(7, 27, 47, 0.99) 26%, rgba(7, 27, 47, 0.88) 44%, rgba(7, 27, 47, 0.26) 69%, rgba(7, 27, 47, 0.08) 100%),
+    linear-gradient(180deg, rgba(7, 27, 47, 0.12), transparent 22%, transparent 76%, rgba(7, 27, 47, 0.38));
+}
+
+.home-tech-ambient__data-line {
+  fill: none;
+  stroke: rgba(112, 219, 247, 0.27);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 7 12;
+  animation: home-tech-data-flow 18s linear infinite;
+}
+
+.home-tech-ambient__data-line--two {
+  stroke: rgba(116, 171, 255, 0.22);
+  animation-duration: 23s;
+  animation-direction: reverse;
+}
+
+.home-tech-ambient__data-line--three {
+  animation-duration: 27s;
+}
+
+.home-tech-ambient__data-line--four {
+  stroke-width: 1;
+  stroke-dasharray: 4 15;
+  animation-duration: 21s;
+  animation-direction: reverse;
+}
+
+.home-tech-ambient__packet {
+  fill: #7fe6fb;
+  opacity: 0.74;
+  filter: url(#ambient-soft-glow);
+}
+
+.home-tech-ambient__packet--two {
+  fill: #8ab6ff;
+  opacity: 0.62;
+}
+
+.home-tech-ambient__packet--three {
+  opacity: 0.54;
+}
+
+.home-tech-ambient__node circle:last-child {
+  fill: #78dff5;
+  stroke: rgba(255, 255, 255, 0.44);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: home-tech-node-pulse 3.8s ease-in-out infinite;
+}
+
+.home-tech-ambient__node--two circle:last-child {
+  animation-delay: -1.4s;
+}
+
+.home-tech-ambient__node--three circle:last-child {
+  animation-delay: -2.5s;
+}
+
+.home-tech-ambient__rack-shadow {
+  fill: rgba(0, 6, 17, 0.18);
+  filter: blur(16px);
+}
+
+.home-tech-ambient__rack-frame {
+  fill: url(#ambient-rack-surface);
+  stroke: rgba(159, 228, 246, 0.28);
+  stroke-width: 1.5;
+}
+
+.home-tech-ambient__rack-inner {
+  fill: rgba(4, 21, 39, 0.26);
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+}
+
+.home-tech-ambient__rack-highlight {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.home-tech-ambient__rack-screw {
+  fill: rgba(174, 232, 246, 0.36);
+}
+
+.home-tech-ambient__switch > rect:first-child,
+.home-tech-ambient__server > rect:first-child,
+.home-tech-ambient__rack-base rect,
+.home-tech-ambient__satellite rect {
+  fill: url(#ambient-panel-surface);
+  stroke: rgba(152, 220, 243, 0.25);
+  stroke-width: 1;
+}
+
+.home-tech-ambient__switch-display {
+  fill: rgba(63, 153, 245, 0.12);
+  stroke: rgba(117, 210, 240, 0.24);
+  stroke-width: 1;
+}
+
+.home-tech-ambient__switch-wave {
+  fill: none;
+  stroke: rgba(123, 226, 248, 0.54);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 58;
+  stroke-dashoffset: 58;
+  animation: home-tech-wave 4.6s ease-in-out infinite;
+}
+
+.home-tech-ambient__ports rect {
+  fill: rgba(5, 24, 43, 0.46);
+  stroke: rgba(144, 222, 244, 0.2);
+  stroke-width: 0.8;
+}
+
+.home-tech-ambient__ports rect:nth-child(3n + 1) {
+  animation: home-tech-port-signal 4.8s ease-in-out infinite;
+}
+
+.home-tech-ambient__ports rect:nth-child(3n + 2) {
+  animation: home-tech-port-signal 5.6s ease-in-out -2.1s infinite;
+}
+
+.home-tech-ambient__fan {
+  fill: rgba(4, 22, 40, 0.36);
+  stroke: rgba(144, 220, 242, 0.2);
+  stroke-width: 1;
+}
+
+.home-tech-ambient__fan-core {
+  fill: rgba(126, 221, 244, 0.35);
+}
+
+.home-tech-ambient__fan-blades {
+  fill: rgba(116, 203, 229, 0.19);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: home-tech-fan-spin 18s linear infinite;
+}
+
+.home-tech-ambient__fan-blades--reverse {
+  animation-direction: reverse;
+  animation-duration: 22s;
+}
+
+.home-tech-ambient__server-slot {
+  fill: rgba(129, 210, 234, 0.13);
+}
+
+.home-tech-ambient__led {
+  fill: #66e4b7;
+  opacity: 0.76;
+  filter: url(#ambient-soft-glow);
+  animation: home-tech-led-blink 2.7s ease-in-out infinite;
+}
+
+.home-tech-ambient__led--two {
+  fill: #7fddfb;
+  animation-delay: -0.9s;
+  animation-duration: 3.4s;
+}
+
+.home-tech-ambient__led--three {
+  fill: #ffc873;
+  animation-delay: -1.8s;
+  animation-duration: 4.2s;
+}
+
+.home-tech-ambient__led--four {
+  animation-delay: -2.4s;
+  animation-duration: 3.1s;
+}
+
+.home-tech-ambient__led--five {
+  fill: #85b7ff;
+  animation-delay: -1.1s;
+  animation-duration: 3.8s;
+}
+
+.home-tech-ambient__led--six {
+  fill: #ffdd82;
+  animation-delay: -2.6s;
+  animation-duration: 5s;
+}
+
+.home-tech-ambient__rack-base path,
+.home-tech-ambient__satellite path {
+  fill: none;
+  stroke: rgba(154, 223, 244, 0.25);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+@keyframes home-tech-data-flow {
+  to {
+    stroke-dashoffset: -190;
+  }
+}
+
+@keyframes home-tech-node-pulse {
+  0%, 100% {
+    opacity: 0.38;
+    transform: scale(0.84);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes home-tech-wave {
+  0%, 16% {
+    stroke-dashoffset: 58;
+    opacity: 0.25;
+  }
+  48%, 72% {
+    stroke-dashoffset: 0;
+    opacity: 0.84;
+  }
+  100% {
+    stroke-dashoffset: -58;
+    opacity: 0.2;
+  }
+}
+
+@keyframes home-tech-port-signal {
+  0%, 74%, 100% {
+    fill: rgba(5, 24, 43, 0.46);
+  }
+  82%, 90% {
+    fill: rgba(111, 226, 245, 0.38);
+  }
+}
+
+@keyframes home-tech-fan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes home-tech-led-blink {
+  0%, 18%, 42%, 100% {
+    opacity: 0.28;
+  }
+  22%, 34% {
+    opacity: 0.98;
+  }
+  62%, 72% {
+    opacity: 0.68;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .home-tech-ambient__scene {
+    right: -16vw;
+    width: 82vw;
+    opacity: 0.34;
+  }
+
+  .home-tech-ambient__veil {
+    background:
+      linear-gradient(90deg, #071b2f 0%, rgba(7, 27, 47, 0.99) 38%, rgba(7, 27, 47, 0.83) 62%, rgba(7, 27, 47, 0.22) 100%),
+      linear-gradient(180deg, rgba(7, 27, 47, 0.12), transparent 24%, transparent 76%, rgba(7, 27, 47, 0.42));
+  }
+}
+
+@media (max-width: 991.98px) {
+  .home-tech-ambient__scene {
+    right: -34vw;
+    width: 108vw;
+    opacity: 0.25;
+  }
+
+  .home-tech-ambient__veil {
+    background: linear-gradient(90deg, rgba(7, 27, 47, 0.99), rgba(7, 27, 47, 0.9) 66%, rgba(7, 27, 47, 0.58));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .home-tech-ambient {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-tech-ambient *,
+  .home-tech-ambient *::before,
+  .home-tech-ambient *::after {
+    animation: none !important;
+  }
+
+  .home-tech-ambient__packet {
+    display: none;
+  }
+
+  .home-tech-ambient__scene {
+    opacity: 0.26;
+  }
+}
+
+@media (forced-colors: active) {
+  .home-tech-ambient {
+    display: none;
+  }
+}
