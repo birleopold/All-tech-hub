@@ -104,6 +104,9 @@ fi
 log "Database migrations"
 python manage.py migrate --noinput
 
+log "Ensuring missing commercial hubs and buying guides"
+python manage.py ensure_growth_content
+
 log "Post-migration project audit"
 python manage.py audit_project
 
