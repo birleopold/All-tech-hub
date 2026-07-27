@@ -1,0 +1,36 @@
+.catalogue-bulk-actions {
+  top: 1rem;
+}
+
+.catalogue-bulk-product-options {
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.catalogue-growth-metric {
+  min-height: 100%;
+}
+
+.catalogue-growth-table td,
+.catalogue-growth-table th {
+  vertical-align: middle;
+}
+
+.catalogue-growth-query {
+  max-width: 28rem;
+  overflow-wrap: anywhere;
+}
+
+.catalogue-growth-url {
+  display: block;
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1199.98px) {
+  .catalogue-bulk-actions {
+    top: auto;
+  }
+}
