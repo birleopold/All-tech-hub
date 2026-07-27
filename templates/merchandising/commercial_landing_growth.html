@@ -4,7 +4,7 @@
 {% block body_class %}d-flex flex-column min-vh-100 site-body commercial-page{% endblock %}
 {% block meta %}
 <meta name="description" content="{{ page_description }}">
-<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+{% if product_count %}<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">{% else %}<meta name="robots" content="noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">{% endif %}
 <link rel="canonical" href="{{ canonical_url }}">
 {% if prev_url %}<link rel="prev" href="{{ prev_url }}">{% endif %}
 {% if next_url %}<link rel="next" href="{{ next_url }}">{% endif %}
@@ -56,7 +56,7 @@
 <section class="commercial-section" id="available-products">
   <div class="container">
     <div class="commercial-section__head"><div><p class="market-kicker">Live catalogue</p><h2>Available products and current prices</h2><p>{% if is_paginated %}Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} matching items. {% endif %}Confirm final stock, exact configuration and delivery before paying or travelling.</p></div><a class="btn btn-outline-primary" href="{% url 'product_list' %}">Open full catalogue</a></div>
-    <div class="market-product-grid">{% for p in products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=True %}{% empty %}<div class="commercial-copy-card"><h3 class="h5 fw-bold">No matching product is published yet</h3><p class="mb-3">The page remains useful for guidance, but live matching stock has not been added or confirmed.</p><a class="btn btn-primary" href="{% url 'contact' %}?type=product">Ask the team to source an option</a></div>{% endfor %}</div>
+    <div class="market-product-grid">{% for p in products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=True %}{% empty %}<div class="commercial-copy-card"><h3 class="h5 fw-bold">No matching product is published yet</h3><p class="mb-3">The page remains useful for guidance, but live matching stock has not been added or confirmed. It stays out of search indexes until catalogue evidence supports it.</p><a class="btn btn-primary" href="{% url 'contact' %}?type=product">Ask the team to source an option</a></div>{% endfor %}</div>
 
     {% if is_paginated %}<nav class="mt-5" aria-label="{{ commercial_page.title }} pages"><ul class="pagination justify-content-center gap-1">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link rounded px-3" href="{% if page_obj.previous_page_number == 1 %}{{ commercial_page.get_absolute_url }}{% else %}?page={{ page_obj.previous_page_number }}{% endif %}" rel="prev">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link rounded">{{ page_obj.number }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link rounded px-3" href="?page={{ page_obj.next_page_number }}" rel="next">Next</a></li>{% endif %}</ul><p class="text-center text-muted small">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p></nav>{% endif %}
   </div>
