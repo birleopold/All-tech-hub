@@ -17,8 +17,8 @@ from catalog.models import Category, Product
 from catalog.public_views import PublicProductListView
 from core.seo import public_base_url, public_url
 from growth.models import ProductGrowthData
+from merchandising.growth_views import catalogue_for_growth_page
 from merchandising.models import BuyingGuide, CommercialLandingPage, DeliveryZone
-from merchandising.views import _catalogue_for_page
 
 
 class Command(BaseCommand):
@@ -115,7 +115,7 @@ class Command(BaseCommand):
             for page in CommercialLandingPage.objects.filter(is_published=True).order_by(
                 "pk"
             ):
-                if _catalogue_for_page(page).exists():
+                if catalogue_for_growth_page(page).exists():
                     urls.append(public_url(page.get_absolute_url()))
             urls.extend(
                 public_url(guide.get_absolute_url())
