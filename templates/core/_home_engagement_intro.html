@@ -1,0 +1,80 @@
+<div class="home-discovery-bridge" id="homepage-discovery">
+  <div class="container">
+    <div class="home-trust-ribbon" data-reveal>
+      <a class="home-trust-ribbon__item" href="{% url 'physical_product_list' %}">
+        <span class="home-trust-ribbon__icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+        <span><strong>{{ catalog_stats.products|default:0 }} published products</strong><small>Browse live catalogue options, prices and condition details</small></span>
+      </a>
+      <a class="home-trust-ribbon__item" href="{% url 'service_list' %}">
+        <span class="home-trust-ribbon__icon"><i class="bi bi-tools" aria-hidden="true"></i></span>
+        <span><strong>{{ catalog_stats.services|default:0 }} support services</strong><small>Repairs, installations, networking and technical assistance</small></span>
+      </a>
+      <a class="home-trust-ribbon__item" href="{% url 'buying_guide' %}">
+        <span class="home-trust-ribbon__icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span>
+        <span><strong>Buy with clearer information</strong><small>Review condition, actual photos, warranty and buying guidance</small></span>
+      </a>
+      <a class="home-trust-ribbon__item" href="{% url 'contact' %}?type=quote">
+        <span class="home-trust-ribbon__icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+        <span><strong>Formal quotations available</strong><small>Useful for personal, school, NGO and business purchases</small></span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<section class="home-pathways" aria-labelledby="home-pathways-title">
+  <div class="container">
+    <div class="home-pathways__heading" data-reveal>
+      <div>
+        <p class="market-kicker">Choose your next step</p>
+        <h2 id="home-pathways-title">Start with the result you need</h2>
+      </div>
+      <p>Visitors do not always know the exact model or specification. Begin with the goal, then narrow the catalogue with clearer guidance.</p>
+    </div>
+
+    <div class="home-pathway-grid">
+      <a class="home-pathway-card home-pathway-card--shop" href="{% url 'physical_product_list' %}" data-reveal>
+        <span class="home-pathway-card__number">01</span>
+        <span class="home-pathway-card__icon"><i class="bi bi-laptop" aria-hidden="true"></i></span>
+        <span class="home-pathway-card__copy">
+          <small>Shop technology</small>
+          <strong>Find a computer or accessory</strong>
+          <span>Explore products by category, brand, price, condition and intended use.</span>
+        </span>
+        <span class="home-pathway-card__action">Open catalogue <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+      </a>
+
+      <a class="home-pathway-card home-pathway-card--compare" href="/laptop-prices-in-uganda/" data-reveal data-reveal-delay="1">
+        <span class="home-pathway-card__number">02</span>
+        <span class="home-pathway-card__icon"><i class="bi bi-bar-chart" aria-hidden="true"></i></span>
+        <span class="home-pathway-card__copy">
+          <small>Compare before buying</small>
+          <strong>See laptop prices and options</strong>
+          <span>Compare live products, configurations, brands and practical buying guidance.</span>
+        </span>
+        <span class="home-pathway-card__action">Compare laptops <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+      </a>
+
+      <a class="home-pathway-card home-pathway-card--support" href="{% url 'service_list' %}" data-reveal data-reveal-delay="2">
+        <span class="home-pathway-card__number">03</span>
+        <span class="home-pathway-card__icon"><i class="bi bi-wrench-adjustable-circle" aria-hidden="true"></i></span>
+        <span class="home-pathway-card__copy">
+          <small>Repair or improve</small>
+          <strong>Get technical support</strong>
+          <span>Request diagnostics, upgrades, software installation, networking or repairs.</span>
+        </span>
+        <span class="home-pathway-card__action">View services <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+      </a>
+
+      <a class="home-pathway-card home-pathway-card--procurement" href="{% url 'contact' %}?type=quote" data-reveal data-reveal-delay="3">
+        <span class="home-pathway-card__number">04</span>
+        <span class="home-pathway-card__icon"><i class="bi bi-buildings" aria-hidden="true"></i></span>
+        <span class="home-pathway-card__copy">
+          <small>Buy for an organisation</small>
+          <strong>Plan documented procurement</strong>
+          <span>Share quantities, specifications and budget requirements for a formal quotation.</span>
+        </span>
+        <span class="home-pathway-card__action">Request quotation <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+      </a>
+    </div>
+  </div>
+</section>
