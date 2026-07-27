@@ -11,8 +11,8 @@ from django.views.decorators.http import require_GET
 from catalog import seo_feeds
 from core.seo import public_url
 from merchandising.constants import commercial_page_path
+from merchandising.growth_views import catalogue_for_growth_page
 from merchandising.models import BuyingGuide, CommercialLandingPage, DeliveryZone
-from merchandising.views import _catalogue_for_page
 
 
 @require_GET
@@ -65,7 +65,7 @@ def commercial_sitemap(request):
         for page in pages:
             # Keep useful staff/customer sourcing pages available, but only advertise
             # commercial hubs to search engines once live catalogue evidence exists.
-            if _catalogue_for_page(page).exists():
+            if catalogue_for_growth_page(page).exists():
                 seo_feeds._add_url(
                     root,
                     public_url(commercial_page_path(page.slug)),
