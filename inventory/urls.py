@@ -3,6 +3,10 @@ from django.urls import path
 from inventory import views
 from inventory.catalog_workspace_views import ProductWorkspaceListView, StockTakeWorkspaceListView
 from inventory.inventory_home_view import StaffInventoryHomeView
+from merchandising.staff_views import (
+    CatalogueBulkEnrichmentView,
+    ProductCommercialReviewView,
+)
 
 urlpatterns = [
     path("inventory/", StaffInventoryHomeView.as_view(), name="staff_inventory"),
@@ -23,7 +27,17 @@ urlpatterns = [
         name="staff_job_stock_use",
     ),
     path("inventory/products/", ProductWorkspaceListView.as_view(), name="staff_products"),
+    path(
+        "inventory/catalogue-enrichment/",
+        CatalogueBulkEnrichmentView.as_view(),
+        name="staff_catalogue_bulk_enrichment",
+    ),
     path("inventory/products/new/", views.ProductCreateView.as_view(), name="staff_product_create"),
+    path(
+        "inventory/products/<int:pk>/commercial/",
+        ProductCommercialReviewView.as_view(),
+        name="staff_product_commercial_review",
+    ),
     path("inventory/products/<int:pk>/", views.ProductUpdateView.as_view(), name="staff_product_edit"),
     path("inventory/products/<int:pk>/labels/", views.product_label_sheet, name="staff_product_labels"),
     path("inventory/serials/<int:pk>/labels/", views.serial_label_sheet, name="staff_serial_labels"),
