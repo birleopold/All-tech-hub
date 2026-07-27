@@ -352,5 +352,85 @@
         button.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span class="visually-hidden">Adding to cart…</span>';
       });
     });
+
+    const quickViews = Array.from(document.querySelectorAll(".market-card-quick-view"));
+
+    const syncQuickViewBody = () => {
+      document.body.classList.toggle(
+        "market-quick-view-open",
+        quickViews.some((details) => details.open),
+      );
+    };
+
+    const closeQuickView = (details, restoreFocus = false) => {
+      if (!details?.open) return;
+      details.open = false;
+      details.closest(".market-product-card")?.classList.remove("has-open-quick-view");
+      const summary = details.querySelector(":scope > summary");
+      summary?.setAttribute("aria-expanded", "false");
+      syncQuickViewBody();
+      if (restoreFocus) summary?.focus({ preventScroll: true });
+    };
+
+    quickViews.forEach((details, index) => {
+      const summary = details.querySelector(":scope > summary");
+      const panel = details.querySelector(".market-card-quick-view__panel");
+      if (!summary || !panel) return;
+
+      const panelId = panel.id || `market-quick-view-panel-${index + 1}`;
+      panel.id = panelId;
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-modal", "true");
+      panel.setAttribute("aria-label", panel.querySelector("h4")?.textContent?.trim() || "Product quick view");
+      panel.setAttribute("tabindex", "-1");
+      summary.setAttribute("aria-controls", panelId);
+      summary.setAttribute("aria-expanded", details.open ? "true" : "false");
+
+      if (!panel.querySelector("[data-market-quick-view-close]")) {
+        const closeButton = createElement("button", "market-quick-view-close");
+        closeButton.type = "button";
+        closeButton.dataset.marketQuickViewClose = "";
+        closeButton.setAttribute("aria-label", "Close quick view");
+        closeButton.innerHTML = '<i class="bi bi-x-lg" aria-hidden="true"></i>';
+        closeButton.addEventListener("click", () => closeQuickView(details, true));
+        panel.prepend(closeButton);
+      }
+
+      details.addEventListener("toggle", () => {
+        if (details.open) {
+          quickViews.forEach((other) => {
+            if (other !== details) closeQuickView(other);
+          });
+          details.closest(".market-product-card")?.classList.add("has-open-quick-view");
+          summary.setAttribute("aria-expanded", "true");
+          syncQuickViewBody();
+          window.setTimeout(() => panel.focus({ preventScroll: true }), 0);
+        } else {
+          details.closest(".market-product-card")?.classList.remove("has-open-quick-view");
+          summary.setAttribute("aria-expanded", "false");
+          syncQuickViewBody();
+        }
+      });
+
+      details.addEventListener("click", (event) => {
+        if (details.open && event.target === details) closeQuickView(details, true);
+      });
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      const openQuickView = quickViews.find((details) => details.open);
+      if (openQuickView && !openQuickView.contains(event.target)) {
+        closeQuickView(openQuickView);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      const openQuickView = quickViews.find((details) => details.open);
+      if (openQuickView) {
+        event.preventDefault();
+        closeQuickView(openQuickView, true);
+      }
+    });
   });
 })();
