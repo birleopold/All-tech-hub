@@ -81,7 +81,7 @@ class BulkCatalogueEnrichmentForm(forms.Form):
     def __init__(self, *args, product_choices=(), **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["product_ids"].choices = list(product_choices)
-        for name, field in self.fields.items():
+        for field in self.fields.values():
             widget = field.widget
             if isinstance(widget, forms.CheckboxInput):
                 widget.attrs["class"] = "form-check-input"
@@ -106,23 +106,30 @@ class BulkCatalogueEnrichmentForm(forms.Form):
                 "merchant_shipping_price",
                 "Choose ‘Use one verified shipping price’ before entering a price.",
             )
+        if cleaned.get("verify_condition") and not cleaned.get("condition"):
+            self.add_error(
+                "condition",
+                "Select the condition being physically verified.",
+            )
 
-        operation_fields = (
-            "brand",
-            "condition",
-            "warranty_months",
-            "delivery_note",
-            "shipping_mode",
-            "generate_missing_sku",
-            "fill_blank_alt_text",
-            "confirm_actual_photos",
-            "verify_identity",
-            "verify_condition",
-            "verify_stock",
-            "verify_price",
-            "unpublish_out_of_stock",
+        has_operation = any(
+            (
+                bool(cleaned.get("brand")),
+                bool(cleaned.get("condition")),
+                cleaned.get("warranty_months") is not None,
+                bool(cleaned.get("delivery_note")),
+                bool(cleaned.get("shipping_mode")),
+                bool(cleaned.get("generate_missing_sku")),
+                bool(cleaned.get("fill_blank_alt_text")),
+                bool(cleaned.get("confirm_actual_photos")),
+                bool(cleaned.get("verify_identity")),
+                bool(cleaned.get("verify_condition")),
+                bool(cleaned.get("verify_stock")),
+                bool(cleaned.get("verify_price")),
+                bool(cleaned.get("unpublish_out_of_stock")),
+            )
         )
-        if not any(cleaned.get(name) not in (None, "", False) for name in operation_fields):
+        if not has_operation:
             raise forms.ValidationError("Choose at least one enrichment action.")
         return cleaned
 
