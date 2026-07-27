@@ -17,13 +17,15 @@ from django.utils import timezone
 from catalog.models import Category, Product, ProductImage, ProductVariant
 from core.models import AuditEvent
 from growth.models import ProductGrowthData
+from merchandising.constants import ROOT_COMMERCIAL_SLUGS
+from merchandising.enrichment import apply_bulk_catalogue_enrichment
+from merchandising.forms import BulkCatalogueEnrichmentForm
 from merchandising.models import (
     BuyingGuide,
     CommercialLandingPage,
     ProductCommerceProfile,
     SearchQueryInsight,
 )
-from merchandising.services import apply_bulk_catalogue_enrichment
 
 TEST_MEDIA_ROOT = Path(tempfile.mkdtemp(prefix="leosoft-growth-operations-"))
 ONE_PIXEL_GIF = (
@@ -165,6 +167,54 @@ class CatalogueGrowthOperationsTests(TestCase):
         self.assertIsNone(profile.condition_verified_at)
         self.assertEqual(result["condition_verification_skipped"], 1)
 
+        form = BulkCatalogueEnrichmentForm(
+            {
+                "product_ids": [str(product.pk)],
+                "verify_condition": "on",
+            },
+            product_choices=[(product.pk, product.name)],
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("condition", form.errors)
+
+    def test_zero_month_warranty_is_a_valid_explicit_bulk_action(self):
+        product = self.create_product(name="No Warranty Product")
+        form = BulkCatalogueEnrichmentForm(
+            {
+                "product_ids": [str(product.pk)],
+                "warranty_months": "0",
+            },
+            product_choices=[(product.pk, product.name)],
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_variant_managed_unavailable_product_can_be_bulk_unpublished(self):
+        product = self.create_product(name="Variant Stock Safety", stock=0)
+        product.track_inventory = False
+        product.save(update_fields=["track_inventory", "updated_at"])
+        ProductVariant.objects.create(
+            product=product,
+            name="16GB / 512GB SSD",
+            sku="VARIANT-STOCK-SAFETY",
+            price=Decimal("1700000"),
+            track_inventory=True,
+            stock_quantity=0,
+            is_active=True,
+        )
+
+        response = self.client.post(
+            reverse("staff_catalogue_bulk_enrichment"),
+            {
+                "product_ids": [str(product.pk)],
+                "unpublish_out_of_stock": "on",
+            },
+        )
+
+        self.assertRedirects(response, reverse("staff_catalogue_bulk_enrichment"))
+        product.refresh_from_db()
+        self.assertFalse(product.is_published)
+
     def test_search_console_csv_import_surfaces_growth_opportunity(self):
         report = SimpleUploadedFile(
             "Queries.csv",
@@ -203,6 +253,40 @@ class CatalogueGrowthOperationsTests(TestCase):
 
         with self.assertRaises(CommandError):
             call_command("audit_merchant", "--strict", stdout=StringIO())
+
+    def test_ensure_growth_content_is_idempotent_and_preserves_staff_edits(self):
+        call_command("ensure_growth_content", stdout=StringIO())
+        self.assertEqual(
+            CommercialLandingPage.objects.filter(
+                slug__in=ROOT_COMMERCIAL_SLUGS
+            ).count(),
+            len(ROOT_COMMERCIAL_SLUGS),
+        )
+        self.assertGreaterEqual(BuyingGuide.objects.count(), 8)
+
+        page = CommercialLandingPage.objects.get(slug="laptop-prices-in-uganda")
+        page.title = "Staff edited laptop prices title"
+        page.save(update_fields=["title", "updated_at"])
+        call_command("ensure_growth_content", stdout=StringIO())
+        page.refresh_from_db()
+        self.assertEqual(page.title, "Staff edited laptop prices title")
+
+    def test_empty_commercial_hub_is_noindex_and_excluded_from_sitemap(self):
+        page = CommercialLandingPage.objects.create(
+            slug="empty-commercial-hub-test",
+            title="Empty Commercial Hub Test",
+            meta_description="A sourcing page awaiting matching catalogue evidence.",
+            intro="This page intentionally has no matching published products.",
+            category_keywords="never-existing-category-keyword",
+            search_terms="never-existing-product-keyword",
+        )
+
+        response = self.client.get(page.get_absolute_url())
+        sitemap = self.client.get(reverse("commercial_sitemap"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'content="noindex,follow', html=False)
+        self.assertNotContains(sitemap, page.get_absolute_url())
 
     def test_commercial_hub_uses_variant_price_and_paginates(self):
         page = CommercialLandingPage.objects.create(
@@ -260,6 +344,7 @@ class CatalogueGrowthOperationsTests(TestCase):
         self.assertContains(response, related_page.title)
         self.assertContains(response, guide.title)
         self.assertContains(response, 'rel="next"', html=False)
+        self.assertContains(response, 'content="index,follow', html=False)
 
         second_page = self.client.get(page.get_absolute_url(), {"page": 2})
         self.assertContains(
