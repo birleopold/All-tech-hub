@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static humanize %}
 {% block title %}{{ page_title }}{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body commercial-page{% endblock %}
 {% block meta %}
@@ -37,7 +37,7 @@
         <div class="commercial-hero__stats">
           <div class="commercial-stat"><strong>{{ product_count }}</strong><span>matching catalogue item{{ product_count|pluralize }}</span></div>
           <div class="commercial-stat"><strong>{{ available_count }}</strong><span>currently available to order</span></div>
-          <div class="commercial-stat"><strong>{% if price_min %}{{ company.currency_code }} {{ price_min|floatformat:0 }}{% else %}Ask for price{% endif %}</strong><span>current starting price</span></div>
+          <div class="commercial-stat"><strong>{% if price_min %}{{ company.currency_code }} {{ price_min|floatformat:0|intcomma }}{% else %}Ask for price{% endif %}</strong><span>current starting price</span></div>
           <div class="commercial-stat"><strong>LEOSOFT</strong><span>quotation and after-sales support</span></div>
         </div>
       </div>
