@@ -110,6 +110,9 @@ python manage.py audit_project
 log "Search discoverability audit"
 python manage.py audit_seo --strict
 
+log "Merchant-enabled catalogue audit"
+python manage.py audit_merchant --strict
+
 log "Static asset manifest"
 python manage.py collectstatic --noinput
 python manage.py shell -c '
@@ -117,7 +120,9 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 for name in (
     "css/marketplace_experience.css",
     "css/search_conversion_refinement.css",
+    "css/catalogue_growth_operations.css",
     "js/marketplace_experience.js",
+    "js/catalogue_bulk_enrichment.js",
 ):
     print(name, "=>", staticfiles_storage.url(name))
 '
