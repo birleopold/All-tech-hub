@@ -116,6 +116,7 @@
       mobileFilter?.querySelector("summary")?.setAttribute("aria-expanded", open ? "true" : "false");
     };
     mobileFilter?.addEventListener("toggle", syncFilterState);
+    syncFilterState();
     filterClose?.addEventListener("click", () => {
       if (mobileFilter) mobileFilter.open = false;
     });
