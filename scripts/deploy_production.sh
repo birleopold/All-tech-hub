@@ -73,6 +73,19 @@ set -a
 source "$ENV_FILE"
 set +a
 
+# Resolve release controls again after loading the protected environment file.
+# APP_DIR, VENV_DIR and ENV_FILE must be known before sourcing, while the
+# remaining controls are intentionally configurable from .env.
+SERVICE_NAME="${ALLTECH_GUNICORN_SERVICE:-leosoft_gunicorn}"
+HEALTH_URL="${ALLTECH_LOCAL_HEALTH_URL:-http://127.0.0.1:8010/health/ready/}"
+HEALTH_HOST="${ALLTECH_HEALTH_HOST:-leosoftug.com}"
+DEPLOY_BACKUP_ENABLED="${ALLTECH_DEPLOY_BACKUP_ENABLED:-1}"
+DEPLOY_BACKUP_OFFSITE="${ALLTECH_DEPLOY_BACKUP_OFFSITE:-0}"
+BACKUP_RETENTION_DAYS="${ALLTECH_BACKUP_RETENTION_DAYS:-30}"
+AUTOMATION_TIMER_NAME="${ALLTECH_AUTOMATION_TIMER:-leosoft-marketing-posts.timer}"
+AUTOMATION_SERVICE_NAME="${ALLTECH_AUTOMATION_SERVICE:-${AUTOMATION_TIMER_NAME%.timer}.service}"
+REQUIRE_AUTOMATION_TIMER="${ALLTECH_REQUIRE_AUTOMATION_TIMER:-1}"
+
 # The project has a flat config/settings.py selector. A historic production
 # value of config.settings.prod is invalid and previously allowed deployment
 # commands to fail while systemd was still restarted. Keep the release shell
