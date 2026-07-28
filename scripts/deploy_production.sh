@@ -126,8 +126,10 @@ for name in (
     "css/catalogue_growth_operations.css",
     "css/home_tech_ambient.css",
     "css/home_engagement.css",
+    "css/mobile_commerce_pro.css",
     "js/marketplace_experience.js",
     "js/catalogue_bulk_enrichment.js",
+    "js/mobile_commerce_pro.js",
 ):
     print(name, "=>", staticfiles_storage.url(name))
 '
