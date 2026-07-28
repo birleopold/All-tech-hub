@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Checkout{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body mobile-commerce-page mobile-checkout-page{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">
@@ -16,14 +17,16 @@
 </section>
 
 <div class="container pb-5">
+  <nav class="mobile-checkout-progress d-lg-none" aria-label="Checkout progress"><span><i class="bi bi-cart-check me-1" aria-hidden="true"></i>Cart reviewed</span><span class="is-current" aria-current="step"><i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i>Your details</span><span><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Confirmation</span></nav>
   <div class="row g-4 align-items-start">
     <div class="col-lg-7">
-      <form method="post" class="card border-0 shadow-sm">
+      <form id="checkout-form" method="post" class="card border-0 shadow-sm" data-mobile-checkout-form>
         <div class="card-body p-4 p-lg-5">
           {% csrf_token %}
           {% if checkout_token %}<input type="hidden" name="checkout_token" value="{{ checkout_token }}">{% endif %}
           <p class="text-uppercase small fw-semibold text-primary mb-2">Customer details</p>
           <h2 class="h4 mb-3">Where should we reach you?</h2>
+          {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
           {% for field in form %}
             {% if field.name == 'fulfillment_type' %}
               <fieldset class="mb-4">
@@ -52,20 +55,20 @@
               </div>
             {% endif %}
           {% endfor %}
-          <button type="submit" class="btn btn-primary btn-lg w-100">Place order</button>
-          <p class="small text-muted mt-3 mb-0">A confirmation email and private tracking link will be sent to the address above. Placing an order does not by itself confirm payment.</p>
+          <button type="submit" class="btn btn-primary btn-lg w-100 checkout-inline-submit">Place order</button>
+          <p class="small text-muted mt-3 mb-0"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>A confirmation email and private tracking link will be sent to the address above. Placing an order does not by itself confirm payment.</p>
         </div>
       </form>
     </div>
-    <div class="col-lg-5">
+    <div class="col-lg-5 checkout-summary-column">
       <aside class="card border-0 shadow-sm product-purchase-card mb-4">
         <div class="card-body p-4">
           <p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p>
           <ul class="list-group list-group-flush mb-3">
             {% for row in checkout_lines %}
-            <li class="list-group-item d-flex justify-content-between px-0">
+            <li class="list-group-item d-flex justify-content-between gap-3 px-0">
               <span>{{ row.qty }}× {{ row.line.label }}</span>
-              <strong>{{ company.currency_code }} {{ row.line_total|floatformat:0|intcomma }}</strong>
+              <strong class="text-nowrap">{{ company.currency_code }} {{ row.line_total|floatformat:0|intcomma }}</strong>
             </li>
             {% endfor %}
           </ul>
@@ -77,7 +80,7 @@
         </div>
       </aside>
 
-      <div class="card border-0 shadow-sm">
+      <div class="card border-0 shadow-sm checkout-safe-payment-card">
         <div class="card-body p-4">
           <p class="text-uppercase small fw-semibold text-primary mb-1">Safe payment</p>
           <h2 class="h5 mb-2">How payment works</h2>
@@ -92,5 +95,6 @@
       </div>
     </div>
   </div>
+  <div class="mobile-commerce-sticky-cta d-lg-none" role="region" aria-label="Order total and place order"><div class="mobile-commerce-sticky-cta__copy"><small>Order total</small><strong>{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div><button class="btn btn-primary" type="submit" form="checkout-form">Place order</button></div>
 </div>
 {% endblock %}
