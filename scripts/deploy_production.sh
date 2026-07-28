@@ -10,6 +10,9 @@ HEALTH_HOST="${ALLTECH_HEALTH_HOST:-leosoftug.com}"
 DEPLOY_BACKUP_ENABLED="${ALLTECH_DEPLOY_BACKUP_ENABLED:-1}"
 DEPLOY_BACKUP_OFFSITE="${ALLTECH_DEPLOY_BACKUP_OFFSITE:-0}"
 BACKUP_RETENTION_DAYS="${ALLTECH_BACKUP_RETENTION_DAYS:-30}"
+AUTOMATION_TIMER_NAME="${ALLTECH_AUTOMATION_TIMER:-leosoft-marketing-posts.timer}"
+AUTOMATION_SERVICE_NAME="${ALLTECH_AUTOMATION_SERVICE:-${AUTOMATION_TIMER_NAME%.timer}.service}"
+REQUIRE_AUTOMATION_TIMER="${ALLTECH_REQUIRE_AUTOMATION_TIMER:-1}"
 SERVICE_RESTARTED=0
 
 log() {
@@ -28,6 +31,16 @@ is_true() {
     esac
 }
 
+automation_install_hint() {
+    cat >&2 <<EOF
+Install the tracked durable automation units, then rerun deployment:
+  sudo cp ${APP_DIR}/deployment/leosoft-marketing-posts.service /etc/systemd/system/
+  sudo cp ${APP_DIR}/deployment/leosoft-marketing-posts.timer /etc/systemd/system/
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now ${AUTOMATION_TIMER_NAME}
+EOF
+}
+
 on_error() {
     local exit_code=$?
     printf '\nDeployment stopped before completion (exit %s).\n' "$exit_code" >&2
@@ -37,6 +50,10 @@ on_error() {
         printf 'Gunicorn was restarted, but post-restart verification failed.\n' >&2
         sudo systemctl status "$SERVICE_NAME" --no-pager -l >&2 || true
         sudo journalctl -u "$SERVICE_NAME" -n 60 --no-pager >&2 || true
+        if is_true "$REQUIRE_AUTOMATION_TIMER"; then
+            sudo systemctl status "$AUTOMATION_TIMER_NAME" --no-pager -l >&2 || true
+            sudo journalctl -u "$AUTOMATION_SERVICE_NAME" -n 60 --no-pager >&2 || true
+        fi
     fi
     exit "$exit_code"
 }
@@ -89,6 +106,21 @@ PY
 python manage.py check --deploy
 python manage.py makemigrations --check --dry-run
 python manage.py audit_project --strict-environment --environment-only
+
+if is_true "$REQUIRE_AUTOMATION_TIMER"; then
+    log "Durable automation timer preflight"
+    if ! sudo systemctl cat "$AUTOMATION_TIMER_NAME" >/dev/null 2>&1; then
+        automation_install_hint
+        fail "Required automation timer is not installed: ${AUTOMATION_TIMER_NAME}"
+    fi
+    if ! sudo systemctl is-enabled --quiet "$AUTOMATION_TIMER_NAME"; then
+        automation_install_hint
+        fail "Required automation timer is not enabled: ${AUTOMATION_TIMER_NAME}"
+    fi
+    printf 'Automation timer: %s (installed and enabled)\n' "$AUTOMATION_TIMER_NAME"
+else
+    log "Durable automation timer gate disabled by ALLTECH_REQUIRE_AUTOMATION_TIMER"
+fi
 
 if is_true "$DEPLOY_BACKUP_ENABLED"; then
     log "Pre-migration database backup"
@@ -183,6 +215,13 @@ if failed:
         + f"; expected release {expected_release!r}, received {payload!r}"
     )
 PY
+
+if is_true "$REQUIRE_AUTOMATION_TIMER"; then
+    log "Durable automation timer readiness"
+    sudo systemctl start "$AUTOMATION_TIMER_NAME"
+    sudo systemctl is-active --quiet "$AUTOMATION_TIMER_NAME"
+    sudo systemctl list-timers "$AUTOMATION_TIMER_NAME" --no-pager
+fi
 
 sudo systemctl status "$SERVICE_NAME" --no-pager -l
 trap - ERR
