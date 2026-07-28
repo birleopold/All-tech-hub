@@ -7,3 +7,6 @@ class AutomationConfig(AppConfig):
 
     def ready(self):
         from automation import signals  # noqa: F401
+        from automation.order_notifications import install_order_notification_executor
+
+        install_order_notification_executor()
