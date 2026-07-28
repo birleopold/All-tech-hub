@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load humanize %}
 {% block title %}Checkout{% endblock %}
-{% block body_class %}d-flex flex-column min-vh-100 site-body mobile-commerce-page mobile-checkout-page{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body mobile-commerce-page mobile-checkout-page desktop-checkout-page{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
   <div class="container py-4 py-lg-5">
@@ -17,6 +17,11 @@
 </section>
 
 <div class="container pb-5">
+  <nav class="desktop-checkout-progress" aria-label="Checkout progress">
+    <a class="desktop-checkout-progress__step is-complete" href="{% url 'cart' %}"><span class="desktop-checkout-progress__number"><span><i class="bi bi-check" aria-hidden="true"></i></span></span>Cart reviewed</a>
+    <span class="desktop-checkout-progress__step is-current" aria-current="step"><span class="desktop-checkout-progress__number"><span>2</span></span>Customer details</span>
+    <span class="desktop-checkout-progress__step"><span class="desktop-checkout-progress__number"><span>3</span></span>Confirmation</span>
+  </nav>
   <nav class="mobile-checkout-progress d-lg-none" aria-label="Checkout progress"><span><i class="bi bi-cart-check me-1" aria-hidden="true"></i>Cart reviewed</span><span class="is-current" aria-current="step"><i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i>Your details</span><span><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Confirmation</span></nav>
   <div class="row g-4 align-items-start">
     <div class="col-lg-7">
@@ -27,9 +32,10 @@
           <p class="text-uppercase small fw-semibold text-primary mb-2">Customer details</p>
           <h2 class="h4 mb-3">Where should we reach you?</h2>
           {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+          <div class="desktop-checkout-fields">
           {% for field in form %}
             {% if field.name == 'fulfillment_type' %}
-              <fieldset class="mb-4">
+              <fieldset class="mb-4 desktop-checkout-field--full desktop-checkout-field--fulfillment_type">
                 <legend class="form-label mb-2">{{ field.label }}</legend>
                 {{ field.errors }}
                 <div class="d-flex flex-wrap gap-2">
@@ -43,11 +49,11 @@
                 {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
               </fieldset>
             {% elif field.name == 'marketing_email_opt_in' or field.name == 'marketing_whatsapp_opt_in' %}
-              {% if field.name == 'marketing_email_opt_in' %}<fieldset class="border rounded p-3 mb-4"><legend class="h6 px-1">Optional product updates and offers</legend><p class="small text-muted">These choices are optional and do not affect your order. You can unsubscribe later.</p>{% endif %}
+              {% if field.name == 'marketing_email_opt_in' %}<fieldset class="border rounded p-3 mb-4 desktop-checkout-field--marketing"><legend class="h6 px-1">Optional product updates and offers</legend><p class="small text-muted">These choices are optional and do not affect your order. You can unsubscribe later.</p>{% endif %}
               <div class="form-check mb-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
               {% if field.name == 'marketing_whatsapp_opt_in' %}</fieldset>{% endif %}
             {% else %}
-              <div class="mb-3">
+              <div class="mb-3 desktop-checkout-field--{{ field.name }}">
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field.errors }}
                 {{ field }}
@@ -55,6 +61,7 @@
               </div>
             {% endif %}
           {% endfor %}
+          </div>
           <button type="submit" class="btn btn-primary btn-lg w-100 checkout-inline-submit">Place order</button>
           <p class="small text-muted mt-3 mb-0"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>A confirmation email and private tracking link will be sent to the address above. Placing an order does not by itself confirm payment.</p>
         </div>
@@ -63,7 +70,7 @@
     <div class="col-lg-5 checkout-summary-column">
       <aside class="card border-0 shadow-sm product-purchase-card mb-4">
         <div class="card-body p-4">
-          <p class="text-uppercase small fw-semibold text-primary mb-2">Order summary</p>
+          <div class="d-flex justify-content-between align-items-start gap-3 mb-2"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Order summary</p><small class="text-muted">{{ checkout_lines|length }} line item{{ checkout_lines|length|pluralize }}</small></div><a class="small text-decoration-none" href="{% url 'cart' %}">Edit cart</a></div>
           <ul class="list-group list-group-flush mb-3">
             {% for row in checkout_lines %}
             <li class="list-group-item d-flex justify-content-between gap-3 px-0">
@@ -77,6 +84,7 @@
           <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ tax_amount|floatformat:0|intcomma }}</strong></div>
           <hr>
           <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div>
+          <ul class="desktop-order-confidence"><li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Order submission starts verification; it does not force immediate payment.</span></li><li><i class="bi bi-lock-fill" aria-hidden="true"></i><span>Your private tracking link is sent to the email address entered here.</span></li></ul>
         </div>
       </aside>
 

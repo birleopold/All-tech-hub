@@ -40,6 +40,15 @@ class CheckoutForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        autocomplete = {
+            "name": "name",
+            "email": "email",
+            "phone": "tel",
+            "company_name": "organization",
+            "billing_address": "billing street-address",
+            "shipping_address": "shipping street-address",
+            "customer_note": "off",
+        }
         for name, field in self.fields.items():
             if name == "fulfillment_type":
                 continue
@@ -47,6 +56,9 @@ class CheckoutForm(forms.Form):
                 field.widget.attrs.setdefault("class", "form-check-input")
             else:
                 field.widget.attrs.setdefault("class", "form-control")
+                field.widget.attrs.setdefault("autocomplete", autocomplete.get(name, "off"))
+            if name == "phone":
+                field.widget.attrs.setdefault("inputmode", "tel")
 
     def save_customer(self) -> Customer:
         data = self.cleaned_data

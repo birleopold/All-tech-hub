@@ -39,6 +39,7 @@
   <link href="{% static 'css/marketplace_experience.css' %}" rel="stylesheet">
   <link href="{% static 'css/search_conversion_refinement.css' %}" rel="stylesheet">
   <link href="{% static 'css/mobile_commerce_pro.css' %}" rel="stylesheet">
+  <link href="{% static 'css/desktop_commerce_pro.css' %}" rel="stylesheet">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
   {% block extra_css %}{% endblock %}
 </head>
@@ -70,7 +71,7 @@
 
     <nav class="navbar navbar-expand-xl navbar-dark market-navbar sticky-top" aria-label="Main navigation">
       <div class="container market-navbar__inner">
-        <a class="navbar-brand site-brand fw-semibold" href="{% url 'home' %}">
+        <a class="navbar-brand site-brand fw-semibold" href="{% url 'home' %}" {% if u == 'home' %}aria-current="page"{% endif %}>
           <span class="site-brand__mark" aria-hidden="true"><i class="bi bi-cpu"></i></span>
           <span class="site-brand__copy"><strong>{{ company.company_name }}</strong><small>Technology &amp; support</small></span>
         </a>
@@ -94,21 +95,37 @@
             </div>
           </div>
 
-          <form class="market-global-search market-search-shell" method="get" action="{% url 'product_list' %}" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
+          <form class="market-global-search market-search-shell" method="get" action="{% url 'product_list' %}" role="search" data-market-search-form data-desktop-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
             <label class="visually-hidden" for="market-global-search">Search products, brands, models and services</label>
             <i class="bi bi-search" aria-hidden="true"></i>
-            <input id="market-global-search" name="q" type="search" value="{% if u == 'product_list' %}{{ request.GET.q }}{% endif %}" placeholder="Search laptops, brands, processors, accessories or services" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-global-search-results" data-market-search-input>
+            <input id="market-global-search" name="q" type="search" value="{% if u == 'product_list' %}{{ request.GET.q }}{% endif %}" placeholder="Search laptops, brands, processors, accessories or services" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-global-search-results" aria-keyshortcuts="Control+K Meta+K /" data-market-search-input>
+            <span class="desktop-search-shortcut" aria-hidden="true"><kbd>Ctrl</kbd><kbd>K</kbd></span>
             <button type="submit">Search</button>
             <div id="market-global-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
+            <div class="desktop-search-discovery" data-desktop-search-discovery hidden>
+              <section class="desktop-search-discovery__section" data-desktop-recent-section hidden>
+                <div class="desktop-search-discovery__head"><strong>Recent searches</strong><small>Select one to search again</small></div>
+                <div class="desktop-search-recent" data-desktop-recent-searches></div>
+              </section>
+              <section class="desktop-search-discovery__section">
+                <div class="desktop-search-discovery__head"><strong>Popular destinations</strong><small>Browse without typing</small></div>
+                <div class="desktop-search-destinations">
+                  <a href="{% url 'physical_product_list' %}"><i class="bi bi-laptop" aria-hidden="true"></i><span>Computers and accessories</span></a>
+                  <a href="{% url 'product_collection' 'deals' %}"><i class="bi bi-tags" aria-hidden="true"></i><span>Current catalogue deals</span></a>
+                  <a href="{% url 'service_list' %}"><i class="bi bi-tools" aria-hidden="true"></i><span>Repairs and IT services</span></a>
+                  <a href="{% url 'product_compare' %}"><i class="bi bi-columns-gap" aria-hidden="true"></i><span>Compare products</span></a>
+                </div>
+              </section>
+            </div>
             <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
           </form>
 
           <ul class="navbar-nav market-navbar__actions ms-xl-auto">
             <li class="nav-item d-xl-none"><a class="nav-link" href="{% url 'product_list' %}"><i class="bi bi-grid me-2" aria-hidden="true"></i>Browse all products</a></li>
             {% for category in public_nav_categories|slice:':6' %}<li class="nav-item d-xl-none"><a class="nav-link ps-3" href="{% url 'product_category' category.slug %}">{{ category.name }}</a></li>{% endfor %}
-            <li class="nav-item"><a class="market-nav-action" href="{% url 'service_list' %}"><i class="bi bi-tools" aria-hidden="true"></i><span><small>Technical</small>Services</span></a></li>
-            <li class="nav-item"><a class="market-nav-action" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}"><i class="bi bi-person-circle" aria-hidden="true"></i><span><small>{% if user.is_authenticated %}Welcome{% else %}Sign in{% endif %}</small>Account</span></a></li>
-            <li class="nav-item"><a class="market-nav-action market-cart-action" href="{% url 'cart' %}" {% if cart_item_count %}aria-label="Shopping cart, {{ cart_item_count }} items"{% else %}aria-label="Shopping cart"{% endif %}><i class="bi bi-cart3" aria-hidden="true"></i><span><small>Your</small>Cart</span>{% if cart_item_count %}<b>{{ cart_item_count }}</b>{% endif %}</a></li>
+            <li class="nav-item"><a class="market-nav-action {% if u == 'service_list' %}is-active{% endif %}" href="{% url 'service_list' %}" {% if u == 'service_list' %}aria-current="page"{% endif %}><i class="bi bi-tools" aria-hidden="true"></i><span><small>Technical</small>Services</span></a></li>
+            <li class="nav-item"><a class="market-nav-action {% if 'portal_' in u %}is-active{% endif %}" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}" {% if 'portal_' in u %}aria-current="page"{% endif %}><i class="bi bi-person-circle" aria-hidden="true"></i><span><small>{% if user.is_authenticated %}Welcome{% else %}Sign in{% endif %}</small>Account</span></a></li>
+            <li class="nav-item"><a class="market-nav-action market-cart-action {% if u == 'cart' or u == 'checkout' %}is-active{% endif %}" href="{% url 'cart' %}" {% if u == 'cart' or u == 'checkout' %}aria-current="page"{% endif %} {% if cart_item_count %}aria-label="Shopping cart, {{ cart_item_count }} items"{% else %}aria-label="Shopping cart"{% endif %}><i class="bi bi-cart3" aria-hidden="true"></i><span><small>Your</small>Cart</span>{% if cart_item_count %}<b>{{ cart_item_count }}</b>{% endif %}</a></li>
             {% if user.is_staff %}<li class="nav-item"><a class="market-nav-action" href="{% url 'staff_dashboard' %}"><i class="bi bi-speedometer2" aria-hidden="true"></i><span><small>Internal</small>Staff</span></a></li>{% endif %}
           </ul>
         </div>
@@ -179,6 +196,7 @@
   <script src="{% static 'js/public_experience.js' %}" defer></script>
   <script src="{% static 'js/marketplace_experience.js' %}" defer></script>
   <script src="{% static 'js/mobile_commerce_pro.js' %}" defer></script>
+  <script src="{% static 'js/desktop_commerce_pro.js' %}" defer></script>
   <script src="{% static 'js/pwa.js' %}" defer></script>
   {% with u=resolve_url_name %}{% if 'staff_' in u %}<script src="{% static 'js/staff_documents.js' %}" defer></script>{% endif %}{% endwith %}
   <script src="{% static 'js/marketing_analytics.js' %}" defer></script>
