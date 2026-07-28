@@ -5,8 +5,11 @@
   </nav>
 
   <details class="market-mobile-filter">
-    <summary><span><i class="bi bi-sliders me-2" aria-hidden="true"></i>Filter catalogue</span><small class="text-muted">{% if active_filter_items %}{{ active_filter_items|length }} active{% else %}All items{% endif %}</small></summary>
-    <div class="market-mobile-filter__body pt-3">{% include "catalog/_marketplace_filter_form.html" with id_prefix="mobile-market" %}</div>
+    <summary aria-controls="mobile-market-filter-panel" aria-expanded="false"><span><i class="bi bi-sliders me-2" aria-hidden="true"></i>Filter catalogue</span><small class="text-muted">{% if active_filter_items %}{{ active_filter_items|length }} active{% else %}All items{% endif %}</small></summary>
+    <div id="mobile-market-filter-panel" class="market-mobile-filter__body pt-3">
+      <div class="market-mobile-filter__sheet-head"><div><small class="market-kicker d-block mb-1">Refine results</small><strong>Filter catalogue</strong></div><button type="button" class="market-mobile-filter__close" data-mobile-filter-close aria-label="Close filters"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+      {% include "catalog/_marketplace_filter_form.html" with id_prefix="mobile-market" %}
+    </div>
   </details>
 
   <div class="market-catalog-layout">
