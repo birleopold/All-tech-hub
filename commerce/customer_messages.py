@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -39,7 +40,8 @@ def _deliver(
     to_email: str,
     subject: str,
     body: str,
-    idempotency_key: str,
+    idempotency_key: str = "",
+    raise_on_failure: bool = False,
 ) -> OutboundEmail | None:
     """Deliver one retry-safe transactional message.
 
@@ -54,13 +56,18 @@ def _deliver(
     if not recipient:
         return None
     if not customer_email_delivery_ready():
-        raise RuntimeError(
-            "Customer email delivery is unavailable while the Django console mail backend is active."
-        )
+        if raise_on_failure:
+            raise RuntimeError(
+                "Customer email delivery is unavailable while the Django console mail backend is active."
+            )
+        return None
 
     key = (idempotency_key or "").strip()[:180]
     if not key:
-        raise ValueError("A transactional email idempotency key is required.")
+        digest = hashlib.sha256(
+            f"{recipient}\0{subject}".encode("utf-8")
+        ).hexdigest()
+        key = f"legacy-transactional:{digest}"
 
     with transaction.atomic():
         row, _created = OutboundEmail.objects.select_for_update().get_or_create(
@@ -125,7 +132,9 @@ def _deliver(
                 "updated_at",
             ]
         )
-        raise
+        if raise_on_failure:
+            raise
+        return row
 
     row.mark_sent()
     row.save(
@@ -197,6 +206,7 @@ def send_order_confirmation(order: Order) -> OutboundEmail | None:
         subject=order_confirmation_subject(order),
         body=body,
         idempotency_key=f"order-confirmation:{order.pk}",
+        raise_on_failure=True,
     )
 
 
@@ -245,6 +255,7 @@ def send_order_status_update(event: OrderStatusEvent) -> OutboundEmail | None:
         subject=order_status_subject(order, status_label),
         body=body,
         idempotency_key=f"order-status:{event.pk}",
+        raise_on_failure=True,
     )
 
 
