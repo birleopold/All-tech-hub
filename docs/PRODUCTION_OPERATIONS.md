@@ -29,11 +29,13 @@ The script:
 3. imports production settings and confirms `DEBUG=False`;
 4. runs Django deployment and model-migration checks;
 5. audits unsafe environment gaps;
-6. creates and verifies a database backup before migrations;
-7. runs migrations and builds the hashed static manifest;
-8. records the validated Git revision in `.release`;
-9. restarts Gunicorn only after every preflight step succeeds;
-10. checks systemd and confirms the readiness endpoint reports the same revision.
+6. verifies that the durable automation timer is installed and enabled;
+7. creates and verifies a database backup before migrations;
+8. runs migrations and builds the hashed static manifest;
+9. records the validated Git revision in `.release`;
+10. restarts Gunicorn only after every preflight step succeeds;
+11. checks web readiness and confirms the endpoint reports the same revision;
+12. starts and verifies the durable automation timer before declaring success.
 
 The script does not edit `.env`. Correct the protected file permanently after any warning.
 
@@ -49,6 +51,50 @@ ALLTECH_BACKUP_RCLONE_DEST=secure-remote:leosoft-production-backups
 Keep release backups enabled. Off-site mode should point to a tested rclone remote,
 preferably an encrypted `crypt` remote. Backup directories contain business and
 customer data and must not be placed in a public web directory.
+
+## Durable automation release gate
+
+Customer order confirmations, customer-visible status updates, saved-cart reminders,
+stock alerts and scheduled publishing use the database-backed automation worker. The
+tracked systemd timer runs the worker every minute:
+
+```text
+Timer:   leosoft-marketing-posts.timer
+Service: leosoft-marketing-posts.service
+Command: python manage.py run_automation_jobs --limit 100
+```
+
+Install the units once on a new server:
+
+```bash
+sudo cp /home/admin/All-tech-hub/deployment/leosoft-marketing-posts.service \
+  /etc/systemd/system/
+sudo cp /home/admin/All-tech-hub/deployment/leosoft-marketing-posts.timer \
+  /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now leosoft-marketing-posts.timer
+```
+
+Verify the next run and inspect the latest worker output:
+
+```bash
+sudo systemctl status leosoft-marketing-posts.timer --no-pager
+sudo systemctl list-timers leosoft-marketing-posts.timer --no-pager
+sudo journalctl -u leosoft-marketing-posts.service -n 100 --no-pager
+```
+
+Production releases require the timer by default. These overrides exist for renamed
+units or a controlled recovery window:
+
+```dotenv
+ALLTECH_REQUIRE_AUTOMATION_TIMER=1
+ALLTECH_AUTOMATION_TIMER=leosoft-marketing-posts.timer
+ALLTECH_AUTOMATION_SERVICE=leosoft-marketing-posts.service
+```
+
+Do not disable the gate during normal operation. A healthy web process without a
+working automation timer can accept orders while leaving customer notifications and
+other queued work unprocessed.
 
 ## Manual audit
 
@@ -132,16 +178,19 @@ After deployment:
 curl -I https://leosoftug.com/
 curl -I https://leosoftug.com/catalog/
 curl -sS https://leosoftug.com/health/ready/
+sudo systemctl list-timers leosoft-marketing-posts.timer --no-pager
 ```
 
 Confirm that public responses include `X-Request-ID`, private pages use
 `Cache-Control: private, no-store`, the health response reports the deployed Git
-revision, and static asset URLs contain content hashes.
+revision, static asset URLs contain content hashes, and the automation timer has a
+future scheduled run.
 
 ## Failure handling
 
-- Do not restart Gunicorn after checks, backups, migrations or static collection fail.
+- Do not restart Gunicorn after checks, timer preflight, backups, migrations or static collection fail.
 - Do not use `git reset --hard` on the production checkout.
-- Capture `journalctl -u leosoft_gunicorn -n 100 --no-pager` when workers fail.
+- Capture `journalctl -u leosoft_gunicorn -n 100 --no-pager` when web workers fail.
+- Capture `journalctl -u leosoft-marketing-posts.service -n 100 --no-pager` when queued work fails.
 - Correct the underlying environment or code issue, then rerun the same release script.
 - Database restoration should use a verified backup and a documented maintenance window.
