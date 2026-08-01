@@ -1,5 +1,5 @@
-{% load catalog_images humanize %}
-<article class="market-product-card" data-reveal data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{{ p.public_price }}">
+{% load catalog_images %}
+<article class="market-product-card market-product-card--compact" data-reveal data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{{ p.public_price }}">
   <div class="market-product-card__media">
     <a class="market-product-card__image-link" href="{{ p.get_absolute_url }}" aria-label="View {{ p.name }}">
       {% if p.primary_display_image %}
@@ -9,37 +9,13 @@
         <span class="market-product-card__placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i><small>Image coming soon</small></span>
       {% endif %}
     </a>
-    <div class="market-product-card__badges">
-      {% if p.savings_percent %}<span class="market-badge market-badge--deal">Save {{ p.savings_percent }}%</span>{% endif %}
-      {% if p.public_condition %}<span class="market-badge">{{ p.public_condition }}</span>{% endif %}
-      {% if p.public_actual_photos %}<span class="market-badge"><i class="bi bi-camera-fill" aria-hidden="true"></i> Actual photos</span>{% endif %}
-      {% if p.kind == 'service' %}<span class="market-badge market-badge--available">Bookable</span>{% elif p.public_available %}<span class="market-badge market-badge--available">In stock</span>{% else %}<span class="market-badge market-badge--muted">Confirm stock</span>{% endif %}
-    </div>
   </div>
+
   <div class="market-product-card__body">
-    <div class="market-product-card__identity">
-      <p>{% if p.public_brand %}<strong>{{ p.public_brand }}</strong><span aria-hidden="true"> · </span>{% endif %}{{ p.category.name }}</p>
-      <h3><a data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
-    </div>
-    <p class="market-product-card__description">{{ p.short_description|default:p.description|truncatewords:16 }}</p>
-    {% if p.public_processor_summary or p.public_memory_storage_summary %}<div class="market-product-card__decision-specs">{% if p.public_processor_summary %}<span><i class="bi bi-cpu" aria-hidden="true"></i>{{ p.public_processor_summary }}</span>{% endif %}{% if p.public_memory_storage_summary %}<span><i class="bi bi-memory" aria-hidden="true"></i>{{ p.public_memory_storage_summary }}</span>{% endif %}</div>{% endif %}
-    <div class="market-product-card__signals">
-      {% if p.public_has_variants %}<span><i class="bi bi-sliders" aria-hidden="true"></i>{{ p.public_variant_count }} option{{ p.public_variant_count|pluralize }}</span>{% endif %}
-      {% if p.public_warranty_months %}<span><i class="bi bi-shield-check" aria-hidden="true"></i>{{ p.public_warranty_months }}-month warranty</span>{% endif %}
-      {% if p.sku %}<span><i class="bi bi-upc-scan" aria-hidden="true"></i>{{ p.sku }}</span>{% endif %}
-      {% if p.public_stock_confirmed_at %}<span><i class="bi bi-clock-history" aria-hidden="true"></i>Stock checked {{ p.public_stock_confirmed_at|timesince }} ago</span>{% endif %}
-      {% if p.public_low_stock %}<span class="text-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Low stock</span>{% endif %}
-    </div>
-    <div class="market-product-card__price-row">
-      <div class="market-price">
-        {% if p.public_has_variants %}<small>From</small>{% endif %}
-        <strong>{{ company.currency_code }} {{ p.public_price|floatformat:0|intcomma }}</strong>
-        {% if p.public_compare_at_price %}<del>{{ company.currency_code }} {{ p.public_compare_at_price|floatformat:0|intcomma }}</del>{% endif %}
-      </div>
-    </div>
-    <div class="market-product-card__actions">
+    <h3 class="market-product-card__title"><a data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+
+    <div class="market-product-card__actions" aria-label="Actions for {{ p.name }}">
       <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details</a>
-      <details class="market-card-quick-view"><summary class="btn btn-outline-secondary" aria-label="Quick view {{ p.name }}" title="Quick view"><i class="bi bi-eye" aria-hidden="true"></i><span class="desktop-action-label">Quick view</span></summary><div class="market-card-quick-view__panel"><p class="market-kicker">Quick view</p><h4>{{ p.name }}</h4><p>{{ p.short_description|default:p.description|truncatewords:34 }}</p><dl><div><dt>Condition</dt><dd>{{ p.public_condition|default:'Confirm with team' }}</dd></div><div><dt>Price</dt><dd>{% if p.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ p.public_price|floatformat:0|intcomma }}</dd></div>{% if p.public_processor_summary %}<div><dt>Processor</dt><dd>{{ p.public_processor_summary }}</dd></div>{% endif %}{% if p.public_memory_storage_summary %}<div><dt>Memory and storage</dt><dd>{{ p.public_memory_storage_summary }}</dd></div>{% endif %}<div><dt>Availability</dt><dd>{% if p.public_available %}Available to order{% else %}Confirm availability{% endif %}</dd></div></dl><div class="d-flex flex-wrap gap-2"><a class="btn btn-primary btn-sm" href="{{ p.get_absolute_url }}">Full details</a><a class="btn btn-outline-primary btn-sm" href="{% url 'contact' %}?type=product&amp;product={{ p.slug|urlencode }}">Ask the team</a></div></div></details>
       {% if p.kind == 'physical' and p.public_available and not p.public_has_variants %}
       <form method="post" action="{% url 'cart_add' p.pk %}" class="market-quick-add-form" data-market-quick-add>{% csrf_token %}<input type="hidden" name="quantity" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-primary market-quick-add-button" aria-label="Add {{ p.name }} to cart" title="Add to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i><span class="desktop-action-label">Add</span></button></form>
       {% endif %}
