@@ -7,9 +7,12 @@
 .market-product-card--compact .market-product-card__title{margin:0;font-size:1rem;font-weight:800;line-height:1.35}
 .market-product-card--compact .market-product-card__title a{display:-webkit-box;overflow:hidden;color:inherit;text-decoration:none;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .market-product-card--compact .market-product-card__title a:hover{color:var(--bs-primary)}
+.market-product-card--compact .market-product-card__price-row{margin-top:0;padding-top:0}
+.market-product-card--compact .market-price small{width:auto}
+.market-product-card--compact .market-price strong{font-size:1.05rem}
 .market-product-card--compact .market-product-card__actions{margin-top:auto;padding-top:.15rem}
 .market-product-card--compact .market-product-card__actions .btn{min-height:2.35rem}
-@media(max-width:575px){.market-product-card--compact .market-product-card__body{gap:.7rem;padding:.85rem}.market-product-card--compact .market-product-card__title{font-size:.95rem}.market-product-card--compact .market-product-card__actions{gap:.4rem}}
+@media(max-width:575px){.market-product-card--compact .market-product-card__body{gap:.7rem;padding:.85rem}.market-product-card--compact .market-product-card__title{font-size:.95rem}.market-product-card--compact .market-price strong{font-size:1rem}.market-product-card--compact .market-product-card__actions{gap:.4rem}}
 
 /* Loaded after the base product-detail stylesheet, so these declarations keep
    the pointer-responsive gallery transform from being replaced by the legacy
