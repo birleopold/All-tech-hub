@@ -1,16 +1,27 @@
 {% extends "staff_base.html" %}
+{% load static %}
 {% block title %}{% if is_create %}New document{% else %}Edit {{ object.number }}{% endif %}{% endblock %}
+{% block staff_page_name %}{% if is_create %}New commercial document{% else %}Edit {{ object.number }}{% endif %}{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<link href="{% static 'css/staff_document_composer.css' %}" rel="stylesheet">
+{% endblock %}
 {% block staff_content %}
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-  <div>
-    <p class="text-primary small fw-semibold text-uppercase mb-1">Commercial documents</p>
-    <h1 class="h3 mb-1" id="document-page-title">{% if is_create %}Create document{% else %}Edit {{ object.number }}{% endif %}</h1>
-    <p class="text-muted mb-0">{% if is_create %}Complete the details and line items, then create the document in one step.{% else %}Update the document, line items, totals, and workflow settings.{% endif %}</p>
+<div class="document-composer-page">
+<header class="document-composer-header">
+  <div class="document-composer-heading">
+    <a class="document-composer-back" href="{% url 'staff_documents' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i><span>All documents</span></a>
+    <p class="document-composer-eyebrow"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Commercial documents</p>
+    <h1 id="document-page-title">{% if is_create %}Create document{% else %}Edit {{ object.number }}{% endif %}</h1>
+    <p>{% if is_create %}Prepare a clear, professional document for your customer.{% else %}Update the document, line items, totals, and workflow settings.{% endif %}</p>
   </div>
-  {% if not is_create %}
-  <span class="badge rounded-pill text-bg-{% if object.status == 'paid' %}success{% elif object.status == 'cancelled' %}secondary{% elif object.status == 'partial' %}warning{% else %}primary{% endif %} px-3 py-2">{{ object.get_status_display }}</span>
-  {% endif %}
-</div>
+  <div class="document-composer-header-aside">
+    {% if not is_create %}<span class="badge rounded-pill text-bg-{% if object.status == 'paid' %}success{% elif object.status == 'cancelled' %}secondary{% elif object.status == 'partial' %}warning{% else %}primary{% endif %} px-3 py-2">{{ object.get_status_display }}</span>{% endif %}
+    <div class="document-composer-context"><span><i class="bi bi-shield-check" aria-hidden="true"></i> Secure billing</span><span><i class="bi bi-currency-exchange" aria-hidden="true"></i> {{ company.currency_code }}</span></div>
+  </div>
+</header>
+
+<nav class="document-composer-steps" aria-label="Document preparation steps"><span class="document-composer-step is-current"><span>1</span> Document details</span><span class="document-composer-step"><span>2</span> Customer and items</span><span class="document-composer-step"><span>3</span> Review and save</span></nav>
 
 {% if object.is_locked %}
 <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -19,34 +30,35 @@
 </div>
 {% endif %}
 
-<form method="post" novalidate id="document-form">
+<form method="post" novalidate id="document-form" class="document-composer-form">
   {% csrf_token %}
   {% if form.non_field_errors %}
   <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
   {% endif %}
 
-  <div class="row g-4">
-    <div class="col-xl-8">
+  <div class="row g-4 document-composer-grid">
+    <div class="col-xl-8 document-composer-main">
       {% if is_create %}
-      <section class="card border-0 shadow-sm mb-4">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card document-template-card">
         <div class="card-body p-3 p-md-4">
+          <div class="document-card-heading"><span class="document-card-icon"><i class="bi bi-lightning-charge" aria-hidden="true"></i></span><div><h2>Quick start</h2><p>Use an existing template or begin with a blank document.</p></div></div>
           <div class="row g-3 align-items-end">
-            <div class="col-md-8"><label class="form-label" for="{{ form.template.id_for_label }}">{{ form.template.label }}</label>{{ form.template }}<div class="form-text">Templates fill document defaults and repeat line items; you can still change everything.</div></div>
-            <div class="col-md-4"><button class="btn btn-outline-secondary w-100" id="apply-template" type="button">Apply template</button></div>
+            <div class="col-md-8"><label class="form-label" for="{{ form.template.id_for_label }}">Choose a template <span class="document-field-optional">Optional</span></label>{{ form.template }}<div class="form-text">Defaults and line items remain fully editable.</div></div>
+            <div class="col-md-4"><button class="btn btn-outline-secondary w-100 document-template-apply" id="apply-template" type="button"><i class="bi bi-magic me-1" aria-hidden="true"></i> Apply template</button></div>
           </div>
         </div>
       </section>
       {% endif %}
-      <section class="card border-0 shadow-sm mb-4">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card">
         <div class="card-body p-3 p-md-4">
-          <h2 class="h5 mb-3">Document details</h2>
+          <div class="document-card-heading"><span class="document-card-icon"><i class="bi bi-file-earmark-ruled" aria-hidden="true"></i></span><div><h2>Document details</h2><p>Choose the document type, dates and sales information.</p></div></div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="{{ form.doc_type.id_for_label }}">{{ form.doc_type.label }}</label>
               {{ form.doc_type.errors }}{{ form.doc_type }}
             </div>
             <div class="col-md-6">
-              <div class="alert alert-primary py-2 mb-0 h-100" id="document-type-guidance" role="status"></div>
+              <div class="document-type-guidance" id="document-type-guidance" role="status"></div>
             </div>
             <div class="col-12">
               <label class="form-label" for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
@@ -95,9 +107,9 @@
         </div>
       </section>
 
-      <section class="card border-0 shadow-sm mb-4">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card">
         <div class="card-body p-3 p-md-4">
-          <h2 class="h5 mb-3">Pricing, tax and charges</h2>
+          <div class="document-card-heading"><span class="document-card-icon"><i class="bi bi-percent" aria-hidden="true"></i></span><div><h2>Pricing, tax and charges</h2><p>Adjust discounts, delivery charges and tax treatment.</p></div></div>
           <div class="row g-3">
             <div class="col-md-4"><label class="form-label" for="{{ form.pricing_mode.id_for_label }}">{{ form.pricing_mode.label }}</label>{{ form.pricing_mode.errors }}{{ form.pricing_mode }}</div>
             <div class="col-md-4"><label class="form-label" for="{{ form.discount_type.id_for_label }}">{{ form.discount_type.label }}</label>{{ form.discount_type.errors }}{{ form.discount_type }}</div>
@@ -114,14 +126,11 @@
         </div>
       </section>
 
-      <section class="card border-0 shadow-sm mb-4">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card">
         <div class="card-body p-3 p-md-4">
-          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-            <div>
-              <h2 class="h5 mb-1" id="customer-section-title">Customer details</h2>
-              <p class="small text-muted mb-0">A system account is never required. Use these fields for walk-ins and one-off customers.</p>
-            </div>
-            <span class="badge text-bg-light border">Saved on this document</span>
+          <div class="document-card-heading document-card-heading--spread">
+            <span class="document-card-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span><div><h2 id="customer-section-title">Customer details</h2><p>Choose an existing customer or enter a walk-in.</p></div>
+            <span class="document-context-badge">No account required</span>
           </div>
           <div class="row g-3">
             <div class="col-12">
@@ -162,19 +171,11 @@
         </div>
       </section>
 
-      <section class="card border-0 shadow-sm mb-4">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card document-items-card">
         <div class="card-body p-0">
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 p-md-4 pb-md-3">
-            <div>
-              <h2 class="h5 mb-1" id="line-section-title">Line items</h2>
-              <p class="small text-muted mb-0">Catalog links are optional. Type any outside-stock, consignment, neighbour-supplied, or custom item directly.</p>
-            </div>
-            <button class="btn btn-sm btn-outline-primary" type="button" id="add-line">
-              <i class="bi bi-plus-lg" aria-hidden="true"></i> Add line
-            </button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" id="bulk-paste-toggle">
-              <i class="bi bi-clipboard-plus" aria-hidden="true"></i> Bulk paste
-            </button>
+          <div class="document-items-toolbar p-3 p-md-4 pb-md-3">
+            <div class="document-card-heading mb-0"><span class="document-card-icon"><i class="bi bi-bag-check" aria-hidden="true"></i></span><div><h2 id="line-section-title">Line items</h2><p>Add catalogue products, services or custom items.</p></div></div>
+            <div class="document-items-actions"><button class="btn btn-sm btn-outline-secondary" type="button" id="bulk-paste-toggle"><i class="bi bi-clipboard-plus" aria-hidden="true"></i> Bulk paste</button><button class="btn btn-sm btn-primary" type="button" id="add-line"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add item</button></div>
           </div>
           <div class="px-3 px-md-4 pb-3 d-none" id="bulk-paste-panel">
             <label class="form-label" for="bulk-paste-input">Paste rows: description, quantity, unit price, optional unit cost</label>
@@ -185,17 +186,17 @@
           {% if line_formset.non_form_errors %}
           <div class="alert alert-danger mx-3 mx-md-4" role="alert">{{ line_formset.non_form_errors }}</div>
           {% endif %}
-          <div class="table-responsive">
+          <div class="table-responsive document-lines-scroll" tabindex="0" aria-label="Document line items; scroll horizontally to view all columns">
             <table class="table align-middle mb-0 document-lines" id="line-table">
               <thead class="table-light">
-                <tr><th>Catalog link (optional)</th><th>Description</th><th>Qty</th><th id="unit-price-heading">Unit price</th><th class="text-end" id="amount-heading">Amount</th><th><span class="visually-hidden">Actions</span></th></tr>
+                <tr><th>Catalogue <span class="document-table-optional">Optional</span></th><th>Description</th><th>Qty</th><th id="unit-price-heading">Unit price</th><th class="text-end" id="amount-heading">Amount</th><th><span class="visually-hidden">Actions</span></th></tr>
               </thead>
               <tbody id="line-rows">
                 {% for f in line_formset %}
                 <tr class="line-form-row" draggable="true">
                   {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
                   <td class="line-product-cell">
-                    <input class="form-control form-control-sm mb-2 product-filter" type="search" placeholder="Filter catalog">
+                    <input class="form-control form-control-sm mb-2 product-filter" type="search" placeholder="Search catalogue">
                     {{ f.product.errors }}{{ f.product }}
                     <div class="mt-2">{{ f.product_variant.errors }}{{ f.product_variant }}</div>
                     <div class="mt-2">{{ f.source_type.errors }}{{ f.source_type }}</div>
@@ -236,7 +237,7 @@
             <tr class="line-form-row" draggable="true">
               {% with f=line_formset.empty_form %}
               {% for hidden in f.hidden_fields %}{{ hidden }}{% endfor %}
-              <td class="line-product-cell"><input class="form-control form-control-sm mb-2 product-filter" type="search" placeholder="Filter catalog">{{ f.product }}<div class="mt-2">{{ f.product_variant }}</div><div class="mt-2">{{ f.source_type }}</div></td>
+              <td class="line-product-cell"><input class="form-control form-control-sm mb-2 product-filter" type="search" placeholder="Search catalogue">{{ f.product }}<div class="mt-2">{{ f.product_variant }}</div><div class="mt-2">{{ f.source_type }}</div></td>
               <td>{{ f.description }}{{ f.sort_order }}<details class="mt-2 line-advanced"><summary class="small text-primary">Advanced details</summary><div class="row g-2 mt-1"><div class="col-md-6"><label class="form-label small">SKU</label>{{ f.sku }}</div><div class="col-md-6"><label class="form-label small">Section</label>{{ f.section }}</div><div class="col-md-6"><label class="form-label small">Serial</label>{{ f.serial_number }}</div><div class="col-md-6"><label class="form-label small">Warranty</label>{{ f.warranty }}</div><div class="col-12"><label class="form-label small">Line note</label>{{ f.line_note }}</div><div class="col-md-6"><label class="form-label small">Discount type</label>{{ f.discount_type }}</div><div class="col-md-6"><label class="form-label small">Discount</label>{{ f.discount_value }}</div><div class="col-md-6"><label class="form-label small">Tax %</label>{{ f.tax_rate }}</div><div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2">{{ f.tax_exempt }}<label class="form-check-label small">Tax exempt</label></div></div><div class="col-md-6 cost-field {% if not can_view_margin %}d-none{% endif %}"><label class="form-label small">Unit cost</label>{{ f.unit_cost }}</div><div class="col-md-6"><label class="form-label small">Supplier / owner</label>{{ f.supplier_name }}</div><div class="col-12"><label class="form-label small">Source reference</label>{{ f.source_reference }}</div></div></details></td>
               <td class="line-number-cell">{{ f.quantity }}</td>
               <td class="line-number-cell">{{ f.unit_price }}</td>
@@ -248,9 +249,9 @@
         </div>
       </section>
 
-      <section class="card border-0 shadow-sm mb-4">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card">
         <div class="card-body p-3 p-md-4">
-          <h2 class="h5 mb-3">Notes and terms</h2>
+          <div class="document-card-heading"><span class="document-card-icon"><i class="bi bi-chat-left-text" aria-hidden="true"></i></span><div><h2>Notes and terms</h2><p>Add any customer instructions and payment conditions.</p></div></div>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
@@ -265,9 +266,9 @@
       </section>
 
       {% if form.quote_requires_internal_approval or form.quote_requires_customer_acceptance %}
-      <section class="card border-0 shadow-sm mb-4" id="quote-options">
+      <section class="card border-0 shadow-sm mb-4 document-composer-card" id="quote-options">
         <div class="card-body p-3 p-md-4">
-          <h2 class="h5 mb-3">Quotation approvals</h2>
+          <div class="document-card-heading"><span class="document-card-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span><div><h2>Quotation approvals</h2><p>Choose which approvals are needed before proceeding.</p></div></div>
           {% if form.quote_requires_internal_approval %}
           <div class="form-check mb-3">{{ form.quote_requires_internal_approval }}<label class="form-check-label" for="{{ form.quote_requires_internal_approval.id_for_label }}">{{ form.quote_requires_internal_approval.label }}</label></div>
           {% endif %}
@@ -279,24 +280,24 @@
       {% endif %}
     </div>
 
-    <div class="col-xl-4">
-      <div class="card border-0 shadow-sm document-summary">
+    <div class="col-xl-4 document-composer-sidebar">
+      <div class="card border-0 shadow-sm document-summary document-summary-card">
         <div class="card-body p-3 p-md-4">
-          <h2 class="h5 mb-3">Summary</h2>
-          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Subtotal</span><strong id="summary-subtotal">{{ company.currency_code }} 0.00</strong></div>
-          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Discount</span><strong id="summary-discount">− {{ company.currency_code }} 0.00</strong></div>
-          <div class="d-flex justify-content-between mb-2"><span class="text-muted">Shipping &amp; charges</span><strong id="summary-charges">{{ company.currency_code }} 0.00</strong></div>
-          <div class="d-flex justify-content-between mb-3" id="summary-tax-row"><span class="text-muted">Tax</span><strong id="summary-tax">{{ company.currency_code }} 0.00</strong></div>
-          <div class="d-flex justify-content-between mb-3"><span class="text-muted">Withholding</span><strong id="summary-withholding">− {{ company.currency_code }} 0.00</strong></div>
-          <div class="d-flex justify-content-between border-top pt-3 fs-5"><span>Total</span><strong id="summary-total">{{ company.currency_code }} 0.00</strong></div>
-          <div class="d-flex justify-content-between mt-2 d-none" id="summary-change-row"><span class="text-muted">Change due</span><strong id="summary-change">{{ company.currency_code }} 0.00</strong></div>
-          {% if can_view_margin %}<div class="border-top mt-3 pt-3 small"><div class="d-flex justify-content-between"><span class="text-muted">Estimated cost</span><strong id="summary-cost">{{ company.currency_code }} 0.00</strong></div><div class="d-flex justify-content-between"><span class="text-muted">Estimated gross profit</span><strong id="summary-profit">{{ company.currency_code }} 0.00</strong></div></div>{% endif %}
-          <p class="small text-muted mt-3 mb-0">The document number is assigned only after the complete form saves successfully.</p>
-          <div class="d-grid gap-2 mt-4">
+          <div class="document-summary-heading"><div><span>Live calculation</span><h2>Document summary</h2></div><span class="document-summary-currency">{{ company.currency_code }}</span></div>
+          <div class="document-summary-lines"><div class="document-summary-row"><span>Subtotal</span><strong id="summary-subtotal">{{ company.currency_code }} 0.00</strong></div>
+          <div class="document-summary-row"><span>Discount</span><strong id="summary-discount">− {{ company.currency_code }} 0.00</strong></div>
+          <div class="document-summary-row"><span>Shipping &amp; charges</span><strong id="summary-charges">{{ company.currency_code }} 0.00</strong></div>
+          <div class="document-summary-row" id="summary-tax-row"><span>Tax</span><strong id="summary-tax">{{ company.currency_code }} 0.00</strong></div>
+          <div class="document-summary-row"><span>Withholding</span><strong id="summary-withholding">− {{ company.currency_code }} 0.00</strong></div></div>
+          <div class="document-summary-total"><span>Amount due</span><strong id="summary-total">{{ company.currency_code }} 0.00</strong></div>
+          <div class="document-summary-row mt-2 d-none" id="summary-change-row"><span>Change due</span><strong id="summary-change">{{ company.currency_code }} 0.00</strong></div>
+          {% if can_view_margin %}<div class="document-summary-margin"><div class="document-summary-row"><span>Estimated cost</span><strong id="summary-cost">{{ company.currency_code }} 0.00</strong></div><div class="document-summary-row"><span>Estimated gross profit</span><strong id="summary-profit">{{ company.currency_code }} 0.00</strong></div></div>{% endif %}
+          <div class="document-summary-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>A document number is generated after everything saves successfully.</span></div>
+          <div class="d-grid gap-2 document-summary-actions">
             <button type="submit" name="save_action" value="view" class="btn btn-primary" id="primary-save-button">{% if is_create %}Create and view{% else %}Save and view{% endif %}</button>
             <button type="submit" name="save_action" value="edit" class="btn btn-outline-primary" id="secondary-save-button">{% if is_create %}Create and keep editing{% else %}Save changes{% endif %}</button>
-            <div class="input-group"><span class="input-group-text">Template</span>{{ form.template_name }}<button type="submit" name="save_action" value="template" class="btn btn-outline-secondary">Save</button></div>
-            <a class="btn btn-link" href="{% if is_create %}{% url 'staff_documents' %}{% else %}{% url 'staff_document_view' object.pk %}{% endif %}">Cancel</a>
+            <div class="document-save-template"><label class="form-label" for="{{ form.template_name.id_for_label }}">Save as reusable template <span class="document-field-optional">Optional</span></label><div class="input-group">{{ form.template_name }}<button type="submit" name="save_action" value="template" class="btn btn-outline-secondary">Save</button></div></div>
+            <a class="btn btn-link document-cancel-link" href="{% if is_create %}{% url 'staff_documents' %}{% else %}{% url 'staff_document_view' object.pk %}{% endif %}">Cancel and return</a>
           </div>
         </div>
       </div>
@@ -305,7 +306,7 @@
 </form>
 
 {% if not is_create %}
-<div class="card border-0 shadow-sm mt-4">
+<div class="card border-0 shadow-sm mt-4 document-composer-card document-next-actions">
   <div class="card-body">
     <h2 class="h5">Next actions</h2>
     <div class="d-flex flex-wrap gap-2">
@@ -324,6 +325,7 @@
   </div>
 </div>
 {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}

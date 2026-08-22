@@ -1,0 +1,615 @@
+/* Focused commercial document editor. All rules stay inside the composer page. */
+
+.document-composer-page {
+  --document-ink: #17243a;
+  --document-muted: #728196;
+  --document-border: #e4ebf1;
+  --document-surface: #ffffff;
+  --document-accent: #149b88;
+  --document-accent-soft: #e8f7f3;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+}
+
+.document-composer-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.35rem;
+}
+
+.document-composer-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  color: #65748a;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.document-composer-back:hover {
+  color: var(--document-accent);
+}
+
+.document-composer-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.35rem;
+  color: var(--document-accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.document-composer-heading h1 {
+  margin: 0 0 0.32rem;
+  color: var(--document-ink);
+  font-size: clamp(1.65rem, 2.4vw, 2.15rem);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+}
+
+.document-composer-heading > p:last-child {
+  margin: 0;
+  color: var(--document-muted);
+  font-size: 0.88rem;
+}
+
+.document-composer-header-aside {
+  display: grid;
+  justify-items: end;
+  gap: 0.7rem;
+}
+
+.document-composer-context {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.document-composer-context > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.46rem 0.7rem;
+  border: 1px solid var(--document-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #526278;
+  font-size: 0.73rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.document-composer-context i {
+  color: var(--document-accent);
+}
+
+.document-composer-steps {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  margin-bottom: 1.4rem;
+  padding: 0.78rem 1rem;
+  border: 1px solid var(--document-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.document-composer-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
+  color: #758398;
+  font-size: 0.77rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.document-composer-step > span {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf1f5;
+  color: #66748a;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.document-composer-step.is-current {
+  color: var(--document-ink);
+}
+
+.document-composer-step.is-current > span {
+  background: var(--document-accent);
+  color: #fff;
+}
+
+.document-composer-grid {
+  --bs-gutter-x: 1.4rem;
+  --bs-gutter-y: 1.4rem;
+}
+
+.document-composer-main,
+.document-composer-sidebar {
+  min-width: 0;
+}
+
+#document-form .document-composer-card,
+#document-form .document-summary-card,
+.document-composer-page .document-next-actions {
+  overflow: hidden;
+  border: 1px solid var(--document-border) !important;
+  border-radius: 1rem !important;
+  background: var(--document-surface);
+  box-shadow: 0 0.7rem 1.7rem rgba(30, 49, 74, 0.045) !important;
+}
+
+#document-form .document-composer-card {
+  margin-bottom: 1.05rem !important;
+}
+
+#document-form .document-composer-card > .card-body,
+#document-form .document-summary-card > .card-body {
+  padding: 1.25rem !important;
+}
+
+#document-form .document-items-card > .card-body {
+  padding: 0 !important;
+}
+
+.document-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.78rem;
+  min-width: 0;
+  margin-bottom: 1.2rem;
+}
+
+.document-card-heading--spread > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.document-card-icon {
+  display: grid;
+  flex: 0 0 2.45rem;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border-radius: 0.78rem;
+  background: var(--document-accent-soft);
+  color: var(--document-accent);
+  font-size: 1.02rem;
+}
+
+#document-form .document-card-heading h2 {
+  margin: 0 0 0.15rem;
+  color: var(--document-ink);
+  font-size: 0.98rem;
+  font-weight: 720;
+  letter-spacing: -0.015em;
+}
+
+.document-card-heading p {
+  margin: 0;
+  color: var(--document-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.document-composer-page .form-label {
+  margin-bottom: 0.38rem;
+  color: #46566c;
+  font-size: 0.77rem;
+  font-weight: 650;
+}
+
+.document-composer-page .form-control,
+.document-composer-page .form-select,
+.document-composer-page .input-group-text {
+  min-height: 2.55rem;
+  border-color: #dce5ed;
+  border-radius: 0.68rem;
+  font-size: 0.82rem;
+}
+
+.document-composer-page .form-control:focus,
+.document-composer-page .form-select:focus {
+  border-color: #74c6b9;
+  box-shadow: 0 0 0 0.2rem rgba(20, 155, 136, 0.12);
+}
+
+.document-composer-page textarea.form-control {
+  min-height: 5.2rem;
+}
+
+.document-composer-page .form-text {
+  color: #8190a1;
+  font-size: 0.71rem;
+  line-height: 1.4;
+}
+
+.document-field-optional {
+  margin-left: 0.28rem;
+  color: #8592a2;
+  font-size: 0.7rem;
+  font-weight: 450;
+}
+
+.document-template-apply {
+  min-height: 2.55rem;
+}
+
+.document-type-guidance {
+  display: flex;
+  align-items: center;
+  min-height: 2.55rem;
+  height: calc(100% - 1.48rem);
+  margin-top: 1.48rem;
+  padding: 0.62rem 0.78rem;
+  border: 1px solid #d4eee8;
+  border-radius: 0.68rem;
+  background: #f0faf7;
+  color: #28665d;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.document-context-badge {
+  padding: 0.36rem 0.58rem;
+  border-radius: 999px;
+  background: #eef7f4;
+  color: #39756a;
+  font-size: 0.68rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.document-items-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.document-items-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.document-items-actions .btn {
+  white-space: nowrap;
+}
+
+.document-lines-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-color: #c8d5de #f3f6f8;
+  scrollbar-width: thin;
+}
+
+.document-lines-scroll:focus-visible {
+  outline: 2px solid var(--document-accent);
+  outline-offset: -2px;
+}
+
+#document-form .document-lines {
+  min-width: 1030px;
+  table-layout: fixed;
+}
+
+#document-form .document-lines th,
+#document-form .document-lines td {
+  padding: 0.8rem 0.72rem;
+  border-color: #edf1f5;
+  vertical-align: top;
+}
+
+#document-form .document-lines thead th {
+  padding-top: 0.82rem;
+  padding-bottom: 0.82rem;
+  background: #f6f8fa;
+  color: #58687d;
+  font-size: 0.69rem;
+  font-weight: 720;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#document-form .document-lines th:nth-child(1),
+#document-form .document-lines td:nth-child(1) {
+  width: 228px;
+}
+
+#document-form .document-lines th:nth-child(2),
+#document-form .document-lines td:nth-child(2) {
+  width: 255px;
+}
+
+#document-form .document-lines th:nth-child(3),
+#document-form .document-lines td:nth-child(3) {
+  width: 110px;
+}
+
+#document-form .document-lines th:nth-child(4),
+#document-form .document-lines td:nth-child(4) {
+  width: 145px;
+}
+
+#document-form .document-lines th:nth-child(5),
+#document-form .document-lines td:nth-child(5) {
+  width: 155px;
+}
+
+#document-form .document-lines th:nth-child(6),
+#document-form .document-lines td:nth-child(6) {
+  width: 70px;
+}
+
+#document-form .document-lines .line-total {
+  padding-top: 1.35rem;
+  color: var(--document-ink);
+  font-size: 0.79rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#document-form .document-lines .form-control,
+#document-form .document-lines .form-select {
+  min-width: 0;
+  min-height: 2.3rem;
+  font-size: 0.76rem;
+}
+
+.document-table-optional {
+  display: inline-block;
+  margin-left: 0.2rem;
+  color: #8a97a5;
+  font-size: 0.61rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.document-composer-page .line-advanced > summary {
+  font-size: 0.72rem !important;
+}
+
+#document-form .document-summary-card {
+  position: sticky;
+  top: 1rem;
+}
+
+.document-summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--document-border);
+}
+
+.document-summary-heading > div > span {
+  color: var(--document-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.document-summary-heading h2 {
+  margin: 0.25rem 0 0;
+  color: var(--document-ink);
+  font-size: 1.03rem;
+  font-weight: 740;
+}
+
+.document-summary-currency {
+  padding: 0.38rem 0.54rem;
+  border-radius: 0.55rem;
+  background: #f1f4f7;
+  color: #56657a;
+  font-size: 0.69rem;
+  font-weight: 750;
+}
+
+.document-summary-lines {
+  display: grid;
+  gap: 0.76rem;
+  padding: 1.05rem 0;
+}
+
+.document-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+  font-size: 0.79rem;
+}
+
+.document-summary-row > span {
+  color: #68778a;
+}
+
+.document-summary-row > strong,
+.document-summary-total > strong {
+  color: var(--document-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.document-summary-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--document-border);
+  border-bottom: 1px solid var(--document-border);
+}
+
+.document-summary-total > span {
+  color: #415166;
+  font-size: 0.82rem;
+  font-weight: 680;
+}
+
+.document-summary-total > strong {
+  font-size: 1.1rem;
+  font-weight: 760;
+}
+
+.document-summary-margin {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.95rem;
+  padding: 0.8rem;
+  border-radius: 0.65rem;
+  background: #f6f8fa;
+}
+
+.document-summary-margin .document-summary-row {
+  font-size: 0.72rem;
+}
+
+.document-summary-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  color: #748297;
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.document-summary-note i {
+  color: var(--document-accent);
+}
+
+.document-summary-actions {
+  margin-top: 1.15rem;
+}
+
+.document-summary-actions > .btn {
+  min-height: 2.7rem;
+  font-size: 0.78rem;
+  font-weight: 680;
+}
+
+.document-save-template {
+  padding-top: 0.65rem;
+}
+
+.document-save-template .form-label {
+  display: block;
+}
+
+.document-save-template .form-control {
+  min-width: 0;
+}
+
+.document-save-template .btn {
+  padding-right: 0.7rem;
+  padding-left: 0.7rem;
+  font-size: 0.75rem;
+}
+
+.document-cancel-link {
+  color: #748297;
+  font-size: 0.76rem;
+  text-decoration: none;
+}
+
+@media (min-width: 1200px) {
+  .document-composer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 350px);
+    gap: 1.35rem;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .document-composer-grid > .document-composer-main,
+  .document-composer-grid > .document-composer-sidebar {
+    width: auto;
+    max-width: none;
+    padding-right: 0;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  #document-form .document-summary-card {
+    position: static;
+  }
+
+  .document-composer-sidebar {
+    padding-bottom: 1rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .document-composer-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .document-composer-header-aside {
+    justify-items: start;
+  }
+
+  .document-composer-steps {
+    gap: 0.8rem;
+    overflow-x: auto;
+    padding: 0.72rem 0.82rem;
+  }
+
+  .document-composer-step {
+    font-size: 0.7rem;
+  }
+
+  #document-form .document-composer-card > .card-body,
+  #document-form .document-summary-card > .card-body {
+    padding: 1rem !important;
+  }
+
+  #document-form .document-items-card > .card-body {
+    padding: 0 !important;
+  }
+
+  .document-items-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .document-context-badge {
+    display: none;
+  }
+
+  .document-type-guidance {
+    height: auto;
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .document-composer-page *,
+  .document-composer-page *::before,
+  .document-composer-page *::after {
+    scroll-behavior: auto !important;
+  }
+}
