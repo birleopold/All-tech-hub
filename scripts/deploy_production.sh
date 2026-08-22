@@ -149,6 +149,9 @@ fi
 log "Database migrations"
 python manage.py migrate --noinput
 
+log "Refreshing staff role permissions"
+python manage.py bootstrap_roles
+
 log "Ensuring missing commercial hubs and buying guides"
 python manage.py ensure_growth_content
 

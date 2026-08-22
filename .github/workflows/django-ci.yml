@@ -63,7 +63,10 @@ jobs:
           automation
           messaging.test_deliverability
           growth.test_growth
+          growth.test_ambassador_payouts
           marketing.test_automation
+          marketing.test_integrations
+          marketing.test_lead_pipeline
           customer_campaigns
           catalog.test_social_marketing
           catalog.test_watermarks
@@ -75,6 +78,8 @@ jobs:
           commerce.test_recommendations
           commerce.test_retention
           loyalty.test_loyalty
+          loyalty.test_redemption
+          purchasing.test_replenishment_policy
           reports.test_conversion
           reports.test_retention
           portal.test_warranties
