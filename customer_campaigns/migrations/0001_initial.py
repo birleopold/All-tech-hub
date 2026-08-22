@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("loyalty", "0001_initial"),
-        ("marketing", "__latest__"),
+        ("marketing", "0002_marketing_automation"),
         ("messaging", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
