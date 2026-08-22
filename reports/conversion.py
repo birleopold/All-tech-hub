@@ -4,12 +4,14 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
-from django.db.models import Avg, Count, Sum
+from django.db.models import Avg, Count, F, Sum
 from django.utils import timezone
 
 from commerce.customer_messages import customer_email_delivery_ready
 from commerce.models import Order
 from growth.models import SavedCart
+from marketing.attribution_metrics import merge_channel_metrics, percentage
+from marketing.models import CampaignClick, MarketingCampaign, MarketingLead
 from messaging.models import OutboundEmail
 
 
@@ -19,6 +21,62 @@ def _rate(numerator: int, denominator: int) -> Decimal:
     return (Decimal(numerator) / Decimal(denominator) * Decimal("100")).quantize(
         Decimal("0.01")
     )
+
+
+def marketing_attribution_summary(days: int = 30) -> dict:
+    """Report period-matched tracked clicks, leads, attributed orders, and revenue."""
+    days = max(1, min(int(days), 365))
+    since = timezone.now() - timedelta(days=days)
+    orders = Order.objects.filter(placed_at__gte=since).exclude(
+        status=Order.STATUS_CANCELLED
+    )
+    attributed_orders = orders.exclude(marketing_source="")
+    click_rows = CampaignClick.objects.filter(occurred_at__gte=since).values(
+        source=F("link__source"), medium=F("link__medium")
+    ).annotate(clicks=Count("id"))
+    lead_rows = MarketingLead.objects.filter(created_at__gte=since).values(
+        "source", "medium"
+    ).annotate(leads=Count("id"))
+    order_rows = attributed_orders.values(
+        source=F("marketing_source"), medium=F("marketing_medium")
+    ).annotate(orders=Count("id"), revenue=Sum("total"))
+    channels = merge_channel_metrics(click_rows, lead_rows, order_rows)
+
+    campaign_rows = list(
+        attributed_orders.exclude(marketing_campaign="").values(
+            "marketing_campaign"
+        ).annotate(orders=Count("id"), revenue=Sum("total"))
+    )
+    campaigns_by_slug = {
+        campaign.slug: campaign
+        for campaign in MarketingCampaign.objects.filter(
+            slug__in=[row["marketing_campaign"] for row in campaign_rows]
+        )
+    }
+    for row in campaign_rows:
+        campaign = campaigns_by_slug.get(row["marketing_campaign"])
+        budget = campaign.budget if campaign else Decimal("0.00")
+        row["name"] = campaign.name if campaign else row["marketing_campaign"]
+        row["budget"] = budget
+        row["budget_return"] = (
+            (Decimal(str(row["revenue"])) / budget).quantize(Decimal("0.01"))
+            if budget > 0
+            else None
+        )
+    campaign_rows.sort(key=lambda row: -row["revenue"])
+
+    attributed = attributed_orders.aggregate(count=Count("id"), revenue=Sum("total"))
+    attributed_count = attributed["count"] or 0
+    total_orders = orders.count()
+    return {
+        "days": days,
+        "channels": channels,
+        "campaigns": campaign_rows,
+        "attributed_orders": attributed_count,
+        "attributed_revenue": attributed["revenue"] or Decimal("0.00"),
+        "unattributed_orders": total_orders - attributed_count,
+        "attribution_rate": percentage(attributed_count, total_orders),
+    }
 
 
 def conversion_summary(days: int = 30) -> dict:
@@ -80,6 +138,7 @@ def conversion_summary(days: int = 30) -> dict:
     non_recovered_saved = saved_active + saved_expired + saved_unsubscribed
     conversion_denominator = order_count + non_recovered_saved
 
+    attribution = marketing_attribution_summary(days)
     return {
         "days": days,
         "since": since,
@@ -105,6 +164,7 @@ def conversion_summary(days: int = 30) -> dict:
         "failed_order_emails": failed_order_emails,
         "status_emails_sent": status_emails_sent,
         "pending_older_than_24h": pending_older_than_24h,
+        "attribution": attribution,
         "status_counts": [
             {
                 "value": value,

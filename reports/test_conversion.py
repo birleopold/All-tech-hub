@@ -9,8 +9,9 @@ from django.utils import timezone
 from commerce.models import Order
 from crm.models import Customer
 from growth.models import SavedCart
+from marketing.models import CampaignClick, CampaignLink, MarketingCampaign, MarketingLead
 from messaging.models import OutboundEmail
-from reports.conversion import conversion_summary
+from reports.conversion import conversion_summary, marketing_attribution_summary
 
 
 class ConversionLifecycleReportTests(TestCase):
@@ -122,3 +123,44 @@ class ConversionLifecycleReportTests(TestCase):
         self.assertContains(response, "Conversion and customer lifecycle")
         self.assertContains(response, "500000.00")
         self.assertContains(response, "Saved carts")
+
+    def test_channel_revenue_and_budget_return_use_non_cancelled_orders(self):
+        campaign = MarketingCampaign.objects.create(
+            name="WhatsApp relaunch", budget=Decimal("100000.00")
+        )
+        link = CampaignLink.objects.create(
+            campaign=campaign,
+            name="WhatsApp status",
+            destination_url="https://example.com/laptops/",
+            source="whatsapp",
+            medium="status",
+        )
+        CampaignClick.objects.create(link=link)
+        MarketingLead.objects.create(
+            name="Interested buyer", source="whatsapp", medium="status"
+        )
+        self.order.marketing_link = link
+        self.order.marketing_source = "whatsapp"
+        self.order.marketing_medium = "status"
+        self.order.marketing_campaign = campaign.slug
+        self.order.save()
+
+        summary = marketing_attribution_summary(30)
+
+        self.assertEqual(summary["attributed_orders"], 1)
+        self.assertEqual(summary["attributed_revenue"], Decimal("500000.00"))
+        self.assertEqual(summary["attribution_rate"], Decimal("100.00"))
+        self.assertEqual(summary["channels"][0]["orders"], 1)
+        self.assertEqual(summary["channels"][0]["click_to_order_rate"], Decimal("100.00"))
+        self.assertEqual(summary["campaigns"][0]["budget_return"], Decimal("5.00"))
+
+    def test_cancelled_orders_do_not_inflate_attributed_revenue(self):
+        self.order.marketing_source = "facebook"
+        self.order.marketing_medium = "social"
+        self.order.status = Order.STATUS_CANCELLED
+        self.order.save()
+
+        summary = marketing_attribution_summary(30)
+
+        self.assertEqual(summary["attributed_orders"], 0)
+        self.assertEqual(summary["attributed_revenue"], Decimal("0.00"))

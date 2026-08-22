@@ -21,6 +21,7 @@ from commerce.recommendations import (
 )
 from commerce.stock import InsufficientStock, decrement_line_stock
 from core.models import CompanySettings
+from marketing.attribution import SESSION_ATTRIBUTION_KEY, order_attribution
 from reliability.services import create_order_reservation, order_for_idempotency_key
 
 SESSION_CHECKOUT_TOKEN = "checkout_submit_token"
@@ -189,6 +190,7 @@ def checkout_view(request):
         if existing_order is not None:
             cart_mod.clear(request.session)
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
+            request.session.pop(SESSION_ATTRIBUTION_KEY, None)
             messages.info(
                 request,
                 f"Order {existing_order.reference} was already received. No duplicate order was created.",
@@ -273,6 +275,7 @@ def checkout_view(request):
                         coupon=locked_coupon,
                         coupon_code_applied=locked_coupon.code if locked_coupon else "",
                         total=total + delivery_fee + delivery_tax,
+                        **order_attribution(request.session),
                     )
                     if locked_coupon is not None:
                         from django.db.models import F as _F
@@ -325,6 +328,7 @@ def checkout_view(request):
 
             cart_mod.clear(request.session)
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
+            request.session.pop(SESSION_ATTRIBUTION_KEY, None)
             if reused_order:
                 messages.info(
                     request,

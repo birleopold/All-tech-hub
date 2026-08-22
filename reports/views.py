@@ -43,6 +43,9 @@ def staff_export_orders_csv(request):
             "customer_email",
             "carrier",
             "tracking_number",
+            "marketing_source",
+            "marketing_medium",
+            "marketing_campaign",
             "total",
         ]
     )
@@ -56,6 +59,9 @@ def staff_export_orders_csv(request):
                 order.customer.email,
                 getattr(getattr(order, "shipment", None), "carrier", ""),
                 getattr(getattr(order, "shipment", None), "tracking_number", ""),
+                order.marketing_source,
+                order.marketing_medium,
+                order.marketing_campaign,
                 str(order.total),
             ]
         )

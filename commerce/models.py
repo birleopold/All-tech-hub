@@ -155,6 +155,18 @@ class Order(models.Model):
         related_name="orders",
     )
     coupon_code_applied = models.CharField(max_length=40, blank=True)
+    marketing_link = models.ForeignKey(
+        "marketing.CampaignLink",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attributed_orders",
+    )
+    marketing_source = models.CharField(max_length=60, blank=True, db_index=True)
+    marketing_medium = models.CharField(max_length=60, blank=True)
+    marketing_campaign = models.CharField(max_length=200, blank=True, db_index=True)
+    marketing_content = models.CharField(max_length=120, blank=True)
+    marketing_attributed_at = models.DateTimeField(null=True, blank=True)
     total = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))
     cancellation_reason = models.CharField(max_length=255, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)

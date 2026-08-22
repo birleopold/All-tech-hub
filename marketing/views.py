@@ -39,6 +39,7 @@ from marketing.models import (
     SocialProfileSettings,
 )
 from marketing.readiness import evaluate_growth_phases
+from reports.conversion import marketing_attribution_summary
 
 
 class MarketingDashboardView(StaffRequiredMixin, TemplateView):
@@ -52,6 +53,7 @@ class MarketingDashboardView(StaffRequiredMixin, TemplateView):
             occurred_at__gte=thirty_days_ago
         ).count()
         leads_30d = MarketingLead.objects.filter(created_at__gte=thirty_days_ago).count()
+        attribution = marketing_attribution_summary(30)
 
         ctx.update(
             {
@@ -85,9 +87,10 @@ class MarketingDashboardView(StaffRequiredMixin, TemplateView):
                 "top_links": CampaignLink.objects.select_related(
                     "campaign", "product"
                 ).order_by("-click_count", "-lead_count")[:8],
-                "channel_performance": CampaignLink.objects.values("source")
-                .annotate(clicks=Sum("click_count"), leads=Sum("lead_count"))
-                .order_by("-clicks"),
+                "channel_performance": attribution["channels"],
+                "attributed_orders_30d": attribution["attributed_orders"],
+                "attributed_revenue_30d": attribution["attributed_revenue"],
+                "attribution_rate_30d": attribution["attribution_rate"],
                 "social_settings": SocialProfileSettings.load(),
                 "feed_csv_url": self.request.build_absolute_uri(
                     reverse("marketing_product_feed_csv")
@@ -168,6 +171,7 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
         whatsapp_campaigns = CustomerCampaign.objects.filter(
             channel=CustomerCampaign.CHANNEL_WHATSAPP
         ).count()
+        attribution = marketing_attribution_summary(30)
         growth_settings = GrowthSettings.load()
         analytics_ready = bool(
             growth_settings.ga4_measurement_id or growth_settings.clarity_project_id
@@ -293,6 +297,12 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
                 "scheduled_content": scheduled_content,
                 "whatsapp_audience": whatsapp_audience,
                 "whatsapp_campaigns": whatsapp_campaigns,
+                "attributed_orders_30d": attribution["attributed_orders"],
+                "attributed_revenue_30d": attribution["attributed_revenue"],
+                "attribution_rate_30d": attribution["attribution_rate"],
+                "best_marketing_channel": (
+                    attribution["channels"][0] if attribution["channels"] else None
+                ),
                 "analytics_ready": analytics_ready,
                 "published_reviews": published_reviews,
                 "pending_reviews": pending_reviews,
@@ -363,6 +373,19 @@ class CampaignListView(MarketingListMixin, ListView):
     page_kind = "campaigns"
     create_url_name = "staff_marketing_campaign_create"
 
+    def get_queryset(self):
+        return super().get_queryset().annotate(
+            attributed_order_count=Count(
+                "links__attributed_orders",
+                filter=~Q(links__attributed_orders__status=Order.STATUS_CANCELLED),
+                distinct=True,
+            ),
+            attributed_revenue=Sum(
+                "links__attributed_orders__total",
+                filter=~Q(links__attributed_orders__status=Order.STATUS_CANCELLED),
+            ),
+        )
+
 
 class CampaignCreateView(CreatedByFormMixin, MarketingFormMixin, CreateView):
     model = MarketingCampaign
@@ -414,7 +437,16 @@ class LinkListView(MarketingListMixin, ListView):
     create_url_name = "staff_marketing_link_create"
 
     def get_queryset(self):
-        return super().get_queryset().select_related("campaign", "product")
+        return super().get_queryset().select_related("campaign", "product").annotate(
+            attributed_order_count=Count(
+                "attributed_orders",
+                filter=~Q(attributed_orders__status=Order.STATUS_CANCELLED),
+            ),
+            attributed_revenue=Sum(
+                "attributed_orders__total",
+                filter=~Q(attributed_orders__status=Order.STATUS_CANCELLED),
+            ),
+        )
 
 
 class LinkCreateView(CreatedByFormMixin, MarketingFormMixin, CreateView):
@@ -594,6 +626,7 @@ def track_campaign_link(request, code):
         "campaign": link.campaign.slug if link.campaign else "leosoft",
         "content": link.content or (link.product.slug if link.product else link.code),
         "link_id": link.pk,
+        "clicked_at": now.isoformat(),
     }
     return redirect(link.destination_with_utm())
 

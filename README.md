@@ -163,6 +163,17 @@ abandoned-cart value, aging orders, shipment exceptions, repeat customers,
 reviews, loyalty adoption, and ambassador activity. The phase score reports
 configured and observed readiness only; it does not promise sales or viral reach.
 
+Tracked marketing links now use first-party last-click order attribution. A
+successful checkout snapshots the verified campaign link, source, medium,
+campaign, content, and click time onto its order, then clears the consumed
+session attribution. Clicks expire after 30 days by default; configure
+`ALLTECH_MARKETING_ATTRIBUTION_WINDOW_DAYS` for a different 1–365 day window.
+The marketing dashboard, campaign/link lists, order details, CSV export, and
+conversion lifecycle report show attributable orders and revenue. Channel
+reporting compares period-matched clicks, leads, and non-cancelled orders;
+campaign budget return compares attributed revenue with the configured campaign
+budget and must not be mistaken for verified advertising spend or profit.
+
 Purchase orders support both **Receive remaining** and per-line partial shipment
 receiving. Each receiving event continues to create a stock receipt and update
 inventory inside one transaction.
