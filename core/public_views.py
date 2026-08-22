@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, F, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -191,7 +192,10 @@ def _contact_initial(request):
         initial["request_type"] = requested_type
 
     product = None
-    product_slug = (request.GET.get("product") or "").strip()
+    product_slug = (
+        request.POST.get("product") if request.method == "POST" else request.GET.get("product")
+    ) or request.GET.get("product") or ""
+    product_slug = product_slug.strip()
     if product_slug:
         product = (
             Product.objects.filter(slug=product_slug, is_published=True)
@@ -225,10 +229,13 @@ def public_contact_view(request):
             data["request_type"] = ContactForm.REQUEST_OTHER
         form = ContactForm(data)
         if form.is_valid():
-            contact_message = form.save()
             from marketing.services import create_lead_from_contact
 
-            create_lead_from_contact(request, contact_message)
+            with transaction.atomic():
+                contact_message = form.save(commit=False)
+                contact_message.product = contact_product
+                contact_message.save()
+                create_lead_from_contact(request, contact_message, product=contact_product)
             messages.success(
                 request,
                 "Your request has been received. The team will review it and respond using the details you provided.",

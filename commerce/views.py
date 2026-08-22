@@ -21,7 +21,9 @@ from commerce.recommendations import (
 )
 from commerce.stock import InsufficientStock, decrement_line_stock
 from core.models import CompanySettings
+from growth.services import AMBASSADOR_SESSION_KEY, mark_order_growth_attribution
 from marketing.attribution import SESSION_ATTRIBUTION_KEY, order_attribution
+from marketing.services import close_lead_from_order
 from reliability.services import create_order_reservation, order_for_idempotency_key
 
 SESSION_CHECKOUT_TOKEN = "checkout_submit_token"
@@ -191,6 +193,7 @@ def checkout_view(request):
             cart_mod.clear(request.session)
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
             request.session.pop(SESSION_ATTRIBUTION_KEY, None)
+            request.session.pop(AMBASSADOR_SESSION_KEY, None)
             messages.info(
                 request,
                 f"Order {existing_order.reference} was already received. No duplicate order was created.",
@@ -309,6 +312,8 @@ def checkout_view(request):
                         posted,
                         actor=request.user if request.user.is_authenticated else None,
                     )
+                    mark_order_growth_attribution(request, order)
+                    close_lead_from_order(order)
                     order_id = order.pk
                     transaction.on_commit(
                         lambda: send_order_confirmation_by_id(order_id)
@@ -329,6 +334,7 @@ def checkout_view(request):
             cart_mod.clear(request.session)
             request.session.pop(SESSION_CHECKOUT_TOKEN, None)
             request.session.pop(SESSION_ATTRIBUTION_KEY, None)
+            request.session.pop(AMBASSADOR_SESSION_KEY, None)
             if reused_order:
                 messages.info(
                     request,

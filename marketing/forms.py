@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth import get_user_model
 
 from automation.models import PostAutomationPlan
 from automation.services import configure_post_plan
@@ -234,6 +235,8 @@ class MarketingLeadForm(BootstrapModelForm):
             "product",
             "source",
             "medium",
+            "request_type",
+            "priority",
             "status",
             "estimated_value",
             "assigned_to",
@@ -252,4 +255,20 @@ class MarketingLeadForm(BootstrapModelForm):
         self.fields["next_follow_up_at"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["next_follow_up_at"].help_text = (
             "Set the next promised contact time. Won and lost leads clear this automatically."
+        )
+        self.fields["assigned_to"].queryset = get_user_model().objects.filter(
+            is_staff=True,
+            is_active=True,
+        ).order_by("username")
+        self.fields["request_type"].required = False
+        self.fields["priority"].required = False
+
+    def clean_request_type(self):
+        return self.cleaned_data.get("request_type") or self.instance.request_type or "other"
+
+    def clean_priority(self):
+        return (
+            self.cleaned_data.get("priority")
+            or self.instance.priority
+            or MarketingLead.PRIORITY_NORMAL
         )

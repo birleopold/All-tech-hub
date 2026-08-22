@@ -253,7 +253,9 @@ class SupportTicketListView(StaffRequiredMixin, ListView):
     paginate_by = 25
 
     def get_queryset(self):
-        qs = SupportTicket.objects.select_related("customer", "assigned_to")
+        qs = SupportTicket.objects.select_related(
+            "customer", "assigned_to", "related_product"
+        )
         return apply_ticket_filters(qs, self.request.GET)
 
     def get_context_data(self, **kwargs):
@@ -277,7 +279,16 @@ class SupportTicketDetailView(StaffRequiredMixin, DetailView):
     context_object_name = "ticket"
 
     def get_queryset(self):
-        return SupportTicket.objects.select_related("customer", "assigned_to", "created_by")
+        return SupportTicket.objects.select_related(
+            "customer",
+            "assigned_to",
+            "created_by",
+            "related_order",
+            "related_product",
+            "related_product__category",
+            "related_serial",
+            "related_serial__product",
+        )
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -389,7 +400,9 @@ class ContactMessageListView(StaffRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        qs = ContactMessage.objects.order_by("-created_at")
+        qs = ContactMessage.objects.select_related("product", "product__category").order_by(
+            "-created_at"
+        )
         if self.request.GET.get("handled") == "0":
             qs = qs.filter(handled=False)
         elif self.request.GET.get("handled") == "1":
@@ -401,6 +414,8 @@ class ContactMessageListView(StaffRequiredMixin, ListView):
                 | Q(name__icontains=q)
                 | Q(email__icontains=q)
                 | Q(message__icontains=q)
+                | Q(product__name__icontains=q)
+                | Q(product__sku__icontains=q)
             )
         return qs
 
@@ -418,6 +433,9 @@ class ContactMessageConvertTicketView(StaffRequiredMixin, View):
         from crm.models import Customer
 
         msg = get_object_or_404(ContactMessage, pk=pk)
+        from marketing.models import MarketingLead
+
+        linked_lead = MarketingLead.objects.filter(contact_message_id=msg.pk).first()
         customer, _ = Customer.objects.get_or_create(
             email=msg.email.strip().lower(),
             defaults={"name": msg.name, "phone": msg.phone},
@@ -427,7 +445,12 @@ class ContactMessageConvertTicketView(StaffRequiredMixin, View):
             created_by=request.user,
             subject=msg.subject[:200],
             description=msg.message,
-            priority=SupportTicket.PRIORITY_NORMAL,
+            priority=(
+                linked_lead.priority
+                if linked_lead and linked_lead.priority in dict(SupportTicket.PRIORITY_CHOICES)
+                else SupportTicket.PRIORITY_NORMAL
+            ),
+            related_product=msg.product or (linked_lead.product if linked_lead else None),
         )
         msg.handled = True
         msg.save(update_fields=["handled"])

@@ -88,6 +88,14 @@ class ContactMessage(models.Model):
     name = models.CharField(max_length=120)
     email = models.EmailField()
     phone = models.CharField(max_length=64, blank=True)
+    product = models.ForeignKey(
+        "catalog.Product",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contact_enquiries",
+    )
+    request_type = models.CharField(max_length=20, default="other", db_index=True)
     subject = models.CharField(max_length=200)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -253,6 +261,13 @@ class SupportTicket(models.Model):
     )
     related_order = models.ForeignKey(
         "commerce.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="support_tickets",
+    )
+    related_product = models.ForeignKey(
+        "catalog.Product",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

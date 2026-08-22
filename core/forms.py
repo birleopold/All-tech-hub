@@ -99,6 +99,7 @@ class ContactForm(forms.ModelForm):
             request_type,
             "General enquiry",
         )
+        instance.request_type = request_type
         subject = (instance.subject or "").strip()
         prefix = f"{request_label}: "
         if subject and not subject.lower().startswith(prefix.lower()):
@@ -117,6 +118,7 @@ class PortalSupportTicketForm(forms.ModelForm):
             "description",
             "priority",
             "related_order",
+            "related_product",
             "related_serial",
         )
         widgets = {
@@ -136,6 +138,7 @@ class PortalSupportTicketForm(forms.ModelForm):
             ),
             "priority": forms.Select(attrs={"class": "form-select"}),
             "related_order": forms.Select(attrs={"class": "form-select"}),
+            "related_product": forms.Select(attrs={"class": "form-select"}),
             "related_serial": forms.Select(attrs={"class": "form-select"}),
         }
 
@@ -148,6 +151,11 @@ class PortalSupportTicketForm(forms.ModelForm):
         ]
         self.fields["related_order"].required = False
         self.fields["related_order"].empty_label = "— optional —"
+        self.fields["related_product"].required = False
+        self.fields["related_product"].empty_label = "— optional —"
+        self.fields["related_product"].queryset = self.fields[
+            "related_product"
+        ].queryset.filter(is_published=True).order_by("name")
         self.fields["related_serial"].required = False
         self.fields["related_serial"].empty_label = "— optional —"
         self.fields["related_serial"].queryset = self.fields[
@@ -172,6 +180,9 @@ class PortalSupportTicketForm(forms.ModelForm):
         self.fields["related_serial"].help_text = (
             "Choose a purchased device when the issue is about warranty, serial number, or RMA."
         )
+        self.fields["related_product"].help_text = (
+            "Choose the exact product or service this support request concerns."
+        )
         self.fields["priority"].help_text = (
             "Use High only for urgent business interruptions or serious service issues."
         )
@@ -189,6 +200,7 @@ class StaffSupportTicketForm(forms.ModelForm):
             "priority",
             "assigned_to",
             "related_order",
+            "related_product",
             "related_serial",
         )
         widgets = {
@@ -200,6 +212,7 @@ class StaffSupportTicketForm(forms.ModelForm):
             "priority": forms.Select(attrs={"class": "form-select"}),
             "assigned_to": forms.Select(attrs={"class": "form-select"}),
             "related_order": forms.Select(attrs={"class": "form-select"}),
+            "related_product": forms.Select(attrs={"class": "form-select"}),
             "related_serial": forms.Select(attrs={"class": "form-select"}),
         }
 
@@ -209,6 +222,10 @@ class StaffSupportTicketForm(forms.ModelForm):
             is_staff=True
         ).order_by("username")
         self.fields["assigned_to"].required = False
+        self.fields["related_product"].required = False
+        self.fields["related_product"].help_text = (
+            "Attach the product or service so its price and stock remain visible."
+        )
 
 
 class StaffSavedSearchForm(forms.Form):

@@ -491,6 +491,7 @@ def ambassador_referral(request, code):
         "medium": "referral",
         "campaign": f"ambassador-{ambassador.code}",
         "content": ambassador.code,
+        "clicked_at": timezone.now().isoformat(),
     }
     request.session.modified = True
 

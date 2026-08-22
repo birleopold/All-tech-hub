@@ -174,6 +174,26 @@ reporting compares period-matched clicks, leads, and non-cancelled orders;
 campaign budget return compares attributed revenue with the configured campaign
 budget and must not be mistaken for verified advertising spend or profit.
 
+Website enquiries now enter a load-balanced sales queue with request type,
+priority, a first-response deadline, staff assignment, and in-app notifications.
+Formal quotation, repair, installation, and support requests receive a shorter
+deadline than ordinary product enquiries. Configure the normal target with
+`ALLTECH_MARKETING_LEAD_RESPONSE_TARGET_MINUTES` (30 minutes by default).
+The contact inbox links directly to each lead and WhatsApp conversation; sales
+staff can claim an enquiry or record first contact from the queue. A matching
+completed checkout automatically closes its open lead, marks the originating
+contact message handled, records the order, restores saved-cart recovery
+accounting, and credits a valid ambassador referral exactly once.
+
+Product-specific website enquiries retain the actual catalogue product rather
+than relying on free-text descriptions. The support inbox shows its current
+price, SKU, stock and public product link; converting the message to a support
+ticket carries over both the product and the sales priority. Customer and staff
+ticket forms can also link a product directly. Product-linked leads start with
+the current product price as their estimated value, while Market Readiness ranks
+the products customers have recently asked about and flags requested items that
+are out of stock. Apply all migrations before restarting the updated release.
+
 Purchase orders support both **Receive remaining** and per-line partial shipment
 receiving. Each receiving event continues to create a stock receipt and update
 inventory inside one transaction.

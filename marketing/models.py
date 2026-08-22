@@ -1,11 +1,13 @@
 import secrets
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+
+from marketing.lead_policy import uganda_whatsapp_digits
 
 
 def generate_link_code() -> str:
@@ -313,6 +315,16 @@ class ScheduledPost(models.Model):
 
 
 class MarketingLead(models.Model):
+    PRIORITY_LOW = "low"
+    PRIORITY_NORMAL = "normal"
+    PRIORITY_HIGH = "high"
+    PRIORITY_URGENT = "urgent"
+    PRIORITY_CHOICES = [
+        (PRIORITY_LOW, "Low"),
+        (PRIORITY_NORMAL, "Normal"),
+        (PRIORITY_HIGH, "High"),
+        (PRIORITY_URGENT, "Urgent"),
+    ]
     STATUS_NEW = "new"
     STATUS_CONTACTED = "contacted"
     STATUS_QUALIFIED = "qualified"
@@ -355,6 +367,13 @@ class MarketingLead(models.Model):
     phone = models.CharField(max_length=64, blank=True)
     source = models.CharField(max_length=60, default="direct")
     medium = models.CharField(max_length=60, blank=True)
+    request_type = models.CharField(max_length=20, default="other", db_index=True)
+    priority = models.CharField(
+        max_length=12,
+        choices=PRIORITY_CHOICES,
+        default=PRIORITY_NORMAL,
+        db_index=True,
+    )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW
     )
@@ -368,8 +387,16 @@ class MarketingLead(models.Model):
         related_name="assigned_marketing_leads",
     )
     first_contacted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    response_due_at = models.DateTimeField(null=True, blank=True, db_index=True)
     next_follow_up_at = models.DateTimeField(null=True, blank=True, db_index=True)
     won_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    won_order = models.ForeignKey(
+        "commerce.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="won_marketing_leads",
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -396,6 +423,23 @@ class MarketingLead(models.Model):
             and self.status not in {self.STATUS_WON, self.STATUS_LOST}
         )
 
+    @property
+    def response_overdue(self) -> bool:
+        return bool(
+            self.response_due_at
+            and self.first_contacted_at is None
+            and self.status == self.STATUS_NEW
+            and self.response_due_at <= timezone.now()
+        )
+
+    @property
+    def whatsapp_contact_url(self) -> str:
+        digits = uganda_whatsapp_digits(self.phone)
+        if not digits:
+            return ""
+        message = quote(f"Hello {self.name}, we are following up on your enquiry.")
+        return f"https://wa.me/{digits}?text={message}"
+
     def save(self, *args, **kwargs):
         previous_status = None
         auto_updated_fields = set()
@@ -410,6 +454,9 @@ class MarketingLead(models.Model):
         ):
             self.first_contacted_at = now
             auto_updated_fields.add("first_contacted_at")
+            if self.next_follow_up_at and self.next_follow_up_at == self.response_due_at:
+                self.next_follow_up_at = None
+                auto_updated_fields.add("next_follow_up_at")
         if self.status == self.STATUS_WON and self.won_at is None:
             self.won_at = now
             auto_updated_fields.add("won_at")

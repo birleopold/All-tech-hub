@@ -13,14 +13,18 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from catalog.models import Product, ProductReview
 from commerce.models import Order, Shipment
 from core.mixins import StaffRequiredMixin
+from core.models import ContactMessage
+from core.notifications import staff_notify
 from crm.models import Customer
 from customer_campaigns.models import CustomerCampaign
 from growth.models import Ambassador, AmbassadorConversion, GrowthSettings, SavedCart
+from growth.services import AMBASSADOR_SESSION_KEY
 from loyalty.models import CustomerMarketingPreference, LoyaltyAccount
 from marketing.forms import (
     CampaignLinkForm,
@@ -139,6 +143,31 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
         new_leads = MarketingLead.objects.filter(
             status=MarketingLead.STATUS_NEW
         ).count()
+        response_breaches = MarketingLead.objects.filter(
+            status=MarketingLead.STATUS_NEW,
+            first_contacted_at__isnull=True,
+            response_due_at__lte=now,
+        ).count()
+        unassigned_leads = MarketingLead.objects.filter(
+            status=MarketingLead.STATUS_NEW,
+            assigned_to__isnull=True,
+        ).count()
+        in_demand_products = list(
+            Product.objects.annotate(
+                recent_enquiries=Count(
+                    "contact_enquiries",
+                    filter=Q(contact_enquiries__created_at__gte=cutoff),
+                )
+            )
+            .filter(recent_enquiries__gt=0)
+            .order_by("-recent_enquiries", "name")[:6]
+        )
+        unavailable_demanded_products = sum(
+            product.kind == Product.KIND_PHYSICAL
+            and product.track_inventory
+            and product.stock_quantity <= 0
+            for product in in_demand_products
+        )
         overdue_follow_ups = MarketingLead.objects.filter(
             next_follow_up_at__lte=now
         ).exclude(status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)).count()
@@ -278,6 +307,10 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
                 "channels": channels,
                 "connected_channels": connected_channels,
                 "new_leads": new_leads,
+                "response_breaches": response_breaches,
+                "unassigned_leads": unassigned_leads,
+                "in_demand_products": in_demand_products,
+                "unavailable_demanded_products": unavailable_demanded_products,
                 "overdue_follow_ups": overdue_follow_ups,
                 "average_first_response_minutes": round(
                     sum(response_minutes) / len(response_minutes)
@@ -503,7 +536,7 @@ class LeadListView(MarketingListMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related(
-            "campaign", "link", "product", "assigned_to"
+            "campaign", "link", "product", "assigned_to", "won_order"
         )
         status = self.request.GET.get("status")
         source = self.request.GET.get("source")
@@ -521,6 +554,20 @@ class LeadListView(MarketingListMixin, ListView):
             qs = qs.filter(next_follow_up_at__date=today).exclude(
                 status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)
             )
+        elif follow_up == "response_overdue":
+            qs = qs.filter(
+                status=MarketingLead.STATUS_NEW,
+                first_contacted_at__isnull=True,
+                response_due_at__lte=timezone.now(),
+            )
+        owner = self.request.GET.get("owner")
+        if owner == "mine":
+            qs = qs.filter(assigned_to=self.request.user)
+        elif owner == "unassigned":
+            qs = qs.filter(assigned_to__isnull=True)
+        priority = self.request.GET.get("priority")
+        if priority:
+            qs = qs.filter(priority=priority)
         return qs
 
     def get_context_data(self, **kwargs):
@@ -530,7 +577,30 @@ class LeadListView(MarketingListMixin, ListView):
                 "lead_status": self.request.GET.get("status") or "",
                 "lead_source": self.request.GET.get("source") or "",
                 "lead_follow_up": self.request.GET.get("follow_up") or "",
+                "lead_owner": self.request.GET.get("owner") or "",
+                "lead_priority": self.request.GET.get("priority") or "",
                 "lead_status_choices": MarketingLead.STATUS_CHOICES,
+                "lead_priority_choices": MarketingLead.PRIORITY_CHOICES,
+                "lead_queue_stats": {
+                    "new": MarketingLead.objects.filter(status=MarketingLead.STATUS_NEW).count(),
+                    "mine": MarketingLead.objects.filter(
+                        assigned_to=self.request.user,
+                        status__in=(
+                            MarketingLead.STATUS_NEW,
+                            MarketingLead.STATUS_CONTACTED,
+                            MarketingLead.STATUS_QUALIFIED,
+                        ),
+                    ).count(),
+                    "unassigned": MarketingLead.objects.filter(
+                        assigned_to__isnull=True,
+                        status=MarketingLead.STATUS_NEW,
+                    ).count(),
+                    "response_overdue": MarketingLead.objects.filter(
+                        status=MarketingLead.STATUS_NEW,
+                        first_contacted_at__isnull=True,
+                        response_due_at__lte=timezone.now(),
+                    ).count(),
+                },
             }
         )
         return context
@@ -556,8 +626,58 @@ class LeadUpdateView(MarketingFormMixin, UpdateView):
     success_url = reverse_lazy("staff_marketing_leads")
 
     def form_valid(self, form):
+        previous = MarketingLead.objects.filter(pk=form.instance.pk).values(
+            "assigned_to_id"
+        ).first()
+        response = super().form_valid(form)
+        if (
+            self.object.assigned_to_id
+            and previous
+            and self.object.assigned_to_id != previous["assigned_to_id"]
+        ):
+            staff_notify(
+                self.object.assigned_to,
+                f"Sales lead assigned to you: {self.object.name}",
+                reverse("staff_marketing_lead_edit", kwargs={"pk": self.object.pk}),
+            )
+        if self.object.contact_message_id and self.object.status != MarketingLead.STATUS_NEW:
+            ContactMessage.objects.filter(pk=self.object.contact_message_id).update(
+                handled=True
+            )
         messages.success(self.request, "Lead updated.")
-        return super().form_valid(form)
+        return response
+
+
+class LeadClaimView(StaffRequiredMixin, View):
+    def post(self, request, pk):
+        lead = get_object_or_404(MarketingLead, pk=pk)
+        if lead.assigned_to_id and lead.assigned_to_id != request.user.pk:
+            messages.warning(request, "This enquiry is already assigned to another team member.")
+        elif lead.status in {MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST}:
+            messages.warning(request, "Closed enquiries cannot be claimed.")
+        else:
+            lead.assigned_to = request.user
+            lead.save(update_fields=["assigned_to", "updated_at"])
+            messages.success(request, f"You are now responsible for {lead.name}'s enquiry.")
+        return redirect("staff_marketing_leads")
+
+
+class LeadMarkContactedView(StaffRequiredMixin, View):
+    def post(self, request, pk):
+        lead = get_object_or_404(MarketingLead, pk=pk)
+        if lead.status != MarketingLead.STATUS_NEW:
+            messages.info(request, "This enquiry has already moved past its first response.")
+            return redirect("staff_marketing_leads")
+        lead.status = MarketingLead.STATUS_CONTACTED
+        fields = ["status", "updated_at"]
+        if lead.assigned_to_id is None:
+            lead.assigned_to = request.user
+            fields.append("assigned_to")
+        lead.save(update_fields=fields)
+        if lead.contact_message_id:
+            ContactMessage.objects.filter(pk=lead.contact_message_id).update(handled=True)
+        messages.success(request, f"First response to {lead.name} has been recorded.")
+        return redirect("staff_marketing_leads")
 
 
 def _staff(user):
@@ -620,6 +740,7 @@ def track_campaign_link(request, code):
         user_agent=request.META.get("HTTP_USER_AGENT", "")[:300],
         referrer=request.META.get("HTTP_REFERER", ""),
     )
+    request.session.pop(AMBASSADOR_SESSION_KEY, None)
     request.session["marketing_attribution"] = {
         "source": link.source,
         "medium": link.medium,

@@ -2,6 +2,7 @@ from django.db.models import Count, Q
 
 from core import staff_views
 from core.models import AuditEvent, ContactMessage, StaffNotification, SupportTicket
+from marketing.models import MarketingLead
 
 
 class SupportTicketWorkspaceListView(staff_views.SupportTicketListView):
@@ -49,6 +50,19 @@ class ContactMessageWorkspaceListView(staff_views.ContactMessageListView):
             unhandled=Count("pk", filter=Q(handled=False)),
             handled=Count("pk", filter=Q(handled=True)),
         )
+        visible_messages = list(context.get("messages_list", ()))
+        linked_leads = {
+            lead.contact_message_id: lead
+            for lead in MarketingLead.objects.filter(
+                contact_message_id__in=[message.pk for message in visible_messages]
+            ).select_related("assigned_to", "campaign", "product")
+        }
+        for message in visible_messages:
+            message.sales_lead = linked_leads.get(message.pk)
+        context["contact_stats"]["unassigned_leads"] = MarketingLead.objects.filter(
+            status=MarketingLead.STATUS_NEW,
+            assigned_to__isnull=True,
+        ).count()
         params = self.request.GET.copy()
         params.pop("page", None)
         context["querystring"] = params.urlencode()

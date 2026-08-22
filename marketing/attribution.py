@@ -19,12 +19,11 @@ def order_attribution(session, *, now=None) -> dict:
         return {}
 
     try:
-        link_id = int(raw.get("link_id"))
         clicked_at = datetime.fromisoformat(str(raw.get("clicked_at", "")))
     except (TypeError, ValueError, OverflowError):
         return {}
 
-    if link_id <= 0 or timezone.is_naive(clicked_at):
+    if timezone.is_naive(clicked_at):
         return {}
     now = now or timezone.now()
     max_days = max(
@@ -34,6 +33,30 @@ def order_attribution(session, *, now=None) -> dict:
     if clicked_at < now - timedelta(days=max_days):
         return {}
     if clicked_at > now + timedelta(minutes=5):
+        return {}
+
+    if not raw.get("link_id"):
+        from growth.models import Ambassador
+        from growth.services import AMBASSADOR_SESSION_KEY
+
+        code = str(session.get(AMBASSADOR_SESSION_KEY) or "").strip()
+        ambassador = Ambassador.objects.filter(code=code, is_active=True).first()
+        if ambassador is None:
+            return {}
+        return {
+            "marketing_link": None,
+            "marketing_source": f"ambassador:{ambassador.code}"[:60],
+            "marketing_medium": "referral",
+            "marketing_campaign": f"ambassador-{ambassador.code}"[:200],
+            "marketing_content": ambassador.code[:120],
+            "marketing_attributed_at": clicked_at,
+        }
+
+    try:
+        link_id = int(raw.get("link_id"))
+    except (TypeError, ValueError, OverflowError):
+        return {}
+    if link_id <= 0:
         return {}
 
     link = CampaignLink.objects.select_related("campaign", "product").filter(

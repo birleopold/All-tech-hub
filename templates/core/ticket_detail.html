@@ -77,9 +77,10 @@
       <article class="staff-section-card">
         <header class="staff-section-card-header"><div><h2>Related records</h2><p>Connected sales and warranty context</p></div><i class="bi bi-link-45deg text-muted" aria-hidden="true"></i></header>
         <div class="staff-section-card-body">
+          {% if ticket.related_product %}<a class="staff-compact-row" href="{% url 'staff_product_edit' ticket.related_product.pk %}"><span><strong class="d-block">{{ ticket.related_product.name }}</strong><small>{{ company.currency_code }} {{ ticket.related_product.price|floatformat:0 }}{% if ticket.related_product.sku %} · {{ ticket.related_product.sku }}{% endif %}{% if ticket.related_product.kind == 'physical' and ticket.related_product.track_inventory %} · {% if ticket.related_product.stock_quantity > 0 %}{{ ticket.related_product.stock_quantity }} in stock{% else %}out of stock{% endif %}{% endif %}</small></span><i class="bi bi-box-seam" aria-hidden="true"></i></a><a class="small d-inline-block mb-2" href="{{ ticket.related_product.get_absolute_url }}" target="_blank" rel="noopener">Open public product page</a>{% endif %}
           {% if ticket.related_order %}<a class="staff-compact-row" href="{% url 'staff_order_detail' ticket.related_order.pk %}"><span><strong class="d-block">{{ ticket.related_order.reference }}</strong><small>Related order</small></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% endif %}
           {% if ticket.related_serial %}<div class="staff-compact-row"><span><strong class="d-block">{{ ticket.related_serial.serial_number }}</strong><small>{{ ticket.related_serial.product.name }}</small></span><i class="bi bi-upc-scan" aria-hidden="true"></i></div>{% endif %}
-          {% if not ticket.related_order and not ticket.related_serial %}<div class="staff-empty-state"><i class="bi bi-link-45deg" aria-hidden="true"></i><strong>No related records</strong><span>Use Edit ticket to connect an order or product serial.</span></div>{% endif %}
+          {% if not ticket.related_product and not ticket.related_order and not ticket.related_serial %}<div class="staff-empty-state"><i class="bi bi-link-45deg" aria-hidden="true"></i><strong>No related records</strong><span>Use Edit ticket to connect a product, order or product serial.</span></div>{% endif %}
         </div>
       </article>
     </aside>

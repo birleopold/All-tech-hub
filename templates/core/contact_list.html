@@ -9,13 +9,14 @@
       <h1>Contact inbox</h1>
       <p>Review website enquiries, convert support requests and close handled conversations.</p>
     </div>
-    <div class="staff-page-actions"><a class="btn btn-primary" href="{% url 'staff_ticket_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New ticket</a></div>
+    <div class="staff-page-actions"><a class="btn btn-outline-primary" href="{% url 'staff_marketing_leads' %}"><i class="bi bi-funnel me-1" aria-hidden="true"></i>Sales pipeline</a><a class="btn btn-primary" href="{% url 'staff_ticket_create' %}"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New ticket</a></div>
   </header>
 
   <div class="staff-summary-grid">
     <a class="staff-summary-card" href="{% url 'staff_contact_messages' %}"><span class="staff-summary-icon"><i class="bi bi-envelope" aria-hidden="true"></i></span><span><small>All messages</small><strong>{{ contact_stats.total }}</strong></span></a>
     <a class="staff-summary-card staff-summary-card--amber" href="{% url 'staff_contact_messages' %}?handled=0"><span class="staff-summary-icon"><i class="bi bi-envelope-exclamation" aria-hidden="true"></i></span><span><small>Needs attention</small><strong>{{ contact_stats.unhandled }}</strong></span></a>
     <a class="staff-summary-card staff-summary-card--green" href="{% url 'staff_contact_messages' %}?handled=1"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Handled</small><strong>{{ contact_stats.handled }}</strong></span></a>
+    <a class="staff-summary-card{% if contact_stats.unassigned_leads %} staff-summary-card--amber{% endif %}" href="{% url 'staff_marketing_leads' %}?owner=unassigned"><span class="staff-summary-icon"><i class="bi bi-person-exclamation" aria-hidden="true"></i></span><span><small>Unassigned leads</small><strong>{{ contact_stats.unassigned_leads }}</strong></span></a>
   </div>
 
   <form method="get" class="staff-filter-card" role="search">
@@ -32,10 +33,13 @@
       <div class="staff-contact-copy">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-1"><h2>{{ message.subject }}</h2>{% if not message.handled %}<span class="staff-status-pill staff-status-pill--warning">New</span>{% else %}<span class="staff-status-pill staff-status-pill--success">Handled</span>{% endif %}</div>
         <p><strong class="text-dark">{{ message.name }}</strong> · <a href="mailto:{{ message.email }}">{{ message.email }}</a>{% if message.phone %} · <a href="tel:{{ message.phone }}">{{ message.phone }}</a>{% endif %} · {{ message.created_at|date:"M j, Y H:i" }}</p>
+        {% if message.sales_lead %}<p class="small mb-2"><span class="badge {% if message.sales_lead.priority == 'urgent' or message.sales_lead.priority == 'high' %}text-bg-warning{% else %}text-bg-light{% endif %}">{{ message.sales_lead.get_priority_display }}</span> {{ message.sales_lead.source }} · {{ message.sales_lead.get_status_display }}{% if message.sales_lead.assigned_to %} · assigned to {{ message.sales_lead.assigned_to.get_username }}{% else %} · <strong>unassigned</strong>{% endif %}{% if message.sales_lead.response_overdue %} · <strong class="text-danger">response overdue</strong>{% endif %}</p>{% endif %}
+        {% if message.product %}<div class="border rounded-3 p-2 mb-2 bg-light"><div class="d-flex flex-wrap justify-content-between align-items-center gap-2"><div><span class="small text-muted d-block">Customer asked about</span><a class="fw-semibold" href="{% url 'staff_product_edit' message.product.pk %}">{{ message.product.name }}</a><span class="small text-muted d-block">{{ company.currency_code }} {{ message.product.price|floatformat:0 }}{% if message.product.sku %} · SKU {{ message.product.sku }}{% endif %}{% if message.product.kind == 'physical' and message.product.track_inventory %} · {% if message.product.stock_quantity > 0 %}{{ message.product.stock_quantity }} in stock{% else %}<strong class="text-danger">Out of stock</strong>{% endif %}{% endif %}</span></div><a class="btn btn-sm btn-outline-primary" href="{{ message.product.get_absolute_url }}" target="_blank" rel="noopener">View product</a></div></div>{% endif %}
         <p class="staff-contact-excerpt">{{ message.message|linebreaksbr }}</p>
       </div>
       <div class="staff-contact-actions">
         <a class="btn btn-sm btn-outline-secondary" href="mailto:{{ message.email }}?subject=Re:%20{{ message.subject|urlencode }}"><i class="bi bi-reply me-1" aria-hidden="true"></i>Reply</a>
+        {% if message.sales_lead %}<a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_lead_edit' message.sales_lead.pk %}"><i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i>Open lead</a>{% if message.sales_lead.whatsapp_contact_url %}<a class="btn btn-sm btn-outline-success" href="{{ message.sales_lead.whatsapp_contact_url }}" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-1" aria-hidden="true"></i>WhatsApp</a>{% endif %}{% endif %}
         {% if not message.handled %}<form method="post" action="{% url 'staff_contact_to_ticket' message.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-life-preserver me-1" aria-hidden="true"></i>Create ticket</button></form>{% endif %}
         <form method="post" action="{% url 'staff_contact_toggle' message.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm {% if message.handled %}btn-outline-secondary{% else %}btn-outline-success{% endif %}">{% if message.handled %}Reopen{% else %}Mark handled{% endif %}</button></form>
       </div>

@@ -65,7 +65,7 @@
         <tbody>
           {% for ticket in tickets %}
           <tr>
-            <td><a class="staff-record-link" href="{% url 'staff_ticket_detail' ticket.pk %}">{{ ticket.reference }}</a><small class="d-block text-muted mt-1">{{ ticket.subject|truncatechars:48 }}</small></td>
+            <td><a class="staff-record-link" href="{% url 'staff_ticket_detail' ticket.pk %}">{{ ticket.reference }}</a><small class="d-block text-muted mt-1">{{ ticket.subject|truncatechars:48 }}</small>{% if ticket.related_product %}<small class="d-block text-primary"><i class="bi bi-box-seam me-1" aria-hidden="true"></i>{{ ticket.related_product.name }}</small>{% endif %}</td>
             <td><strong class="d-block fw-semibold">{{ ticket.customer.name }}</strong><small class="text-muted">{{ ticket.get_category_display }}</small></td>
             <td><span class="staff-status-pill staff-status-pill--{{ ticket.status|staff_status_tone }}">{{ ticket.get_status_display }}</span></td>
             <td><span class="staff-priority-pill staff-priority-pill--{{ ticket.priority|staff_priority_tone }}">{{ ticket.get_priority_display }}</span></td>

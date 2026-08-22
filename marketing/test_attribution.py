@@ -7,6 +7,8 @@ from django.utils import timezone
 
 from catalog.models import Category, Product
 from commerce.models import Order
+from growth.models import Ambassador, AmbassadorConversion, SavedCart
+from growth.services import AMBASSADOR_SESSION_KEY
 from marketing.attribution import SESSION_ATTRIBUTION_KEY, order_attribution
 from marketing.models import CampaignLink, MarketingCampaign
 
@@ -33,6 +35,18 @@ class CampaignOrderAttributionTests(TestCase):
         attribution = self.client.session[SESSION_ATTRIBUTION_KEY]
         self.assertEqual(attribution["link_id"], self.link.pk)
         self.assertIn("clicked_at", attribution)
+
+    def test_new_campaign_click_supersedes_older_ambassador_referral(self):
+        ambassador = Ambassador.objects.create(name="Previous creator", code="previous")
+        self.client.get(reverse("growth_ambassador_referral", args=[ambassador.code]))
+        self.assertIn(AMBASSADOR_SESSION_KEY, self.client.session)
+
+        self.client.get(reverse("marketing_track", args=[self.link.code]))
+
+        self.assertNotIn(AMBASSADOR_SESSION_KEY, self.client.session)
+        self.assertEqual(
+            self.client.session[SESSION_ATTRIBUTION_KEY]["link_id"], self.link.pk
+        )
 
     def test_attribution_uses_database_link_not_tampered_session_labels(self):
         values = order_attribution(
@@ -118,3 +132,56 @@ class CampaignOrderAttributionTests(TestCase):
         self.assertEqual(order.marketing_medium, "social")
         self.assertEqual(order.marketing_campaign, self.campaign.slug)
         self.assertNotIn(SESSION_ATTRIBUTION_KEY, self.client.session)
+
+    def test_ambassador_checkout_credits_referral_and_recovers_saved_cart(self):
+        ambassador = Ambassador.objects.create(
+            name="Trusted creator",
+            code="trusted-creator",
+            commission_value=Decimal("10.00"),
+        )
+        category = Category.objects.create(name="Referral laptops", slug="referral-laptops")
+        product = Product.objects.create(
+            category=category,
+            name="Referral laptop",
+            slug="referral-laptop",
+            price=Decimal("1000000.00"),
+            stock_quantity=2,
+            is_published=True,
+        )
+        self.client.get(reverse("growth_ambassador_referral", args=[ambassador.code]))
+        self.client.post(reverse("cart_add", kwargs={"product_id": product.pk}), {"quantity": 1})
+        saved = SavedCart.objects.create(
+            session_key=self.client.session.session_key,
+            email="referral-buyer@example.com",
+            cart_data={f"p:{product.pk}": 1},
+            subtotal=product.price,
+        )
+        self.client.get(reverse("checkout"))
+        token = self.client.session["checkout_submit_token"]
+
+        self.client.post(
+            reverse("checkout"),
+            {
+                "name": "Referral buyer",
+                "email": "referral-buyer@example.com",
+                "phone": "0700000000",
+                "company_name": "",
+                "billing_address": "Kampala",
+                "shipping_address": "",
+                "customer_note": "",
+                "fulfillment_type": Order.FULFILLMENT_PICKUP,
+                "checkout_token": token,
+            },
+        )
+
+        order = Order.objects.get()
+        saved.refresh_from_db()
+        ambassador.refresh_from_db()
+        conversion = AmbassadorConversion.objects.get(order=order)
+        self.assertEqual(order.marketing_source, f"ambassador:{ambassador.code}")
+        self.assertEqual(order.marketing_medium, "referral")
+        self.assertEqual(saved.status, SavedCart.STATUS_RECOVERED)
+        self.assertEqual(saved.recovered_order, order)
+        self.assertEqual(conversion.ambassador, ambassador)
+        self.assertEqual(ambassador.order_count, 1)
+        self.assertNotIn(AMBASSADOR_SESSION_KEY, self.client.session)

@@ -53,6 +53,8 @@ URL_ACTION_PERMISSIONS = {
     "staff_marketing_caption_create": "marketing.add_captiontemplate",
     "staff_marketing_caption_edit": "marketing.change_captiontemplate",
     "staff_marketing_lead_create": "marketing.add_marketinglead",
+    "staff_marketing_lead_claim": "marketing.change_marketinglead",
+    "staff_marketing_lead_contacted": "marketing.change_marketinglead",
     "staff_marketing_lead_edit": "marketing.change_marketinglead",
     "staff_marketing_link_create": "marketing.add_campaignlink",
     "staff_marketing_link_edit": "marketing.change_campaignlink",

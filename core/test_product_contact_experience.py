@@ -135,3 +135,45 @@ class ProductContactExperienceTests(TestCase):
             ContactMessage.objects.filter(subject="Other request: General question").exists()
         )
         create_lead.assert_called_once()
+
+    def test_product_enquiry_remains_linked_after_form_submission(self):
+        from marketing.models import MarketingLead
+
+        response = self.client.post(
+            reverse("contact"),
+            {
+                "request_type": ContactForm.REQUEST_QUOTE,
+                "product": self.product.slug,
+                "name": "Product buyer",
+                "email": "product-buyer@example.com",
+                "phone": "0700000000",
+                "subject": "Please quote for this laptop",
+                "message": "Please confirm the current price and availability.",
+            },
+        )
+
+        self.assertRedirects(response, reverse("contact"))
+        message = ContactMessage.objects.get()
+        lead = MarketingLead.objects.get()
+        self.assertEqual(message.product, self.product)
+        self.assertEqual(message.request_type, ContactForm.REQUEST_QUOTE)
+        self.assertEqual(lead.product, self.product)
+        self.assertEqual(lead.estimated_value, self.product.price)
+
+    def test_unpublished_product_cannot_be_attached_to_an_enquiry(self):
+        self.product.is_published = False
+        self.product.save(update_fields=["is_published"])
+
+        self.client.post(
+            reverse("contact"),
+            {
+                "request_type": ContactForm.REQUEST_PRODUCT,
+                "product": self.product.slug,
+                "name": "Product buyer",
+                "email": "product-buyer@example.com",
+                "subject": "Is this laptop available?",
+                "message": "Please let me know whether it can still be ordered.",
+            },
+        )
+
+        self.assertIsNone(ContactMessage.objects.get().product)

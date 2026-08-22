@@ -61,3 +61,31 @@ class MarketingLeadFollowUpTests(TestCase):
         lead.refresh_from_db()
 
         self.assertIsNotNone(lead.first_contacted_at)
+
+    def test_first_contact_clears_initial_response_follow_up(self):
+        due_at = timezone.now() + timedelta(minutes=30)
+        lead = MarketingLead.objects.create(
+            name="Timed lead",
+            source="website",
+            response_due_at=due_at,
+            next_follow_up_at=due_at,
+        )
+        lead.status = MarketingLead.STATUS_CONTACTED
+
+        lead.save(update_fields=["status"])
+        lead.refresh_from_db()
+
+        self.assertIsNotNone(lead.first_contacted_at)
+        self.assertIsNone(lead.next_follow_up_at)
+
+    def test_overdue_response_is_detected_before_first_contact(self):
+        lead = MarketingLead.objects.create(
+            name="Late lead",
+            source="website",
+            response_due_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        self.assertTrue(lead.response_overdue)
+        lead.status = MarketingLead.STATUS_CONTACTED
+        lead.save()
+        self.assertFalse(lead.response_overdue)

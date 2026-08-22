@@ -109,7 +109,7 @@ def purchase_event(order) -> dict:
             "transaction_id": order.reference,
             "value": float(order.total),
             "tax": float(order.tax_amount),
-            "shipping": 0,
+            "shipping": float(order.delivery_fee),
             "currency": company.currency_code,
             "coupon": order.coupon_code_applied,
             "items": items,
