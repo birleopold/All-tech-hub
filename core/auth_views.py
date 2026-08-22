@@ -1,4 +1,5 @@
 from datetime import timedelta
+from ipaddress import ip_address
 
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
@@ -16,6 +17,11 @@ from core.field_encryption import (
     reveal_totp_secret,
 )
 from core.models import LoginAttempt, StaffTwoFactor
+from core.security import (
+    clear_staff_two_factor_verification,
+    mark_staff_two_factor_verified,
+    staff_two_factor_is_verified,
+)
 from core.totp import generate_secret, provisioning_uri, verify_token
 
 MAX_FAILURES = 5
@@ -23,8 +29,17 @@ LOCK_MINUTES = 15
 
 
 def _client_ip(request):
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    return (forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR")) or None
+    # Nginx sets X-Real-IP from its actual peer. Never trust the leftmost
+    # X-Forwarded-For value because clients can supply that header themselves.
+    candidate = (
+        request.META.get("HTTP_X_REAL_IP")
+        or request.META.get("REMOTE_ADDR")
+        or ""
+    ).strip()
+    try:
+        return str(ip_address(candidate))
+    except ValueError:
+        return None
 
 
 class StaffLoginView(View):
@@ -70,6 +85,10 @@ class StaffLoginView(View):
             username__iexact=username, ip_address=ip, successful=False
         ).delete()
         login(request, user)
+        if user.is_staff and profile and profile.enabled:
+            mark_staff_two_factor_verified(request, user)
+        else:
+            clear_staff_two_factor_verification(request)
         target = request.POST.get("next") or reverse("staff_dashboard")
         if not url_has_allowed_host_and_scheme(target, {request.get_host()}, request.is_secure()):
             target = reverse("staff_dashboard")
@@ -86,16 +105,20 @@ def two_factor_setup(request):
     if not profile.secret:
         profile.secret = protect_totp_secret(generate_secret())
         profile.save(update_fields=["secret", "updated_at"])
-    display_secret = ensure_profile_secret_protected(profile)
+    if profile.enabled and not staff_two_factor_is_verified(request, request.user):
+        messages.error(request, "Complete your authenticator challenge before managing 2FA.")
+        return redirect("login")
+    display_secret = "" if profile.enabled else ensure_profile_secret_protected(profile)
     return render(
         request,
         "registration/two_factor_setup.html",
         {
             "profile": profile,
             "display_secret": display_secret,
-            "provisioning_uri": provisioning_uri(
-                display_secret,
-                request.user.get_username(),
+            "provisioning_uri": (
+                provisioning_uri(display_secret, request.user.get_username())
+                if display_secret
+                else ""
             ),
         },
     )
@@ -111,6 +134,7 @@ def two_factor_confirm(request):
         profile.enabled = True
         profile.confirmed_at = timezone.now()
         profile.save(update_fields=["enabled", "confirmed_at", "updated_at"])
+        mark_staff_two_factor_verified(request, request.user)
         log_audit_event(
             actor=request.user,
             verb="security.2fa_enabled",
@@ -139,6 +163,7 @@ def two_factor_disable(request):
         return redirect("staff_two_factor_setup")
     profile.enabled = False
     profile.save(update_fields=["enabled", "updated_at"])
+    clear_staff_two_factor_verification(request)
     log_audit_event(
         actor=request.user,
         verb="security.2fa_disabled",

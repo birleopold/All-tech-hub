@@ -367,6 +367,9 @@ class MarketingLead(models.Model):
         blank=True,
         related_name="assigned_marketing_leads",
     )
+    first_contacted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    next_follow_up_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    won_at = models.DateTimeField(null=True, blank=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -375,3 +378,50 @@ class MarketingLead(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} — {self.source}"
+
+    @property
+    def first_response_minutes(self) -> int | None:
+        if not self.first_contacted_at or not self.created_at:
+            return None
+        return max(
+            0,
+            round((self.first_contacted_at - self.created_at).total_seconds() / 60),
+        )
+
+    @property
+    def follow_up_overdue(self) -> bool:
+        return bool(
+            self.next_follow_up_at
+            and self.next_follow_up_at <= timezone.now()
+            and self.status not in {self.STATUS_WON, self.STATUS_LOST}
+        )
+
+    def save(self, *args, **kwargs):
+        previous_status = None
+        auto_updated_fields = set()
+        if self.pk:
+            previous_status = type(self).objects.filter(pk=self.pk).values_list(
+                "status", flat=True
+            ).first()
+        now = timezone.now()
+        if (
+            self.status in {self.STATUS_CONTACTED, self.STATUS_QUALIFIED, self.STATUS_WON}
+            and self.first_contacted_at is None
+        ):
+            self.first_contacted_at = now
+            auto_updated_fields.add("first_contacted_at")
+        if self.status == self.STATUS_WON and self.won_at is None:
+            self.won_at = now
+            auto_updated_fields.add("won_at")
+        elif self.status != self.STATUS_WON and previous_status == self.STATUS_WON:
+            self.won_at = None
+            auto_updated_fields.add("won_at")
+        if (
+            self.status in {self.STATUS_WON, self.STATUS_LOST}
+            and self.next_follow_up_at is not None
+        ):
+            self.next_follow_up_at = None
+            auto_updated_fields.add("next_follow_up_at")
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = set(kwargs["update_fields"]) | auto_updated_fields
+        super().save(*args, **kwargs)

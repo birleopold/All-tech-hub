@@ -110,6 +110,63 @@ Production also requires staff 2FA by default. Set
 `ALLTECH_REQUIRE_STAFF_2FA=0` only for a controlled recovery window. Staff
 enroll from **Staff → Two-factor security**.
 
+## Customer identity, delivery, and market growth
+
+Customer portal registration sends an email-verification link before an existing
+customer's orders, repairs, or invoices can be linked to a new account. Set up a
+working SMTP provider and a real `ALLTECH_DEFAULT_FROM_EMAIL` before offering
+self-service registration or password recovery. Verification links expire after
+24 hours by default; `ALLTECH_PORTAL_EMAIL_VERIFICATION_MAX_AGE` controls the
+lifetime in seconds. Staff cannot sign in or reset passwords through the customer
+portal.
+
+Staff can manage customer profiles, search purchase and repair history, identify
+repeat or dormant buyers, and review outstanding invoice balances under
+**Customers → Customer directory**. Enable the appropriate Sales, Finance, or
+Manager role before using this workspace with production role enforcement.
+
+Configure active delivery zones in the Django administration area. Checkout then
+requires a delivery area for delivered orders, displays its charge and applicable
+tax before purchase, and carries the charge through to the resulting invoice.
+Store pickup remains free. Apply the delivery migration before restarting an
+updated production release:
+
+```bash
+python manage.py migrate
+python manage.py bootstrap_roles
+```
+
+Use **Reports & growth → Market readiness** to review catalogue completeness,
+configured social profiles, unanswered leads, tracked links, campaigns, recent
+orders, and a practical Uganda-focused content plan. Social profile links do not
+automatically grant API publishing access, and recording Mobile Money payments
+does not connect a live payment gateway; those integrations require their own
+provider accounts, credentials, and production verification.
+
+Consent-safe customer campaigns now support both bounded email delivery and a
+manual WhatsApp click-to-chat queue. WhatsApp recipients must have current
+WhatsApp and topic consent plus a usable phone number. Staff open each prepared
+message, send it through WhatsApp, and separately confirm delivery so the system
+keeps an auditable record without claiming an unconfigured WhatsApp Business API
+integration. Include a tracked campaign link in the message when measuring
+traffic and leads.
+
+Marketing leads record the first response, next promised follow-up, overdue
+follow-ups, and the time a lead was won. The Market Readiness screen shows
+overdue work and average recorded response time; use these figures to enforce a
+fast sales-response routine.
+
+The same screen now audits the full commercial journey across seven phases:
+Discovery, Trust, Acquisition, Conversion, Fulfillment, Retention, and Advocacy.
+Each phase has measurable operating checks and direct actions. It also exposes
+abandoned-cart value, aging orders, shipment exceptions, repeat customers,
+reviews, loyalty adoption, and ambassador activity. The phase score reports
+configured and observed readiness only; it does not promise sales or viral reach.
+
+Purchase orders support both **Receive remaining** and per-line partial shipment
+receiving. Each receiving event continues to create a stock receipt and update
+inventory inside one transaction.
+
 ## Company profile
 
 Configure the production company identity after migrations:

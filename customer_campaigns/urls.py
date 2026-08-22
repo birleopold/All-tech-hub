@@ -10,6 +10,16 @@ urlpatterns = [
     path("<int:pk>/prepare/", views.customer_campaign_prepare, name="staff_customer_campaign_prepare"),
     path("<int:pk>/approve/", views.customer_campaign_approve, name="staff_customer_campaign_approve"),
     path("<int:pk>/send/", views.customer_campaign_send, name="staff_customer_campaign_send"),
+    path(
+        "<int:pk>/whatsapp/<int:recipient_pk>/open/",
+        views.customer_campaign_whatsapp_open,
+        name="staff_customer_campaign_whatsapp_open",
+    ),
+    path(
+        "<int:pk>/whatsapp/<int:recipient_pk>/sent/",
+        views.customer_campaign_whatsapp_sent,
+        name="staff_customer_campaign_whatsapp_sent",
+    ),
     path("<int:pk>/schedule/", views.customer_campaign_schedule, name="staff_customer_campaign_schedule"),
     path("<int:pk>/pause/", views.customer_campaign_pause, name="staff_customer_campaign_pause"),
     path("<int:pk>/resume/", views.customer_campaign_resume, name="staff_customer_campaign_resume"),

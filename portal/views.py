@@ -1,10 +1,16 @@
+import logging
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import get_user_model, login
+from django.core import signing
+from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import ListView, TemplateView
@@ -19,6 +25,9 @@ from core.models import Announcement, KnowledgeArticle, SupportTicket, TicketCom
 from crm.models import Customer, CustomerAddress
 from operations.models import JobCard, JobFeedback, JobNote, JobStatusEvent
 from portal.forms import CustomerAddressForm, CustomerSignUpForm, PortalRepairIntakeForm
+
+logger = logging.getLogger(__name__)
+EMAIL_VERIFICATION_SALT = "alltech.portal.email-verification"
 
 
 class PortalHomeView(TemplateView):
@@ -109,10 +118,97 @@ class CustomerSignUpView(FormView):
     form_class = CustomerSignUpForm
 
     def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)
-        messages.success(self.request, "Welcome! Your customer portal is ready.")
-        return redirect("portal_home")
+        unsafe_delivery_backends = {
+            "django.core.mail.backends.console.EmailBackend",
+            "django.core.mail.backends.dummy.EmailBackend",
+            "django.core.mail.backends.filebased.EmailBackend",
+            "django.core.mail.backends.locmem.EmailBackend",
+        }
+        if not settings.DEBUG and settings.EMAIL_BACKEND in unsafe_delivery_backends:
+            logger.error("customer_portal_email_delivery_is_not_configured")
+            form.add_error(
+                None,
+                "Customer registration is temporarily unavailable. Please contact us.",
+            )
+            return self.form_invalid(form)
+        try:
+            with transaction.atomic():
+                user = form.save()
+                token = signing.dumps(
+                    {"user_id": user.pk, "email": user.email},
+                    salt=EMAIL_VERIFICATION_SALT,
+                )
+                verify_url = self.request.build_absolute_uri(
+                    reverse("portal_verify_email", kwargs={"token": token})
+                )
+                send_mail(
+                    "Verify your LEOSOFT customer account",
+                    (
+                        "Welcome to LEOSOFT. Verify your email to securely access "
+                        "your orders, repairs, invoices and warranties:\n\n"
+                        f"{verify_url}\n\n"
+                        "If you did not request this account, ignore this email."
+                    ),
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+        except Exception:
+            logger.exception("customer_portal_verification_email_failed")
+            form.add_error(
+                None,
+                "We could not send your verification email. Please try again or contact us.",
+            )
+            return self.form_invalid(form)
+        messages.success(
+            self.request,
+            "Check your email and open the verification link to activate your account.",
+        )
+        return redirect("portal_login")
+
+
+@transaction.atomic
+def verify_customer_email(request, token: str):
+    try:
+        payload = signing.loads(
+            token,
+            salt=EMAIL_VERIFICATION_SALT,
+            max_age=getattr(settings, "PORTAL_EMAIL_VERIFICATION_MAX_AGE", 86400),
+        )
+    except signing.BadSignature:
+        messages.error(request, "This verification link is invalid or has expired.")
+        return redirect("portal_login")
+
+    User = get_user_model()
+    user = get_object_or_404(
+        User.objects.select_for_update(),
+        pk=payload.get("user_id"),
+        email__iexact=payload.get("email", ""),
+    )
+    customers = list(
+        Customer.objects.select_for_update().filter(email__iexact=user.email)[:2]
+    )
+    if len(customers) != 1:
+        messages.error(request, "Your customer record needs a support review.")
+        return redirect("portal_login")
+    customer = customers[0]
+    if customer.user_id and customer.user_id != user.pk:
+        messages.error(request, "This customer account is already linked to another user.")
+        return redirect("portal_login")
+
+    if user.is_active and customer.user_id == user.pk:
+        messages.info(request, "This account is already verified. Please sign in.")
+        return redirect("portal_login")
+
+    if customer.user_id != user.pk:
+        customer.user = user
+        customer.save(update_fields=["user", "updated_at"])
+    if not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    messages.success(request, "Your email is verified and your customer portal is ready.")
+    return redirect("portal_home")
 
 
 def _customer_for_request(request) -> Customer | None:
@@ -491,4 +587,3 @@ def my_ticket_detail(request, pk: int):
             "can_reply": not closed,
         },
     )
-

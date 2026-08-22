@@ -88,25 +88,53 @@ def receive_stock(request, pk: int):
     if not request.user.is_staff:
         raise Http404
     po = get_object_or_404(
-        PurchaseOrder.objects.prefetch_related("lines__product", "lines__product_variant"),
+        PurchaseOrder.objects.select_for_update().prefetch_related(
+            "lines__product", "lines__product_variant"
+        ),
         pk=pk,
     )
     if request.method != "POST":
         return redirect("staff_po_edit", pk=pk)
+    if po.status == PurchaseOrder.STATUS_CANCELLED:
+        messages.error(request, "Cancelled purchase orders cannot receive stock.")
+        return redirect("staff_po_edit", pk=pk)
     remaining_lines = [
-        (line, int(line.quantity) - int(line.received_quantity))
+        (line, line.remaining_quantity)
         for line in po.lines.all()
-        if int(line.quantity) > int(line.received_quantity)
+        if line.remaining_quantity
     ]
     if not remaining_lines:
         messages.info(request, "Nothing to receive (all lines already received).")
         return redirect("staff_po_edit", pk=pk)
-    receipt = StockReceipt.objects.create(purchase_order=po, received_by=request.user)
+    quantities_supplied = any(key.startswith("quantity_") for key in request.POST)
+    requested_lines = []
     for line, remaining in remaining_lines:
+        if quantities_supplied:
+            raw_quantity = request.POST.get(f"quantity_{line.pk}", "0").strip()
+            try:
+                quantity = int(raw_quantity or 0)
+            except (TypeError, ValueError):
+                messages.error(request, "Received quantities must be whole numbers.")
+                return redirect("staff_po_edit", pk=pk)
+            if quantity < 0 or quantity > remaining:
+                messages.error(
+                    request,
+                    f"Receive between 0 and {remaining} units of {line.product.name}.",
+                )
+                return redirect("staff_po_edit", pk=pk)
+        else:
+            quantity = remaining
+        if quantity:
+            requested_lines.append((line, quantity))
+    if not requested_lines:
+        messages.error(request, "Enter a quantity for at least one purchase line.")
+        return redirect("staff_po_edit", pk=pk)
+    receipt = StockReceipt.objects.create(purchase_order=po, received_by=request.user)
+    for line, quantity in requested_lines:
         rline = StockReceiptLine.objects.create(
             receipt=receipt,
             purchase_line=line,
-            quantity_received=remaining,
+            quantity_received=quantity,
         )
         rline.apply()
     po.refresh_from_db()

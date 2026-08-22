@@ -24,6 +24,7 @@ class CustomerCampaignForm(BootstrapFormMixin, forms.ModelForm):
         fields = (
             "name",
             "marketing_campaign",
+            "channel",
             "topic",
             "segment",
             "subject",
@@ -40,6 +41,10 @@ class CustomerCampaignForm(BootstrapFormMixin, forms.ModelForm):
         self.fields["marketing_campaign"].help_text = (
             "Optional link to the broader marketing campaign for reporting."
         )
+        self.fields["channel"].help_text = (
+            "Email can use bounded delivery. WhatsApp creates a consent-checked "
+            "click-to-chat queue that staff send and confirm manually."
+        )
         self.fields["max_recipients"].help_text = (
             "Preparation will stop at this number. The production maximum is "
             f"{getattr(settings, 'CUSTOMER_CAMPAIGN_MAX_RECIPIENTS', 100)}."
@@ -54,6 +59,18 @@ class CustomerCampaignForm(BootstrapFormMixin, forms.ModelForm):
                 f"Use {configured_max} recipients or fewer for one campaign."
             )
         return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            cleaned_data.get("channel") == CustomerCampaign.CHANNEL_WHATSAPP
+            and len(cleaned_data.get("body") or "") > 1500
+        ):
+            self.add_error(
+                "body",
+                "Keep manual WhatsApp messages to 1,500 characters or fewer.",
+            )
+        return cleaned_data
 
 
 class CampaignApprovalForm(BootstrapFormMixin, forms.Form):

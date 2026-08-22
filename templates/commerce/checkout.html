@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize %}
+{% load humanize static %}
 {% block title %}Checkout{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body mobile-commerce-page mobile-checkout-page desktop-checkout-page{% endblock %}
 {% block content %}
@@ -25,7 +25,7 @@
   <nav class="mobile-checkout-progress d-lg-none" aria-label="Checkout progress"><span><i class="bi bi-cart-check me-1" aria-hidden="true"></i>Cart reviewed</span><span class="is-current" aria-current="step"><i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i>Your details</span><span><i class="bi bi-check-circle me-1" aria-hidden="true"></i>Confirmation</span></nav>
   <div class="row g-4 align-items-start">
     <div class="col-lg-7">
-      <form id="checkout-form" method="post" class="card border-0 shadow-sm" data-mobile-checkout-form>
+      <form id="checkout-form" method="post" class="card border-0 shadow-sm" data-mobile-checkout-form data-checkout-pricing data-base-total="{{ total|floatformat:2 }}" data-base-tax="{{ tax_amount|floatformat:2 }}" data-tax-rate="{{ tax_rate|floatformat:2 }}" data-currency="{{ company.currency_code }}">
         <div class="card-body p-4 p-lg-5">
           {% csrf_token %}
           {% if checkout_token %}<input type="hidden" name="checkout_token" value="{{ checkout_token }}">{% endif %}
@@ -48,12 +48,13 @@
                 </div>
                 {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
               </fieldset>
+            {% elif field.name == 'delivery_zone' and not delivery_zones_available %}
             {% elif field.name == 'marketing_email_opt_in' or field.name == 'marketing_whatsapp_opt_in' %}
               {% if field.name == 'marketing_email_opt_in' %}<fieldset class="border rounded p-3 mb-4 desktop-checkout-field--marketing"><legend class="h6 px-1">Optional product updates and offers</legend><p class="small text-muted">These choices are optional and do not affect your order. You can unsubscribe later.</p>{% endif %}
               <div class="form-check mb-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
               {% if field.name == 'marketing_whatsapp_opt_in' %}</fieldset>{% endif %}
             {% else %}
-              <div class="mb-3 desktop-checkout-field--{{ field.name }}">
+              <div class="mb-3 desktop-checkout-field--{{ field.name }}"{% if field.name == 'delivery_zone' %} data-delivery-zone-field{% endif %}>
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field.errors }}
                 {{ field }}
@@ -81,9 +82,10 @@
           </ul>
           <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Subtotal</span><strong>{{ company.currency_code }} {{ subtotal|floatformat:0|intcomma }}</strong></div>
           {% if discount %}<div class="d-flex justify-content-between small mb-2 text-success"><span>Discount{% if coupon %} ({{ coupon.code }}){% endif %}</span><strong>−{{ company.currency_code }} {{ discount|floatformat:0|intcomma }}</strong></div>{% endif %}
-          <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Tax</span><strong>{{ company.currency_code }} {{ tax_amount|floatformat:0|intcomma }}</strong></div>
+          <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Tax</span><strong data-checkout-tax>{{ company.currency_code }} {{ tax_amount|floatformat:0|intcomma }}</strong></div>
+          {% if delivery_zones_available %}<div class="d-flex justify-content-between small mb-2" data-checkout-delivery><span class="text-muted">Delivery</span><strong class="small" data-checkout-delivery-amount>{% if delivery_fee %}{{ company.currency_code }} {{ delivery_fee|floatformat:0|intcomma }}{% else %}Choose your delivery area{% endif %}</strong></div>{% endif %}
           <hr>
-          <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4">{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div>
+          <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4" data-checkout-total>{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div>
           <ul class="desktop-order-confidence"><li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Order submission starts verification; it does not force immediate payment.</span></li><li><i class="bi bi-lock-fill" aria-hidden="true"></i><span>Your private tracking link is sent to the email address entered here.</span></li></ul>
         </div>
       </aside>
@@ -103,6 +105,8 @@
       </div>
     </div>
   </div>
-  <div class="mobile-commerce-sticky-cta d-lg-none" role="region" aria-label="Order total and place order"><div class="mobile-commerce-sticky-cta__copy"><small>Order total</small><strong>{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div><button class="btn btn-primary" type="submit" form="checkout-form">Place order</button></div>
+  <div class="mobile-commerce-sticky-cta d-lg-none" role="region" aria-label="Order total and place order"><div class="mobile-commerce-sticky-cta__copy"><small>Order total</small><strong data-checkout-total>{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div><button class="btn btn-primary" type="submit" form="checkout-form">Place order</button></div>
+  {{ delivery_zone_rates|json_script:"checkout-delivery-rates" }}
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/checkout_delivery.js' %}" defer></script>{% endblock %}

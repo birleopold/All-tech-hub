@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -210,6 +211,9 @@ def checkout_view(request):
     )
     coupon = cart_mod.get_coupon(request.session)
 
+    delivery_fee = Decimal("0.00")
+    delivery_tax = Decimal("0.00")
+
     checkout_lines = [
         {"line": ln, "qty": ln.quantity, "line_total": ln.unit_price * ln.quantity}
         for ln in lines
@@ -225,7 +229,7 @@ def checkout_view(request):
                 "This checkout step expired or was already submitted. Please review your order and try again.",
             )
             return redirect("checkout")
-        form = CheckoutForm(request.POST)
+        form = CheckoutForm(request.POST, request_user=request.user)
         if form.is_valid():
             reused_order = False
             try:
@@ -242,6 +246,11 @@ def checkout_view(request):
                                 "That discount code has reached its usage limit or expired."
                             )
                     customer = form.save_customer()
+                    selected_zone = form.cleaned_data.get("delivery_zone")
+                    delivery_fee = form.delivery_fee
+                    delivery_tax = (
+                        delivery_fee * tax_rate / Decimal("100")
+                    ).quantize(Decimal("0.01"))
                     ref = allocate_document_number("ORD")
                     order = Order.objects.create(
                         reference=ref,
@@ -254,14 +263,16 @@ def checkout_view(request):
                         shipping_summary=form.cleaned_data.get("shipping_address")
                         or form.cleaned_data["billing_address"],
                         fulfillment_type=form.cleaned_data["fulfillment_type"],
+                        delivery_zone_name=selected_zone.name if selected_zone else "",
+                        delivery_fee=delivery_fee,
                         customer_note=form.cleaned_data.get("customer_note") or "",
                         subtotal=subtotal,
                         tax_rate=tax_rate,
-                        tax_amount=tax,
+                        tax_amount=tax + delivery_tax,
                         discount_amount=discount,
                         coupon=locked_coupon,
                         coupon_code_applied=locked_coupon.code if locked_coupon else "",
-                        total=total,
+                        total=total + delivery_fee + delivery_tax,
                     )
                     if locked_coupon is not None:
                         from django.db.models import F as _F
@@ -340,7 +351,7 @@ def checkout_view(request):
                     "phone": prof.phone,
                     "company_name": prof.company_name,
                 }
-        form = CheckoutForm(initial=initial)
+        form = CheckoutForm(initial=initial, request_user=request.user)
 
     return render(
         request,
@@ -352,9 +363,15 @@ def checkout_view(request):
             "checkout_lines": checkout_lines,
             "subtotal": subtotal,
             "tax_rate": tax_rate,
-            "tax_amount": tax,
+            "tax_amount": tax + delivery_tax,
             "discount": discount,
-            "total": total,
+            "delivery_fee": delivery_fee,
+            "delivery_zones_available": form.delivery_zones_available,
+            "delivery_zone_rates": {
+                str(zone.pk): str(zone.fee_from or Decimal("0.00"))
+                for zone in form.fields["delivery_zone"].queryset
+            },
+            "total": total + delivery_fee + delivery_tax,
             "coupon": coupon,
         },
     )

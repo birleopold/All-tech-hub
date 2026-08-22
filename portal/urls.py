@@ -1,19 +1,57 @@
 from django.contrib.auth import views as auth_views
-from django.urls import path
+from django.urls import path, reverse_lazy
 
 from core import private_views
 from loyalty import views as loyalty_views
 from portal import views, warranty_views
+from portal.forms import CustomerPortalAuthenticationForm, CustomerPortalPasswordResetForm
 
 urlpatterns = [
     path("", views.PortalHomeView.as_view(), name="portal_home"),
     path("kb/", views.KnowledgeBaseListView.as_view(), name="portal_kb"),
     path("kb/<slug:slug>/", views.kb_article_detail, name="portal_kb_article"),
     path("signup/", views.CustomerSignUpView.as_view(), name="portal_signup"),
+    path("verify-email/<str:token>/", views.verify_customer_email, name="portal_verify_email"),
     path(
         "login/",
-        auth_views.LoginView.as_view(template_name="portal/login.html"),
+        auth_views.LoginView.as_view(
+            template_name="portal/login.html",
+            authentication_form=CustomerPortalAuthenticationForm,
+        ),
         name="portal_login",
+    ),
+    path(
+        "password-reset/",
+        auth_views.PasswordResetView.as_view(
+            form_class=CustomerPortalPasswordResetForm,
+            template_name="portal/password_reset.html",
+            email_template_name="portal/password_reset_email.txt",
+            subject_template_name="portal/password_reset_subject.txt",
+            success_url=reverse_lazy("portal_password_reset_done"),
+        ),
+        name="portal_password_reset",
+    ),
+    path(
+        "password-reset/sent/",
+        auth_views.PasswordResetDoneView.as_view(
+            template_name="portal/password_reset_done.html",
+        ),
+        name="portal_password_reset_done",
+    ),
+    path(
+        "password-reset/<uidb64>/<token>/",
+        auth_views.PasswordResetConfirmView.as_view(
+            template_name="portal/password_reset_confirm.html",
+            success_url=reverse_lazy("portal_password_reset_complete"),
+        ),
+        name="portal_password_reset_confirm",
+    ),
+    path(
+        "password-reset/complete/",
+        auth_views.PasswordResetCompleteView.as_view(
+            template_name="portal/password_reset_complete.html",
+        ),
+        name="portal_password_reset_complete",
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="portal_logout"),
     path("jobs/", views.MyJobsView.as_view(), name="portal_jobs"),

@@ -41,12 +41,13 @@
     </div>
   </details>
 
-  <details class="staff-nav-group" {% if u == 'staff_contact_messages' or u == 'staff_notifications' or 'staff_customer_campaign' in u or u == 'staff_customer_growth_dashboard' or u == 'staff_retention_dashboard' %}open{% endif %}>
+  <details class="staff-nav-group" {% if u == 'staff_customers' or u == 'staff_customer_detail' or u == 'staff_customer_create' or u == 'staff_customer_edit' or u == 'staff_contact_messages' or u == 'staff_notifications' or 'staff_customer_campaign' in u or u == 'staff_customer_growth_dashboard' or u == 'staff_retention_dashboard' %}open{% endif %}>
     <summary><span><i class="bi bi-people-fill" aria-hidden="true"></i>Customers</span><i class="bi bi-chevron-down staff-nav-chevron" aria-hidden="true"></i></summary>
     <div class="staff-nav-submenu">
+      <a class="staff-nav-link" href="{% url 'staff_customers' %}" {% if u == 'staff_customers' or u == 'staff_customer_detail' or u == 'staff_customer_create' or u == 'staff_customer_edit' %}aria-current="page"{% endif %}>Customer directory</a>
       <a class="staff-nav-link" href="{% url 'staff_contact_messages' %}" {% if u == 'staff_contact_messages' %}aria-current="page"{% endif %}>Contact inbox</a>
       <a class="staff-nav-link" href="{% url 'staff_notifications' %}" {% if u == 'staff_notifications' %}aria-current="page"{% endif %}>Notifications{% if staff_unread_notifications %}<span class="staff-nav-badge">{{ staff_unread_notifications }}</span>{% endif %}</a>
-      <a class="staff-nav-link" href="{% url 'staff_customer_campaigns' %}" {% if 'staff_customer_campaign' in u %}aria-current="page"{% endif %}>Email campaigns</a>
+      <a class="staff-nav-link" href="{% url 'staff_customer_campaigns' %}" {% if 'staff_customer_campaign' in u %}aria-current="page"{% endif %}>Customer campaigns</a>
       <a class="staff-nav-link" href="{% url 'staff_customer_growth_dashboard' %}" {% if u == 'staff_customer_growth_dashboard' %}aria-current="page"{% endif %}>Customer growth &amp; loyalty</a>
       <a class="staff-nav-link" href="{% url 'staff_retention_dashboard' %}" {% if u == 'staff_retention_dashboard' %}aria-current="page"{% endif %}>Retention &amp; reviews</a>
     </div>
@@ -58,7 +59,8 @@
       <a class="staff-nav-link" href="{% url 'staff_reports' %}" {% if u == 'staff_reports' %}aria-current="page"{% endif %}>Reports &amp; analytics</a>
       <a class="staff-nav-link" href="{% url 'staff_conversion_lifecycle' %}" {% if u == 'staff_conversion_lifecycle' %}aria-current="page"{% endif %}>Conversion lifecycle</a>
       <a class="staff-nav-link" href="{% url 'staff_seo' %}" {% if u == 'staff_seo' %}aria-current="page"{% endif %}>SEO control center</a>
-      <a class="staff-nav-link" href="{% url 'staff_marketing_dashboard' %}" {% if 'staff_marketing' in u and 'staff_growth' not in u %}aria-current="page"{% endif %}>Marketing automation</a>
+      <a class="staff-nav-link" href="{% url 'staff_marketing_dashboard' %}" {% if 'staff_marketing' in u and 'staff_growth' not in u and u != 'staff_marketing_market_readiness' %}aria-current="page"{% endif %}>Marketing automation</a>
+      <a class="staff-nav-link" href="{% url 'staff_marketing_market_readiness' %}" {% if u == 'staff_marketing_market_readiness' %}aria-current="page"{% endif %}>Market readiness</a>
       <a class="staff-nav-link" href="{% url 'staff_growth_dashboard' %}" {% if 'staff_growth' in u %}aria-current="page"{% endif %}>Growth analytics</a>
     </div>
   </details>

@@ -14,6 +14,8 @@ from customer_campaigns.reporting import campaign_integrity_findings
 from customer_campaigns.services import (
     CampaignOperationError,
     approve_campaign,
+    mark_whatsapp_recipient_sent,
+    open_whatsapp_recipient,
     prepare_campaign,
     send_campaign_batch,
 )
@@ -328,3 +330,74 @@ class ControlledCustomerCampaignTests(TestCase):
         findings = campaign_integrity_findings()
         self.assertEqual(findings["sent_without_unsubscribe"], 1)
         self.assertGreater(findings["errors"], 0)
+
+
+@override_settings(
+    PUBLIC_BASE_URL="https://leosoftug.com",
+    CUSTOMER_CAMPAIGN_REQUIRE_SEPARATE_APPROVER=True,
+)
+class WhatsAppCustomerCampaignTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.creator = user_model.objects.create_user(
+            username="whatsapp-creator", password="strong-test-password", is_staff=True
+        )
+        self.approver = user_model.objects.create_user(
+            username="whatsapp-approver", password="strong-test-password", is_staff=True
+        )
+        self.customer = Customer.objects.create(
+            name="Amina WhatsApp", email="amina-wa@example.com", phone="0700000010"
+        )
+        update_marketing_preference(
+            self.customer,
+            email_marketing=False,
+            whatsapp_marketing=True,
+            product_updates=True,
+            special_offers=False,
+            source=CustomerMarketingPreference.SOURCE_PORTAL,
+        )
+        self.campaign = CustomerCampaign.objects.create(
+            name="WhatsApp product launch",
+            channel=CustomerCampaign.CHANNEL_WHATSAPP,
+            topic=CustomerCampaign.TOPIC_PRODUCT_UPDATES,
+            segment=CustomerCampaign.SEGMENT_ALL,
+            subject="Product launch",
+            body="Hello {first_name}, see the new LEOSOFT arrivals.",
+            max_recipients=20,
+            created_by=self.creator,
+        )
+
+    def _prepare_and_approve(self):
+        prepare_campaign(self.campaign, user=self.creator)
+        approve_campaign(self.campaign, user=self.approver)
+        self.campaign.refresh_from_db()
+        return self.campaign.recipients.get()
+
+    def test_whatsapp_campaign_uses_phone_and_current_channel_consent(self):
+        recipient = self._prepare_and_approve()
+        self.assertEqual(recipient.phone_number, "0700000010")
+        self.assertEqual(recipient.email_address, "amina-wa@example.com")
+        url = open_whatsapp_recipient(recipient, user=self.creator)
+        self.assertTrue(url.startswith("https://wa.me/256700000010?text="))
+        self.assertIn("preferences%2Funsubscribe", url)
+        recipient.refresh_from_db()
+        self.assertIsNotNone(recipient.attempted_at)
+        mark_whatsapp_recipient_sent(recipient, user=self.creator)
+        recipient.refresh_from_db()
+        self.campaign.refresh_from_db()
+        self.assertEqual(recipient.status, CustomerCampaignRecipient.STATUS_SENT)
+        self.assertEqual(self.campaign.status, CustomerCampaign.STATUS_COMPLETED)
+
+    def test_whatsapp_consent_withdrawal_suppresses_before_open(self):
+        recipient = self._prepare_and_approve()
+        withdraw_all_marketing(self.customer)
+        self.assertIsNone(open_whatsapp_recipient(recipient, user=self.creator))
+        recipient.refresh_from_db()
+        self.assertEqual(
+            recipient.status, CustomerCampaignRecipient.STATUS_SUPPRESSED
+        )
+
+    def test_email_batch_sender_refuses_whatsapp_campaigns(self):
+        self._prepare_and_approve()
+        with self.assertRaises(CampaignOperationError):
+            send_campaign_batch(self.campaign, user=self.creator)

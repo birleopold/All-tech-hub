@@ -126,6 +126,7 @@ def campaign_integrity_findings() -> dict:
     ).distinct().count()
     sent_without_success_log = CustomerCampaignRecipient.objects.filter(
         status=CustomerCampaignRecipient.STATUS_SENT,
+        campaign__channel=CustomerCampaign.CHANNEL_EMAIL,
     ).filter(
         Q(outbound_email__isnull=True)
         | ~Q(outbound_email__status=OutboundEmail.STATUS_SENT)
@@ -150,17 +151,42 @@ def campaign_integrity_findings() -> dict:
         reason = ""
         if preference is None:
             reason = "preference_missing"
-        elif preference.withdrawn_at is not None or not preference.email_marketing:
+        elif preference.withdrawn_at is not None:
+            reason = "marketing_consent_withdrawn"
+        elif (
+            recipient.campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP
+            and not preference.whatsapp_marketing
+        ):
+            reason = "whatsapp_consent_withdrawn"
+        elif (
+            recipient.campaign.channel == CustomerCampaign.CHANNEL_EMAIL
+            and not preference.email_marketing
+        ):
             reason = "email_consent_withdrawn"
         elif not getattr(preference, recipient.campaign.topic, False):
             reason = "topic_consent_withdrawn"
-        elif (recipient.customer.email or "").strip().lower() != recipient.email_address.lower():
+        elif (
+            recipient.campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP
+            and (recipient.customer.phone or "").strip() != recipient.phone_number.strip()
+        ):
+            reason = "phone_changed"
+        elif (
+            recipient.campaign.channel == CustomerCampaign.CHANNEL_EMAIL
+            and (recipient.customer.email or "").strip().lower()
+            != recipient.email_address.lower()
+        ):
             reason = "email_changed"
         else:
             event = preference.events.order_by("-created_at", "-id").first()
             if event is None or event.action == MarketingConsentEvent.ACTION_WITHDRAWN:
                 reason = "active_consent_event_missing"
-            elif not event.email_marketing or not getattr(event, recipient.campaign.topic, False):
+            elif (
+                recipient.campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP
+                and not event.whatsapp_marketing
+            ) or (
+                recipient.campaign.channel == CustomerCampaign.CHANNEL_EMAIL
+                and not event.email_marketing
+            ) or not getattr(event, recipient.campaign.topic, False):
                 reason = "consent_event_mismatch"
         if reason:
             stale_consent_recipients.append(

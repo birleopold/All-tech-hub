@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from urllib.parse import quote
 
 from django.conf import settings
 from django.db import transaction
@@ -70,17 +71,18 @@ def _approval_is_current(campaign: CustomerCampaign, *, at=None) -> bool:
 
 
 def eligible_customer_queryset(campaign: CustomerCampaign):
-    if campaign.channel != CustomerCampaign.CHANNEL_EMAIL:
-        return Customer.objects.none()
-
     topic_field = f"marketing_preference__{campaign.topic}"
+    channel_field = (
+        "marketing_preference__whatsapp_marketing"
+        if campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP
+        else "marketing_preference__email_marketing"
+    )
     queryset = (
         Customer.objects.filter(
-            marketing_preference__email_marketing=True,
+            **{channel_field: True},
             marketing_preference__withdrawn_at__isnull=True,
             **{topic_field: True},
         )
-        .exclude(email="")
         .annotate(
             order_count=Count(
                 "orders",
@@ -94,6 +96,10 @@ def eligible_customer_queryset(campaign: CustomerCampaign):
         )
         .select_related("marketing_preference")
     )
+    if campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP:
+        queryset = queryset.exclude(phone="")
+    else:
+        queryset = queryset.exclude(email="")
     recent_cutoff = timezone.now() - timedelta(days=90)
     if campaign.segment == CustomerCampaign.SEGMENT_REPEAT:
         queryset = queryset.filter(order_count__gte=2)
@@ -108,11 +114,17 @@ def _latest_active_event(
     preference: CustomerMarketingPreference,
     *,
     topic: str,
+    channel: str = CustomerCampaign.CHANNEL_EMAIL,
 ) -> MarketingConsentEvent | None:
     event = preference.events.order_by("-created_at", "-id").first()
     if event is None or event.action == MarketingConsentEvent.ACTION_WITHDRAWN:
         return None
-    if not event.email_marketing or not getattr(event, topic, False):
+    channel_allowed = (
+        event.whatsapp_marketing
+        if channel == CustomerCampaign.CHANNEL_WHATSAPP
+        else event.email_marketing
+    )
+    if not channel_allowed or not getattr(event, topic, False):
         return None
     return event
 
@@ -151,14 +163,17 @@ def prepare_campaign(campaign: CustomerCampaign, *, user) -> CustomerCampaign:
     customers = list(eligible_customer_queryset(campaign)[: campaign.max_recipients])
     for customer in customers:
         preference = customer.marketing_preference
-        event = _latest_active_event(preference, topic=campaign.topic)
+        event = _latest_active_event(
+            preference, topic=campaign.topic, channel=campaign.channel
+        )
         if event is None:
             continue
         recipients.append(
             CustomerCampaignRecipient(
                 campaign=campaign,
                 customer=customer,
-                email_address=customer.email.strip().lower(),
+                email_address=(customer.email or "").strip().lower(),
+                phone_number=(customer.phone or "").strip(),
                 consent_event=event,
             )
         )
@@ -274,21 +289,37 @@ def _current_consent(
     customer = Customer.objects.filter(pk=recipient.customer_id).first()
     if customer is None:
         return None, None, "customer_removed"
-    current_email = (customer.email or "").strip().lower()
-    if not current_email:
-        return None, None, "email_missing"
-    if current_email != recipient.email_address.strip().lower():
-        return None, None, "email_changed_reprepare_required"
+    if recipient.campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP:
+        current_phone = (customer.phone or "").strip()
+        if not current_phone:
+            return None, None, "phone_missing"
+        if current_phone != recipient.phone_number.strip():
+            return None, None, "phone_changed_reprepare_required"
+    else:
+        current_email = (customer.email or "").strip().lower()
+        if not current_email:
+            return None, None, "email_missing"
+        if current_email != recipient.email_address.strip().lower():
+            return None, None, "email_changed_reprepare_required"
     preference = CustomerMarketingPreference.objects.filter(
         customer_id=recipient.customer_id
     ).first()
     if preference is None:
         return None, None, "preference_missing"
-    if preference.withdrawn_at is not None or not preference.email_marketing:
-        return preference, None, "email_consent_withdrawn"
+    channel_allowed = (
+        preference.whatsapp_marketing
+        if recipient.campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP
+        else preference.email_marketing
+    )
+    if preference.withdrawn_at is not None or not channel_allowed:
+        return preference, None, f"{recipient.campaign.channel}_consent_withdrawn"
     if not getattr(preference, recipient.campaign.topic, False):
         return preference, None, "topic_consent_withdrawn"
-    event = _latest_active_event(preference, topic=recipient.campaign.topic)
+    event = _latest_active_event(
+        preference,
+        topic=recipient.campaign.topic,
+        channel=recipient.campaign.channel,
+    )
     if event is None:
         return preference, None, "active_consent_event_missing"
     return preference, event, ""
@@ -577,6 +608,10 @@ def send_campaign_batch(
     batch_size: int | None = None,
     automated: bool = False,
 ) -> CustomerCampaign:
+    if campaign.channel != CustomerCampaign.CHANNEL_EMAIL:
+        raise CampaignOperationError(
+            "WhatsApp campaigns use the consent-safe manual click-to-chat queue."
+        )
     if not getattr(settings, "CUSTOMER_CAMPAIGN_SEND_ENABLED", False):
         raise CampaignOperationError(
             "Customer campaign sending is disabled by the production safety switch."
@@ -680,6 +715,122 @@ def send_campaign_batch(
     return refresh_campaign_counts(campaign)
 
 
+def _whatsapp_digits(raw_phone: str) -> str:
+    digits = "".join(character for character in (raw_phone or "") if character.isdigit())
+    if digits.startswith("0") and len(digits) >= 10:
+        digits = "256" + digits[1:]
+    return digits
+
+
+@transaction.atomic
+def open_whatsapp_recipient(recipient: CustomerCampaignRecipient, *, user) -> str | None:
+    recipient = (
+        CustomerCampaignRecipient.objects.select_for_update()
+        .select_related("campaign", "customer")
+        .get(pk=recipient.pk)
+    )
+    campaign = recipient.campaign
+    if campaign.channel != CustomerCampaign.CHANNEL_WHATSAPP:
+        raise CampaignOperationError("This recipient does not belong to a WhatsApp campaign.")
+    if campaign.status not in {
+        CustomerCampaign.STATUS_APPROVED,
+        CustomerCampaign.STATUS_SENDING,
+    }:
+        raise CampaignOperationError("Approve the WhatsApp campaign before opening messages.")
+    if recipient.status != CustomerCampaignRecipient.STATUS_PENDING:
+        raise CampaignOperationError("Only pending recipients can be opened for WhatsApp.")
+    if not _approval_is_current(campaign):
+        raise CampaignOperationError("The campaign approval has expired.")
+    preference, event, reason = _current_consent(recipient)
+    if reason or preference is None or event is None:
+        recipient.status = CustomerCampaignRecipient.STATUS_SUPPRESSED
+        recipient.suppression_reason = reason or "consent_recheck_failed"
+        recipient.attempted_at = timezone.now()
+        recipient.save(
+            update_fields=["status", "suppression_reason", "attempted_at", "updated_at"]
+        )
+        refresh_campaign_counts(campaign)
+        return None
+    digits = _whatsapp_digits(recipient.phone_number)
+    if len(digits) < 10:
+        raise CampaignOperationError("The saved phone number is not valid for WhatsApp.")
+    company_name = CompanySettings.load().company_name
+    unsubscribe_url = _unsubscribe_url(preference)
+    message = _render_template(
+        campaign.body,
+        customer=recipient.customer,
+        company_name=company_name,
+        unsubscribe_url=unsubscribe_url,
+    )
+    if "{unsubscribe_url}" not in campaign.body:
+        message = (
+            f"{message.rstrip()}\n\nManage optional marketing preferences: "
+            f"{unsubscribe_url}"
+        )
+    recipient.attempted_at = timezone.now()
+    recipient.consent_event = event
+    recipient.suppression_reason = ""
+    recipient.save(
+        update_fields=[
+            "attempted_at",
+            "consent_event",
+            "suppression_reason",
+            "updated_at",
+        ]
+    )
+    if campaign.status == CustomerCampaign.STATUS_APPROVED:
+        campaign.status = CustomerCampaign.STATUS_SENDING
+        campaign.started_at = timezone.now()
+        campaign.sent_by = user
+        campaign.save(
+            update_fields=["status", "started_at", "sent_by", "updated_at"]
+        )
+    return f"https://wa.me/{digits}?text={quote(message)}"
+
+
+@transaction.atomic
+def mark_whatsapp_recipient_sent(
+    recipient: CustomerCampaignRecipient, *, user
+) -> CustomerCampaign:
+    recipient = (
+        CustomerCampaignRecipient.objects.select_for_update()
+        .select_related("campaign", "customer")
+        .get(pk=recipient.pk)
+    )
+    campaign = recipient.campaign
+    if campaign.channel != CustomerCampaign.CHANNEL_WHATSAPP:
+        raise CampaignOperationError("This recipient does not belong to a WhatsApp campaign.")
+    if recipient.status != CustomerCampaignRecipient.STATUS_PENDING:
+        raise CampaignOperationError("Only pending recipients can be confirmed as sent.")
+    if not _approval_is_current(campaign):
+        raise CampaignOperationError("The campaign approval expired before confirmation.")
+    if not recipient.attempted_at:
+        raise CampaignOperationError("Open the WhatsApp message before confirming it as sent.")
+    preference, event, reason = _current_consent(recipient)
+    if reason or preference is None or event is None:
+        recipient.status = CustomerCampaignRecipient.STATUS_SUPPRESSED
+        recipient.suppression_reason = reason or "consent_recheck_failed"
+        recipient.save(update_fields=["status", "suppression_reason", "updated_at"])
+        return refresh_campaign_counts(campaign)
+    recipient.status = CustomerCampaignRecipient.STATUS_SENT
+    recipient.sent_at = timezone.now()
+    recipient.consent_event = event
+    recipient.suppression_reason = ""
+    recipient.save(
+        update_fields=[
+            "status",
+            "sent_at",
+            "consent_event",
+            "suppression_reason",
+            "updated_at",
+        ]
+    )
+    if campaign.sent_by_id is None:
+        campaign.sent_by = user
+        campaign.save(update_fields=["sent_by", "updated_at"])
+    return refresh_campaign_counts(campaign)
+
+
 @transaction.atomic
 def schedule_campaign(
     campaign: CustomerCampaign,
@@ -689,6 +840,10 @@ def schedule_campaign(
     batch_size: int,
 ) -> CustomerCampaign:
     campaign = CustomerCampaign.objects.select_for_update().get(pk=campaign.pk)
+    if campaign.channel != CustomerCampaign.CHANNEL_EMAIL:
+        raise CampaignOperationError(
+            "WhatsApp campaigns are intentionally manual and cannot be scheduled."
+        )
     if campaign.status != CustomerCampaign.STATUS_APPROVED:
         raise CampaignOperationError("Only an approved campaign can be scheduled.")
     if campaign.recipients.filter(

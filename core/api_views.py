@@ -131,6 +131,8 @@ def api_order_lookup(request):
             "subtotal": _money(order.subtotal),
             "tax_amount": _money(order.tax_amount),
             "discount_amount": _money(order.discount_amount),
+            "delivery_fee": _money(order.delivery_fee),
+            "delivery_zone": order.delivery_zone_name,
             "total": _money(order.total),
             "customer_name": order.contact_name,
             "fulfillment_type": order.fulfillment_type,

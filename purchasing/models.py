@@ -136,6 +136,10 @@ class PurchaseLine(models.Model):
     def received_total(self) -> Decimal:
         return (Decimal(self.received_quantity) * self.unit_cost).quantize(Decimal("0.01"))
 
+    @property
+    def remaining_quantity(self) -> int:
+        return max(int(self.quantity) - int(self.received_quantity), 0)
+
 
 class StockReceipt(models.Model):
     """A receiving event (GRN) that increments product stock quantities."""

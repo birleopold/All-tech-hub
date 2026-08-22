@@ -8,15 +8,20 @@ from qrcode.image.svg import SvgPathImage
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import F, Sum
+from django.db.models import Count, F, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
-from catalog.models import Product
+from catalog.models import Product, ProductReview
+from commerce.models import Order, Shipment
 from core.mixins import StaffRequiredMixin
+from crm.models import Customer
+from customer_campaigns.models import CustomerCampaign
+from growth.models import Ambassador, AmbassadorConversion, GrowthSettings, SavedCart
+from loyalty.models import CustomerMarketingPreference, LoyaltyAccount
 from marketing.forms import (
     CampaignLinkForm,
     CaptionTemplateForm,
@@ -33,6 +38,7 @@ from marketing.models import (
     ScheduledPost,
     SocialProfileSettings,
 )
+from marketing.readiness import evaluate_growth_phases
 
 
 class MarketingDashboardView(StaffRequiredMixin, TemplateView):
@@ -95,6 +101,217 @@ class MarketingDashboardView(StaffRequiredMixin, TemplateView):
             }
         )
         return ctx
+
+
+class MarketReadinessView(StaffRequiredMixin, TemplateView):
+    template_name = "marketing/market_readiness.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        now = timezone.now()
+        cutoff = now - timezone.timedelta(days=30)
+        products = Product.objects.filter(is_published=True)
+        published_count = products.count()
+        missing_images = products.filter(
+            Q(image="") | Q(image__isnull=True), gallery_images__isnull=True
+        ).distinct().count()
+        missing_descriptions = products.filter(
+            Q(short_description="") | Q(description="")
+        ).count()
+        unavailable_products = products.filter(
+            kind=Product.KIND_PHYSICAL,
+            track_inventory=True,
+            stock_quantity__lte=0,
+        ).count()
+        social = SocialProfileSettings.load()
+        channels = [
+            {"name": "WhatsApp Business", "ready": bool(social.whatsapp_number)},
+            {"name": "TikTok", "ready": bool(social.tiktok_url)},
+            {"name": "Instagram", "ready": bool(social.instagram_url)},
+            {"name": "Facebook", "ready": bool(social.facebook_url)},
+            {"name": "LinkedIn", "ready": bool(social.linkedin_url)},
+            {"name": "YouTube", "ready": bool(social.youtube_url)},
+        ]
+        connected_channels = sum(channel["ready"] for channel in channels)
+        new_leads = MarketingLead.objects.filter(
+            status=MarketingLead.STATUS_NEW
+        ).count()
+        overdue_follow_ups = MarketingLead.objects.filter(
+            next_follow_up_at__lte=now
+        ).exclude(status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)).count()
+        response_samples = MarketingLead.objects.filter(
+            first_contacted_at__isnull=False
+        ).only("created_at", "first_contacted_at")[:500]
+        response_minutes = [
+            lead.first_response_minutes
+            for lead in response_samples
+            if lead.first_response_minutes is not None
+        ]
+        leads_30d = MarketingLead.objects.filter(created_at__gte=cutoff).count()
+        clicks_30d = CampaignClick.objects.filter(occurred_at__gte=cutoff).count()
+        orders_30d = Order.objects.filter(placed_at__gte=cutoff).exclude(
+            status=Order.STATUS_CANCELLED
+        )
+        customer_count = Customer.objects.count()
+        campaigns_active = MarketingCampaign.objects.filter(
+            status=MarketingCampaign.STATUS_ACTIVE
+        ).count()
+        tracked_links = CampaignLink.objects.count()
+        scheduled_content = ScheduledPost.objects.filter(
+            status__in=(ScheduledPost.STATUS_SCHEDULED, ScheduledPost.STATUS_READY)
+        ).count()
+        whatsapp_audience = CustomerMarketingPreference.objects.filter(
+            whatsapp_marketing=True,
+            withdrawn_at__isnull=True,
+            customer__phone__gt="",
+        ).count()
+        whatsapp_campaigns = CustomerCampaign.objects.filter(
+            channel=CustomerCampaign.CHANNEL_WHATSAPP
+        ).count()
+        growth_settings = GrowthSettings.load()
+        analytics_ready = bool(
+            growth_settings.ga4_measurement_id or growth_settings.clarity_project_id
+        )
+        published_reviews = ProductReview.objects.filter(is_published=True).count()
+        pending_reviews = ProductReview.objects.filter(is_published=False).count()
+        active_ambassadors = Ambassador.objects.filter(is_active=True).count()
+        ambassador_conversions = AmbassadorConversion.objects.exclude(
+            status=AmbassadorConversion.STATUS_CANCELLED
+        ).count()
+        loyalty_accounts = LoyaltyAccount.objects.count()
+        repeat_customers = Customer.objects.annotate(
+            completed_order_count=Count(
+                "orders",
+                filter=~Q(orders__status=Order.STATUS_CANCELLED),
+            )
+        ).filter(completed_order_count__gte=2).count()
+        aged_open_orders = Order.objects.filter(
+            status__in=(
+                Order.STATUS_PENDING,
+                Order.STATUS_CONFIRMED,
+                Order.STATUS_PROCESSING,
+            ),
+            placed_at__lt=now - timezone.timedelta(hours=24),
+        ).count()
+        shipment_exceptions = Shipment.objects.filter(
+            status=Shipment.STATUS_EXCEPTION
+        ).count()
+        active_saved_carts = SavedCart.objects.filter(status=SavedCart.STATUS_ACTIVE)
+        abandoned_cart_count = active_saved_carts.filter(
+            last_activity__lte=now
+            - timezone.timedelta(hours=growth_settings.abandoned_cart_first_delay_hours)
+        ).count()
+        abandoned_cart_value = active_saved_carts.aggregate(total=Sum("subtotal"))[
+            "total"
+        ] or 0
+        recovered_carts_30d = SavedCart.objects.filter(
+            status=SavedCart.STATUS_RECOVERED,
+            updated_at__gte=cutoff,
+        ).count()
+        email_delivery_ready = settings.EMAIL_BACKEND not in {
+            "django.core.mail.backends.console.EmailBackend",
+            "django.core.mail.backends.dummy.EmailBackend",
+            "django.core.mail.backends.filebased.EmailBackend",
+            "django.core.mail.backends.locmem.EmailBackend",
+        }
+        catalogue_score = 0
+        if published_count:
+            image_coverage = 1 - (missing_images / published_count)
+            copy_coverage = 1 - (missing_descriptions / published_count)
+            catalogue_score = round(25 * max(0, (image_coverage + copy_coverage) / 2))
+        readiness_score = max(
+            0,
+            min(
+                100,
+                catalogue_score
+                + min(15, connected_channels * 3)
+                + (15 if social.whatsapp_number else 0)
+                + (10 if tracked_links else 0)
+                + (10 if campaigns_active else 0)
+                + (10 if scheduled_content else 0)
+                + (10 if customer_count else 0)
+                + (5 if leads_30d else 0)
+                - (0 if email_delivery_ready else 10),
+            ),
+        )
+        order_count_30d = orders_30d.count()
+        phase_audit = evaluate_growth_phases(
+            {
+                "published_count": published_count,
+                "connected_channels": connected_channels,
+                "analytics_ready": analytics_ready,
+                "missing_images": missing_images,
+                "missing_descriptions": missing_descriptions,
+                "published_reviews": published_reviews,
+                "business_profile_ready": bool(
+                    growth_settings.google_business_profile_url
+                ),
+                "tracked_links": tracked_links,
+                "scheduled_content": scheduled_content,
+                "clicks_30d": clicks_30d,
+                "leads_30d": leads_30d,
+                "overdue_follow_ups": overdue_follow_ups,
+                "orders_30d": order_count_30d,
+                "unavailable_products": unavailable_products,
+                "aged_open_orders": aged_open_orders,
+                "shipment_exceptions": shipment_exceptions,
+                "cart_recovery_ready": (
+                    growth_settings.abandoned_cart_enabled and email_delivery_ready
+                ),
+                "loyalty_accounts": loyalty_accounts,
+                "repeat_customers": repeat_customers,
+                "active_ambassadors": active_ambassadors,
+                "ambassador_conversions": ambassador_conversions,
+            }
+        )
+        context.update(
+            {
+                "readiness_score": readiness_score,
+                "published_count": published_count,
+                "missing_images": missing_images,
+                "missing_descriptions": missing_descriptions,
+                "unavailable_products": unavailable_products,
+                "channels": channels,
+                "connected_channels": connected_channels,
+                "new_leads": new_leads,
+                "overdue_follow_ups": overdue_follow_ups,
+                "average_first_response_minutes": round(
+                    sum(response_minutes) / len(response_minutes)
+                )
+                if response_minutes
+                else None,
+                "email_delivery_ready": email_delivery_ready,
+                "leads_30d": leads_30d,
+                "clicks_30d": clicks_30d,
+                "orders_30d": order_count_30d,
+                "revenue_30d": orders_30d.aggregate(total=Sum("total"))["total"] or 0,
+                "new_customers_30d": Customer.objects.filter(
+                    created_at__gte=cutoff
+                ).count(),
+                "campaigns_active": campaigns_active,
+                "tracked_links": tracked_links,
+                "scheduled_content": scheduled_content,
+                "whatsapp_audience": whatsapp_audience,
+                "whatsapp_campaigns": whatsapp_campaigns,
+                "analytics_ready": analytics_ready,
+                "published_reviews": published_reviews,
+                "pending_reviews": pending_reviews,
+                "active_ambassadors": active_ambassadors,
+                "ambassador_conversions": ambassador_conversions,
+                "loyalty_accounts": loyalty_accounts,
+                "repeat_customers": repeat_customers,
+                "aged_open_orders": aged_open_orders,
+                "shipment_exceptions": shipment_exceptions,
+                "abandoned_cart_count": abandoned_cart_count,
+                "abandoned_cart_value": abandoned_cart_value,
+                "recovered_carts_30d": recovered_carts_30d,
+                "phase_audit": phase_audit,
+                "conversion_rate": round(leads_30d * 100 / clicks_30d, 1)
+                if clicks_30d
+                else 0,
+            }
+        )
+        return context
 
 
 class CreatedByFormMixin:
@@ -262,7 +479,29 @@ class LeadListView(MarketingListMixin, ListView):
             qs = qs.filter(status=status)
         if source:
             qs = qs.filter(source=source)
+        follow_up = self.request.GET.get("follow_up")
+        if follow_up == "overdue":
+            qs = qs.filter(next_follow_up_at__lte=timezone.now()).exclude(
+                status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)
+            )
+        elif follow_up == "today":
+            today = timezone.localdate()
+            qs = qs.filter(next_follow_up_at__date=today).exclude(
+                status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)
+            )
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                "lead_status": self.request.GET.get("status") or "",
+                "lead_source": self.request.GET.get("source") or "",
+                "lead_follow_up": self.request.GET.get("follow_up") or "",
+                "lead_status_choices": MarketingLead.STATUS_CHOICES,
+            }
+        )
+        return context
 
 
 class LeadCreateView(MarketingFormMixin, CreateView):

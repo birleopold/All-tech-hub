@@ -7,7 +7,11 @@ from django.db import models
 
 class CustomerCampaign(models.Model):
     CHANNEL_EMAIL = "email"
-    CHANNEL_CHOICES = [(CHANNEL_EMAIL, "Email")]
+    CHANNEL_WHATSAPP = "whatsapp"
+    CHANNEL_CHOICES = [
+        (CHANNEL_EMAIL, "Email"),
+        (CHANNEL_WHATSAPP, "WhatsApp (manual click-to-chat)"),
+    ]
 
     TOPIC_PRODUCT_UPDATES = "product_updates"
     TOPIC_SPECIAL_OFFERS = "special_offers"
@@ -187,7 +191,8 @@ class CustomerCampaignRecipient(models.Model):
         on_delete=models.CASCADE,
         related_name="customer_campaign_recipients",
     )
-    email_address = models.EmailField()
+    email_address = models.EmailField(blank=True)
+    phone_number = models.CharField(max_length=32, blank=True)
     status = models.CharField(
         max_length=16,
         choices=STATUS_CHOICES,

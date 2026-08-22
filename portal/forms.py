@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, UserCreationForm
+from django.db import transaction
 
 from crm.models import Customer, CustomerAddress
 
@@ -30,22 +31,68 @@ class CustomerSignUpForm(UserCreationForm):
         for name in ("username", "password1", "password2"):
             self.fields[name].widget.attrs.setdefault("class", "form-control")
 
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        customers = Customer.objects.filter(email__iexact=email)
+        if customers.count() > 1:
+            raise forms.ValidationError(
+                "This email needs a customer-record review. Please contact customer support."
+            )
+        customer = customers.first()
+        if customer is not None and customer.user_id:
+            raise forms.ValidationError(
+                "An account already exists for this email. Sign in or reset your password."
+            )
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                "An account already exists for this email. Sign in or contact support."
+            )
+        return email
+
+    @transaction.atomic
     def save(self, commit=True):
-        user = super().save(commit=commit)
+        if not commit:
+            raise ValueError("Customer accounts must be saved before verification is sent.")
+        user = super().save(commit=False)
         email = self.cleaned_data["email"].strip().lower()
         full_name = self.cleaned_data["full_name"].strip()
         phone = (self.cleaned_data.get("phone") or "").strip()
         company_name = (self.cleaned_data.get("company_name") or "").strip()
-        Customer.objects.update_or_create(
-            email=email,
-            defaults={
-                "name": full_name,
-                "company_name": company_name,
-                "phone": phone,
-                "user": user,
-            },
-        )
+        user.email = email
+        user.first_name = full_name[:150]
+        user.is_active = False
+        user.save()
+        customer = Customer.objects.select_for_update().filter(email__iexact=email).first()
+        if customer is None:
+            Customer.objects.create(
+                email=email,
+                name=full_name,
+                company_name=company_name,
+                phone=phone,
+            )
         return user
+
+
+class CustomerPortalAuthenticationForm(AuthenticationForm):
+    """Staff must authenticate through their challenge-protected staff login."""
+
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        if user.is_staff:
+            raise forms.ValidationError(
+                "Staff accounts must sign in through the staff login page.",
+                code="staff_login_required",
+            )
+
+
+class CustomerPortalPasswordResetForm(PasswordResetForm):
+    """Keep customer self-service password recovery separate from staff accounts."""
+
+    def get_users(self, email):
+        for user in super().get_users(email):
+            profile = getattr(user, "customer_profile", None)
+            if not user.is_staff and profile is not None:
+                yield user
 
 
 class CustomerAddressForm(forms.ModelForm):
@@ -110,4 +157,3 @@ class PortalRepairIntakeForm(forms.Form):
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 5}),
         label="Describe the problem",
     )
-

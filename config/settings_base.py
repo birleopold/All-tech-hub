@@ -277,6 +277,9 @@ EMAIL_BACKEND = os.getenv(
     "ALLTECH_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
 DEFAULT_FROM_EMAIL = os.getenv("ALLTECH_DEFAULT_FROM_EMAIL", "no-reply@alltech.local")
+PORTAL_EMAIL_VERIFICATION_MAX_AGE = max(
+    300, int(os.getenv("ALLTECH_PORTAL_EMAIL_VERIFICATION_MAX_AGE", "86400"))
+)
 EMAIL_HOST = os.getenv("ALLTECH_EMAIL_HOST", "")
 EMAIL_PORT = int(os.getenv("ALLTECH_EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("ALLTECH_EMAIL_USER", "")

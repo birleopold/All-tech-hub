@@ -22,6 +22,8 @@ from customer_campaigns.services import (
     CampaignOperationError,
     approve_campaign,
     cancel_campaign,
+    mark_whatsapp_recipient_sent,
+    open_whatsapp_recipient,
     pause_campaign,
     prepare_campaign,
     resume_campaign,
@@ -153,6 +155,7 @@ def customer_campaign_detail(request, pk: int):
         "processing_count": campaign.recipients.filter(
             status=CustomerCampaignRecipient.STATUS_PROCESSING
         ).count(),
+        "is_whatsapp": campaign.channel == CustomerCampaign.CHANNEL_WHATSAPP,
     }
     return render(request, "customer_campaigns/detail.html", context)
 
@@ -221,6 +224,41 @@ def customer_campaign_send(request, pk: int):
             ),
         )
     return redirect("staff_customer_campaign_detail", pk=campaign.pk)
+
+
+@require_POST
+def customer_campaign_whatsapp_open(request, pk: int, recipient_pk: int):
+    _require_campaign_staff(request)
+    recipient = get_object_or_404(
+        CustomerCampaignRecipient, pk=recipient_pk, campaign_id=pk
+    )
+    try:
+        url = open_whatsapp_recipient(recipient, user=request.user)
+    except CampaignOperationError as exc:
+        messages.error(request, str(exc))
+        return redirect("staff_customer_campaign_detail", pk=pk)
+    if not url:
+        messages.error(
+            request,
+            "Consent or contact details changed; the recipient was suppressed.",
+        )
+        return redirect("staff_customer_campaign_detail", pk=pk)
+    return redirect(url)
+
+
+@require_POST
+def customer_campaign_whatsapp_sent(request, pk: int, recipient_pk: int):
+    _require_campaign_staff(request)
+    recipient = get_object_or_404(
+        CustomerCampaignRecipient, pk=recipient_pk, campaign_id=pk
+    )
+    try:
+        mark_whatsapp_recipient_sent(recipient, user=request.user)
+    except CampaignOperationError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "WhatsApp delivery recorded with fresh consent evidence.")
+    return redirect("staff_customer_campaign_detail", pk=pk)
 
 
 @require_POST

@@ -100,3 +100,29 @@ class ReceivingIntegrityTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock_quantity, 1)
         self.assertEqual(SupplierReturn.objects.count(), 1)
+
+    def test_purchase_order_can_receive_a_partial_shipment(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("staff_po_receive", args=[self.po.pk]),
+            {f"quantity_{self.line.pk}": "1"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.po.refresh_from_db()
+        self.line.refresh_from_db()
+        self.product.refresh_from_db()
+        self.assertEqual(self.po.status, PurchaseOrder.STATUS_PARTIAL)
+        self.assertEqual(self.line.received_quantity, 1)
+        self.assertEqual(self.product.stock_quantity, 1)
+
+    def test_partial_receiving_rejects_quantities_above_remaining(self):
+        self.client.force_login(self.user)
+        receipt_count = StockReceipt.objects.count()
+        response = self.client.post(
+            reverse("staff_po_receive", args=[self.po.pk]),
+            {f"quantity_{self.line.pk}": "3"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(StockReceipt.objects.count(), receipt_count)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 0)

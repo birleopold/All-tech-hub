@@ -34,6 +34,13 @@ def latest_backup_status(root: Path | None = None) -> BackupStatus:
         candidates = [
             path for path in backup_root.glob("leosoft-*") if path.is_dir()
         ]
+        # Older scheduled releases used flat alltech-backup manifests. Keep them
+        # visible while servers transition to the unified verified backup job.
+        candidates.extend(
+            path
+            for path in backup_root.glob("alltech-backup-*.json")
+            if path.is_file()
+        )
     except OSError:
         return BackupStatus(
             False,
@@ -64,7 +71,8 @@ def latest_backup_status(root: Path | None = None) -> BackupStatus:
         )
 
     age_hours = max(0.0, (timezone.now() - created_at).total_seconds() / 3600)
-    manifest_path = latest / "manifest.json"
+    manifest_path = latest if latest.is_file() else latest / "manifest.json"
+    backup_files_root = latest.parent if latest.is_file() else latest
     try:
         manifest_exists = manifest_path.exists()
     except OSError:
@@ -111,7 +119,7 @@ def latest_backup_status(root: Path | None = None) -> BackupStatus:
                 age_hours,
                 "Manifest contains an invalid file record",
             )
-        file_path = latest / str(record["name"])
+        file_path = backup_files_root / str(record["name"])
         expected_size = record.get("size_bytes")
         try:
             actual_size = file_path.stat().st_size

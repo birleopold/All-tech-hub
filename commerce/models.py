@@ -135,6 +135,10 @@ class Order(models.Model):
         choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_DELIVERY,
     )
+    delivery_zone_name = models.CharField(max_length=140, blank=True)
+    delivery_fee = models.DecimalField(
+        max_digits=14, decimal_places=2, default=Decimal("0")
+    )
     customer_note = models.TextField(blank=True)
     staff_note = models.TextField(blank=True)
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0"))

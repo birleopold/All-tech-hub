@@ -92,6 +92,7 @@ class Command(BaseCommand):
             "automation",
             "customer_campaigns",
             "loyalty",
+            "merchandising",
         }
 
         for role, app_models in ROLE_PERMISSIONS.items():

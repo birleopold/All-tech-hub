@@ -5,6 +5,11 @@ from marketing import views
 
 urlpatterns = [
     path("", views.MarketingDashboardView.as_view(), name="staff_marketing_dashboard"),
+    path(
+        "market-readiness/",
+        views.MarketReadinessView.as_view(),
+        name="staff_marketing_market_readiness",
+    ),
     path("campaigns/", views.CampaignListView.as_view(), name="staff_marketing_campaigns"),
     path("campaigns/new/", views.CampaignCreateView.as_view(), name="staff_marketing_campaign_create"),
     path("campaigns/<int:pk>/edit/", views.CampaignUpdateView.as_view(), name="staff_marketing_campaign_edit"),

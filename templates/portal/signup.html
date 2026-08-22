@@ -17,6 +17,7 @@
           {% csrf_token %}
           <p class="text-uppercase small fw-semibold text-primary mb-2">Sign up</p>
           <h2 class="h4 mb-3">Your details</h2>
+          {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
           {% for field in form %}
           <div class="mb-3">
             <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -25,7 +26,8 @@
             {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
           </div>
           {% endfor %}
-          <button type="submit" class="btn btn-primary btn-lg w-100">Create account</button>
+          <button type="submit" class="btn btn-primary btn-lg w-100">Create account securely</button>
+          <p class="small text-muted mt-3 mb-0">We will email you a verification link before any order or repair history is connected.</p>
           <p class="small text-muted mt-3 mb-0">Already have an account? <a href="{% url 'portal_login' %}">Sign in</a>.</p>
         </div>
       </form>

@@ -237,6 +237,19 @@ class MarketingLeadForm(BootstrapModelForm):
             "status",
             "estimated_value",
             "assigned_to",
+            "next_follow_up_at",
             "notes",
         )
-        widgets = {"notes": forms.Textarea(attrs={"rows": 5})}
+        widgets = {
+            "next_follow_up_at": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
+            "notes": forms.Textarea(attrs={"rows": 5}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["next_follow_up_at"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields["next_follow_up_at"].help_text = (
+            "Set the next promised contact time. Won and lost leads clear this automatically."
+        )
