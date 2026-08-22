@@ -24,11 +24,19 @@ class CustomerCampaign(models.Model):
     SEGMENT_REPEAT = "repeat"
     SEGMENT_RECENT = "recent"
     SEGMENT_DORMANT = "dormant"
+    SEGMENT_HIGH_VALUE = "high_value"
+    SEGMENT_NEW = "new"
+    SEGMENT_NO_PURCHASE = "no_purchase"
+    SEGMENT_PRODUCT_INTEREST = "product_interest"
     SEGMENT_CHOICES = [
         (SEGMENT_ALL, "All eligible customers"),
         (SEGMENT_REPEAT, "Repeat customers"),
         (SEGMENT_RECENT, "Ordered in the last 90 days"),
         (SEGMENT_DORMANT, "No order for at least 90 days"),
+        (SEGMENT_HIGH_VALUE, "High-value customers"),
+        (SEGMENT_NEW, "Customers added in the last 30 days"),
+        (SEGMENT_NO_PURCHASE, "Customers without a completed purchase"),
+        (SEGMENT_PRODUCT_INTEREST, "Customers who enquired about a product"),
     ]
 
     STATUS_DRAFT = "draft"
@@ -73,6 +81,9 @@ class CustomerCampaign(models.Model):
         choices=SEGMENT_CHOICES,
         default=SEGMENT_ALL,
     )
+    target_product = models.ForeignKey("catalog.Product", on_delete=models.SET_NULL, null=True, blank=True, related_name="targeted_customer_campaigns")
+    minimum_customer_spend = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    location_query = models.CharField(max_length=120, blank=True)
     subject = models.CharField(max_length=200)
     body = models.TextField(
         help_text=(

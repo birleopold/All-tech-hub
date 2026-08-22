@@ -29,4 +29,5 @@ urlpatterns = [
     path("leads/<int:pk>/edit/", views.LeadUpdateView.as_view(), name="staff_marketing_lead_edit"),
     path("leads/<int:pk>/claim/", views.LeadClaimView.as_view(), name="staff_marketing_lead_claim"),
     path("leads/<int:pk>/contacted/", views.LeadMarkContactedView.as_view(), name="staff_marketing_lead_contacted"),
+    path("leads/<int:pk>/quote/", views.LeadCreateQuoteView.as_view(), name="staff_marketing_lead_quote"),
 ]

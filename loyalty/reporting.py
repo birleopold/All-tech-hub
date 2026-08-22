@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 
@@ -16,7 +17,7 @@ from loyalty.models import (
 
 
 VALID_CHANNELS = {"email", "whatsapp"}
-VALID_SEGMENTS = {"all", "repeat", "dormant", "recent"}
+VALID_SEGMENTS = {"all", "repeat", "dormant", "recent", "high_value", "new", "no_purchase"}
 VALID_TOPICS = {"product_updates", "special_offers"}
 
 
@@ -74,6 +75,12 @@ def customer_growth_summary(
         eligible = eligible.filter(last_order_at__lt=recent_cutoff)
     elif segment == "recent":
         eligible = eligible.filter(last_order_at__gte=recent_cutoff)
+    elif segment == "high_value":
+        eligible = eligible.filter(lifetime_value__gte=getattr(settings, "CUSTOMER_CAMPAIGN_HIGH_VALUE_UGX", 1000000))
+    elif segment == "new":
+        eligible = eligible.filter(created_at__gte=now - timedelta(days=30))
+    elif segment == "no_purchase":
+        eligible = eligible.filter(order_count=0)
 
     audience = list(
         eligible.order_by("-lifetime_value", "-last_order_at", "name", "id")[:100]

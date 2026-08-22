@@ -12,7 +12,7 @@ from commerce.models import Order
 from core.models import ContactMessage, StaffNotification, SupportTicket
 from crm.models import Customer
 from marketing.models import CampaignLink, MarketingCampaign, MarketingLead
-from marketing.services import close_lead_from_order
+from marketing.services import close_lead_from_order, create_quote_from_lead, process_due_lead_followups
 
 
 @override_settings(MARKETING_LEAD_RESPONSE_TARGET_MINUTES=30)
@@ -162,3 +162,32 @@ class SalesLeadPipelineTests(TestCase):
         self.assertEqual(ticket.related_product, product)
         self.assertEqual(ticket.priority, SupportTicket.PRIORITY_HIGH)
         self.assertContains(self.client.get(response.url), product.name)
+
+    def test_enquiry_becomes_one_customer_linked_quotation(self):
+        category = Category.objects.create(name="Quote computers", slug="quote-computers")
+        product = Product.objects.create(category=category, name="Business laptop", slug="business-laptop", price=Decimal("1850000.00"), stock_quantity=3)
+        lead = MarketingLead.objects.create(name="Interested buyer", email="buyer@example.com", product=product, assigned_to=self.salesperson)
+
+        first = create_quote_from_lead(lead, actor=self.salesperson)
+        second = create_quote_from_lead(lead, actor=self.salesperson)
+
+        lead.refresh_from_db()
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(lead.quoted_document, first)
+        self.assertEqual(first.customer.email, "buyer@example.com")
+        self.assertEqual(first.lines.get().product, product)
+        self.assertEqual(lead.status, MarketingLead.STATUS_QUALIFIED)
+
+    def test_overdue_enquiry_is_reminded_and_escalated_once(self):
+        manager = get_user_model().objects.create_user(username="lead-manager", password="strong-test-password", is_staff=True, is_superuser=True)
+        lead = MarketingLead.objects.create(name="Overdue buyer", email="late@example.com", assigned_to=self.salesperson,
+            response_due_at=timezone.now() - timedelta(hours=2), next_follow_up_at=timezone.now() - timedelta(hours=2))
+
+        first = process_due_lead_followups()
+        second = process_due_lead_followups()
+
+        lead.refresh_from_db()
+        self.assertEqual(first, {"reminded": 1, "escalated": 1})
+        self.assertEqual(second, {"reminded": 0, "escalated": 0})
+        self.assertIsNotNone(lead.escalated_at)
+        self.assertTrue(StaffNotification.objects.filter(recipient=manager, message__icontains="Escalated").exists())

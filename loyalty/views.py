@@ -72,6 +72,8 @@ def portal_loyalty_account(request):
             "account": account,
             "transactions": account.transactions.all()[:50],
             "points_enabled": bool(getattr(settings, "LOYALTY_POINTS_ENABLED", False)),
+            "reward_value": account.points_balance * int(getattr(settings, "LOYALTY_POINT_VALUE_UGX", 100)),
+            "minimum_redemption": int(getattr(settings, "LOYALTY_MIN_REDEMPTION_POINTS", 50)),
         },
     )
 

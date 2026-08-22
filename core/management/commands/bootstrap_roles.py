@@ -64,6 +64,8 @@ ROLE_PERMISSIONS = {
         },
         "commerce": {"order", "orderline", "coupon"},
         "crm": {"customer"},
+        "growth": {"growthsettings", "ambassador", "ambassadorconversion"},
+        "loyalty": {"loyaltyaccount", "loyaltytransaction"},
         "messaging": {"outboundemail"},
         "core": {"auditevent"},
     },

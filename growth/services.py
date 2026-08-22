@@ -2,6 +2,8 @@ from decimal import Decimal
 from urllib.parse import urljoin
 
 from django.db.models import Count, Sum
+from django.db import transaction
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from catalog.models import Product, ProductVariant
@@ -22,6 +24,38 @@ from messaging.utils import send_outbound_email
 ANALYTICS_SESSION_KEY = "growth_analytics_events"
 PURCHASE_SESSION_KEY = "growth_purchase_order"
 AMBASSADOR_SESSION_KEY = "growth_ambassador_code"
+
+
+@transaction.atomic
+def approve_ambassador_conversion(conversion, *, actor):
+    conversion = AmbassadorConversion.objects.select_for_update().select_related("order").get(pk=conversion.pk)
+    if conversion.status != AmbassadorConversion.STATUS_PENDING:
+        raise ValidationError("Only pending ambassador commissions can be approved.")
+    from commerce.models import Order
+
+    if conversion.order.status == Order.STATUS_CANCELLED:
+        raise ValidationError("Commissions cannot be approved for cancelled orders.")
+    conversion.status = AmbassadorConversion.STATUS_APPROVED
+    conversion.approved_at = timezone.now()
+    conversion.approved_by = actor
+    conversion.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
+    return conversion
+
+
+@transaction.atomic
+def pay_ambassador_conversion(conversion, *, actor, payout_reference: str):
+    conversion = AmbassadorConversion.objects.select_for_update().get(pk=conversion.pk)
+    if conversion.status != AmbassadorConversion.STATUS_APPROVED:
+        raise ValidationError("Approve the commission before recording payment.")
+    payout_reference = (payout_reference or "").strip()
+    if not payout_reference:
+        raise ValidationError("A mobile-money, bank, or cash payment reference is required.")
+    conversion.status = AmbassadorConversion.STATUS_PAID
+    conversion.paid_at = timezone.now()
+    conversion.paid_by = actor
+    conversion.payout_reference = payout_reference[:120]
+    conversion.save(update_fields=["status", "paid_at", "paid_by", "payout_reference", "updated_at"])
+    return conversion
 
 
 def company_base_url() -> str:

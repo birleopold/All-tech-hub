@@ -405,11 +405,16 @@ def queue_due_growth_jobs(*, limit: int = 100, dry_run: bool = False) -> dict:
                     )
                 )
 
+    from marketing.services import process_due_lead_followups
+
+    followups = process_due_lead_followups(limit=limit, dry_run=dry_run)
     return {
         "due_cart": len(first_ids) + len(second_ids),
         "due_alerts": len(alert_ids),
         "queued_cart": queued_cart,
         "queued_alerts": queued_alerts,
+        "lead_reminders": followups["reminded"],
+        "lead_escalations": followups["escalated"],
     }
 
 

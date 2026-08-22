@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Q, Sum
 from django.urls import reverse
 from django.utils import timezone
 
@@ -18,6 +18,7 @@ from customer_campaigns.models import (
     CustomerCampaignRecipient,
 )
 from loyalty.models import CustomerMarketingPreference, MarketingConsentEvent
+from marketing.models import MarketingLead
 from messaging.models import OutboundEmail
 from messaging.utils import retry_outbound_email
 
@@ -93,6 +94,7 @@ def eligible_customer_queryset(campaign: CustomerCampaign):
                 "orders__placed_at",
                 filter=~Q(orders__status=Order.STATUS_CANCELLED),
             ),
+            lifetime_spend=Sum("orders__total", filter=~Q(orders__status=Order.STATUS_CANCELLED)),
         )
         .select_related("marketing_preference")
     )
@@ -107,6 +109,23 @@ def eligible_customer_queryset(campaign: CustomerCampaign):
         queryset = queryset.filter(last_order_at__gte=recent_cutoff)
     elif campaign.segment == CustomerCampaign.SEGMENT_DORMANT:
         queryset = queryset.filter(last_order_at__lt=recent_cutoff)
+    elif campaign.segment == CustomerCampaign.SEGMENT_HIGH_VALUE:
+        threshold = campaign.minimum_customer_spend or getattr(settings, "CUSTOMER_CAMPAIGN_HIGH_VALUE_UGX", 1000000)
+        queryset = queryset.filter(lifetime_spend__gte=threshold)
+    elif campaign.segment == CustomerCampaign.SEGMENT_NEW:
+        queryset = queryset.filter(created_at__gte=timezone.now() - timedelta(days=30))
+    elif campaign.segment == CustomerCampaign.SEGMENT_NO_PURCHASE:
+        queryset = queryset.filter(order_count=0)
+    elif campaign.segment == CustomerCampaign.SEGMENT_PRODUCT_INTEREST:
+        if not campaign.target_product_id:
+            return queryset.none()
+        interested_emails = MarketingLead.objects.filter(product_id=campaign.target_product_id).exclude(email="").values("email")
+        queryset = queryset.filter(email__in=interested_emails)
+    if campaign.minimum_customer_spend:
+        queryset = queryset.filter(lifetime_spend__gte=campaign.minimum_customer_spend)
+    if campaign.location_query:
+        location = campaign.location_query.strip()
+        queryset = queryset.filter(Q(addresses__city__icontains=location) | Q(addresses__region__icontains=location) | Q(addresses__line1__icontains=location)).distinct()
     return queryset.order_by("-last_order_at", "name", "id")
 
 

@@ -337,6 +337,16 @@ class MarketingLead(models.Model):
         (STATUS_WON, "Won"),
         (STATUS_LOST, "Lost"),
     ]
+    LOSS_REASON_CHOICES = [
+        ("price", "Price too high"),
+        ("out_of_stock", "Product unavailable"),
+        ("slow_response", "Response was too slow"),
+        ("delivery", "Delivery did not work"),
+        ("competitor", "Bought from a competitor"),
+        ("no_budget", "Customer had no budget"),
+        ("unreachable", "Customer could not be reached"),
+        ("other", "Other reason"),
+    ]
 
     campaign = models.ForeignKey(
         MarketingCampaign,
@@ -389,6 +399,16 @@ class MarketingLead(models.Model):
     first_contacted_at = models.DateTimeField(null=True, blank=True, db_index=True)
     response_due_at = models.DateTimeField(null=True, blank=True, db_index=True)
     next_follow_up_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_reminded_at = models.DateTimeField(null=True, blank=True)
+    escalated_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    loss_reason = models.CharField(max_length=20, choices=LOSS_REASON_CHOICES, blank=True)
+    quoted_document = models.ForeignKey(
+        "billing.CommercialDocument",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_marketing_leads",
+    )
     won_at = models.DateTimeField(null=True, blank=True, db_index=True)
     won_order = models.ForeignKey(
         "commerce.Order",

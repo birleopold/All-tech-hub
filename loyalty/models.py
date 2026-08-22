@@ -164,10 +164,12 @@ class LoyaltyTransaction(models.Model):
     KIND_EARN = "earn"
     KIND_ADJUST = "adjust"
     KIND_REVERSE = "reverse"
+    KIND_REDEEM = "redeem"
     KIND_CHOICES = [
         (KIND_EARN, "Points earned"),
         (KIND_ADJUST, "Staff adjustment"),
         (KIND_REVERSE, "Points reversed"),
+        (KIND_REDEEM, "Points redeemed for account credit"),
     ]
 
     account = models.ForeignKey(

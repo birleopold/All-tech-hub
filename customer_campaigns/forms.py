@@ -27,6 +27,9 @@ class CustomerCampaignForm(BootstrapFormMixin, forms.ModelForm):
             "channel",
             "topic",
             "segment",
+            "target_product",
+            "minimum_customer_spend",
+            "location_query",
             "subject",
             "body",
             "max_recipients",
@@ -45,6 +48,10 @@ class CustomerCampaignForm(BootstrapFormMixin, forms.ModelForm):
             "Email can use bounded delivery. WhatsApp creates a consent-checked "
             "click-to-chat queue that staff send and confirm manually."
         )
+        self.fields["target_product"].required = False
+        self.fields["target_product"].help_text = "Required for product-interest campaigns; optional for other audiences."
+        self.fields["minimum_customer_spend"].help_text = "Optional minimum lifetime order value in UGX."
+        self.fields["location_query"].help_text = "Optional city, region, or address keyword."
         self.fields["max_recipients"].help_text = (
             "Preparation will stop at this number. The production maximum is "
             f"{getattr(settings, 'CUSTOMER_CAMPAIGN_MAX_RECIPIENTS', 100)}."
@@ -62,6 +69,8 @@ class CustomerCampaignForm(BootstrapFormMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        if cleaned_data.get("segment") == CustomerCampaign.SEGMENT_PRODUCT_INTEREST and not cleaned_data.get("target_product"):
+            self.add_error("target_product", "Choose the product customers asked about.")
         if (
             cleaned_data.get("channel") == CustomerCampaign.CHANNEL_WHATSAPP
             and len(cleaned_data.get("body") or "") > 1500

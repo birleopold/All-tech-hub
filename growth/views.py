@@ -6,13 +6,15 @@ import qrcode
 from qrcode.image.svg import SvgPathImage
 from django.conf import settings
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.views import View
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from catalog.models import Product
@@ -40,8 +42,10 @@ from growth.models import (
 )
 from growth.services import (
     AMBASSADOR_SESSION_KEY,
+    approve_ambassador_conversion,
     generate_content_assets,
     restore_saved_cart,
+    pay_ambassador_conversion,
     save_cart_for_recovery,
     send_saved_cart_message,
 )
@@ -305,7 +309,11 @@ class AmbassadorConversionListView(StaffRequiredMixin, ListView):
     paginate_by = 40
 
     def get_queryset(self):
-        return AmbassadorConversion.objects.select_related("ambassador", "order")
+        queryset = AmbassadorConversion.objects.select_related("ambassador", "order", "approved_by", "paid_by")
+        status = self.request.GET.get("status", "").strip()
+        if status in dict(AmbassadorConversion.STATUS_CHOICES):
+            queryset = queryset.filter(status=status)
+        return queryset
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -314,9 +322,39 @@ class AmbassadorConversionListView(StaffRequiredMixin, ListView):
                 "page_title": "Ambassador conversions and commissions",
                 "page_kind": "ambassador_conversions",
                 "create_url_name": "",
+                "commission_totals": AmbassadorConversion.objects.aggregate(
+                    pending=Sum("commission_amount", filter=Q(status=AmbassadorConversion.STATUS_PENDING)),
+                    approved=Sum("commission_amount", filter=Q(status=AmbassadorConversion.STATUS_APPROVED)),
+                    paid=Sum("commission_amount", filter=Q(status=AmbassadorConversion.STATUS_PAID)),
+                ),
+                "selected_status": self.request.GET.get("status", ""),
             }
         )
         return ctx
+
+
+class AmbassadorConversionApproveView(StaffRequiredMixin, View):
+    def post(self, request, pk):
+        conversion = get_object_or_404(AmbassadorConversion, pk=pk)
+        try:
+            approve_ambassador_conversion(conversion, actor=request.user)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+        else:
+            messages.success(request, f"Commission approved for {conversion.ambassador.name}.")
+        return redirect("staff_growth_ambassador_conversions")
+
+
+class AmbassadorConversionPayView(StaffRequiredMixin, View):
+    def post(self, request, pk):
+        conversion = get_object_or_404(AmbassadorConversion, pk=pk)
+        try:
+            result = pay_ambassador_conversion(conversion, actor=request.user, payout_reference=request.POST.get("payout_reference", ""))
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+        else:
+            messages.success(request, f"Ambassador payment recorded: {result.payout_reference}.")
+        return redirect("staff_growth_ambassador_conversions")
 
 
 def content_asset_workspace(request):

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from decimal import ROUND_FLOOR, Decimal
+import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from commerce.models import Order
+from billing.models import CustomerCredit
 from crm.models import Customer
 from loyalty.models import (
     CustomerMarketingPreference,
@@ -224,3 +227,43 @@ def ensure_loyalty_account(customer: Customer) -> LoyaltyAccount:
         account.tier = expected_tier
         account.save(update_fields=["tier", "updated_at"])
     return account
+
+
+@transaction.atomic
+def redeem_loyalty_points(customer: Customer, points: int, *, actor=None, note: str = ""):
+    """Exchange points for auditable customer credit applicable to invoices."""
+    if not getattr(settings, "LOYALTY_POINTS_ENABLED", False):
+        raise ValidationError("Loyalty rewards are not enabled.")
+    try:
+        points = int(points)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("Enter a valid number of points.") from exc
+    minimum = max(1, int(getattr(settings, "LOYALTY_MIN_REDEMPTION_POINTS", 50)))
+    if points < minimum:
+        raise ValidationError(f"Redeem at least {minimum} loyalty points.")
+    account = ensure_loyalty_account(customer)
+    account = LoyaltyAccount.objects.select_for_update().get(pk=account.pk)
+    if points > account.points_balance:
+        raise ValidationError("The customer does not have enough available loyalty points.")
+    point_value = max(Decimal("0.01"), Decimal(str(getattr(settings, "LOYALTY_POINT_VALUE_UGX", 100))))
+    amount = (Decimal(points) * point_value).quantize(Decimal("0.01"))
+    reference = f"LOYALTY-{uuid.uuid4().hex[:12].upper()}"
+    credit = CustomerCredit.objects.create(
+        customer=customer,
+        customer_name=customer.name,
+        amount=amount,
+        remaining_amount=amount,
+        reference=reference,
+        note=(note or f"Redeemed {points} loyalty points")[:255],
+        created_by=actor,
+    )
+    transaction_row = LoyaltyTransaction.objects.create(
+        account=account,
+        kind=LoyaltyTransaction.KIND_REDEEM,
+        points_delta=-points,
+        idempotency_key=f"redemption:{reference}",
+        note=f"Redeemed for account credit {reference}",
+    )
+    account.points_balance -= points
+    account.save(update_fields=["points_balance", "updated_at"])
+    return transaction_row, credit

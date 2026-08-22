@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -9,8 +10,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from catalog.models import Product
+from billing.models import CommercialDocument, CommercialLine, allocate_document_number
 from core.models import CompanySettings, ContactMessage
 from core.notifications import staff_notify
+from crm.models import Customer
 from marketing.attribution import order_attribution
 from marketing.lead_policy import classify_enquiry, response_minutes
 from marketing.models import (
@@ -225,3 +228,101 @@ def close_lead_from_order(order) -> MarketingLead | None:
     if lead.contact_message_id:
         ContactMessage.objects.filter(pk=lead.contact_message_id).update(handled=True)
     return lead
+
+
+@transaction.atomic
+def create_quote_from_lead(lead: MarketingLead, *, actor) -> CommercialDocument:
+    """Create one editable, correctly linked commercial quotation per enquiry."""
+    lead = MarketingLead.objects.select_for_update().select_related(
+        "product", "quoted_document"
+    ).get(pk=lead.pk)
+    if lead.quoted_document_id:
+        return lead.quoted_document
+    if lead.status in {MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST}:
+        raise ValueError("Closed enquiries cannot be converted into new quotations.")
+
+    customer = None
+    if lead.email:
+        customer = Customer.objects.filter(email__iexact=lead.email).order_by("pk").first()
+        if customer is None:
+            customer = Customer.objects.create(name=lead.name, email=lead.email, phone=lead.phone)
+    company = CompanySettings.load()
+    document = CommercialDocument.objects.create(
+        doc_type=CommercialDocument.TYPE_QUOTE,
+        number=allocate_document_number(CommercialDocument.PREFIX[CommercialDocument.TYPE_QUOTE]),
+        customer=customer,
+        customer_name=lead.name,
+        customer_email=lead.email,
+        customer_phone=lead.phone,
+        title=(f"Quotation for {lead.product.name}" if lead.product_id else "Customer quotation"),
+        notes=lead.notes,
+        tax_rate=company.default_tax_rate,
+        created_by=actor,
+        salesperson=lead.assigned_to or actor,
+    )
+    if lead.product_id:
+        CommercialLine.objects.create(
+            document=document,
+            product=lead.product,
+            description=lead.product.name,
+            quantity=Decimal("1"),
+            unit_price=lead.product.min_active_variant_price or lead.product.price,
+            source_type=(
+                CommercialLine.SOURCE_STOCK
+                if lead.product.kind == Product.KIND_PHYSICAL
+                else CommercialLine.SOURCE_SERVICE
+            ),
+            tax_rate=company.default_tax_rate,
+        )
+        document.recalculate_from_lines()
+        document.save()
+    lead.quoted_document = document
+    lead.status = MarketingLead.STATUS_QUALIFIED
+    lead.estimated_value = document.total or lead.estimated_value
+    if not lead.assigned_to_id:
+        lead.assigned_to = actor
+    lead.save()
+    if lead.contact_message_id:
+        ContactMessage.objects.filter(pk=lead.contact_message_id).update(handled=True)
+    return document
+
+
+def process_due_lead_followups(*, limit: int = 100, dry_run: bool = False) -> dict:
+    """Remind assigned staff and escalate unanswered enquiries once to managers."""
+    now = timezone.now()
+    reminder_interval = max(5, int(getattr(settings, "MARKETING_LEAD_REMINDER_INTERVAL_MINUTES", 60)))
+    escalation_delay = max(0, int(getattr(settings, "MARKETING_LEAD_ESCALATION_MINUTES", 30)))
+    throttle_before = now - timedelta(minutes=reminder_interval)
+    candidates = MarketingLead.objects.select_related("assigned_to").filter(
+        status__in=(MarketingLead.STATUS_NEW, MarketingLead.STATUS_CONTACTED, MarketingLead.STATUS_QUALIFIED)
+    ).filter(
+        Q(next_follow_up_at__lte=now)
+        | Q(status=MarketingLead.STATUS_NEW, first_contacted_at__isnull=True, response_due_at__lte=now)
+    ).filter(Q(last_reminded_at__isnull=True) | Q(last_reminded_at__lte=throttle_before)).order_by(
+        "response_due_at", "next_follow_up_at", "pk"
+    )[:max(1, min(int(limit), 500))]
+    reminders = escalations = 0
+    for lead in candidates:
+        destination = reverse("staff_marketing_lead_edit", kwargs={"pk": lead.pk})
+        should_escalate = bool(
+            lead.status == MarketingLead.STATUS_NEW
+            and lead.response_due_at
+            and lead.response_due_at <= now - timedelta(minutes=escalation_delay)
+            and not lead.escalated_at
+        )
+        reminders += 1
+        escalations += int(should_escalate)
+        if dry_run:
+            continue
+        if lead.assigned_to_id:
+            staff_notify(lead.assigned_to, f"Sales follow-up overdue: {lead.name}", destination)
+        if should_escalate:
+            managers = get_user_model().objects.filter(is_active=True, is_staff=True).filter(
+                Q(is_superuser=True) | Q(groups__name="Manager")
+            ).exclude(pk=lead.assigned_to_id).distinct()[:10]
+            for manager in managers:
+                staff_notify(manager, f"Escalated unanswered enquiry: {lead.name}", destination)
+            lead.escalated_at = now
+        lead.last_reminded_at = now
+        lead.save(update_fields=["last_reminded_at", "escalated_at", "updated_at"])
+    return {"reminded": reminders, "escalated": escalations}

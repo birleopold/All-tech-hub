@@ -462,6 +462,11 @@ class AmbassadorConversion(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_PENDING,
     )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="ambassador_conversions_approved")
+    paid_at = models.DateTimeField(null=True, blank=True)
+    paid_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="ambassador_conversions_paid")
+    payout_reference = models.CharField(max_length=120, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

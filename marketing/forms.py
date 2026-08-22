@@ -238,6 +238,7 @@ class MarketingLeadForm(BootstrapModelForm):
             "request_type",
             "priority",
             "status",
+            "loss_reason",
             "estimated_value",
             "assigned_to",
             "next_follow_up_at",
@@ -262,6 +263,17 @@ class MarketingLeadForm(BootstrapModelForm):
         ).order_by("username")
         self.fields["request_type"].required = False
         self.fields["priority"].required = False
+        self.fields["loss_reason"].help_text = (
+            "Record why a sale was lost so recurring commercial problems can be fixed."
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("status") == MarketingLead.STATUS_LOST and not cleaned_data.get("loss_reason"):
+            self.add_error("loss_reason", "Choose the main reason this sale was lost.")
+        if cleaned_data.get("status") != MarketingLead.STATUS_LOST:
+            cleaned_data["loss_reason"] = ""
+        return cleaned_data
 
     def clean_request_type(self):
         return self.cleaned_data.get("request_type") or self.instance.request_type or "other"

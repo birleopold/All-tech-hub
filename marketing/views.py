@@ -42,7 +42,9 @@ from marketing.models import (
     ScheduledPost,
     SocialProfileSettings,
 )
+from marketing.services import create_quote_from_lead
 from marketing.readiness import evaluate_growth_phases
+from marketing.integrations import integration_capabilities
 from reports.conversion import marketing_attribution_summary
 
 
@@ -247,6 +249,16 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
             "django.core.mail.backends.filebased.EmailBackend",
             "django.core.mail.backends.locmem.EmailBackend",
         }
+        from automation.connectors import MetaConfig
+
+        meta_config = MetaConfig.load()
+        integration_status = integration_capabilities(
+            facebook_connected=meta_config.supports("facebook"),
+            instagram_connected=meta_config.supports("instagram"),
+            whatsapp_available=bool(social.whatsapp_number),
+            email_connected=email_delivery_ready,
+            analytics_connected=analytics_ready,
+        )
         catalogue_score = 0
         if published_count:
             image_coverage = 1 - (missing_images / published_count)
@@ -306,12 +318,15 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
                 "unavailable_products": unavailable_products,
                 "channels": channels,
                 "connected_channels": connected_channels,
+                "integration_status": integration_status,
                 "new_leads": new_leads,
                 "response_breaches": response_breaches,
                 "unassigned_leads": unassigned_leads,
                 "in_demand_products": in_demand_products,
                 "unavailable_demanded_products": unavailable_demanded_products,
                 "overdue_follow_ups": overdue_follow_ups,
+                "quoted_leads_30d": MarketingLead.objects.filter(created_at__gte=cutoff, quoted_document__isnull=False).count(),
+                "lost_sale_reasons": list(MarketingLead.objects.filter(status=MarketingLead.STATUS_LOST).exclude(loss_reason="").values("loss_reason").annotate(count=Count("pk")).order_by("-count")[:5]),
                 "average_first_response_minutes": round(
                     sum(response_minutes) / len(response_minutes)
                 )
@@ -536,7 +551,7 @@ class LeadListView(MarketingListMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related(
-            "campaign", "link", "product", "assigned_to", "won_order"
+            "campaign", "link", "product", "assigned_to", "won_order", "quoted_document"
         )
         status = self.request.GET.get("status")
         source = self.request.GET.get("source")
@@ -678,6 +693,18 @@ class LeadMarkContactedView(StaffRequiredMixin, View):
             ContactMessage.objects.filter(pk=lead.contact_message_id).update(handled=True)
         messages.success(request, f"First response to {lead.name} has been recorded.")
         return redirect("staff_marketing_leads")
+
+
+class LeadCreateQuoteView(StaffRequiredMixin, View):
+    def post(self, request, pk):
+        lead = get_object_or_404(MarketingLead, pk=pk)
+        try:
+            document = create_quote_from_lead(lead, actor=request.user)
+        except ValueError as exc:
+            messages.warning(request, str(exc))
+            return redirect("staff_marketing_leads")
+        messages.success(request, f"Quotation {document.number} is ready for {lead.name}.")
+        return redirect("staff_document_edit", pk=document.pk)
 
 
 def _staff(user):
