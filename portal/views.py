@@ -487,7 +487,7 @@ class PortalTicketCreateView(FormView):
             self.request,
             f"Support request {ticket.reference} submitted. We will respond by email.",
         )
-        return redirect("portal_ticket_detail", pk=ticket.pk)
+        return redirect("portal_tickets")
 
 
 class PortalRepairIntakeView(FormView):
