@@ -187,6 +187,51 @@ class PortalSupportTicketForm(forms.ModelForm):
             "Use High only for urgent business interruptions or serious service issues."
         )
 
+    def clean(self):
+        cleaned = super().clean()
+        category = cleaned.get("category")
+        serial = cleaned.get("related_serial")
+        product = cleaned.get("related_product")
+        order = cleaned.get("related_order")
+
+        if category == SupportTicket.CATEGORY_WARRANTY and serial is None:
+            self.add_error(
+                "related_serial",
+                "Choose the purchased device covered by this warranty claim.",
+            )
+
+        if serial is not None:
+            if product is not None and product.pk != serial.product_id:
+                self.add_error(
+                    "related_product",
+                    "The selected product does not match the selected device serial.",
+                )
+            elif product is None:
+                cleaned["related_product"] = serial.product
+
+            if (
+                category == SupportTicket.CATEGORY_WARRANTY
+                and not serial.is_under_warranty
+            ):
+                self.add_error(
+                    "related_serial",
+                    "This device no longer has active warranty coverage. "
+                    "Please submit a general repair or support request.",
+                )
+
+        selected_product = cleaned.get("related_product")
+        if (
+            order is not None
+            and selected_product is not None
+            and not order.lines.filter(product_id=selected_product.pk).exists()
+        ):
+            self.add_error(
+                "related_order",
+                "The selected order does not contain the selected product.",
+            )
+
+        return cleaned
+
 
 class StaffSupportTicketForm(forms.ModelForm):
     class Meta:
