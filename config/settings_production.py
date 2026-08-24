@@ -12,7 +12,15 @@ if len(SECRET_KEY) < 50:
 if not ALLOWED_HOSTS:  # noqa: F405
     raise ImproperlyConfigured("ALLTECH_ALLOWED_HOSTS must list at least one hostname.")
 
-FIELD_ENCRYPTION_KEY = os.getenv("ALLTECH_FIELD_ENCRYPTION_KEY", SECRET_KEY)
+FIELD_ENCRYPTION_KEY = os.getenv("ALLTECH_FIELD_ENCRYPTION_KEY", "")
+if len(FIELD_ENCRYPTION_KEY) < 32:
+    raise ImproperlyConfigured(
+        "ALLTECH_FIELD_ENCRYPTION_KEY must contain at least 32 characters."
+    )
+if FIELD_ENCRYPTION_KEY == SECRET_KEY:
+    raise ImproperlyConfigured(
+        "ALLTECH_FIELD_ENCRYPTION_KEY must be different from ALLTECH_SECRET_KEY."
+    )
 DEBUG = False
 ENFORCE_STAFF_ROLES = True
 REQUIRE_STAFF_2FA = env_bool("ALLTECH_REQUIRE_STAFF_2FA", True)  # noqa: F405
