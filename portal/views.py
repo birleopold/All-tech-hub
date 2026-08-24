@@ -424,8 +424,40 @@ class PortalTicketCreateView(FormView):
     def get_initial(self):
         initial = super().get_initial()
         customer = _customer_for_request(self.request)
+        if customer is None:
+            return initial
+
+        order_id = (self.request.GET.get("order") or "").strip()
+        product_id = (self.request.GET.get("product") or "").strip()
+        action = (self.request.GET.get("action") or "").strip()
+        if order_id.isdigit():
+            order = Order.objects.filter(
+                pk=int(order_id),
+                customer=customer,
+            ).first()
+            if order is not None:
+                initial["related_order"] = order.pk
+                initial["subject"] = f"Support for order {order.reference}"[:200]
+                product = None
+                if product_id.isdigit():
+                    product = Product.objects.filter(
+                        pk=int(product_id),
+                        order_lines__order=order,
+                    ).first()
+                    if product is not None:
+                        initial["related_product"] = product.pk
+
+                if (
+                    action == "return"
+                    and order.status
+                    in (Order.STATUS_DELIVERED, Order.STATUS_FULFILLED)
+                ):
+                    initial["category"] = SupportTicket.CATEGORY_RMA
+                    item_name = product.name if product is not None else order.reference
+                    initial["subject"] = f"Return request: {item_name}"[:200]
+
         serial_id = (self.request.GET.get("serial") or "").strip()
-        if customer is None or not serial_id.isdigit():
+        if not serial_id.isdigit():
             return initial
 
         serial = (
