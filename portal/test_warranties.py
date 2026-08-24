@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from catalog.models import Category, Product, ProductSerial
+from commerce.models import Order, OrderLine
 from core.models import SupportTicket
 from crm.models import Customer
 
@@ -173,6 +174,54 @@ class CustomerWarrantyPortalTests(TestCase):
         self.assertContains(response, ticket.reference)
         self.assertContains(response, "Track warranty claim")
         self.assertEqual(response.context["open_warranty_claim_count"], 1)
+
+    def test_delivered_order_prefills_product_return_request(self):
+        self.client.force_login(self.user)
+        order = Order.objects.create(
+            customer=self.customer,
+            status=Order.STATUS_DELIVERED,
+            contact_name=self.customer.name,
+            contact_email=self.customer.email,
+        )
+        OrderLine.objects.create(
+            order=order,
+            product=self.product,
+            description=self.product.name,
+            quantity=1,
+            unit_price=self.product.price,
+        )
+        response = self.client.get(
+            reverse("portal_ticket_create"),
+            {
+                "order": order.pk,
+                "product": self.product.pk,
+                "action": "return",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["form"].initial["category"],
+            SupportTicket.CATEGORY_RMA,
+        )
+        self.assertEqual(response.context["form"].initial["related_order"], order.pk)
+        self.assertEqual(
+            response.context["form"].initial["related_product"],
+            self.product.pk,
+        )
+
+    def test_other_customer_order_cannot_prefill_support_request(self):
+        self.client.force_login(self.user)
+        other_order = Order.objects.create(
+            customer=self.other_customer,
+            contact_name=self.other_customer.name,
+            contact_email=self.other_customer.email,
+        )
+        response = self.client.get(
+            reverse("portal_ticket_create"),
+            {"order": other_order.pk, "action": "return"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("related_order", response.context["form"].initial)
 
     def test_public_knowledge_base_is_not_forced_to_noindex(self):
         response = self.client.get(reverse("portal_kb"))
