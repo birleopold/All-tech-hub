@@ -67,6 +67,7 @@ ROLE_PERMISSIONS = {
         "growth": {"growthsettings", "ambassador", "ambassadorconversion"},
         "loyalty": {"loyaltyaccount", "loyaltytransaction"},
         "messaging": {"outboundemail"},
+        "reliability": {"paymentattempt", "paymentrefund", "paymentwebhookevent"},
         "core": {"auditevent"},
     },
 }
@@ -95,6 +96,7 @@ class Command(BaseCommand):
             "customer_campaigns",
             "loyalty",
             "merchandising",
+            "reliability",
         }
 
         for role, app_models in ROLE_PERMISSIONS.items():

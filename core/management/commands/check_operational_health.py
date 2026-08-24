@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 from django.utils import timezone as django_timezone
+
+from core.backups import latest_backup_status
 
 
 class Command(BaseCommand):
@@ -65,34 +67,33 @@ class Command(BaseCommand):
         if disk_status == "error":
             failures.append(f"disk: only {free_percent:.1f}% free")
 
-        backup_root = Path(
-            getattr(settings, "BACKUP_ROOT", settings.BASE_DIR / "backups")
+        backup = latest_backup_status()
+        backup_status = (
+            "ok"
+            if backup.healthy
+            and backup.age_hours is not None
+            and backup.age_hours <= options["max_backup_age_hours"]
+            else "error"
         )
-        manifests = sorted(
-            backup_root.glob("alltech-backup-*.json") if backup_root.exists() else [],
-            key=lambda path: path.stat().st_mtime,
-            reverse=True,
+        checks.append(
+            {
+                "name": "backup",
+                "status": backup_status,
+                "age_hours": (
+                    round(backup.age_hours, 2)
+                    if backup.age_hours is not None
+                    else None
+                ),
+                "path": str(backup.path) if backup.path else "",
+                "detail": backup.detail,
+            }
         )
-        if not manifests:
-            checks.append({"name": "backup", "status": "error", "detail": "missing"})
-            failures.append("backup: no integrity manifest found")
-        else:
-            latest = manifests[0]
-            modified = datetime.fromtimestamp(latest.stat().st_mtime, tz=timezone.utc)
-            age_hours = (datetime.now(timezone.utc) - modified).total_seconds() / 3600
-            backup_status = (
-                "ok" if age_hours <= options["max_backup_age_hours"] else "error"
+        if not backup.healthy:
+            failures.append(f"backup: {backup.detail}")
+        elif backup_status == "error":
+            failures.append(
+                f"backup: newest verified backup is {backup.age_hours:.1f}h old"
             )
-            checks.append(
-                {
-                    "name": "backup",
-                    "status": backup_status,
-                    "age_hours": round(age_hours, 2),
-                    "manifest": latest.name,
-                }
-            )
-            if backup_status == "error":
-                failures.append(f"backup: newest manifest is {age_hours:.1f}h old")
 
         private_root = Path(settings.PRIVATE_MEDIA_ROOT)
         if not private_root.exists():

@@ -1,5 +1,3 @@
-from datetime import datetime
-from datetime import timezone as datetime_timezone
 from urllib.parse import parse_qs
 
 from django.conf import settings
@@ -15,6 +13,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from core.backups import latest_backup_status
 from core.filters import apply_ticket_filters
 from core.forms import StaffSavedSearchForm, StaffSupportTicketForm, TicketCommentForm
 from core.mixins import StaffRequiredMixin
@@ -43,44 +42,50 @@ KNOWN_AUDIT_VERBS = (
 )
 
 
-def _latest_backup(pattern: str):
-    backup_dir = settings.BASE_DIR / "backups"
-    if not backup_dir.exists():
-        return None
-    files = [path for path in backup_dir.glob(pattern) if path.is_file()]
-    return max(files, key=lambda path: path.stat().st_mtime) if files else None
-
-
-def _backup_snapshot(pattern: str, label: str) -> dict:
-    path = _latest_backup(pattern)
-    if path is None:
+def _backup_snapshot() -> dict:
+    backup = latest_backup_status()
+    if not backup.exists:
         return {
-            "label": label,
+            "label": "Verified project backup",
             "status": "missing",
             "status_label": "Missing",
             "path": "",
             "age_hours": None,
             "updated_at": None,
             "size_mb": None,
+            "detail": backup.detail,
         }
-    updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=datetime_timezone.utc)
-    age_hours = int((timezone.now() - updated_at).total_seconds() // 3600)
-    status = "ok"
-    status_label = "Fresh"
-    if age_hours > 72:
+
+    age_hours = int(backup.age_hours or 0)
+    status = "ok" if backup.healthy else "stale"
+    status_label = "Fresh" if backup.healthy else "Invalid"
+    if backup.healthy and age_hours > 72:
         status = "stale"
         status_label = "Stale"
-    elif age_hours > 24:
+    elif backup.healthy and age_hours > 24:
         status = "warning"
         status_label = "Aging"
+
+    size_bytes = 0
+    if backup.path:
+        if backup.path.is_dir():
+            size_bytes = sum(
+                item.stat().st_size
+                for item in backup.path.rglob("*")
+                if item.is_file()
+            )
+        else:
+            size_bytes = backup.path.stat().st_size
+
     return {
-        "label": label,
+        "label": "Verified project backup",
         "status": status,
         "status_label": status_label,
-        "path": str(path.relative_to(settings.BASE_DIR)),
+        "path": str(backup.path or ""),
         "age_hours": age_hours,
-        "updated_at": updated_at,
-        "size_mb": round(path.stat().st_size / 1024 / 1024, 2),
+        "updated_at": backup.created_at,
+        "size_mb": round(size_bytes / 1024 / 1024, 2),
+        "detail": backup.detail,
     }
 
 
@@ -210,10 +215,7 @@ class SecurityDiagnosticsView(StaffRequiredMixin, TemplateView):
                 "detail": settings.DATABASES["default"]["ENGINE"].rsplit(".", 1)[-1],
             },
         ]
-        ctx["backups"] = [
-            _backup_snapshot("alltech-db-*", "Database backup"),
-            _backup_snapshot("alltech-media-*", "Media backup"),
-        ]
+        ctx["backups"] = [_backup_snapshot()]
         ctx["generated_at"] = timezone.now()
         return ctx
 

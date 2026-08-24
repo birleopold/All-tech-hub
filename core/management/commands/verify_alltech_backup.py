@@ -11,6 +11,8 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from core.backups import latest_backup_status
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -38,14 +40,14 @@ class Command(BaseCommand):
         if options["manifest"]:
             manifest_path = Path(options["manifest"]).resolve()
         else:
-            manifests = sorted(
-                backup_root.glob("alltech-backup-*.json"),
-                key=lambda path: path.stat().st_mtime,
-                reverse=True,
-            )
-            if not manifests:
+            backup = latest_backup_status(backup_root)
+            if not backup.exists or backup.path is None:
                 raise CommandError(f"No backup manifest found in {backup_root}.")
-            manifest_path = manifests[0]
+            manifest_path = (
+                backup.path
+                if backup.path.is_file()
+                else backup.path / "manifest.json"
+            )
 
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
