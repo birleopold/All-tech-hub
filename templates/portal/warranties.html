@@ -32,7 +32,14 @@
             <dt class="col-5">Coverage ends</dt><dd class="col-7">{{ item.warranty_expires_on|default:"No expiry recorded" }}</dd>
           </dl>
           {% if item.is_under_warranty %}<div class="alert alert-success small"><strong>Coverage appears active.</strong> Final eligibility depends on the warranty terms, product condition and inspection.</div>{% else %}<div class="alert alert-light small"><strong>Standard coverage is not active.</strong> LEOSOFT may still provide paid diagnostic or repair support.</div>{% endif %}
-          <a class="btn btn-outline-primary" href="{% url 'portal_ticket_create' %}">Ask about this product</a>
+          {% if item.open_warranty_claim %}
+          <div class="alert alert-primary small mb-3"><strong>Claim in progress:</strong> {{ item.open_warranty_claim.reference }} · {{ item.open_warranty_claim.get_status_display }}</div>
+          <a class="btn btn-primary" href="{% url 'portal_ticket_detail' item.open_warranty_claim.pk %}">Track warranty claim</a>
+          {% elif item.is_under_warranty %}
+          <a class="btn btn-primary" href="{% url 'portal_ticket_create' %}?serial={{ item.pk }}"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>Start warranty claim</a>
+          {% else %}
+          <a class="btn btn-outline-primary" href="{% url 'portal_ticket_create' %}?serial={{ item.pk }}"><i class="bi bi-tools me-1" aria-hidden="true"></i>Request repair support</a>
+          {% endif %}
         </div>
       </article>
     </div>
