@@ -8,8 +8,8 @@ from django.utils import timezone
 from automation.models import AutomationJob
 
 
-JOB_ORDER_CONFIRMATION_EMAIL = "order_confirmation_email"
-JOB_ORDER_STATUS_EMAIL = "order_status_email"
+JOB_ORDER_CONFIRMATION_EMAIL = AutomationJob.TYPE_ORDER_CONFIRMATION_EMAIL
+JOB_ORDER_STATUS_EMAIL = AutomationJob.TYPE_ORDER_STATUS_EMAIL
 
 
 def _queue_notification_job(*, key: str, job_type: str, payload: dict, when=None) -> bool:
