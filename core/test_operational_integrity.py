@@ -66,6 +66,27 @@ class ProductionAutomationUnitTests(SimpleTestCase):
         )
         self.assertNotIn("manage.py run_automation_jobs", service)
 
+    def test_operational_monitor_timer_runs_the_existing_monitor_command(self):
+        root = Path(__file__).resolve().parents[1]
+        service = (
+            root / "deployment" / "leosoft-operations-monitor.service"
+        ).read_text(encoding="utf-8")
+        timer = (
+            root / "deployment" / "leosoft-operations-monitor.timer"
+        ).read_text(encoding="utf-8")
+        self.assertIn("manage.py monitor_operations", service)
+        self.assertIn("EnvironmentFile=/home/admin/All-tech-hub/.env", service)
+        self.assertIn("OnUnitActiveSec=15min", timer)
+
+    def test_production_management_helper_loads_the_same_environment(self):
+        helper = (
+            Path(__file__).resolve().parents[1]
+            / "scripts"
+            / "manage_production.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn('source "$ENV_FILE"', helper)
+        self.assertIn('exec "${APP_DIR}/.venv/bin/python"', helper)
+
 
 class ReliabilityRoleTests(TestCase):
     def test_finance_and_manager_receive_reliability_permissions(self):
