@@ -18,7 +18,7 @@ from django.views.generic.edit import FormView
 
 from billing.models import CommercialDocument
 from billing.pdf import pdf_response as document_pdf_response
-from catalog.models import Product, WishlistItem
+from catalog.models import Product, ProductSerial, WishlistItem
 from commerce.models import Order
 from core.forms import PortalSupportTicketForm, PortalTicketReplyForm
 from core.models import Announcement, KnowledgeArticle, SupportTicket, TicketComment
@@ -421,9 +421,65 @@ class PortalTicketCreateView(FormView):
         kwargs["customer"] = _customer_for_request(self.request)
         return kwargs
 
+    def get_initial(self):
+        initial = super().get_initial()
+        customer = _customer_for_request(self.request)
+        serial_id = (self.request.GET.get("serial") or "").strip()
+        if customer is None or not serial_id.isdigit():
+            return initial
+
+        serial = (
+            ProductSerial.objects.filter(pk=int(serial_id), sold_to=customer)
+            .select_related("product")
+            .first()
+        )
+        if serial is None:
+            return initial
+
+        initial["related_serial"] = serial.pk
+        initial["related_product"] = serial.product_id
+        if serial.is_under_warranty:
+            initial["category"] = SupportTicket.CATEGORY_WARRANTY
+            initial["subject"] = (
+                f"Warranty claim: {serial.product.name} "
+                f"({serial.serial_number})"
+            )[:200]
+        else:
+            initial["category"] = SupportTicket.CATEGORY_GENERAL
+            initial["subject"] = (
+                f"Repair support: {serial.product.name} "
+                f"({serial.serial_number})"
+            )[:200]
+        return initial
+
     def form_valid(self, form):
         customer = _customer_for_request(self.request)
         ticket = form.save(commit=False)
+        if (
+            ticket.category == SupportTicket.CATEGORY_WARRANTY
+            and ticket.related_serial_id
+        ):
+            existing = (
+                SupportTicket.objects.filter(
+                    customer=customer,
+                    category=SupportTicket.CATEGORY_WARRANTY,
+                    related_serial_id=ticket.related_serial_id,
+                )
+                .exclude(
+                    status__in=(
+                        SupportTicket.STATUS_RESOLVED,
+                        SupportTicket.STATUS_CLOSED,
+                    )
+                )
+                .first()
+            )
+            if existing is not None:
+                messages.info(
+                    self.request,
+                    f"An active warranty claim already exists: {existing.reference}.",
+                )
+                return redirect("portal_ticket_detail", pk=existing.pk)
+
         ticket.customer = customer
         ticket.created_by = self.request.user
         ticket.save()
@@ -431,7 +487,7 @@ class PortalTicketCreateView(FormView):
             self.request,
             f"Support request {ticket.reference} submitted. We will respond by email.",
         )
-        return redirect("portal_tickets")
+        return redirect("portal_ticket_detail", pk=ticket.pk)
 
 
 class PortalRepairIntakeView(FormView):
