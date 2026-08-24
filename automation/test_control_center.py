@@ -89,6 +89,23 @@ class AutomationControlCenterTests(TestCase):
         paused_job.refresh_from_db()
         self.assertEqual(paused_job.status, AutomationJob.STATUS_QUEUED)
 
+    def test_order_notification_types_can_be_paused_individually(self):
+        paused_job = self.create_job(
+            job_type=AutomationJob.TYPE_ORDER_CONFIRMATION_EMAIL
+        )
+        available_job = self.create_job(
+            job_type=AutomationJob.TYPE_ORDER_STATUS_EMAIL
+        )
+        pause_automation(
+            user=self.manager,
+            reason="Order confirmation delivery is under review",
+            job_types=[AutomationJob.TYPE_ORDER_CONFIRMATION_EMAIL],
+        )
+        claimed = claim_controlled_job("test-worker")
+        self.assertEqual(claimed.pk, available_job.pk)
+        paused_job.refresh_from_db()
+        self.assertEqual(paused_job.status, AutomationJob.STATUS_QUEUED)
+
     def test_resume_clears_master_and_type_pauses(self):
         pause_automation(
             user=self.manager,
