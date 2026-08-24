@@ -137,10 +137,14 @@ class AutomationJob(models.Model):
     TYPE_SOCIAL_POST = "social_post"
     TYPE_SAVED_CART_EMAIL = "saved_cart_email"
     TYPE_STOCK_ALERT_EMAIL = "stock_alert_email"
+    TYPE_ORDER_CONFIRMATION_EMAIL = "order_confirmation_email"
+    TYPE_ORDER_STATUS_EMAIL = "order_status_email"
     TYPE_CHOICES = [
         (TYPE_SOCIAL_POST, "Social post"),
         (TYPE_SAVED_CART_EMAIL, "Saved-cart email"),
         (TYPE_STOCK_ALERT_EMAIL, "Stock alert email"),
+        (TYPE_ORDER_CONFIRMATION_EMAIL, "Order confirmation email"),
+        (TYPE_ORDER_STATUS_EMAIL, "Order status email"),
     ]
 
     STATUS_QUEUED = "queued"
