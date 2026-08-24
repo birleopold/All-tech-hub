@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from catalog.models import Category, Product, ProductSerial
+from core.models import SupportTicket
 from crm.models import Customer
 
 
@@ -91,6 +92,87 @@ class CustomerWarrantyPortalTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Active warranties")
         self.assertContains(response, reverse("portal_warranties"))
+
+    def test_active_device_prefills_customer_scoped_warranty_claim(self):
+        self.client.force_login(self.user)
+        response = self.client.get(
+            reverse("portal_ticket_create"),
+            {"serial": self.active.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["form"].initial["category"],
+            SupportTicket.CATEGORY_WARRANTY,
+        )
+        self.assertEqual(
+            response.context["form"].initial["related_serial"],
+            self.active.pk,
+        )
+        self.assertEqual(
+            response.context["form"].initial["related_product"],
+            self.product.pk,
+        )
+
+    def test_other_customers_device_cannot_prefill_warranty_claim(self):
+        self.client.force_login(self.user)
+        other_serial = ProductSerial.objects.get(serial_number="OTHER-SERIAL-003")
+        response = self.client.get(
+            reverse("portal_ticket_create"),
+            {"serial": other_serial.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("related_serial", response.context["form"].initial)
+
+    def test_active_warranty_claim_links_product_and_serial(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("portal_ticket_create"),
+            {
+                "category": SupportTicket.CATEGORY_WARRANTY,
+                "subject": "Laptop battery problem",
+                "description": "The battery no longer charges.",
+                "priority": SupportTicket.PRIORITY_NORMAL,
+                "related_product": self.product.pk,
+                "related_serial": self.active.pk,
+            },
+        )
+        self.assertRedirects(response, reverse("portal_tickets"))
+        ticket = SupportTicket.objects.get(customer=self.customer)
+        self.assertEqual(ticket.related_product, self.product)
+        self.assertEqual(ticket.related_serial, self.active)
+
+    def test_expired_device_cannot_open_a_warranty_claim(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("portal_ticket_create"),
+            {
+                "category": SupportTicket.CATEGORY_WARRANTY,
+                "subject": "Old laptop problem",
+                "description": "Please inspect the old laptop.",
+                "priority": SupportTicket.PRIORITY_NORMAL,
+                "related_product": self.product.pk,
+                "related_serial": self.expired.pk,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "no longer has active warranty coverage")
+        self.assertFalse(SupportTicket.objects.filter(customer=self.customer).exists())
+
+    def test_warranty_centre_displays_existing_open_claim(self):
+        self.client.force_login(self.user)
+        ticket = SupportTicket.objects.create(
+            customer=self.customer,
+            created_by=self.user,
+            category=SupportTicket.CATEGORY_WARRANTY,
+            subject="Warranty investigation",
+            description="Investigate the covered device.",
+            related_product=self.product,
+            related_serial=self.active,
+        )
+        response = self.client.get(reverse("portal_warranties"))
+        self.assertContains(response, ticket.reference)
+        self.assertContains(response, "Track warranty claim")
+        self.assertEqual(response.context["open_warranty_claim_count"], 1)
 
     def test_public_knowledge_base_is_not_forced_to_noindex(self):
         response = self.client.get(reverse("portal_kb"))
