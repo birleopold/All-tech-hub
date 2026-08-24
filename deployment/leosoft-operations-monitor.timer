@@ -1,0 +1,12 @@
+[Unit]
+Description=Check overdue LEOSOFT operations and stock every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+Unit=leosoft-operations-monitor.service
+
+[Install]
+WantedBy=timers.target
