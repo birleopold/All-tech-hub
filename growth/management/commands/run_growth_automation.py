@@ -10,6 +10,7 @@ from automation.services import queue_due_growth_jobs, queue_due_posts
 from automation.worker import process_controlled_automation_jobs
 from customer_campaigns.services import process_scheduled_campaigns
 from marketing.services import process_due_lead_followups
+from reports.followups import refresh_retention_followups
 
 
 class Command(BaseCommand):
@@ -55,6 +56,10 @@ class Command(BaseCommand):
                 limit=min(limit, 500),
                 dry_run=inspect_only,
             )
+            retention = refresh_retention_followups(
+                limit=min(limit, 50),
+                dry_run=inspect_only,
+            )
             jobs = (
                 {
                     "succeeded": 0,
@@ -76,6 +81,7 @@ class Command(BaseCommand):
                 "growth": growth,
                 "campaigns": campaigns,
                 "leads": leads,
+                "retention": retention,
                 "jobs": jobs,
             }
             has_failures = bool(
@@ -106,6 +112,8 @@ class Command(BaseCommand):
                     f"campaigns paused: {campaigns['paused']}; "
                     f"lead reminders: {leads['reminded']}; "
                     f"lead escalations: {leads['escalated']}; "
+                    f"warranty follow-ups created: {retention['warranty_created']}; "
+                    f"dormant follow-ups created: {retention['dormant_created']}; "
                     f"jobs recovered: {jobs['recovered']}; "
                     f"jobs succeeded: {jobs['succeeded']}; "
                     f"jobs retrying: {jobs['retried']}; "

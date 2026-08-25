@@ -24,6 +24,7 @@ from merchandising.services import (
 )
 from marketing.models import MarketingLead
 from operations.models import JobCard, JobFeedback
+from reports.models import CustomerFollowUp
 
 
 class StaffDashboardView(StaffRequiredMixin, TemplateView):
@@ -72,6 +73,12 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         ).count()
         ctx["failed_automation_count"] = AutomationJob.objects.filter(
             status=AutomationJob.STATUS_FAILED
+        ).count()
+        ctx["pending_retention_followup_count"] = CustomerFollowUp.objects.filter(
+            status__in=[
+                CustomerFollowUp.STATUS_PENDING,
+                CustomerFollowUp.STATUS_IN_PROGRESS,
+            ]
         ).count()
         ctx["overdue_lead_count"] = MarketingLead.objects.filter(
             status__in=[

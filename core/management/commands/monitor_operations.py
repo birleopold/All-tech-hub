@@ -13,6 +13,7 @@ from catalog.stock_alerts import low_stock_products
 from core.models import StaffNotification, SupportTicket
 from core.notifications import staff_notify
 from operations.models import JobCard
+from reports.models import CustomerFollowUp
 
 
 class Command(BaseCommand):
@@ -37,6 +38,7 @@ class Command(BaseCommand):
         self._notify_payment_exceptions()
         self._notify_pending_payment_submissions()
         self._notify_failed_automation()
+        self._notify_retention_followups()
         self._notify_low_stock()
 
         self.stdout.write(
@@ -188,6 +190,23 @@ class Command(BaseCommand):
                 user,
                 f"{failed} automation job(s) failed and need review.",
                 reverse("staff_automation_control"),
+            )
+
+    def _notify_retention_followups(self):
+        overdue = CustomerFollowUp.objects.filter(
+            status__in=[
+                CustomerFollowUp.STATUS_PENDING,
+                CustomerFollowUp.STATUS_IN_PROGRESS,
+            ],
+            due_at__lt=timezone.now(),
+        ).count()
+        if overdue <= 0:
+            return
+        for user in self._role_users("Manager", "Sales"):
+            self._notify_once(
+                user,
+                f"{overdue} customer retention follow-up(s) are overdue.",
+                reverse("staff_retention_dashboard"),
             )
 
     def _notify_low_stock(self):

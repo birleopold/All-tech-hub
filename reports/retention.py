@@ -11,6 +11,7 @@ from commerce.customer_messages import customer_email_delivery_ready
 from commerce.models import Order
 from commerce.retention import REVIEW_SUBJECT_PREFIX, review_emails_enabled
 from messaging.models import OutboundEmail
+from reports.models import CustomerFollowUp
 
 
 def _rate(numerator: int, denominator: int) -> Decimal:
@@ -144,8 +145,18 @@ def retention_summary(days: int = 90) -> dict:
             )
     top_customers.sort(key=lambda row: row["lifetime_value"], reverse=True)
 
+    open_followups = CustomerFollowUp.objects.filter(
+        status__in=[
+            CustomerFollowUp.STATUS_PENDING,
+            CustomerFollowUp.STATUS_IN_PROGRESS,
+        ]
+    )
+    overdue_followups = open_followups.filter(due_at__lt=now)
+
     return {
         "days": days,
+        "open_followup_count": open_followups.count(),
+        "overdue_followup_count": overdue_followups.count(),
         "since": since,
         "order_count": len(period_rows),
         "revenue": revenue,

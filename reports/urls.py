@@ -18,6 +18,31 @@ urlpatterns = [
         name="staff_retention_dashboard",
     ),
     path(
+        "reports/retention/refresh/",
+        retention_views.refresh_customer_followups,
+        name="staff_retention_followup_refresh",
+    ),
+    path(
+        "reports/retention/followups/<int:pk>/claim/",
+        retention_views.customer_followup_claim,
+        name="staff_retention_followup_claim",
+    ),
+    path(
+        "reports/retention/followups/<int:pk>/email/",
+        retention_views.customer_followup_email,
+        name="staff_retention_followup_email",
+    ),
+    path(
+        "reports/retention/followups/<int:pk>/whatsapp/",
+        retention_views.customer_followup_whatsapp,
+        name="staff_retention_followup_whatsapp",
+    ),
+    path(
+        "reports/retention/followups/<int:pk>/close/",
+        retention_views.customer_followup_close,
+        name="staff_retention_followup_close",
+    ),
+    path(
         "reports/customer-growth/",
         loyalty_staff_views.CustomerGrowthDashboardView.as_view(),
         name="staff_customer_growth_dashboard",

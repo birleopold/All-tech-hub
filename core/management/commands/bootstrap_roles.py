@@ -21,6 +21,7 @@ ROLE_PERMISSIONS = {
         "crm": {"customer", "customeraddress"},
         "catalog": {"product", "productvariant", "productreview"},
         "core": {"contactmessage", "supportticket"},
+        "reports": {"customerfollowup"},
         "messaging": {"outboundemail"},
         "marketing": {
             "socialprofilesettings",

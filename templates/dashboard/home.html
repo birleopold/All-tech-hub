@@ -15,11 +15,12 @@
     </div>
   </div>
 
-  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention or backup_requires_attention or pending_payment_count or overdue_invoice_count or overdue_lead_count or failed_automation_count %}
+  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention or backup_requires_attention or pending_payment_count or overdue_invoice_count or overdue_lead_count or failed_automation_count or pending_retention_followup_count %}
   <div class="staff-alert-strip" role="status">
     <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
     <div>
       <strong class="d-block mb-1">Attention needed</strong>
+      {% if pending_retention_followup_count %}<a href="{% url 'staff_retention_dashboard' %}">{{ pending_retention_followup_count }} customer follow-up{{ pending_retention_followup_count|pluralize }}</a> · {% endif %}
       {% if pending_payment_count %}<a href="{% url 'staff_payment_reconciliation' %}">{{ pending_payment_count }} payment{{ pending_payment_count|pluralize }} awaiting verification</a> · {% endif %}
       {% if overdue_invoice_count %}<a href="{% url 'staff_documents' %}?type=invoice">{{ overdue_invoice_count }} overdue invoice{{ overdue_invoice_count|pluralize }}</a> · {% endif %}
       {% if overdue_lead_count %}<a href="{% url 'staff_marketing_leads' %}">{{ overdue_lead_count }} overdue sales lead{{ overdue_lead_count|pluralize }}</a> · {% endif %}
@@ -149,6 +150,7 @@
         <div class="card-body">
           <div class="staff-panel-heading"><h2>Operational health</h2><a href="{% url 'staff_catalogue_quality' %}">Catalogue</a></div>
           <div class="staff-health-list">
+            <div class="staff-health-row"><span>Customer follow-ups</span><a href="{% url 'staff_retention_dashboard' %}" class="badge rounded-pill {% if pending_retention_followup_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_retention_followup_count }}</a></div>
             <div class="staff-health-row"><span>Payments awaiting verification</span><a href="{% url 'staff_payment_reconciliation' %}" class="badge rounded-pill {% if pending_payment_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_payment_count }}</a></div>
             <div class="staff-health-row"><span>Overdue invoices</span><a href="{% url 'staff_documents' %}?type=invoice" class="badge rounded-pill {% if overdue_invoice_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_invoice_count }} · {{ company.currency_code }} {{ overdue_invoice_balance|floatformat:0 }}</a></div>
             <div class="staff-health-row"><span>Overdue sales leads</span><a href="{% url 'staff_marketing_leads' %}" class="badge rounded-pill {% if overdue_lead_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_lead_count }}</a></div>

@@ -3,10 +3,37 @@
 {% block staff_content %}
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
   <div><p class="text-uppercase small fw-semibold text-primary mb-1">Phase 6 reporting</p><h1 class="h3 mb-1">Retention, reviews and repeat sales</h1><p class="text-muted mb-0">Customer return behaviour, verified reviews and warranty follow-up for the last {{ retention.days }} days.</p></div>
-  <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-secondary" href="{% url 'staff_reports' %}">All reports</a><a class="btn {% if retention.days == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=30">30 days</a><a class="btn {% if retention.days == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=90">90 days</a><a class="btn {% if retention.days == 180 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=180">180 days</a></div>
+  <div class="d-flex gap-2 flex-wrap"><form method="post" action="{% url 'staff_retention_followup_refresh' %}">{% csrf_token %}<button class="btn btn-success">Refresh customer-care queue</button></form><a class="btn btn-outline-secondary" href="{% url 'staff_reports' %}">All reports</a><a class="btn {% if retention.days == 30 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=30">30 days</a><a class="btn {% if retention.days == 90 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=90">90 days</a><a class="btn {% if retention.days == 180 %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?days=180">180 days</a></div>
 </div>
 
 {% if retention.review_email_enabled and not retention.email_delivery_ready %}<div class="alert alert-danger border-0 shadow-sm"><strong>Review emails cannot be delivered.</strong> Review requests are enabled, but the configured email backend is non-delivering. Fix SMTP before relying on this automation.</div>{% elif not retention.review_email_enabled %}<div class="alert alert-info border-0 shadow-sm"><strong>Review requests are currently disabled.</strong> Verified review forms and manual links still work; automatic requests require <code>ALLTECH_ORDER_REVIEW_EMAILS_ENABLED=1</code> after SMTP verification.</div>{% endif %}
+
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body border-bottom d-flex justify-content-between align-items-center gap-3 flex-wrap">
+    <div><p class="text-uppercase small fw-semibold text-primary mb-1">Customer care queue</p><h2 class="h5 mb-1">Retention follow-ups</h2><p class="small text-muted mb-0">Every outreach is assigned, tracked and consent-checked.</p></div>
+    <div><span class="badge text-bg-primary">{{ retention.open_followup_count }} open</span> <span class="badge {% if retention.overdue_followup_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ retention.overdue_followup_count }} overdue</span></div>
+  </div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Due</th><th>Customer</th><th>Reason</th><th>Owner</th><th>Contact</th><th>Close</th></tr></thead>
+    <tbody>
+    {% for task in followups %}
+      <tr class="{% if task.is_overdue %}table-warning{% endif %}">
+        <td>{{ task.due_at|date:"M j, H:i" }}{% if task.is_overdue %}<span class="badge text-bg-danger d-block mt-1">Overdue</span>{% endif %}</td>
+        <td><strong>{{ task.customer.name }}</strong><small class="d-block text-muted">{{ task.customer.email|default:"No email" }}{% if task.customer.phone %} · {{ task.customer.phone }}{% endif %}</small></td>
+        <td>{{ task.get_follow_up_type_display }}<small class="d-block text-muted">{{ task.note|truncatechars:100 }}</small></td>
+        <td>{% if task.assigned_to %}{{ task.assigned_to.get_username }}{% else %}<form method="post" action="{% url 'staff_retention_followup_claim' task.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">Claim</button></form>{% endif %}</td>
+        <td class="text-nowrap">
+          {% if task.email_allowed and task.customer.email %}<form method="post" action="{% url 'staff_retention_followup_email' task.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-primary">Email</button></form>{% endif %}
+          {% if task.whatsapp_allowed and task.customer.phone %}<form method="post" action="{% url 'staff_retention_followup_whatsapp' task.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success">WhatsApp</button></form>{% endif %}
+          {% if not task.email_allowed and not task.whatsapp_allowed %}<span class="small text-muted" title="No marketing consent. A staff member may make a non-promotional service call.">Service call only</span>{% endif %}
+        </td>
+        <td><details><summary class="btn btn-sm btn-outline-secondary">Close</summary><form method="post" action="{% url 'staff_retention_followup_close' task.pk %}" class="p-2 mt-1 border rounded bg-white" style="min-width:16rem">{% csrf_token %}<input class="form-control form-control-sm mb-2" name="note" maxlength="500" placeholder="Outcome or reason"><button class="btn btn-sm btn-success w-100 mb-1" name="action" value="complete">Complete</button><button class="btn btn-sm btn-outline-secondary w-100" name="action" value="dismiss">Dismiss</button></form></details></td>
+      </tr>
+    {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No open customer follow-ups. Refresh the queue to generate due work.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
 
 <div class="row g-3 mb-4">
   <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="small text-muted mb-1">Customers</p><p class="display-6 mb-1">{{ retention.unique_customers }}</p><p class="small text-muted mb-0">{{ retention.order_count }} non-cancelled orders</p></div></div></div>
