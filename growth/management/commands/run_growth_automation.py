@@ -9,6 +9,7 @@ from automation.models import AutomationRun
 from automation.services import queue_due_growth_jobs, queue_due_posts
 from automation.worker import process_controlled_automation_jobs
 from customer_campaigns.services import process_scheduled_campaigns
+from marketing.services import process_due_lead_followups
 
 
 class Command(BaseCommand):
@@ -50,6 +51,10 @@ class Command(BaseCommand):
                 limit=min(limit, 100),
                 dry_run=inspect_only,
             )
+            leads = process_due_lead_followups(
+                limit=min(limit, 500),
+                dry_run=inspect_only,
+            )
             jobs = (
                 {
                     "succeeded": 0,
@@ -70,6 +75,7 @@ class Command(BaseCommand):
                 "posts": posts,
                 "growth": growth,
                 "campaigns": campaigns,
+                "leads": leads,
                 "jobs": jobs,
             }
             has_failures = bool(
@@ -98,6 +104,8 @@ class Command(BaseCommand):
                     f"due customer campaigns: {campaigns['due']}; "
                     f"campaign batches processed: {campaigns['processed']}; "
                     f"campaigns paused: {campaigns['paused']}; "
+                    f"lead reminders: {leads['reminded']}; "
+                    f"lead escalations: {leads['escalated']}; "
                     f"jobs recovered: {jobs['recovered']}; "
                     f"jobs succeeded: {jobs['succeeded']}; "
                     f"jobs retrying: {jobs['retried']}; "

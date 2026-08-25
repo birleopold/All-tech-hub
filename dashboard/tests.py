@@ -1,7 +1,14 @@
+from datetime import timedelta
+from decimal import Decimal
+
 from django.contrib.auth.models import User
 from django.templatetags.static import static
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
+
+from automation.models import AutomationJob
+from billing.models import CommercialDocument, PaymentSubmission
 
 from dashboard.templatetags.dashboard_ui import staff_page_label
 
@@ -31,6 +38,41 @@ class DashboardAccessTests(TestCase):
         self.assertContains(response, "Recent activity feed")
         self.assertContains(response, "Service schedule")
         self.assertContains(response, "No upcoming service appointments.")
+
+    def test_dashboard_highlights_payment_and_automation_attention(self):
+        user = User.objects.create_user(
+            "operations-dashboard", password="pw", is_staff=True
+        )
+        invoice = CommercialDocument.objects.create(
+            doc_type=CommercialDocument.TYPE_INVOICE,
+            number="INV-DASHBOARD-ATTENTION",
+            customer_name="Dashboard customer",
+            status=CommercialDocument.STATUS_ISSUED,
+            total=Decimal("50000.00"),
+            due_date=timezone.localdate() - timedelta(days=2),
+        )
+        PaymentSubmission.objects.create(
+            document=invoice,
+            amount=Decimal("25000.00"),
+            method="mobile_money",
+            reference="DASHBOARD-MOMO-1",
+        )
+        AutomationJob.objects.create(
+            idempotency_key="dashboard-failed-job",
+            job_type=AutomationJob.TYPE_STOCK_ALERT_EMAIL,
+            status=AutomationJob.STATUS_FAILED,
+            scheduled_for=timezone.now(),
+            next_attempt_at=timezone.now(),
+        )
+        self.client.force_login(user)
+        response = self.client.get(reverse("staff_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["pending_payment_count"], 1)
+        self.assertEqual(response.context["overdue_invoice_count"], 1)
+        self.assertEqual(response.context["failed_automation_count"], 1)
+        self.assertContains(response, "payment awaiting verification")
+        self.assertContains(response, "overdue invoice")
+        self.assertContains(response, "failed automation job")
 
     def test_staff_page_labels_are_readable(self):
         self.assertEqual(

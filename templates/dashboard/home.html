@@ -15,11 +15,15 @@
     </div>
   </div>
 
-  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention or backup_requires_attention %}
+  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention or backup_requires_attention or pending_payment_count or overdue_invoice_count or overdue_lead_count or failed_automation_count %}
   <div class="staff-alert-strip" role="status">
     <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
     <div>
       <strong class="d-block mb-1">Attention needed</strong>
+      {% if pending_payment_count %}<a href="{% url 'staff_payment_reconciliation' %}">{{ pending_payment_count }} payment{{ pending_payment_count|pluralize }} awaiting verification</a> · {% endif %}
+      {% if overdue_invoice_count %}<a href="{% url 'staff_documents' %}?type=invoice">{{ overdue_invoice_count }} overdue invoice{{ overdue_invoice_count|pluralize }}</a> · {% endif %}
+      {% if overdue_lead_count %}<a href="{% url 'staff_marketing_leads' %}">{{ overdue_lead_count }} overdue sales lead{{ overdue_lead_count|pluralize }}</a> · {% endif %}
+      {% if failed_automation_count %}<a href="{% url 'staff_automation_control' %}">{{ failed_automation_count }} failed automation job{{ failed_automation_count|pluralize }}</a> · {% endif %}
       {% if overdue_jobs %}<a href="{% url 'staff_jobs' %}?due=overdue">{{ overdue_jobs }} overdue job{{ overdue_jobs|pluralize }}</a>{% endif %}
       {% if overdue_jobs and overdue_tickets %}<span aria-hidden="true"> · </span>{% endif %}
       {% if overdue_tickets %}<a href="{% url 'staff_tickets' %}?due=overdue">{{ overdue_tickets }} overdue ticket{{ overdue_tickets|pluralize }}</a>{% endif %}
@@ -145,6 +149,10 @@
         <div class="card-body">
           <div class="staff-panel-heading"><h2>Operational health</h2><a href="{% url 'staff_catalogue_quality' %}">Catalogue</a></div>
           <div class="staff-health-list">
+            <div class="staff-health-row"><span>Payments awaiting verification</span><a href="{% url 'staff_payment_reconciliation' %}" class="badge rounded-pill {% if pending_payment_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_payment_count }}</a></div>
+            <div class="staff-health-row"><span>Overdue invoices</span><a href="{% url 'staff_documents' %}?type=invoice" class="badge rounded-pill {% if overdue_invoice_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_invoice_count }} · {{ company.currency_code }} {{ overdue_invoice_balance|floatformat:0 }}</a></div>
+            <div class="staff-health-row"><span>Overdue sales leads</span><a href="{% url 'staff_marketing_leads' %}" class="badge rounded-pill {% if overdue_lead_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_lead_count }}</a></div>
+            <div class="staff-health-row"><span>Failed automation</span><a href="{% url 'staff_automation_control' %}" class="badge rounded-pill {% if failed_automation_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ failed_automation_count }}</a></div>
             <div class="staff-health-row"><span>Low stock</span><a href="{% url 'staff_products' %}?low=1" class="badge rounded-pill {% if low_stock_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ low_stock_count }}</a></div>
             <div class="staff-health-row"><span>Catalogue quality</span><a href="{% url 'staff_catalogue_quality' %}" class="badge rounded-pill {% if catalogue_quality.critical %}text-bg-danger{% elif catalogue_quality.attention %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ catalogue_quality.average_score }}%</a></div>
             <div class="staff-health-row"><span>Latest backup</span><span class="badge rounded-pill {% if not backup_status.healthy %}text-bg-danger{% elif backup_requires_attention %}text-bg-warning{% else %}text-bg-success{% endif %}" title="{{ backup_status.detail }}">{% if backup_status.created_at %}{{ backup_status.created_at|timesince }} ago{% else %}Missing{% endif %}</span></div>

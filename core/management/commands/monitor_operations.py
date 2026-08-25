@@ -7,7 +7,8 @@ from django.core.management.base import BaseCommand
 from django.urls import reverse
 from django.utils import timezone
 
-from billing.models import CommercialDocument, DocumentPayment
+from automation.models import AutomationJob
+from billing.models import CommercialDocument, DocumentPayment, PaymentSubmission
 from catalog.stock_alerts import low_stock_products
 from core.models import StaffNotification, SupportTicket
 from core.notifications import staff_notify
@@ -34,6 +35,8 @@ class Command(BaseCommand):
         self._notify_overdue_tickets()
         self._notify_overdue_invoices()
         self._notify_payment_exceptions()
+        self._notify_pending_payment_submissions()
+        self._notify_failed_automation()
         self._notify_low_stock()
 
         self.stdout.write(
@@ -155,6 +158,36 @@ class Command(BaseCommand):
                 user,
                 f"{count} unreconciled payment(s) need review.",
                 reverse("staff_payment_reconciliation"),
+            )
+
+    def _notify_pending_payment_submissions(self):
+        pending = list(
+            PaymentSubmission.objects.filter(
+                status=PaymentSubmission.STATUS_PENDING
+            ).select_related("document").order_by("created_at")[:50]
+        )
+        if not pending:
+            return
+        refs = ", ".join(item.reference for item in pending[:5])
+        more = f" (+{len(pending) - 5} more)" if len(pending) > 5 else ""
+        for user in self._role_users("Manager", "Finance"):
+            self._notify_once(
+                user,
+                f"{len(pending)} customer payment(s) awaiting verification: {refs}{more}",
+                reverse("staff_payment_reconciliation"),
+            )
+
+    def _notify_failed_automation(self):
+        failed = AutomationJob.objects.filter(
+            status=AutomationJob.STATUS_FAILED
+        ).count()
+        if failed <= 0:
+            return
+        for user in self._role_users("Manager"):
+            self._notify_once(
+                user,
+                f"{failed} automation job(s) failed and need review.",
+                reverse("staff_automation_control"),
             )
 
     def _notify_low_stock(self):

@@ -1,12 +1,14 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
 from commerce.models import Order
 from crm.models import Customer
+from core.models import StaffNotification
 from reliability.models import PaymentAttempt
 
 from billing.models import CommercialDocument, DocumentPayment, PaymentSubmission
@@ -77,6 +79,37 @@ class ManualPaymentSubmissionTests(TestCase):
         self.assertEqual(self.document.amount_paid, Decimal("40000.00"))
         self.assertEqual(self.document.status, CommercialDocument.STATUS_PARTIALLY_PAID)
         self.assertEqual(submission.status, PaymentSubmission.STATUS_VERIFIED)
+
+    def test_submission_immediately_notifies_finance_reviewer(self):
+        self.submit(reference="NOTIFY-MOMO-1")
+        self.assertTrue(
+            StaffNotification.objects.filter(
+                recipient=self.staff,
+                message__icontains="NOTIFY-MOMO-1",
+            ).exists()
+        )
+
+    def test_verified_customer_receives_payment_confirmation(self):
+        submission, _ = self.submit(reference="EMAIL-MOMO-1")
+        verify_payment_submission(submission, actor=self.staff)
+        self.assertTrue(
+            any(
+                "Payment confirmed for" in message.subject
+                for message in mail.outbox
+            )
+        )
+
+    def test_rejected_customer_receives_verification_update(self):
+        submission, _ = self.submit(reference="EMAIL-MOMO-2")
+        reject_payment_submission(
+            submission, actor=self.staff, reason="Reference not found"
+        )
+        self.assertTrue(
+            any(
+                "Payment verification update" in message.subject
+                for message in mail.outbox
+            )
+        )
 
     def test_full_payment_marks_document_paid(self):
         submission, _ = self.submit(amount="100000")

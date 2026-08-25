@@ -19,7 +19,7 @@
   <div class="table-responsive card border-0 shadow-sm overflow-hidden">
     <table class="table mb-0 align-middle">
       <caption class="visually-hidden">Your quotes and invoices with document number, type, status, date, total, and PDF download</caption>
-      <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th></th></tr></thead>
+      <thead class="table-light"><tr><th>Number</th><th>Type</th><th>Status</th><th>Date</th><th class="text-end">Total</th><th class="text-end">Balance</th><th></th></tr></thead>
       <tbody>
         {% for d in documents %}
         <tr>
@@ -28,7 +28,8 @@
           <td><span class="badge text-bg-light border">{{ d.get_status_display }}</span></td>
           <td>{{ d.issue_date }}</td>
           <td class="text-end fw-semibold">{{ company.currency_code }} {{ d.total|floatformat:2 }}</td>
-          <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'portal_document_pdf' d.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open PDF for {{ d.number }} in a new tab">PDF</a></td>
+          <td class="text-end">{% if d.supports_payment_request %}{{ company.currency_code }} {{ d.balance_due|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="text-end text-nowrap">{% if d.supports_payment_request and d.balance_due > 0 and d.status != "cancelled" and d.status != "expired" %}<form method="post" action="{% url 'portal_document_payment' d.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Pay</button></form> {% endif %}<a class="btn btn-sm btn-primary" href="{% url 'portal_document_pdf' d.pk %}" target="_blank" rel="noopener noreferrer" aria-label="Open PDF for {{ d.number }} in a new tab">PDF</a></td>
         </tr>
         {% endfor %}
       </tbody>

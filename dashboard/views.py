@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Avg, Q
+from django.db.models import Avg, F, Q, Sum
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from billing.models import CommercialDocument
+from automation.models import AutomationJob
+from billing.models import CommercialDocument, PaymentSubmission
 from catalog.models import Product, ProductReview
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
 from catalog.stock_alerts import low_stock_products
@@ -21,6 +22,7 @@ from merchandising.services import (
     merchant_readiness_snapshot,
     search_opportunity_rows,
 )
+from marketing.models import MarketingLead
 from operations.models import JobCard, JobFeedback
 
 
@@ -50,6 +52,41 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         ctx["unhandled_contacts"] = ContactMessage.objects.filter(handled=False).count()
         ctx["low_stock_count"] = len(low_stock_products(limit=None))
         ctx["pending_reviews"] = ProductReview.objects.filter(is_published=False).count()
+        outstanding_invoices = CommercialDocument.objects.filter(
+            doc_type=CommercialDocument.TYPE_INVOICE,
+        ).exclude(status__in=[
+            CommercialDocument.STATUS_PAID,
+            CommercialDocument.STATUS_CANCELLED,
+            CommercialDocument.STATUS_EXPIRED,
+        ]).filter(total__gt=F("amount_paid"))
+        overdue_invoices = outstanding_invoices.filter(due_date__lt=today)
+        ctx["overdue_invoice_count"] = overdue_invoices.count()
+        ctx["overdue_invoice_balance"] = overdue_invoices.aggregate(
+            total=Sum(F("total") - F("amount_paid"))
+        )["total"] or 0
+        ctx["outstanding_invoice_balance"] = outstanding_invoices.aggregate(
+            total=Sum(F("total") - F("amount_paid"))
+        )["total"] or 0
+        ctx["pending_payment_count"] = PaymentSubmission.objects.filter(
+            status=PaymentSubmission.STATUS_PENDING
+        ).count()
+        ctx["failed_automation_count"] = AutomationJob.objects.filter(
+            status=AutomationJob.STATUS_FAILED
+        ).count()
+        ctx["overdue_lead_count"] = MarketingLead.objects.filter(
+            status__in=[
+                MarketingLead.STATUS_NEW,
+                MarketingLead.STATUS_CONTACTED,
+                MarketingLead.STATUS_QUALIFIED,
+            ]
+        ).filter(
+            Q(next_follow_up_at__lte=now)
+            | Q(
+                status=MarketingLead.STATUS_NEW,
+                first_contacted_at__isnull=True,
+                response_due_at__lte=now,
+            )
+        ).count()
         avg = JobFeedback.objects.aggregate(avg=Avg("rating"))["avg"]
         ctx["avg_job_rating"] = round(float(avg), 1) if avg is not None else None
         ctx["recent_feedback"] = list(

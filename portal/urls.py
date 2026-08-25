@@ -74,6 +74,7 @@ urlpatterns = [
     ),
     path("documents/", views.MyDocumentsView.as_view(), name="portal_documents"),
     path("documents/<int:pk>/pdf/", views.my_document_pdf, name="portal_document_pdf"),
+    path("documents/<int:pk>/pay/", views.my_document_payment, name="portal_document_payment"),
     path("tickets/", views.MyTicketsView.as_view(), name="portal_tickets"),
     path("tickets/new/", views.PortalTicketCreateView.as_view(), name="portal_ticket_create"),
     path("tickets/<int:pk>/", views.my_ticket_detail, name="portal_ticket_detail"),

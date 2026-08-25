@@ -95,6 +95,7 @@ urlpatterns = [
     path("", include("core.urls")),
     path("catalog/", include("catalog.urls")),
     path("cart/", include("commerce.urls")),
+    path("staff/", include("automation.urls")),
     path("staff/", include("dashboard.urls")),
     path("staff/", include("core.staff_urls")),
     path("staff/", include("commerce.staff_urls")),

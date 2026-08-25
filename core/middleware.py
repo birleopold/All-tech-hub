@@ -16,6 +16,10 @@ request_logger = logging.getLogger("alltech.request")
 
 URL_ACTION_PERMISSIONS = {
     "staff_account_payment_create": "billing.add_accountpayment",
+    "staff_automation_pause": "automation.change_automationjob",
+    "staff_automation_resume": "automation.change_automationjob",
+    "staff_automation_job_replay": "automation.change_automationjob",
+    "staff_automation_job_cancel": "automation.change_automationjob",
     "staff_apply_customer_credit": "billing.change_customercredit",
     "staff_catalogue_bulk_enrichment": "catalog.change_product",
     "staff_contact_to_ticket": "core.add_supportticket",

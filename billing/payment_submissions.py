@@ -2,13 +2,18 @@
 
 from decimal import Decimal, InvalidOperation
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
 
 from billing.models import CommercialDocument, DocumentPayment, PaymentSubmission
 from core.audit import log_audit_event
 from core.models import CompanySettings
+from core.notifications import staff_notify
+from messaging.utils import send_outbound_email
 from reliability.models import PaymentAttempt
 from reliability.services import create_payment_attempt, transition_payment_attempt
 
@@ -100,6 +105,17 @@ def submit_payment_confirmation(
         submission.payment_attempt = attempt
         submission.save(update_fields=["payment_attempt", "updated_at"])
 
+    reviewers = get_user_model().objects.filter(
+        is_staff=True, is_active=True
+    ).filter(
+        Q(is_superuser=True) | Q(groups__name__in=["Finance", "Manager"])
+    ).distinct()[:10]
+    for reviewer in reviewers:
+        staff_notify(
+            reviewer,
+            f"Payment awaiting verification: {document.number} · {reference}",
+            reverse("staff_payment_reconciliation"),
+        )
     log_audit_event(
         actor=actor,
         verb="billing.payment_confirmation_submitted",
@@ -173,13 +189,31 @@ def verify_payment_submission(submission, *, actor):
         ),
         target=submission,
     )
+    customer_email = submission.payer_email or document.display_customer_email
+    if customer_email:
+        company = CompanySettings.load()
+        send_outbound_email(
+            to_email=customer_email,
+            subject=f"Payment confirmed for {document.number}",
+            body=(
+                f"Dear {submission.payer_name or document.display_customer_name},\n\n"
+                f"Your payment of {company.currency_code} {submission.amount} "
+                f"with reference {submission.reference} has been confirmed.\n\n"
+                f"Remaining balance: {company.currency_code} "
+                f"{document.balance_due}.\n\n"
+                f"Thank you for choosing {company.company_name}."
+            ),
+            created_by=actor,
+            commercial_document=document,
+            idempotency_key=f"payment-submission-verified:{submission.pk}",
+        )
     return payment
 
 
 @transaction.atomic
 def reject_payment_submission(submission, *, actor, reason=""):
     submission = PaymentSubmission.objects.select_for_update().select_related(
-        "payment_attempt"
+        "payment_attempt", "document", "document__customer"
     ).get(pk=submission.pk)
     if submission.status != PaymentSubmission.STATUS_PENDING:
         raise ValidationError("This payment submission has already been reviewed.")
@@ -204,4 +238,21 @@ def reject_payment_submission(submission, *, actor, reason=""):
         summary=f"Rejected payment {submission.reference}: {reason}",
         target=submission,
     )
+    customer_email = submission.payer_email or submission.document.display_customer_email
+    if customer_email:
+        company = CompanySettings.load()
+        send_outbound_email(
+            to_email=customer_email,
+            subject=f"Payment verification update for {submission.document.number}",
+            body=(
+                f"Dear {submission.payer_name or submission.document.display_customer_name},\n\n"
+                f"We could not verify payment reference {submission.reference}.\n"
+                f"Reason: {reason}\n\n"
+                "Please review the reference and contact our team for assistance.\n\n"
+                f"— {company.company_name}"
+            ),
+            created_by=actor,
+            commercial_document=submission.document,
+            idempotency_key=f"payment-submission-rejected:{submission.pk}",
+        )
     return submission

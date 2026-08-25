@@ -13,10 +13,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, TemplateView
 from django.views.generic.edit import FormView
 
-from billing.models import CommercialDocument
+from billing.models import CommercialDocument, PaymentSubmission
 from billing.pdf import pdf_response as document_pdf_response
 from catalog.models import Product, ProductSerial, WishlistItem
 from commerce.models import Order
@@ -71,6 +72,13 @@ class PortalHomeView(TemplateView):
             if due > 0:
                 balance += due
         ctx["unpaid_invoice_balance"] = balance
+        ctx["outstanding_invoices"] = list(
+            inv.order_by("due_date", "-issue_date")[:5]
+        )
+        ctx["pending_payment_count"] = PaymentSubmission.objects.filter(
+            document__customer=customer,
+            status=PaymentSubmission.STATUS_PENDING,
+        ).count()
         ctx["recent_jobs"] = list(
             JobCard.objects.filter(customer=customer).order_by("-received_on")[:5]
         )
@@ -333,6 +341,35 @@ class MyDocumentsView(ListView):
         if _customer_for_request(request) is None:
             return redirect("portal_login")
         return super().dispatch(request, *args, **kwargs)
+
+
+@require_POST
+def my_document_payment(request, pk: int):
+    customer = _customer_for_request(request)
+    if customer is None:
+        return redirect("portal_login")
+    document = get_object_or_404(
+        CommercialDocument.objects.select_related("customer"),
+        pk=pk,
+        customer=customer,
+    )
+    if (
+        not document.supports_payment_request
+        or document.status in (
+            CommercialDocument.STATUS_CANCELLED,
+            CommercialDocument.STATUS_EXPIRED,
+        )
+        or document.balance_due <= 0
+    ):
+        messages.error(request, "This document is not available for payment.")
+        return redirect("portal_documents")
+    if not document.payment_request_token:
+        document.ensure_payment_request_token()
+        document.save(update_fields=["payment_request_token", "updated_at"])
+    return redirect(
+        "payment_request_portal",
+        token=document.payment_request_token,
+    )
 
 
 def my_document_pdf(request, pk: int):
