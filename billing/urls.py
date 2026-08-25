@@ -86,6 +86,16 @@ urlpatterns = [
         name="staff_customer_statement",
     ),
     path(
+        "payments/submissions/<int:submission_pk>/approve/",
+        views.payment_submission_approve,
+        name="staff_payment_submission_approve",
+    ),
+    path(
+        "payments/submissions/<int:submission_pk>/reject/",
+        views.payment_submission_reject,
+        name="staff_payment_submission_reject",
+    ),
+    path(
         "payments/reconciliation/",
         views.payment_reconciliation,
         name="staff_payment_reconciliation",

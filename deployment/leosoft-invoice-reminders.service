@@ -1,0 +1,15 @@
+[Unit]
+Description=Send LEOSOFT upcoming invoice payment reminders
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=admin
+Group=www-data
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py send_invoice_due_reminders --days 3 --include-overdue --min-days-since-reminder 7
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true

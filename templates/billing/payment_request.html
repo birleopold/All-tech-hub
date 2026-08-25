@@ -62,6 +62,16 @@
     </div>
   </div>
 
+  {% if pending_submissions %}
+  <div class="alert alert-info border-0 shadow-sm" role="status">
+    <strong>Payment verification in progress</strong>
+    {% for submission in pending_submissions %}
+    <div class="small mt-1">{{ submission.get_method_display }} · {{ submission.reference }} · {{ company.currency_code }} {{ submission.amount|floatformat:2 }}</div>
+    {% endfor %}
+    <p class="small mb-0 mt-2">Our finance team will update your balance after confirming the transaction.</p>
+  </div>
+  {% endif %}
+
   <form method="post" class="card border-0 shadow-sm">
     <div class="card-body">
       {% csrf_token %}
@@ -81,16 +91,14 @@
         </div>
         <div class="col-md-6">
           <label class="form-label" for="amount">Amount paid</label>
-          <input class="form-control" id="amount" name="amount" inputmode="decimal" value="{{ document.balance_due|floatformat:2 }}">
+          <input class="form-control" id="amount" name="amount" type="number" min="0.01" step="0.01" max="{{ document.balance_due }}" required inputmode="decimal" value="{{ document.balance_due|floatformat:2 }}">
         </div>
         <div class="col-md-6">
           <label class="form-label" for="method">Method</label>
           <select class="form-select" id="method" name="method">
-            <option>Mobile Money</option>
-            <option>Bank transfer</option>
-            <option>Card</option>
-            <option>Cash deposit</option>
-            <option>Other</option>
+            {% for value, label in payment_methods %}
+            <option value="{{ value }}"{% if value == "mobile_money" %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
           </select>
         </div>
         <div class="col-md-6">

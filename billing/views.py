@@ -28,12 +28,18 @@ from billing.models import (
     CommercialLine,
     CustomerCredit,
     DocumentPayment,
+    PaymentSubmission,
     DocumentRevision,
     DocumentTemplate,
     PaymentAllocation,
     allocate_document_number,
 )
 from billing.pdf import pdf_response
+from billing.payment_submissions import (
+    reject_payment_submission,
+    submit_payment_confirmation,
+    verify_payment_submission,
+)
 from catalog.models import Product, ProductVariant
 from core.audit import log_audit_event
 from core.mixins import StaffRequiredMixin
@@ -717,6 +723,9 @@ class CommercialDocumentDetailView(StaffRequiredMixin, DetailView):
         ctx["show_payment_form"] = show_pay and doc.balance_due > 0
         ctx["payment_form"] = PaymentRecordForm()
         ctx["payment_history"] = doc.payments.all()
+        ctx["pending_payment_submissions"] = doc.payment_submissions.filter(
+            status=PaymentSubmission.STATUS_PENDING
+        )
         ctx["refund_form"] = PaymentRefundForm()
         if show_pay and doc.balance_due > 0:
             ctx["payment_request_text"] = (
@@ -1324,8 +1333,48 @@ def payment_reconciliation(request):
             "payments": payments,
             "account_payments": account_payments,
             "method_totals": totals.values(),
+            "pending_submissions": PaymentSubmission.objects.filter(
+                status=PaymentSubmission.STATUS_PENDING
+            ).select_related("document", "document__customer"),
+            "recent_submissions": PaymentSubmission.objects.exclude(
+                status=PaymentSubmission.STATUS_PENDING
+            ).select_related("document", "reviewed_by")[:25],
         },
     )
+
+
+@require_POST
+def payment_submission_approve(request, submission_pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    submission = get_object_or_404(PaymentSubmission, pk=submission_pk)
+    try:
+        payment = verify_payment_submission(submission, actor=request.user)
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.success(
+            request,
+            f"Verified {payment.reference} and applied {payment.amount} "
+            f"to {payment.document.number}.",
+        )
+    return redirect("staff_payment_reconciliation")
+
+
+@require_POST
+def payment_submission_reject(request, submission_pk: int):
+    if not request.user.is_staff:
+        raise Http404
+    submission = get_object_or_404(PaymentSubmission, pk=submission_pk)
+    try:
+        reject_payment_submission(
+            submission, actor=request.user, reason=request.POST.get("reason", "")
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.success(request, "Payment submission rejected.")
+    return redirect("staff_payment_reconciliation")
 
 
 @require_POST
@@ -1771,43 +1820,59 @@ def payment_request_portal(request, token):
         raise Http404
     company = CompanySettings.load()
     if request.method == "POST":
-        payer_name = (request.POST.get("payer_name") or "").strip()
-        payer_email = (request.POST.get("payer_email") or "").strip()
-        payer_phone = (request.POST.get("payer_phone") or "").strip()
-        method = (request.POST.get("method") or "").strip()
-        reference = (request.POST.get("reference") or "").strip()
-        amount = (request.POST.get("amount") or "").strip()
-        if not reference:
-            messages.error(request, "Enter the transaction reference so we can verify payment.")
-        else:
-            ContactMessage.objects.create(
-                name=(payer_name or doc.display_customer_name)[:120],
-                email=(payer_email or doc.display_customer_email or "payments@invalid.local")[:254],
-                phone=(payer_phone or doc.display_customer_phone)[:64],
-                subject=f"Payment confirmation for {doc.number}",
-                message=(
-                    f"Customer submitted payment confirmation for {doc.number}.\n\n"
-                    f"Method: {method or 'Not specified'}\n"
-                    f"Amount: {amount or doc.balance_due}\n"
-                    f"Reference: {reference}\n"
-                    f"Customer: {payer_name or doc.display_customer_name}\n"
-                    f"Email: {payer_email or doc.display_customer_email}\n"
-                    f"Phone: {payer_phone or doc.display_customer_phone}"
-                ),
-            )
-            log_audit_event(
+        try:
+            submission, created = submit_payment_confirmation(
+                document=doc,
+                amount=request.POST.get("amount", ""),
+                method=request.POST.get("method", ""),
+                reference=request.POST.get("reference", ""),
+                payer_name=(request.POST.get("payer_name") or "").strip(),
+                payer_email=(request.POST.get("payer_email") or "").strip(),
+                payer_phone=(request.POST.get("payer_phone") or "").strip(),
                 actor=request.user if request.user.is_authenticated else None,
-                verb="billing.payment_confirmation_submitted",
-                summary=f"Payment confirmation submitted for {doc.number}: {reference[:80]}",
-                target=doc,
             )
-            messages.success(
-                request,
-                "Thank you. Your payment reference was submitted for verification.",
-            )
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+        else:
+            if created:
+                ContactMessage.objects.create(
+                    name=(submission.payer_name or doc.display_customer_name)[:120],
+                    email=(
+                        submission.payer_email
+                        or doc.display_customer_email
+                        or "payments@invalid.local"
+                    )[:254],
+                    phone=submission.payer_phone[:64],
+                    subject=f"Payment confirmation for {doc.number}",
+                    message=(
+                        f"Customer submitted payment confirmation for {doc.number}.\n\n"
+                        f"Method: {submission.get_method_display()}\n"
+                        f"Amount: {submission.amount}\n"
+                        f"Reference: {submission.reference}\n"
+                        f"Customer: {submission.payer_name}\n"
+                        f"Email: {submission.payer_email}\n"
+                        f"Phone: {submission.payer_phone}"
+                    ),
+                )
+                messages.success(
+                    request,
+                    "Thank you. Your payment reference was submitted for verification.",
+                )
+            else:
+                messages.info(
+                    request,
+                    "This payment reference was already submitted and is being reviewed.",
+                )
             return redirect("payment_request_portal", token=token)
     return render(
         request,
         "billing/payment_request.html",
-        {"document": doc, "company": company},
+        {
+            "document": doc,
+            "company": company,
+            "pending_submissions": doc.payment_submissions.filter(
+                status=PaymentSubmission.STATUS_PENDING
+            ),
+            "payment_methods": DocumentPayment.METHOD_CHOICES,
+        },
     )

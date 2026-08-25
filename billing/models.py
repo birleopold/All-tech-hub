@@ -748,6 +748,64 @@ class DocumentPayment(models.Model):
         return max(Decimal("0"), self.amount - self.refunded_amount)
 
 
+class PaymentSubmission(models.Model):
+    """Customer-provided manual-payment evidence awaiting finance verification."""
+
+    STATUS_PENDING = "pending"
+    STATUS_VERIFIED = "verified"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Awaiting verification"),
+        (STATUS_VERIFIED, "Verified"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    document = models.ForeignKey(
+        CommercialDocument, on_delete=models.CASCADE, related_name="payment_submissions"
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    method = models.CharField(max_length=20, choices=DocumentPayment.METHOD_CHOICES)
+    reference = models.CharField(max_length=120, db_index=True)
+    payer_name = models.CharField(max_length=120, blank=True)
+    payer_email = models.EmailField(blank=True)
+    payer_phone = models.CharField(max_length=64, blank=True)
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True
+    )
+    review_note = models.CharField(max_length=255, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="payment_submissions_reviewed",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    recorded_payment = models.ForeignKey(
+        DocumentPayment, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="source_submissions",
+    )
+    payment_attempt = models.ForeignKey(
+        "reliability.PaymentAttempt", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="document_submissions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="positive_payment_submission_amount",
+            ),
+            models.UniqueConstraint(
+                fields=["method", "reference"],
+                name="unique_manual_payment_submission_reference",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.document.number}: {self.reference} ({self.get_status_display()})"
+
+
 class PaymentRefund(models.Model):
     payment = models.ForeignKey(
         DocumentPayment, on_delete=models.PROTECT, related_name="refunds"

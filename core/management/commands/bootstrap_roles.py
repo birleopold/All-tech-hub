@@ -60,7 +60,7 @@ ROLE_PERMISSIONS = {
             "commercialdocument", "commercialline", "documentpayment",
             "documentsequence", "paymentrefund", "documentrevision",
             "documenttemplate", "customercredit", "accountpayment",
-            "paymentallocation",
+            "paymentallocation", "paymentsubmission",
         },
         "commerce": {"order", "orderline", "coupon"},
         "crm": {"customer"},

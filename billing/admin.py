@@ -11,6 +11,7 @@ from billing.models import (
     DocumentTemplate,
     PaymentAllocation,
     PaymentRefund,
+    PaymentSubmission,
 )
 
 
@@ -71,6 +72,22 @@ class DocumentPaymentAdmin(admin.ModelAdmin):
     list_display = ("document", "amount", "method", "recorded_at", "recorded_by")
     list_filter = ("method",)
     raw_id_fields = ("document", "recorded_by")
+
+
+@admin.register(PaymentSubmission)
+class PaymentSubmissionAdmin(admin.ModelAdmin):
+    list_display = (
+        "document", "reference", "method", "amount", "status",
+        "created_at", "reviewed_by",
+    )
+    list_filter = ("status", "method", "created_at")
+    search_fields = (
+        "reference", "document__number", "payer_name", "payer_email", "payer_phone"
+    )
+    raw_id_fields = (
+        "document", "reviewed_by", "recorded_payment", "payment_attempt"
+    )
+    readonly_fields = ("created_at", "updated_at", "reviewed_at")
 
 
 @admin.register(DocumentSequence)

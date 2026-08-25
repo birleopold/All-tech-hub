@@ -71,6 +71,8 @@ URL_ACTION_PERMISSIONS = {
     "staff_order_transition": "commerce.change_order",
     "staff_order_shipment": "commerce.change_shipment",
     "staff_payment_reconcile": "billing.change_documentpayment",
+    "staff_payment_submission_approve": "billing.add_documentpayment",
+    "staff_payment_submission_reject": "billing.change_paymentsubmission",
     "staff_payment_refund": "billing.add_paymentrefund",
     "staff_po_create": "purchasing.add_purchaseorder",
     "staff_po_edit": "purchasing.change_purchaseorder",

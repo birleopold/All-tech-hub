@@ -1,0 +1,11 @@
+[Unit]
+Description=Run LEOSOFT invoice payment reminders each morning
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=leosoft-invoice-reminders.service
+
+[Install]
+WantedBy=timers.target

@@ -5,6 +5,29 @@
   <div><h1 class="h3 mb-1">Payment reconciliation</h1><p class="text-muted mb-0">Daily cashier and payment-method totals.</p></div>
   <a class="btn btn-primary" href="{% url 'staff_account_payment_create' %}">Record account payment</a>
 </div>
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body border-bottom d-flex justify-content-between align-items-center">
+    <div><h2 class="h5 mb-1">Customer payment verification</h2><p class="small text-muted mb-0">Confirm the Mobile Money or bank transaction before approving.</p></div>
+    <span class="badge text-bg-warning">{{ pending_submissions|length }} pending</span>
+  </div>
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Received</th><th>Document / customer</th><th>Method / reference</th><th class="text-end">Amount</th><th>Review</th></tr></thead>
+    <tbody>
+    {% for submission in pending_submissions %}
+      <tr>
+        <td>{{ submission.created_at|date:"M j, H:i" }}</td>
+        <td><a href="{% url 'staff_document_view' submission.document_id %}">{{ submission.document.number }}</a><small class="d-block text-muted">{{ submission.payer_name|default:submission.document.display_customer_name }}{% if submission.payer_phone %} · {{ submission.payer_phone }}{% endif %}</small></td>
+        <td>{{ submission.get_method_display }}<code class="d-block">{{ submission.reference }}</code></td>
+        <td class="text-end fw-semibold">{{ company.currency_code }} {{ submission.amount|floatformat:2 }}</td>
+        <td>
+          <form method="post" action="{% url 'staff_payment_submission_approve' submission.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-success">Verify &amp; apply</button></form>
+          <details class="d-inline-block ms-1"><summary class="btn btn-sm btn-outline-danger">Reject</summary><form method="post" action="{% url 'staff_payment_submission_reject' submission.pk %}" class="p-2 border rounded bg-white mt-1" style="min-width:16rem">{% csrf_token %}<input class="form-control form-control-sm mb-2" name="reason" maxlength="255" placeholder="Reason for rejection"><button class="btn btn-sm btn-danger w-100">Reject submission</button></form></details>
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No payment confirmations are awaiting verification.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
 <form method="get" class="d-flex gap-2 mb-3"><input class="form-control" style="max-width:14rem" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"><button class="btn btn-outline-primary">Load date</button></form>
 <div class="row g-3 mb-4">{% for row in method_totals %}<div class="col-md-6 col-xl-4"><div class="card border-0 shadow-sm"><div class="card-body"><strong>{{ row.label }}</strong><div class="small text-muted">Document payments</div><div>{{ company.currency_code }} {{ row.document_total|floatformat:2 }}</div><div class="small text-muted mt-2">Account payments</div><div>{{ company.currency_code }} {{ row.account_total|floatformat:2 }}</div></div></div></div>{% endfor %}</div>
 <div class="card border-0 shadow-sm"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Time</th><th>Reference</th><th>Method</th><th>Cashier</th><th class="text-end">Amount</th><th>Status</th></tr></thead><tbody>

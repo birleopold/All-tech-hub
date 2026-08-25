@@ -31,6 +31,11 @@ class Command(BaseCommand):
             help="Skip if a reminder was sent more recently than this many days ago.",
         )
         parser.add_argument(
+            "--include-overdue",
+            action="store_true",
+            help="Also remind customers about unpaid invoices already past their due date.",
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Print matches without sending email.",
@@ -48,7 +53,6 @@ class Command(BaseCommand):
             CommercialDocument.objects.filter(
                 doc_type=CommercialDocument.TYPE_INVOICE,
                 due_date__isnull=False,
-                due_date__gte=today,
                 due_date__lte=horizon,
             )
             .exclude(
@@ -59,6 +63,9 @@ class Command(BaseCommand):
             )
             .select_related("customer")
         )
+
+        if not options["include_overdue"]:
+            qs = qs.filter(due_date__gte=today)
 
         sent = 0
         for doc in qs:
@@ -75,7 +82,10 @@ class Command(BaseCommand):
             if not to_email:
                 self.stdout.write(self.style.WARNING(f"Skip {doc.number}: no customer email."))
                 continue
-            subject = f"Reminder: invoice {doc.number} due {doc.due_date}"
+            if doc.due_date < today:
+                subject = f"Overdue payment reminder: invoice {doc.number}"
+            else:
+                subject = f"Reminder: invoice {doc.number} due {doc.due_date}"
             body = (
                 f"Dear {doc.display_customer_name},\n\n"
                 f"This is a friendly reminder that invoice {doc.number} for "
