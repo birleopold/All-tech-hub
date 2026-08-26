@@ -273,9 +273,10 @@ ALLTECH_TELEGRAM_CHANNEL_ID=@your_public_channel
 ```
 
 Keep autopilot stopped until each selected channel shows **Connected** in the
-control center. Stopping autopilot prevents new calendar generation but
-preserves existing drafts and scheduled records for review. The master
-automation pause remains the emergency stop for queued delivery work.
+control center. Stopping autopilot prevents new calendar generation and cancels its future
+scheduled deliveries while retaining an audit history. Controlled mode converts
+future autopilot work to review drafts. The master automation pause remains the
+emergency stop for all queued delivery work.
 
 ## Production commands
 
