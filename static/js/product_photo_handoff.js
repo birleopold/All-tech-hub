@@ -128,8 +128,16 @@
             const image = document.createElement("img");
             image.src = item.url;
             image.alt = item.alt_text || "";
-            image.className = "img-fluid rounded border";
+            image.className = item.is_primary
+              ? "img-fluid rounded border border-primary border-3"
+              : "img-fluid rounded border";
             col.appendChild(image);
+            if (item.is_primary) {
+              const badge = document.createElement("span");
+              badge.className = "badge bg-primary mt-1";
+              badge.textContent = "Main";
+              col.appendChild(badge);
+            }
             thumbnails.appendChild(col);
           });
         };
@@ -171,7 +179,84 @@
     const preview = document.getElementById("phone-photo-preview");
     const message = document.getElementById("phone-photo-message");
     const pushButton = document.getElementById("enable-phone-push");
+    const currentPhotos = document.getElementById("phone-current-photos");
     const csrf = csrfToken(form);
+
+    async function loadCurrentPhotos() {
+      if (!currentPhotos || !root.dataset.statusUrl) return;
+      try {
+        const response = await fetch(root.dataset.statusUrl, {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("Could not load current photos.");
+        const data = await response.json();
+        currentPhotos.replaceChildren();
+
+        if (!data.images.length) {
+          const empty = document.createElement("p");
+          empty.className = "text-muted mb-0";
+          empty.textContent = "No product photos yet.";
+          currentPhotos.appendChild(empty);
+          return;
+        }
+
+        data.images.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "col-6";
+          const frame = document.createElement("div");
+          frame.className = "card h-100";
+          const image = document.createElement("img");
+          image.src = item.url;
+          image.alt = item.alt_text || "";
+          image.className = "card-img-top";
+          frame.appendChild(image);
+
+          const body = document.createElement("div");
+          body.className = "card-body p-2";
+          if (item.is_primary) {
+            const badge = document.createElement("span");
+            badge.className = "badge bg-primary";
+            badge.textContent = "Main image";
+            body.appendChild(badge);
+          } else if (item.id && root.dataset.setPrimaryTemplate) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn btn-sm btn-outline-primary w-100";
+            button.textContent = "Make main";
+            button.addEventListener("click", async () => {
+              button.disabled = true;
+              try {
+                const url = root.dataset.setPrimaryTemplate.replace(
+                  "/0/primary/",
+                  "/" + item.id + "/primary/"
+                );
+                const primaryResponse = await fetch(url, {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { "X-CSRFToken": csrf },
+                });
+                const result = await primaryResponse.json();
+                if (!primaryResponse.ok) {
+                  throw new Error(result.error || "Could not change the main image.");
+                }
+                await loadCurrentPhotos();
+              } catch (error) {
+                message.textContent = error.message;
+                message.className = "alert alert-danger mt-3";
+                button.disabled = false;
+              }
+            });
+            body.appendChild(button);
+          }
+          frame.appendChild(body);
+          card.appendChild(frame);
+          currentPhotos.appendChild(card);
+        });
+      } catch (error) {
+        currentPhotos.textContent = error.message;
+      }
+    }
 
     pushButton.addEventListener("click", async () => {
       pushButton.disabled = true;
@@ -225,6 +310,7 @@
         message.className = "alert alert-success mt-3";
         form.reset();
         preview.replaceChildren();
+        await loadCurrentPhotos();
       } catch (error) {
         message.textContent = error.message;
         message.className = "alert alert-danger mt-3";
@@ -232,6 +318,8 @@
         button.disabled = false;
       }
     });
+
+    loadCurrentPhotos();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
