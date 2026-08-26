@@ -14,7 +14,7 @@ from automation.autopilot import (
     rebuild_autopilot_calendar,
     reconcile_autopilot_state,
 )
-from automation.connectors import publish_telegram
+from automation.connectors import diagnose_channel, publish_telegram
 from automation.models import PostAutomationPlan, SocialAutopilotSettings
 from catalog.models import Category, Product
 from marketing.models import CampaignLink, ScheduledPost
@@ -165,3 +165,23 @@ class TelegramConnectorTests(TestCase):
 
         self.assertEqual(result["external_id"], "42")
         self.assertEqual(result["external_url"], "https://t.me/leosoft/42")
+
+
+@override_settings(
+    TELEGRAM_AUTO_PUBLISH_ENABLED=True,
+    TELEGRAM_BOT_TOKEN="secret-token",
+    TELEGRAM_CHANNEL_ID="@leosoft",
+)
+class SocialConnectionDiagnosticTests(TestCase):
+    @patch("automation.connectors.urlopen")
+    def test_telegram_connection_diagnostic_identifies_channel(self, mocked_urlopen):
+        response = Mock()
+        response.read.return_value = (
+            b'{"ok": true, "result": {"id": -1001, "title": "LEOSOFT Uganda"}}'
+        )
+        mocked_urlopen.return_value.__enter__.return_value = response
+
+        result = diagnose_channel("telegram")
+
+        self.assertTrue(result["ok"])
+        self.assertIn("LEOSOFT Uganda", result["message"])
