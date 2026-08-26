@@ -400,3 +400,100 @@ def rebuild_autopilot_calendar(*, now=None) -> dict:
         else {"created": 0}
     )
     return {"cancelled": len(posts), "created": generated.get("created", 0)}
+
+
+def autopilot_readiness(settings_row: SocialAutopilotSettings, *, now=None) -> dict:
+    """Return actionable queue coverage and channel preflight information."""
+    from automation.connectors import channel_is_configured
+
+    now = now or timezone.now()
+    selected_channels = [
+        channel
+        for channel in (settings_row.channels or [])
+        if channel in SUPPORTED_CHANNELS
+    ]
+    channel_status = {
+        channel: channel_is_configured(channel) for channel in selected_channels
+    }
+    cooldown = max(1, min(int(settings_row.product_cooldown_days), 90))
+    eligible_products = sum(
+        1
+        for _product in _candidate_products(
+            settings_row,
+            cutoff=now - timedelta(days=cooldown),
+            used_ids=set(),
+        )
+    )
+    open_posts = ScheduledPost.objects.filter(
+        notes__startswith=AUTOPILOT_MARKER,
+        scheduled_for__gte=now,
+        status__in=[
+            ScheduledPost.STATUS_DRAFT,
+            ScheduledPost.STATUS_SCHEDULED,
+            ScheduledPost.STATUS_READY,
+        ],
+    )
+    queued_posts = open_posts.count()
+    covered_days = open_posts.dates("scheduled_for", "day").count()
+    expected_posts = (
+        len(_posting_hours(settings_row))
+        * max(1, min(int(settings_row.queue_days), 14))
+        * len(selected_channels)
+    )
+    issues = []
+    if not selected_channels:
+        issues.append("No publishing channels are selected.")
+    unconfigured = [
+        channel.title() for channel, configured in channel_status.items() if not configured
+    ]
+    if unconfigured:
+        issues.append(
+            "Automatic publishing needs credentials for: " + ", ".join(unconfigured) + "."
+        )
+    if eligible_products == 0:
+        issues.append(
+            "No eligible products currently have an image, description, publication status "
+            "and required stock."
+        )
+    if settings_row.enabled and queued_posts == 0:
+        issues.append("Autopilot is running but has no upcoming posts.")
+    return {
+        "selected_channels": selected_channels,
+        "channel_status": channel_status,
+        "eligible_products": eligible_products,
+        "queued_posts": queued_posts,
+        "covered_days": covered_days,
+        "expected_posts": expected_posts,
+        "issues": issues,
+        "ready": bool(settings_row.enabled and not issues),
+    }
+
+
+@transaction.atomic
+def cancel_autopilot_post(post: ScheduledPost, *, actor=None) -> dict:
+    """Cancel one unpublished autopilot item without rebuilding the whole calendar."""
+    from automation.services import cancel_post_automation
+    from core.audit import log_audit_event
+
+    locked = ScheduledPost.objects.select_for_update().get(pk=post.pk)
+    is_autopilot = locked.notes.startswith(AUTOPILOT_MARKER) or locked.notes.startswith(
+        "[social-priority]"
+    )
+    if not is_autopilot:
+        return {"cancelled": False, "error": "Only autopilot queue items can be removed here."}
+    if locked.status in {
+        ScheduledPost.STATUS_PUBLISHED,
+        ScheduledPost.STATUS_CANCELLED,
+    }:
+        return {"cancelled": False, "error": "This post is no longer in the active queue."}
+
+    cancel_post_automation(locked)
+    locked.status = ScheduledPost.STATUS_CANCELLED
+    locked.save(update_fields=["status", "updated_at"])
+    log_audit_event(
+        actor=actor,
+        verb="automation.social_post_cancelled",
+        summary=f"Removed autopilot post from queue: {locked.title}",
+        target=locked,
+    )
+    return {"cancelled": True, "post_id": locked.pk}
