@@ -137,7 +137,7 @@ def product_photo_status(request, token):
     session = _owned_session(request, token)
     images = [
         {"id": image.pk, "url": image.image.url, "alt_text": image.alt_text}
-        for image in session.product.images.order_by("sort_order", "id")
+        for image in session.product.gallery_images.order_by("sort_order", "id")
         if image.image
     ]
     return JsonResponse(
