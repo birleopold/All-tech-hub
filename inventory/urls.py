@@ -1,6 +1,6 @@
 from django.urls import path
 
-from inventory import views
+from inventory import product_photo_views, views
 from inventory.catalog_workspace_views import ProductWorkspaceListView, StockTakeWorkspaceListView
 from inventory.inventory_home_view import StaffInventoryHomeView
 from merchandising.staff_views import (
@@ -9,6 +9,13 @@ from merchandising.staff_views import (
 )
 
 urlpatterns = [
+    path("inventory/push/public-key/", product_photo_views.push_public_key, name="staff_push_public_key"),
+    path("inventory/push/subscribe/", product_photo_views.save_push_subscription, name="staff_push_subscribe"),
+    path("inventory/products/<int:product_id>/photos/phone/", product_photo_views.start_product_photo_session, name="staff_product_photo_start"),
+    path("inventory/product-photos/<str:token>/", product_photo_views.product_photo_mobile, name="staff_product_photo_mobile"),
+    path("inventory/product-photos/<str:token>/upload/", product_photo_views.product_photo_upload, name="staff_product_photo_upload"),
+    path("inventory/product-photos/<str:token>/status/", product_photo_views.product_photo_status, name="staff_product_photo_status"),
+    path("inventory/product-photos/<str:token>/qr/", product_photo_views.product_photo_qr, name="staff_product_photo_qr"),
     path("inventory/", StaffInventoryHomeView.as_view(), name="staff_inventory"),
     path(
         "inventory/movements/",

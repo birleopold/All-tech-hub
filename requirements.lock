@@ -13,3 +13,4 @@ reportlab==4.5.1
 ruff==0.15.18
 sqlparse==0.5.5
 tzdata==2026.2
+pywebpush==2.0.3

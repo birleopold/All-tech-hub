@@ -79,6 +79,33 @@ self.addEventListener("fetch", event => {{
     }})
   );
 }});
+self.addEventListener("push", event => {{
+  let data = {{}};
+  try {{ data = event.data ? event.data.json() : {{}}; }} catch (error) {{}}
+  event.waitUntil(self.registration.showNotification(data.title || "LEOSOFT", {{
+    body: data.body || "",
+    icon: "/static/icons/icon-192.png",
+    badge: "/static/icons/icon-192.png",
+    data: {{ url: data.url || "/staff/" }},
+    tag: "leosoft-product-photos"
+  }}));
+}});
+
+self.addEventListener("notificationclick", event => {{
+  event.notification.close();
+  const destination = event.notification.data && event.notification.data.url
+    ? event.notification.data.url : "/staff/";
+  event.waitUntil(clients.matchAll({{ type: "window", includeUncontrolled: true }}).then(windows => {{
+    for (const client of windows) {{
+      if ("focus" in client) {{
+        client.navigate(destination);
+        return client.focus();
+      }}
+    }}
+    return clients.openWindow(destination);
+  }}));
+}});
+
 """.strip()
     response = HttpResponse(body, content_type="application/javascript")
     response["Service-Worker-Allowed"] = "/"

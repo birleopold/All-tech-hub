@@ -242,7 +242,10 @@ class ProductCreateView(StaffRequiredMixin, CreateView):
             target=self.object,
         )
         messages.success(self.request, "Product created. Add gallery images and variants below.")
-        return redirect("staff_product_edit", pk=self.object.pk)
+        edit_url = reverse("staff_product_edit", kwargs={"pk": self.object.pk})
+        if "send_photos_to_phone" in self.request.POST:
+            return redirect(f"{edit_url}?photos=phone")
+        return redirect(edit_url)
 
 
 class ProductUpdateView(StaffRequiredMixin, UpdateView):
