@@ -86,6 +86,32 @@ class SocialAutopilotTests(TestCase):
         form.save()
         self.settings.refresh_from_db()
         self.assertEqual(self.settings.channels, ["facebook", "telegram"])
+        self.assertEqual(self.settings.posting_hours, [9, 18])
+        self.assertEqual(self.settings.posts_per_day, 2)
+
+    def test_single_daily_time_sets_one_post_per_day(self):
+        form = SocialAutopilotForm(
+            data={
+                "enabled": "on",
+                "mode": SocialAutopilotSettings.MODE_FULL,
+                "channels": ["telegram"],
+                "posting_hours_text": "10",
+                "queue_days": "3",
+                "product_cooldown_days": "7",
+                "include_prices": "on",
+                "require_in_stock": "on",
+                "default_hashtags": "#LEOSOFT",
+                "preferred_product": "",
+            },
+            instance=self.settings,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.settings.refresh_from_db()
+        self.assertEqual(self.settings.channels, ["telegram"])
+        self.assertEqual(self.settings.posting_hours, [10])
+        self.assertEqual(self.settings.posts_per_day, 1)
 
     def test_full_autopilot_generates_channel_posts_and_consumes_priority(self):
         now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
