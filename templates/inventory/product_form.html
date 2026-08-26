@@ -41,7 +41,7 @@
         <img id="phone-photo-qr" class="d-block mx-auto border rounded p-2 mb-3" width="220" height="220" alt="QR code to upload product photos">
         <div class="input-group"><input id="phone-photo-url" class="form-control" readonly><button id="phone-photo-copy" class="btn btn-outline-secondary" type="button">Copy</button></div>
         <p id="phone-photo-push-result" class="small text-muted mt-2 mb-0"></p>
-        <div class="alert alert-info mt-3 mb-0"><strong id="phone-photo-count">0</strong> photo(s) currently attached. This screen updates automatically.</div>
+        <div class="alert alert-info mt-3 mb-2"><strong id="phone-photo-count">0</strong> photo(s) currently attached. This screen updates automatically.</div><div id="phone-photo-thumbnails" class="row g-2"></div>
       </div>
       <div id="phone-photo-error" class="alert alert-danger d-none"></div>
     </div>
@@ -63,7 +63,8 @@
     const permission = await Notification.requestPermission();
     if (permission !== "granted") return false;
     const registration = await navigator.serviceWorker.ready;
-    const bytes = Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+    const padded = publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(publicKey.length / 4) * 4, "=");
+    const bytes = Uint8Array.from(atob(padded), value => value.charCodeAt(0));
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
     await fetch("{% url 'staff_push_subscribe' %}", {
@@ -98,6 +99,18 @@
       const poll = async () => {
         const status = await fetch(data.status_url, {credentials: "same-origin"}).then(r => r.json());
         document.getElementById("phone-photo-count").textContent = status.count;
+        const thumbnails = document.getElementById("phone-photo-thumbnails");
+        thumbnails.replaceChildren();
+        status.images.forEach(item => {
+          const col = document.createElement("div");
+          col.className = "col-3";
+          const img = document.createElement("img");
+          img.src = item.url;
+          img.alt = item.alt_text || "";
+          img.className = "img-fluid rounded border";
+          col.appendChild(img);
+          thumbnails.appendChild(col);
+        });
       };
       await poll();
       clearInterval(pollTimer);
