@@ -17,6 +17,7 @@ from automation.autopilot import (
     reconcile_autopilot_state,
 )
 from automation.connectors import diagnose_channel, publish_telegram
+from automation.forms import SocialAutopilotForm
 from automation.models import (
     PostAutomationPlan,
     PostChannelDelivery,
@@ -56,6 +57,35 @@ class SocialAutopilotTests(TestCase):
         self.settings.queue_days = 1
         self.settings.preferred_product = self.product
         self.settings.save()
+
+    def test_channel_widget_uses_checkbox_styling(self):
+        html = str(SocialAutopilotForm(instance=self.settings)["channels"])
+
+        self.assertIn('class="form-check-input"', html)
+        self.assertNotIn('class="form-control"', html)
+
+    def test_multiple_selected_channels_are_saved_together(self):
+        form = SocialAutopilotForm(
+            data={
+                "enabled": "on",
+                "mode": SocialAutopilotSettings.MODE_FULL,
+                "channels": ["facebook", "telegram"],
+                "posts_per_day": "1",
+                "posting_hours_text": "9,18",
+                "queue_days": "3",
+                "product_cooldown_days": "7",
+                "include_prices": "on",
+                "require_in_stock": "on",
+                "default_hashtags": "#LEOSOFT",
+                "preferred_product": str(self.product.pk),
+            },
+            instance=self.settings,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.settings.refresh_from_db()
+        self.assertEqual(self.settings.channels, ["facebook", "telegram"])
 
     def test_full_autopilot_generates_channel_posts_and_consumes_priority(self):
         now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
