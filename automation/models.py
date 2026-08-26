@@ -370,3 +370,69 @@ class AutomationJobEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.job} — {self.get_action_display()}"
+
+
+class SocialAutopilotSettings(models.Model):
+    MODE_CONTROLLED = "controlled"
+    MODE_FULL = "full"
+    MODE_CHOICES = [
+        (MODE_CONTROLLED, "Controlled — create drafts for review"),
+        (MODE_FULL, "Full autopilot — schedule and publish"),
+    ]
+
+    singleton_key = models.CharField(
+        max_length=32, default="primary", unique=True, editable=False
+    )
+    enabled = models.BooleanField(default=False, db_index=True)
+    mode = models.CharField(
+        max_length=16, choices=MODE_CHOICES, default=MODE_CONTROLLED
+    )
+    channels = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Enabled zero-cost publishing channels.",
+    )
+    posts_per_day = models.PositiveSmallIntegerField(default=1)
+    posting_hours = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Kampala-local hours, for example [9, 18].",
+    )
+    queue_days = models.PositiveSmallIntegerField(default=3)
+    product_cooldown_days = models.PositiveSmallIntegerField(default=7)
+    include_prices = models.BooleanField(default=True)
+    require_in_stock = models.BooleanField(default=True)
+    default_hashtags = models.CharField(
+        max_length=300,
+        default="#LEOSOFT #TechnologyUganda #Kampala",
+        blank=True,
+    )
+    preferred_product = models.ForeignKey(
+        "catalog.Product",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="autopilot_preferences",
+        help_text="Optional one-time priority product; cleared after calendar generation.",
+    )
+    last_generated_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Social autopilot settings"
+        verbose_name_plural = "Social autopilot settings"
+
+    def __str__(self) -> str:
+        return "Social autopilot"
+
+    @classmethod
+    def load(cls):
+        row, _ = cls.objects.get_or_create(
+            singleton_key="primary",
+            defaults={
+                "channels": ["facebook", "instagram", "telegram"],
+                "posting_hours": [9, 18],
+            },
+        )
+        return row
