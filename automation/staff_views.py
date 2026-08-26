@@ -52,6 +52,8 @@ class AutomationControlDashboardView(
         autopilot = SocialAutopilotSettings.load()
         context["autopilot"] = autopilot
         context["autopilot_form"] = SocialAutopilotForm(instance=autopilot)
+        from automation.autopilot import autopilot_readiness
+        context["autopilot_readiness"] = autopilot_readiness(autopilot)
         context["social_connections"] = {
             channel: channel_is_configured(channel)
             for channel in ("facebook", "instagram", "telegram")
@@ -182,6 +184,8 @@ def social_autopilot_update(request):
         context["job_type_labels"] = dict(AutomationJob.TYPE_CHOICES)
         context["autopilot"] = autopilot
         context["autopilot_form"] = form
+        from automation.autopilot import autopilot_readiness
+        context["autopilot_readiness"] = autopilot_readiness(autopilot)
         context["social_connections"] = {
             channel: channel_is_configured(channel)
             for channel in ("facebook", "instagram", "telegram")
@@ -270,4 +274,18 @@ def social_autopilot_test_connections(request):
             messages.success(request, text)
         else:
             messages.error(request, text)
+    return redirect("staff_automation_control")
+
+
+@require_POST
+def social_autopilot_cancel_post(request, post_id: int):
+    _require_automation_staff(request, change=True)
+    post = get_object_or_404(ScheduledPost, pk=post_id)
+    from automation.autopilot import cancel_autopilot_post
+
+    result = cancel_autopilot_post(post, actor=request.user)
+    if result.get("cancelled"):
+        messages.success(request, "The selected social post was removed from the queue.")
+    else:
+        messages.error(request, result.get("error") or "The social post could not be removed.")
     return redirect("staff_automation_control")
