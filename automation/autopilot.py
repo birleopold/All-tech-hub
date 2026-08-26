@@ -115,6 +115,45 @@ def _slot_datetime(day, hour):
 
 
 @transaction.atomic
+def reconcile_autopilot_state(settings_row: SocialAutopilotSettings, *, now=None) -> dict:
+    from automation.services import cancel_post_automation
+
+    now = now or timezone.now()
+    posts = list(
+        ScheduledPost.objects.select_for_update()
+        .filter(
+            notes__startswith=AUTOPILOT_MARKER,
+            status__in=[
+                ScheduledPost.STATUS_DRAFT,
+                ScheduledPost.STATUS_SCHEDULED,
+                ScheduledPost.STATUS_READY,
+            ],
+        )
+        .filter(scheduled_for__gte=now)
+        .order_by("scheduled_for", "pk")
+    )
+    changed = 0
+    for post in posts:
+        if not settings_row.enabled:
+            cancel_post_automation(post)
+            post.status = ScheduledPost.STATUS_CANCELLED
+            post.save(update_fields=["status", "updated_at"])
+            changed += 1
+        elif settings_row.mode == SocialAutopilotSettings.MODE_CONTROLLED:
+            cancel_post_automation(post)
+            post.status = ScheduledPost.STATUS_DRAFT
+            post.save(update_fields=["status", "updated_at"])
+            configure_post_plan(post, mode=PostAutomationPlan.MODE_MANUAL)
+            changed += 1
+        else:
+            post.status = ScheduledPost.STATUS_SCHEDULED
+            post.save(update_fields=["status", "updated_at"])
+            configure_post_plan(post, mode=PostAutomationPlan.MODE_AUTOMATIC)
+            changed += 1
+    return {"changed": changed, "enabled": settings_row.enabled, "mode": settings_row.mode}
+
+
+@transaction.atomic
 def generate_autopilot_calendar(*, now=None) -> dict:
     now = now or timezone.now()
     settings_row = SocialAutopilotSettings.objects.select_for_update().filter(
