@@ -9,6 +9,8 @@ from django.utils import timezone
 from PIL import Image
 
 from automation.autopilot import (
+    autopilot_readiness,
+    cancel_autopilot_post,
     generate_autopilot_calendar,
     queue_product_promotion,
     rebuild_autopilot_calendar,
@@ -139,6 +141,38 @@ class SocialAutopilotTests(TestCase):
                 status=ScheduledPost.STATUS_SCHEDULED
             ).count(),
             3,
+        )
+
+
+    def test_readiness_reports_catalogue_and_connection_gaps(self):
+        readiness = autopilot_readiness(
+            self.settings,
+            now=timezone.make_aware(datetime(2026, 8, 26, 8, 0)),
+        )
+
+        self.assertEqual(readiness["eligible_products"], 1)
+        self.assertEqual(readiness["expected_posts"], 3)
+        self.assertEqual(readiness["queued_posts"], 0)
+        self.assertFalse(readiness["ready"])
+        self.assertTrue(any("credentials" in issue for issue in readiness["issues"]))
+
+    def test_one_autopilot_post_can_be_removed_without_rebuilding_calendar(self):
+        now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=now)
+        post = ScheduledPost.objects.order_by("pk").first()
+
+        result = cancel_autopilot_post(post)
+
+        self.assertTrue(result["cancelled"])
+        post.refresh_from_db()
+        self.assertEqual(post.status, ScheduledPost.STATUS_CANCELLED)
+        self.assertEqual(
+            post.automation_plan.status,
+            PostAutomationPlan.STATUS_CANCELLED,
+        )
+        self.assertEqual(
+            ScheduledPost.objects.exclude(status=ScheduledPost.STATUS_CANCELLED).count(),
+            2,
         )
 
 
