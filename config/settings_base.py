@@ -333,3 +333,10 @@ LOGGING = {
         "handlers": ["console"], "level": "WARNING", "propagate": False,
     }},
 }
+
+# Browser push notifications for staff cross-device workflows.
+WEBPUSH_VAPID_PUBLIC_KEY = os.getenv("ALLTECH_WEBPUSH_VAPID_PUBLIC_KEY", "").strip()
+WEBPUSH_VAPID_PRIVATE_KEY = os.getenv("ALLTECH_WEBPUSH_VAPID_PRIVATE_KEY", "").strip()
+WEBPUSH_VAPID_SUBJECT = os.getenv(
+    "ALLTECH_WEBPUSH_VAPID_SUBJECT", f"mailto:{DEFAULT_FROM_EMAIL}"
+).strip()
