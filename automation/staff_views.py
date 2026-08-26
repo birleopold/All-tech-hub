@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
-from automation.connectors import channel_is_configured
+from automation.connectors import channel_is_configured, diagnose_channel
 from automation.control import (
     AutomationControlError,
     cancel_open_job,
@@ -255,4 +255,19 @@ def social_autopilot_rebuild(request):
             f"cancelled and {result['created']} new channel post(s) generated."
         ),
     )
+    return redirect("staff_automation_control")
+
+
+@require_POST
+def social_autopilot_test_connections(request):
+    _require_automation_staff(request, change=True)
+    autopilot = SocialAutopilotSettings.load()
+    channels = autopilot.channels or ["facebook", "instagram", "telegram"]
+    for channel in channels:
+        result = diagnose_channel(channel)
+        text = f"{channel.title()}: {result['message']}"
+        if result["ok"]:
+            messages.success(request, text)
+        else:
+            messages.error(request, text)
     return redirect("staff_automation_control")
