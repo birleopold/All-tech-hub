@@ -39,6 +39,16 @@
       <div class="col-sm-4"><div class="border rounded p-2 small"><strong>{{ channel|title }}</strong><span class="float-end badge {% if connected %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if connected %}Connected{% else %}Needs credentials{% endif %}</span></div></div>
       {% endfor %}
     </div>
+    <div class="card bg-light border-0 mb-3"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2"><div><h3 class="h6 mb-1">Publishing readiness</h3><p class="small text-muted mb-0">Live preflight based on catalogue eligibility, queue coverage and selected connections.</p></div><span class="badge {% if autopilot_readiness.ready %}bg-success{% elif autopilot.enabled %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{% if autopilot_readiness.ready %}Ready{% elif autopilot.enabled %}Needs attention{% else %}Stopped{% endif %}</span></div>
+      <div class="row g-2 text-center">
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.eligible_products }}</strong><small class="text-muted">Eligible products</small></div></div>
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.queued_posts }}</strong><small class="text-muted">Queued channel posts</small></div></div>
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.covered_days }}</strong><small class="text-muted">Days covered</small></div></div>
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.expected_posts }}</strong><small class="text-muted">Target queue size</small></div></div>
+      </div>
+      {% if autopilot_readiness.issues %}<ul class="small text-warning-emphasis mb-0 mt-3">{% for issue in autopilot_readiness.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+    </div></div>
     {% if autopilot.last_error %}<div class="alert alert-warning">{{ autopilot.last_error }}</div>{% endif %}
     {% if can_change_automation %}
     <form method="post" action="{% url 'staff_social_autopilot_update' %}">
@@ -62,8 +72,8 @@
     {% endif %}
     <hr class="my-4">
     <h3 class="h5">Upcoming social queue</h3>
-    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Time</th><th>Product</th><th>Channels</th><th>Caption preview</th><th>Status</th></tr></thead><tbody>
-      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Review draft" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", " }}</td><td class="small">{{ post.caption|truncatechars:120 }}</td><td>{{ post.get_status_display }}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No upcoming social posts.</td></tr>{% endfor %}
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Time</th><th>Product</th><th>Channels</th><th>Caption preview</th><th>Status</th>{% if can_change_automation %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead><tbody>
+      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Review draft" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", " }}</td><td class="small">{{ post.caption|truncatechars:120 }}</td><td>{{ post.get_status_display }}</td>{% if can_change_automation %}<td class="text-end"><form method="post" action="{% url 'staff_social_autopilot_cancel_post' post.pk %}" onsubmit="return confirm('Remove this post from the social queue?');">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Remove</button></form></td>{% endif %}</tr>{% empty %}<tr><td colspan="{% if can_change_automation %}6{% else %}5{% endif %}" class="text-muted">No upcoming social posts.</td></tr>{% endfor %}
     </tbody></table></div>
   </div>
 </div>
