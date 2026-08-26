@@ -103,13 +103,17 @@ class SocialAutopilotForm(BootstrapFormMixin, forms.ModelForm):
         ("telegram", "Telegram channel"),
     ]
     channels = forms.MultipleChoiceField(
+        label="Where should posts be published?",
         choices=CHANNEL_CHOICES,
         widget=forms.CheckboxSelectMultiple,
-        help_text="Only connected channels publish automatically.",
+        help_text="Select one or more channels. Only channels marked Connected can publish.",
     )
     posting_hours_text = forms.CharField(
-        label="Posting hours",
-        help_text="Kampala-local hours separated by commas, for example 9,18.",
+        label="Daily posting times",
+        help_text=(
+            "Enter Kampala-local hours separated by commas. "
+            "Use 9 for one daily post or 9,18 for two."
+        ),
     )
 
     class Meta:
@@ -118,7 +122,6 @@ class SocialAutopilotForm(BootstrapFormMixin, forms.ModelForm):
             "enabled",
             "mode",
             "channels",
-            "posts_per_day",
             "posting_hours_text",
             "queue_days",
             "product_cooldown_days",
@@ -138,18 +141,20 @@ class SocialAutopilotForm(BootstrapFormMixin, forms.ModelForm):
         self.initial["posting_hours_text"] = ",".join(
             str(value) for value in (self.instance.posting_hours or [9, 18])
         )
-        self.fields["preferred_product"].queryset = (
-            self.fields["preferred_product"].queryset.filter(
-                is_published=True
-            ).order_by("-is_featured", "name")
+        self.fields["mode"].label = "How should publishing work?"
+        self.fields["queue_days"].label = "How many days should be prepared?"
+        self.fields["queue_days"].help_text = (
+            "The system keeps this many upcoming days ready and replenishes them automatically."
+        )
+        self.fields["product_cooldown_days"].label = "Days before repeating a product"
+        self.fields["include_prices"].label = "Include product prices"
+        self.fields["require_in_stock"].label = "Only promote products currently in stock"
+        self.fields["default_hashtags"].label = "Default hashtags"
+        self.fields["preferred_product"].label = "Feature one product first (optional)"
+        self.fields["preferred_product"].help_text = (
+            "Leave blank for automatic product selection. A chosen product is used once, then cleared."
         )
         self.apply_bootstrap()
-
-    def clean_posts_per_day(self):
-        value = int(self.cleaned_data["posts_per_day"])
-        if not 1 <= value <= 4:
-            raise forms.ValidationError("Choose between 1 and 4 daily posting slots.")
-        return value
 
     def clean_queue_days(self):
         value = int(self.cleaned_data["queue_days"])
@@ -177,6 +182,7 @@ class SocialAutopilotForm(BootstrapFormMixin, forms.ModelForm):
         instance = super().save(commit=False)
         instance.channels = self.cleaned_data["channels"]
         instance.posting_hours = self.cleaned_data["posting_hours_text"]
+        instance.posts_per_day = len(instance.posting_hours)
         if commit:
             instance.save()
         return instance
