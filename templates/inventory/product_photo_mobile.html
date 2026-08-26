@@ -5,7 +5,9 @@
 {% block staff_content %}
 <section class="staff-page" id="phone-photo-mobile"
          data-public-key-url="{% url 'staff_push_public_key' %}"
-         data-subscribe-url="{% url 'staff_push_subscribe' %}">
+         data-subscribe-url="{% url 'staff_push_subscribe' %}"
+         data-status-url="{% url 'staff_product_photo_status' photo_session.token %}"
+         data-set-primary-template="{% url 'staff_product_photo_set_primary' photo_session.token 0 %}">
   <div class="card border-0 shadow-sm mx-auto" style="max-width:42rem">
     <div class="card-body p-4">
       <p class="text-uppercase small fw-semibold text-primary mb-2">Connected product draft</p>
@@ -19,10 +21,18 @@
         {% csrf_token %}
         <label class="form-label fw-semibold" for="phone-photos">Product photos</label>
         <input class="form-control form-control-lg" id="phone-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple required>
+        <div class="form-check mt-3">
+          <input class="form-check-input" id="make-primary" name="make_primary" type="checkbox" value="1" checked>
+          <label class="form-check-label" for="make-primary">Use the first uploaded photo as the main product image</label>
+        </div>
         <div id="phone-photo-preview" class="row g-2 mt-2"></div>
         <button class="btn btn-primary btn-lg w-100 mt-3" type="submit"><i class="bi bi-cloud-arrow-up me-1"></i>Upload photos</button>
       </form>
       <div id="phone-photo-message" class="alert d-none mt-3" role="status"></div>
+      <hr class="my-4">
+      <h2 class="h5">Current product photos</h2>
+      <p class="small text-muted">Photos added on the computer or phone appear here. Choose any gallery photo as the main image.</p>
+      <div id="phone-current-photos" class="row g-3"></div>
     </div>
   </div>
 </section>
