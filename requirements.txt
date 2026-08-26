@@ -5,3 +5,4 @@ psycopg[binary]>=3.2,<4
 gunicorn>=23,<24
 qrcode>=8,<9
 cryptography>=49,<50
+pywebpush>=2.0,<3
