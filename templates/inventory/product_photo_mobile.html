@@ -1,8 +1,11 @@
 {% extends "staff_base.html" %}
+{% load static %}
 {% block title %}Add photos — {{ product.name }}{% endblock %}
 {% block staff_page_name %}Phone photo upload{% endblock %}
 {% block staff_content %}
-<section class="staff-page">
+<section class="staff-page" id="phone-photo-mobile"
+         data-public-key-url="{% url 'staff_push_public_key' %}"
+         data-subscribe-url="{% url 'staff_push_subscribe' %}">
   <div class="card border-0 shadow-sm mx-auto" style="max-width:42rem">
     <div class="card-body p-4">
       <p class="text-uppercase small fw-semibold text-primary mb-2">Connected product draft</p>
@@ -15,7 +18,7 @@
       <form id="phone-photo-form" method="post" enctype="multipart/form-data" action="{% url 'staff_product_photo_upload' photo_session.token %}">
         {% csrf_token %}
         <label class="form-label fw-semibold" for="phone-photos">Product photos</label>
-        <input class="form-control form-control-lg" id="phone-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" capture="environment" multiple required>
+        <input class="form-control form-control-lg" id="phone-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple required>
         <div id="phone-photo-preview" class="row g-2 mt-2"></div>
         <button class="btn btn-primary btn-lg w-100 mt-3" type="submit"><i class="bi bi-cloud-arrow-up me-1"></i>Upload photos</button>
       </form>
@@ -23,76 +26,7 @@
     </div>
   </div>
 </section>
-<script>
-(() => {
-  const form = document.getElementById("phone-photo-form");
-  const input = document.getElementById("phone-photos");
-  const preview = document.getElementById("phone-photo-preview");
-  const message = document.getElementById("phone-photo-message");
-  const pushButton = document.getElementById("enable-phone-push");
-  const csrf = form.querySelector('[name="csrfmiddlewaretoken"]').value;
-  pushButton.addEventListener("click", async () => {
-    pushButton.disabled = true;
-    try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Push notifications are not supported by this browser.");
-      const keyResponse = await fetch("{% url 'staff_push_public_key' %}", {credentials: "same-origin"});
-      const {public_key: publicKey} = await keyResponse.json();
-      if (!publicKey) throw new Error("Phone notifications are not configured on the server yet.");
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") throw new Error("Notification permission was not granted.");
-      const registration = await navigator.serviceWorker.ready;
-      const padded = publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(publicKey.length / 4) * 4, "=");
-      const bytes = Uint8Array.from(atob(padded), value => value.charCodeAt(0));
-      let subscription = await registration.pushManager.getSubscription();
-      if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
-      const response = await fetch("{% url 'staff_push_subscribe' %}", {
-        method: "POST", credentials: "same-origin",
-        headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
-        body: JSON.stringify(subscription.toJSON())
-      });
-      if (!response.ok) throw new Error("Could not save this phone.");
-      pushButton.textContent = "Notifications enabled on this phone";
-      message.textContent = "This phone will receive future product photo requests.";
-      message.className = "alert alert-success mt-3";
-    } catch (error) {
-      message.textContent = error.message;
-      message.className = "alert alert-warning mt-3";
-      pushButton.disabled = false;
-    }
-  });
-  input.addEventListener("change", () => {
-    preview.replaceChildren();
-    [...input.files].forEach(file => {
-      const col = document.createElement("div");
-      col.className = "col-4";
-      const img = document.createElement("img");
-      img.className = "img-fluid rounded";
-      img.alt = "";
-      img.src = URL.createObjectURL(file);
-      col.appendChild(img);
-      preview.appendChild(col);
-    });
-  });
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    const button = form.querySelector("button");
-    button.disabled = true;
-    message.className = "alert d-none mt-3";
-    try {
-      const response = await fetch(form.action, {method: "POST", body: new FormData(form), credentials: "same-origin"});
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Upload failed.");
-      message.textContent = data.count + " photo(s) uploaded. You can add more or return to the computer.";
-      message.className = "alert alert-success mt-3";
-      form.reset();
-      preview.replaceChildren();
-    } catch (error) {
-      message.textContent = error.message;
-      message.className = "alert alert-danger mt-3";
-    } finally {
-      button.disabled = false;
-    }
-  });
-})();
-</script>
+
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/product_photo_handoff.js' %}" defer></script>{% endblock %}
