@@ -10,6 +10,11 @@ urlpatterns = [
         name="staff_automation_control",
     ),
     path(
+        "automation/social-autopilot/",
+        staff_views.social_autopilot_update,
+        name="staff_social_autopilot_update",
+    ),
+    path(
         "automation/pause/",
         staff_views.automation_pause,
         name="staff_automation_pause",
