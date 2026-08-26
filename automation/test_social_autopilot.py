@@ -10,6 +10,8 @@ from PIL import Image
 
 from automation.autopilot import (
     generate_autopilot_calendar,
+    queue_product_promotion,
+    rebuild_autopilot_calendar,
     reconcile_autopilot_state,
 )
 from automation.connectors import publish_telegram
@@ -97,6 +99,44 @@ class SocialAutopilotTests(TestCase):
         self.assertEqual(
             ScheduledPost.objects.filter(
                 status=ScheduledPost.STATUS_CANCELLED
+            ).count(),
+            3,
+        )
+
+    def test_priority_product_creates_review_drafts_when_not_in_full_mode(self):
+        self.settings.enabled = False
+        self.settings.channels = ["facebook", "telegram"]
+        self.settings.save()
+
+        result = queue_product_promotion(self.product)
+
+        self.assertEqual(result["created"], 2)
+        self.assertFalse(result["automatic"])
+        self.assertEqual(
+            ScheduledPost.objects.filter(status=ScheduledPost.STATUS_DRAFT).count(),
+            2,
+        )
+        self.assertTrue(
+            all("priority-organic-social" == link.medium for link in CampaignLink.objects.all())
+        )
+
+    def test_calendar_rebuild_replaces_future_autopilot_posts(self):
+        now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=now)
+
+        result = rebuild_autopilot_calendar(now=now)
+
+        self.assertEqual(result["cancelled"], 3)
+        self.assertEqual(result["created"], 3)
+        self.assertEqual(
+            ScheduledPost.objects.filter(
+                status=ScheduledPost.STATUS_CANCELLED
+            ).count(),
+            3,
+        )
+        self.assertEqual(
+            ScheduledPost.objects.filter(
+                status=ScheduledPost.STATUS_SCHEDULED
             ).count(),
             3,
         )
