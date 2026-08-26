@@ -1,11 +1,99 @@
 {% extends "staff_base.html" %}
-{% block title %}{% if object %}Edit {{ object.name }}{% else %}New product{% endif %}{% endblock %}
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}New product{% endif %}{% if object %}
+<div class="modal fade" id="phonePhotoModal" tabindex="-1" aria-labelledby="phonePhotoTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
+    <div class="modal-header"><h2 class="modal-title h5" id="phonePhotoTitle">Continue photos on your phone</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body">
+      <div id="phone-photo-loading" class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Preparing…</span></div></div>
+      <div id="phone-photo-ready" class="d-none">
+        <p>Open the notification on your logged-in phone, scan this QR code, or copy the secure link.</p>
+        <img id="phone-photo-qr" class="d-block mx-auto border rounded p-2 mb-3" width="220" height="220" alt="QR code to upload product photos">
+        <div class="input-group"><input id="phone-photo-url" class="form-control" readonly><button id="phone-photo-copy" class="btn btn-outline-secondary" type="button">Copy</button></div>
+        <p id="phone-photo-push-result" class="small text-muted mt-2 mb-0"></p>
+        <div class="alert alert-info mt-3 mb-0"><strong id="phone-photo-count">0</strong> photo(s) currently attached. This screen updates automatically.</div>
+      </div>
+      <div id="phone-photo-error" class="alert alert-danger d-none"></div>
+    </div>
+  </div></div>
+</div>
+<script>
+(() => {
+  const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+  const startButton = document.getElementById("phone-photo-start");
+  const modalElement = document.getElementById("phonePhotoModal");
+  const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+  let pollTimer;
+
+  async function enablePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || Notification.permission === "denied") return false;
+    const keyResponse = await fetch("{% url 'staff_push_public_key' %}", {credentials: "same-origin"});
+    const {public_key: publicKey} = await keyResponse.json();
+    if (!publicKey) return false;
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return false;
+    const registration = await navigator.serviceWorker.ready;
+    const bytes = Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
+    await fetch("{% url 'staff_push_subscribe' %}", {
+      method: "POST", credentials: "same-origin",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+      body: JSON.stringify(subscription.toJSON())
+    });
+    return true;
+  }
+
+  async function startHandoff() {
+    modal.show();
+    document.getElementById("phone-photo-loading").classList.remove("d-none");
+    document.getElementById("phone-photo-ready").classList.add("d-none");
+    document.getElementById("phone-photo-error").classList.add("d-none");
+    try {
+      const pushEnabled = await enablePush().catch(() => false);
+      const response = await fetch("{% url 'staff_product_photo_start' object.pk %}", {
+        method: "POST", credentials: "same-origin", headers: {"X-CSRFToken": csrf}
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not start phone photo upload.");
+      document.getElementById("phone-photo-url").value = data.url;
+      const qrResponse = await fetch(data.qr_url, {credentials: "same-origin"});
+      const qr = await qrResponse.json();
+      document.getElementById("phone-photo-qr").src = qr.image;
+      document.getElementById("phone-photo-push-result").textContent =
+        data.push_sent ? "Notification sent to your registered phone." :
+        (pushEnabled ? "Phone notifications are enabled for this device." : "No phone notification subscription yet—scan the QR code or open this page on your phone once and allow notifications.");
+      document.getElementById("phone-photo-loading").classList.add("d-none");
+      document.getElementById("phone-photo-ready").classList.remove("d-none");
+      const poll = async () => {
+        const status = await fetch(data.status_url, {credentials: "same-origin"}).then(r => r.json());
+        document.getElementById("phone-photo-count").textContent = status.count;
+      };
+      await poll();
+      clearInterval(pollTimer);
+      pollTimer = setInterval(poll, 3000);
+    } catch (error) {
+      document.getElementById("phone-photo-loading").classList.add("d-none");
+      const box = document.getElementById("phone-photo-error");
+      box.textContent = error.message;
+      box.classList.remove("d-none");
+    }
+  }
+  startButton.addEventListener("click", startHandoff);
+  document.getElementById("phone-photo-copy").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(document.getElementById("phone-photo-url").value);
+  });
+  modalElement.addEventListener("hidden.bs.modal", () => clearInterval(pollTimer));
+  if (new URLSearchParams(location.search).get("photos") === "phone") startHandoff();
+})();
+</script>
+{% endif %}
+{% endblock %}
 {% block staff_page_name %}{% if object %}Edit product{% else %}New product{% endif %}{% endblock %}
 {% block staff_content %}
 <section class="staff-page">
   <header class="staff-detail-header">
     <div class="staff-detail-heading"><p class="staff-page-eyebrow">Inventory catalogue</p><h1>{% if object %}{{ object.name }}{% else %}New product or service{% endif %}</h1><p>{% if object %}Manage catalogue details, images, variants, pricing and stock.{% else %}Create the main catalogue record; images and variants can be added after saving.{% endif %}</p></div>
-    <div class="staff-detail-actions">{% if object %}<a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' object.pk %}"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Print labels</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'staff_products' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Products</a></div>
+    <div class="staff-detail-actions">{% if object %}<button type="button" class="btn btn-primary" id="phone-photo-start"><i class="bi bi-phone me-1" aria-hidden="true"></i>Send photos to phone</button><a class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer" href="{% url 'staff_product_labels' object.pk %}"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Print labels</a>{% endif %}<a class="btn btn-outline-secondary" href="{% url 'staff_products' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Products</a></div>
   </header>
 
   {% if object %}<div class="staff-record-hero"><div class="staff-record-hero-grid"><div class="staff-record-stat"><small>Publication</small><strong>{% if object.is_published %}Published{% else %}Hidden{% endif %}</strong>{% if object.is_featured %}<span>Featured product</span>{% endif %}</div><div class="staff-record-stat"><small>Kind</small><strong>{{ object.get_kind_display }}</strong><span>{{ object.category }}</span></div><div class="staff-record-stat"><small>Current price</small><strong>{{ company.currency_code }} {{ object.price|floatformat:2 }}</strong>{% if object.compare_at_price %}<span>Compare at {{ object.compare_at_price|floatformat:2 }}</span>{% endif %}</div><div class="staff-record-stat"><small>Inventory</small><strong>{% if object.kind == 'physical' %}{% if object.has_sellable_variants %}{{ object.active_variant_count }} active options{% else %}{{ object.stock_quantity }} units{% endif %}{% else %}Not stock tracked{% endif %}</strong>{% if object.is_low_stock %}<span class="text-danger">Low-stock alert active</span>{% endif %}</div></div></div>{% endif %}
@@ -27,7 +115,7 @@
     <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Name</th><th>SKU</th><th class="text-end">Price</th><th class="text-end">Compare at</th><th class="text-center">Track stock</th><th class="text-end">Stock</th><th class="text-end">Sort</th><th class="text-center">Active</th><th class="text-center">Delete</th></tr></thead><tbody>{% for variant_form in variant_formset %}<tr>{% for hidden in variant_form.hidden_fields %}{{ hidden }}{% endfor %}<td>{{ variant_form.name.errors }}{{ variant_form.name }}</td><td>{{ variant_form.sku }}</td><td class="text-end">{{ variant_form.price }}</td><td class="text-end">{{ variant_form.compare_at_price }}</td><td class="text-center">{{ variant_form.track_inventory }}</td><td class="text-end">{{ variant_form.stock_quantity }}</td><td class="text-end">{{ variant_form.sort_order }}</td><td class="text-center">{{ variant_form.is_active }}</td><td class="text-center">{% if variant_form.DELETE %}{{ variant_form.DELETE }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
     {% else %}<div class="staff-section-card-body border-top"><div class="alert alert-info mb-0"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>After creating this item, you can add gallery images and product variants on the edit screen.</div></div>{% endif %}
 
-    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-cloud-check me-1" aria-hidden="true"></i>Catalogue changes are saved together to keep variants and images consistent.</span><div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>{% if object %}Save product{% else %}Create product{% endif %}</button></div></footer>
+    <footer class="staff-form-footer"><span class="text-muted small"><i class="bi bi-cloud-check me-1" aria-hidden="true"></i>Catalogue changes are saved together to keep variants and images consistent.</span><div class="staff-form-footer-actions"><a class="btn btn-outline-secondary" href="{% url 'staff_products' %}">Cancel</a><button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1" aria-hidden="true"></i>{% if object %}Save product{% else %}Create product{% endif %}</button>{% if not object %}<button type="submit" name="send_photos_to_phone" value="1" class="btn btn-outline-primary"><i class="bi bi-phone me-1"></i>Create & send photos to phone</button>{% endif %}</div></footer>
   </form>
 </section>
 {% endblock %}
