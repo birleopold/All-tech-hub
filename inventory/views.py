@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.forms import inlineformset_factory
@@ -18,8 +18,15 @@ from core.audit import log_audit_event
 from core.barcodes import label_payload, repeated_labels
 from core.mixins import StaffRequiredMixin
 from core.models import SupportTicket
-from inventory.forms import JobStockUseForm, StockAdjustmentForm
+from inventory.forms import (
+    JobStockUseForm,
+    ProductCommerceProfileForm,
+    ProductGrowthDataForm,
+    StockAdjustmentForm,
+)
 from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
+from growth.models import ProductGrowthData
+from merchandising.models import ProductCommerceProfile
 from operations.models import JobCard
 
 
@@ -228,27 +235,83 @@ class ProductManageListView(StaffRequiredMixin, ListView):
         return ctx
 
 
-class ProductCreateView(StaffRequiredMixin, CreateView):
+class ProductRelatedFormsMixin:
+    """Keep product identity, condition and specifications on the main workspace."""
+
+    @staticmethod
+    def related_instances(product):
+        try:
+            growth = product.growth_data
+        except ObjectDoesNotExist:
+            growth = ProductGrowthData(product=product)
+        try:
+            commerce = product.commerce_profile
+        except ObjectDoesNotExist:
+            commerce = ProductCommerceProfile(product=product)
+        return growth, commerce
+
+    def related_forms(self, product=None, data=None):
+        growth = ProductGrowthData(product=product) if product is None else self.related_instances(product)[0]
+        commerce = ProductCommerceProfile(product=product) if product is None else self.related_instances(product)[1]
+        return (
+            ProductGrowthDataForm(data=data, instance=growth, prefix="growth"),
+            ProductCommerceProfileForm(data=data, instance=commerce, prefix="commerce"),
+        )
+
+
+class ProductCreateView(ProductRelatedFormsMixin, StaffRequiredMixin, CreateView):
     model = Product
     fields = PRODUCT_STAFF_FIELDS
     template_name = "inventory/product_form.html"
 
-    def form_valid(self, form):
-        self.object = form.save()
-        log_audit_event(
-            actor=self.request.user,
-            verb="catalog.product_saved",
-            summary=f"Created “{self.object.name}” published={self.object.is_published}",
-            target=self.object,
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        if "growth_form" not in ctx:
+            ctx["growth_form"], ctx["commerce_form"] = self.related_forms()
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        growth_form, commerce_form = self.related_forms(data=request.POST)
+        validations = (
+            form.is_valid(),
+            growth_form.is_valid(),
+            commerce_form.is_valid(),
         )
-        messages.success(self.request, "Product created. Add gallery images and variants below.")
-        edit_url = reverse("staff_product_edit", kwargs={"pk": self.object.pk})
-        if "send_photos_to_phone" in self.request.POST:
-            return redirect(f"{edit_url}?photos=phone")
-        return redirect(edit_url)
+        if all(validations):
+            with transaction.atomic():
+                self.object = form.save()
+                growth = growth_form.save(commit=False)
+                growth.product = self.object
+                growth.save()
+                commerce = commerce_form.save(commit=False)
+                commerce.product = self.object
+                commerce.save()
+            log_audit_event(
+                actor=request.user,
+                verb="catalog.product_saved",
+                summary=f"Created “{self.object.name}” published={self.object.is_published}",
+                target=self.object,
+            )
+            messages.success(
+                request,
+                "Product, condition and specifications saved. Add gallery images and variants below.",
+            )
+            edit_url = reverse("staff_product_edit", kwargs={"pk": self.object.pk})
+            if "send_photos_to_phone" in request.POST:
+                return redirect(f"{edit_url}?photos=phone")
+            return redirect(edit_url)
+        return self.render_to_response(
+            self.get_context_data(
+                form=form,
+                growth_form=growth_form,
+                commerce_form=commerce_form,
+            )
+        )
 
 
-class ProductUpdateView(StaffRequiredMixin, UpdateView):
+class ProductUpdateView(ProductRelatedFormsMixin, StaffRequiredMixin, UpdateView):
     model = Product
     fields = PRODUCT_STAFF_FIELDS
     template_name = "inventory/product_form.html"
@@ -268,6 +331,8 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
         else:
             ctx["image_formset"] = ProductImageFormSet(instance=self.object)
             ctx["variant_formset"] = ProductVariantFormSet(instance=self.object)
+        if "growth_form" not in ctx:
+            ctx["growth_form"], ctx["commerce_form"] = self.related_forms(self.object)
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -277,26 +342,46 @@ class ProductUpdateView(StaffRequiredMixin, UpdateView):
             request.POST, request.FILES, instance=self.object
         )
         variant_fs = ProductVariantFormSet(request.POST, instance=self.object)
-        if form.is_valid() and image_fs.is_valid() and variant_fs.is_valid():
+        growth_form, commerce_form = self.related_forms(
+            self.object, data=request.POST
+        )
+        validations = (
+            form.is_valid(),
+            image_fs.is_valid(),
+            variant_fs.is_valid(),
+            growth_form.is_valid(),
+            commerce_form.is_valid(),
+        )
+        if all(validations):
             with transaction.atomic():
                 self.object = form.save()
                 image_fs.instance = self.object
                 image_fs.save()
                 variant_fs.instance = self.object
                 variant_fs.save()
+                growth = growth_form.save(commit=False)
+                growth.product = self.object
+                growth.save()
+                commerce = commerce_form.save(commit=False)
+                commerce.product = self.object
+                commerce.save()
             log_audit_event(
                 actor=request.user,
                 verb="catalog.product_saved",
                 summary=f"Updated “{self.object.name}” published={self.object.is_published}",
                 target=self.object,
             )
-            messages.success(self.request, "Product saved.")
+            messages.success(
+                request, "Product, condition and specifications saved."
+            )
             return redirect(self.get_success_url())
         return self.render_to_response(
             self.get_context_data(
                 form=form,
                 image_formset=image_fs,
                 variant_formset=variant_fs,
+                growth_form=growth_form,
+                commerce_form=commerce_form,
             )
         )
 
