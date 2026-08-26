@@ -57,7 +57,21 @@
       <div class="row g-3">
         {% for field in autopilot_form %}
         <div class="{% if field.name == 'default_hashtags' or field.name == 'preferred_product' or field.name == 'channels' %}col-12{% else %}col-md-6{% endif %}">
-          {% if field.field.widget.input_type == 'checkbox' and field.name != 'channels' %}
+          {% if field.name == 'channels' %}
+          <fieldset>
+            <legend class="form-label fw-semibold mb-2">{{ field.label }}</legend>
+            <div class="row g-2">
+              {% for checkbox in field %}
+              <div class="col-md-4">
+                <div class="form-check border rounded p-3 ps-5 h-100">
+                  {{ checkbox.tag }}
+                  <label class="form-check-label fw-semibold" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </fieldset>
+          {% elif field.field.widget.input_type == 'checkbox' %}
           <div class="form-check mt-4">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
           {% else %}
           <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
