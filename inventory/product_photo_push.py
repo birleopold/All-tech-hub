@@ -32,7 +32,9 @@ def send_product_photo_push(user, *, title, body, url):
                 ttl=3600,
             )
             sent += 1
-        except WebPushException as exc:
+        except Exception as exc:
+            # Push delivery is best-effort: QR and copy-link handoff must keep
+            # working even when a device subscription or VAPID key is stale.
             status = getattr(getattr(exc, "response", None), "status_code", None)
             if status in (404, 410):
                 subscription.delete()
