@@ -12,6 +12,7 @@ from automation.autopilot import (
     autopilot_readiness,
     cancel_autopilot_post,
     generate_autopilot_calendar,
+    publish_autopilot_post_now,
     queue_product_promotion,
     rebuild_autopilot_calendar,
     reconcile_autopilot_state,
@@ -19,6 +20,7 @@ from automation.autopilot import (
 from automation.connectors import diagnose_channel, publish_telegram
 from automation.forms import SocialAutopilotForm
 from automation.models import (
+    AutomationJob,
     PostAutomationPlan,
     PostChannelDelivery,
     SocialAutopilotSettings,
@@ -166,6 +168,50 @@ class SocialAutopilotTests(TestCase):
         post = ScheduledPost.objects.get()
         self.assertEqual(post.status, ScheduledPost.STATUS_DRAFT)
         self.assertEqual(post.automation_plan.mode, PostAutomationPlan.MODE_MANUAL)
+
+    @override_settings(
+        TELEGRAM_AUTO_PUBLISH_ENABLED=True,
+        TELEGRAM_BOT_TOKEN="secret-token",
+        TELEGRAM_CHANNEL_ID="@leosoft",
+    )
+    def test_publish_now_moves_only_selected_post_to_durable_queue(self):
+        self.settings.channels = ["telegram"]
+        self.settings.save(update_fields=["channels", "updated_at"])
+        calendar_now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=calendar_now)
+        post = ScheduledPost.objects.get()
+        original_time = post.scheduled_for
+        publish_now = calendar_now + timedelta(minutes=15)
+
+        result = publish_autopilot_post_now(post, now=publish_now)
+
+        self.assertEqual(result["queued"], 1)
+        post.refresh_from_db()
+        self.assertEqual(post.scheduled_for, publish_now)
+        self.assertEqual(post.status, ScheduledPost.STATUS_READY)
+        self.assertGreater(original_time, post.scheduled_for)
+        job = AutomationJob.objects.get(delivery__post=post)
+        self.assertEqual(job.status, AutomationJob.STATUS_QUEUED)
+        self.assertEqual(job.next_attempt_at, publish_now)
+
+    def test_publish_now_does_not_bypass_controlled_review(self):
+        self.settings.mode = SocialAutopilotSettings.MODE_CONTROLLED
+        self.settings.channels = ["telegram"]
+        self.settings.save(update_fields=["mode", "channels", "updated_at"])
+        calendar_now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=calendar_now)
+        post = ScheduledPost.objects.get()
+        original_time = post.scheduled_for
+
+        result = publish_autopilot_post_now(
+            post,
+            now=calendar_now + timedelta(minutes=15),
+        )
+
+        self.assertIn("error", result)
+        post.refresh_from_db()
+        self.assertEqual(post.scheduled_for, original_time)
+        self.assertFalse(AutomationJob.objects.exists())
 
     def test_stopping_autopilot_cancels_future_posts(self):
         now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))

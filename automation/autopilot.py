@@ -470,6 +470,62 @@ def autopilot_readiness(settings_row: SocialAutopilotSettings, *, now=None) -> d
 
 
 @transaction.atomic
+def publish_autopilot_post_now(post: ScheduledPost, *, actor=None, now=None) -> dict:
+    """Move one automatic post to the durable queue without changing later slots."""
+    now = now or timezone.now()
+    post = (
+        ScheduledPost.objects.select_for_update()
+        .select_related("product")
+        .get(pk=post.pk)
+    )
+    if post.status != ScheduledPost.STATUS_SCHEDULED:
+        return {"queued": 0, "error": "Only an upcoming scheduled post can be published now."}
+
+    plan = PostAutomationPlan.objects.select_for_update().filter(post=post).first()
+    if plan is None or plan.mode != PostAutomationPlan.MODE_AUTOMATIC:
+        return {
+            "queued": 0,
+            "error": "This post is waiting for manual review and cannot publish automatically.",
+        }
+
+    settings_row = SocialAutopilotSettings.load()
+    if not settings_row.enabled or settings_row.mode != SocialAutopilotSettings.MODE_FULL:
+        return {
+            "queued": 0,
+            "error": "Turn on Full autopilot before publishing an item immediately.",
+        }
+
+    original_time = post.scheduled_for
+    post.scheduled_for = now
+    post.save(update_fields=["scheduled_for", "updated_at"])
+
+    from automation.services import prepare_post
+    from core.audit import log_audit_event
+
+    result = prepare_post(post, now=now)
+    if not result.get("queued"):
+        transaction.set_rollback(True)
+        return {
+            **result,
+            "error": (
+                "The post could not be queued automatically. "
+                "Check the selected channel connection and product image."
+            ),
+        }
+
+    log_audit_event(
+        actor=actor,
+        verb="automation.social_post_publish_now",
+        summary=(
+            f"Queued social post #{post.pk} immediately instead of "
+            f"{original_time.isoformat() if original_time else 'an unscheduled time'}."
+        ),
+        target=post,
+    )
+    return {**result, "original_time": original_time}
+
+
+@transaction.atomic
 def cancel_autopilot_post(post: ScheduledPost, *, actor=None) -> dict:
     """Cancel one unpublished autopilot item without rebuilding the whole calendar."""
     from automation.services import cancel_post_automation
