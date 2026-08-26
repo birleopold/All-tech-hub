@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.db import DatabaseError, connection
+from django.db.migrations.executor import MigrationExecutor
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET
@@ -56,13 +57,26 @@ def ready(request):
     """Readiness check used only after the application and database are usable."""
 
     database_status = "ok"
+    migration_status = "unknown"
+    pending_migrations = []
     http_status = 200
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
+        executor = MigrationExecutor(connection)
+        plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        pending_migrations = [
+            f"{migration.app_label}.{migration.name}"
+            for migration, backwards in plan
+            if not backwards
+        ][:20]
+        migration_status = "pending" if pending_migrations else "ok"
+        if pending_migrations:
+            http_status = 503
     except DatabaseError:
         database_status = "error"
+        migration_status = "error"
         http_status = 503
 
     return _health_response(
@@ -70,6 +84,8 @@ def ready(request):
             "status": "ok" if http_status == 200 else "degraded",
             "service": "leosoft-web",
             "database": database_status,
+            "migrations": migration_status,
+            "pending_migrations": pending_migrations,
             "release": RUNNING_RELEASE,
             "timestamp": timezone.now().isoformat(),
         },
