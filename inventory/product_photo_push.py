@@ -15,7 +15,7 @@ def send_product_photo_push(user, *, title, body, url):
         logger.warning("webpush_not_configured")
         return 0
 
-    from pywebpush import WebPushException, webpush
+    from pywebpush import webpush
 
     payload = json.dumps({"title": title, "body": body, "url": url})
     sent = 0
