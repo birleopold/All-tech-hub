@@ -23,6 +23,7 @@ from automation.forms import (
 )
 from automation.models import AutomationJob, SocialAutopilotSettings
 from automation.reporting import automation_control_summary, automation_integrity_findings
+from catalog.models import Product
 from core.mixins import StaffRequiredMixin
 from marketing.models import ScheduledPost
 
@@ -216,4 +217,42 @@ def social_autopilot_update(request):
             request,
             f"Social autopilot stopped. {reconciled['changed']} future delivery record(s) were stopped.",
         )
+    return redirect("staff_automation_control")
+
+
+@require_POST
+def social_autopilot_promote_product(request, product_id: int):
+    _require_automation_staff(request, change=True)
+    product = get_object_or_404(Product, pk=product_id)
+    from automation.autopilot import queue_product_promotion
+
+    result = queue_product_promotion(product, actor=request.user)
+    if result.get("error"):
+        messages.error(request, result["error"])
+    elif result.get("automatic"):
+        messages.success(
+            request,
+            f"{result['created']} social post(s) queued for automatic publishing.",
+        )
+    else:
+        messages.success(
+            request,
+            f"{result['created']} social draft(s) created for review.",
+        )
+    return redirect("staff_product_edit", pk=product.pk)
+
+
+@require_POST
+def social_autopilot_rebuild(request):
+    _require_automation_staff(request, change=True)
+    from automation.autopilot import rebuild_autopilot_calendar
+
+    result = rebuild_autopilot_calendar()
+    messages.success(
+        request,
+        (
+            f"Social calendar rebuilt: {result['cancelled']} old future post(s) "
+            f"cancelled and {result['created']} new channel post(s) generated."
+        ),
+    )
     return redirect("staff_automation_control")
