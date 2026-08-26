@@ -19,7 +19,7 @@ from growth.models import GrowthSettings, SavedCart, StockAlertSubscription
 from growth.services import absolute_public_url, send_saved_cart_message
 from marketing.models import ScheduledPost
 
-AUTO_CHANNELS = {"facebook", "instagram"}
+AUTO_CHANNELS = {"facebook", "instagram", "telegram"}
 OPEN_JOB_STATUSES = {
     AutomationJob.STATUS_QUEUED,
     AutomationJob.STATUS_RUNNING,
@@ -283,6 +283,11 @@ def prepare_post(post: ScheduledPost, *, now=None) -> dict:
 
 def queue_due_posts(*, limit: int = 100, dry_run: bool = False) -> dict:
     now = timezone.now()
+    autopilot = {"created": 0}
+    if not dry_run:
+        from automation.autopilot import generate_autopilot_calendar
+
+        autopilot = generate_autopilot_calendar(now=now)
     ids = list(
         ScheduledPost.objects.filter(
             status=ScheduledPost.STATUS_SCHEDULED,
@@ -299,7 +304,12 @@ def queue_due_posts(*, limit: int = 100, dry_run: bool = False) -> dict:
         result = prepare_post(ScheduledPost(pk=post_id), now=now)
         queued += result["queued"]
         manual += result["manual"]
-    return {"due": len(ids), "queued": queued, "manual": manual}
+    return {
+        "due": len(ids),
+        "queued": queued,
+        "manual": manual,
+        "autopilot_created": autopilot.get("created", 0),
+    }
 
 
 def _queue_job(*, key: str, job_type: str, payload: dict, when, max_attempts=None) -> bool:

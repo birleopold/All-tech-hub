@@ -114,8 +114,8 @@ class ScheduledPostForm(BootstrapModelForm):
         choices=CHANNEL_CHOICES,
         widget=forms.CheckboxSelectMultiple,
         help_text=(
-            "Facebook and Instagram can publish automatically after official Meta "
-            "credentials are connected. Other selected channels remain manual."
+            "Facebook and Instagram publish through Meta, and Telegram through its "
+            "free Bot API, after credentials are connected. Other channels remain manual."
         ),
     )
     publish_mode = forms.ChoiceField(

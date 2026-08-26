@@ -20,6 +20,50 @@
   <div class="col-lg-6"><div class="card border-0 shadow-sm h-100"><div class="card-body p-4"><h2 class="h5">Integrity gate</h2><p class="mb-2"><strong>{{ integrity.errors }}</strong> current integrity error{{ integrity.errors|pluralize }}</p><dl class="row small mb-0"><dt class="col-8">Stale worker runs</dt><dd class="col-4 text-end">{{ integrity.stale_run_count }}</dd><dt class="col-8">Running without lock</dt><dd class="col-4 text-end">{{ integrity.running_without_lock }}</dd><dt class="col-8">Terminal without completion</dt><dd class="col-4 text-end">{{ integrity.terminal_without_completion }}</dd><dt class="col-8">Dead-letter jobs</dt><dd class="col-4 text-end">{{ integrity.dead_letter_jobs }}</dd></dl></div></div></div>
 </div>
 
+<div class="card border-primary shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+      <div>
+        <p class="text-uppercase small text-primary fw-semibold mb-1">Zero-cost organic publishing</p>
+        <h2 class="h4 mb-1">Social media autopilot</h2>
+        <p class="text-muted mb-0">Choose a product once or let inventory, stock, completeness and cooldown rules choose automatically.</p>
+      </div>
+      <span class="badge {% if autopilot.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">{% if autopilot.enabled %}Running{% else %}Stopped{% endif %}</span>
+    </div>
+    <div class="row g-2 mb-3">
+      {% for channel, connected in social_connections.items %}
+      <div class="col-sm-4"><div class="border rounded p-2 small"><strong>{{ channel|title }}</strong><span class="float-end badge {% if connected %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if connected %}Connected{% else %}Needs credentials{% endif %}</span></div></div>
+      {% endfor %}
+    </div>
+    {% if autopilot.last_error %}<div class="alert alert-warning">{{ autopilot.last_error }}</div>{% endif %}
+    {% if can_change_automation %}
+    <form method="post" action="{% url 'staff_social_autopilot_update' %}">
+      {% csrf_token %}
+      {% if autopilot_form.non_field_errors %}<div class="alert alert-danger">{{ autopilot_form.non_field_errors }}</div>{% endif %}
+      <div class="row g-3">
+        {% for field in autopilot_form %}
+        <div class="{% if field.name == 'default_hashtags' or field.name == 'preferred_product' or field.name == 'channels' %}col-12{% else %}col-md-6{% endif %}">
+          {% if field.field.widget.input_type == 'checkbox' and field.name != 'channels' %}
+          <div class="form-check mt-4">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+          {% else %}
+          <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+          {% endif %}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <button class="btn btn-primary mt-3" type="submit">Save autopilot controls</button>
+    </form>
+    {% endif %}
+    <hr class="my-4">
+    <h3 class="h5">Upcoming social queue</h3>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Time</th><th>Product</th><th>Channels</th><th>Status</th></tr></thead><tbody>
+      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Review draft" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", " }}</td><td>{{ post.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4" class="text-muted">No upcoming social posts.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </div>
+</div>
+
 {% if can_change_automation %}
 <div class="row g-4 mb-4">
   <div class="col-lg-6"><div class="card border-danger shadow-sm h-100"><div class="card-body p-4"><h2 class="h5">Pause automation</h2><p class="small text-muted">Pause every automation workflow or one durable job type. Running work is not force-stopped.</p><form method="post" action="{% url 'staff_automation_pause' %}">{% csrf_token %}<div class="mb-3"><label class="form-label" for="{{ pause_form.scope.id_for_label }}">Scope</label>{{ pause_form.scope }}</div><div class="mb-3"><label class="form-label" for="{{ pause_form.reason.id_for_label }}">Reason</label>{{ pause_form.reason }}</div><div class="mb-3"><label class="form-label" for="{{ pause_form.confirmation.id_for_label }}">Confirmation</label>{{ pause_form.confirmation }}<div class="form-text">{{ pause_form.confirmation.help_text }}</div></div><button class="btn btn-danger" type="submit">Apply pause</button></form></div></div></div>

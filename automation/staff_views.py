@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
+from automation.connectors import channel_is_configured
 from automation.control import (
     AutomationControlError,
     cancel_open_job,
@@ -18,10 +19,12 @@ from automation.forms import (
     AutomationJobReplayForm,
     AutomationPauseForm,
     AutomationResumeForm,
+    SocialAutopilotForm,
 )
-from automation.models import AutomationJob
+from automation.models import AutomationJob, SocialAutopilotSettings
 from automation.reporting import automation_control_summary, automation_integrity_findings
 from core.mixins import StaffRequiredMixin
+from marketing.models import ScheduledPost
 
 
 VIEW_PERMISSION = "automation.view_automationjob"
@@ -45,6 +48,24 @@ class AutomationControlDashboardView(
         context["resume_form"] = AutomationResumeForm()
         context["can_change_automation"] = self.request.user.has_perm(CHANGE_PERMISSION)
         context["job_type_labels"] = dict(AutomationJob.TYPE_CHOICES)
+        autopilot = SocialAutopilotSettings.load()
+        context["autopilot"] = autopilot
+        context["autopilot_form"] = SocialAutopilotForm(instance=autopilot)
+        context["social_connections"] = {
+            channel: channel_is_configured(channel)
+            for channel in ("facebook", "instagram", "telegram")
+        }
+        context["upcoming_social_posts"] = (
+            ScheduledPost.objects.filter(
+                status__in=[
+                    ScheduledPost.STATUS_DRAFT,
+                    ScheduledPost.STATUS_SCHEDULED,
+                    ScheduledPost.STATUS_READY,
+                ]
+            )
+            .select_related("product")
+            .order_by("scheduled_for", "pk")[:20]
+        )
         return context
 
 
@@ -144,3 +165,55 @@ def automation_job_cancel(request, pk: int):
     else:
         messages.success(request, "The queued automation job was cancelled.")
     return redirect("staff_automation_job_detail", pk=job.pk)
+
+
+@require_POST
+def social_autopilot_update(request):
+    _require_automation_staff(request, change=True)
+    autopilot = SocialAutopilotSettings.load()
+    form = SocialAutopilotForm(request.POST, instance=autopilot)
+    if not form.is_valid():
+        context = automation_control_summary()
+        context["integrity"] = automation_integrity_findings()
+        context["pause_form"] = AutomationPauseForm()
+        context["resume_form"] = AutomationResumeForm()
+        context["can_change_automation"] = True
+        context["job_type_labels"] = dict(AutomationJob.TYPE_CHOICES)
+        context["autopilot"] = autopilot
+        context["autopilot_form"] = form
+        context["social_connections"] = {
+            channel: channel_is_configured(channel)
+            for channel in ("facebook", "instagram", "telegram")
+        }
+        context["upcoming_social_posts"] = (
+            ScheduledPost.objects.filter(
+                status__in=[
+                    ScheduledPost.STATUS_DRAFT,
+                    ScheduledPost.STATUS_SCHEDULED,
+                    ScheduledPost.STATUS_READY,
+                ]
+            )
+            .select_related("product")
+            .order_by("scheduled_for", "pk")[:20]
+        )
+        return render(request, "automation/staff_control.html", context, status=400)
+
+    autopilot = form.save()
+    from automation.autopilot import (
+        generate_autopilot_calendar,
+        reconcile_autopilot_state,
+    )
+
+    reconciled = reconcile_autopilot_state(autopilot)
+    if autopilot.enabled:
+        result = generate_autopilot_calendar()
+        messages.success(
+            request,
+            f"Social autopilot saved. {result.get('created', 0)} channel post(s) generated.",
+        )
+    else:
+        messages.success(
+            request,
+            f"Social autopilot stopped. {reconciled['changed']} future delivery record(s) were stopped.",
+        )
+    return redirect("staff_automation_control")
