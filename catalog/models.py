@@ -154,16 +154,16 @@ class Product(models.Model):
 
     @property
     def primary_display_image(self):
-        """First gallery image file, else the legacy single product image."""
+        """Explicit main image, falling back to the first gallery image."""
+        if self.image:
+            return self.image
         img = (
             self.gallery_images.filter(image__isnull=False)
             .exclude(image="")
             .order_by("sort_order", "id")
             .first()
         )
-        if img and img.image:
-            return img.image
-        return self.image if self.image else None
+        return img.image if img and img.image else None
 
     @property
     def min_active_variant_price(self) -> Decimal | None:
