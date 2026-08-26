@@ -36,6 +36,60 @@ VIEW_PERMISSION = "automation.view_automationjob"
 CHANGE_PERMISSION = "automation.change_automationjob"
 
 
+CHANNEL_LABELS = {
+    "facebook": "Facebook Page",
+    "instagram": "Instagram",
+    "telegram": "Telegram",
+}
+
+
+def _social_autopilot_context(autopilot, *, form=None):
+    from automation.autopilot import autopilot_readiness
+
+    selected = list(autopilot.channels or [])
+    connections = {
+        channel: channel_is_configured(channel)
+        for channel in CHANNEL_LABELS
+    }
+    upcoming = (
+        ScheduledPost.objects.filter(
+            status__in=[
+                ScheduledPost.STATUS_DRAFT,
+                ScheduledPost.STATUS_SCHEDULED,
+                ScheduledPost.STATUS_READY,
+            ]
+        )
+        .select_related("product")
+        .order_by("scheduled_for", "pk")[:20]
+    )
+    selected_labels = [
+        CHANNEL_LABELS[channel] for channel in selected if channel in CHANNEL_LABELS
+    ]
+    return {
+        "autopilot": autopilot,
+        "autopilot_form": form or SocialAutopilotForm(instance=autopilot),
+        "autopilot_readiness": autopilot_readiness(autopilot),
+        "social_performance": social_channel_performance(days=30),
+        "social_connections": connections,
+        "social_channel_statuses": [
+            {
+                "key": channel,
+                "label": label,
+                "connected": connections[channel],
+                "selected": channel in selected,
+            }
+            for channel, label in CHANNEL_LABELS.items()
+        ],
+        "selected_channel_labels": selected_labels,
+        "selected_channel_names": ", ".join(selected_labels) or "No channels selected",
+        "daily_post_count": len(autopilot.posting_hours or [9]),
+        "target_delivery_count": (
+            len(selected) * len(autopilot.posting_hours or [9]) * autopilot.queue_days
+        ),
+        "upcoming_social_posts": upcoming,
+    }
+
+
 class AutomationControlDashboardView(
     PermissionRequiredMixin,
     StaffRequiredMixin,
@@ -54,26 +108,7 @@ class AutomationControlDashboardView(
         context["can_change_automation"] = self.request.user.has_perm(CHANGE_PERMISSION)
         context["job_type_labels"] = dict(AutomationJob.TYPE_CHOICES)
         autopilot = SocialAutopilotSettings.load()
-        context["autopilot"] = autopilot
-        context["autopilot_form"] = SocialAutopilotForm(instance=autopilot)
-        from automation.autopilot import autopilot_readiness
-        context["autopilot_readiness"] = autopilot_readiness(autopilot)
-        context["social_performance"] = social_channel_performance(days=30)
-        context["social_connections"] = {
-            channel: channel_is_configured(channel)
-            for channel in ("facebook", "instagram", "telegram")
-        }
-        context["upcoming_social_posts"] = (
-            ScheduledPost.objects.filter(
-                status__in=[
-                    ScheduledPost.STATUS_DRAFT,
-                    ScheduledPost.STATUS_SCHEDULED,
-                    ScheduledPost.STATUS_READY,
-                ]
-            )
-            .select_related("product")
-            .order_by("scheduled_for", "pk")[:20]
-        )
+        context.update(_social_autopilot_context(autopilot))
         return context
 
 
@@ -187,26 +222,7 @@ def social_autopilot_update(request):
         context["resume_form"] = AutomationResumeForm()
         context["can_change_automation"] = True
         context["job_type_labels"] = dict(AutomationJob.TYPE_CHOICES)
-        context["autopilot"] = autopilot
-        context["autopilot_form"] = form
-        from automation.autopilot import autopilot_readiness
-        context["autopilot_readiness"] = autopilot_readiness(autopilot)
-        context["social_performance"] = social_channel_performance(days=30)
-        context["social_connections"] = {
-            channel: channel_is_configured(channel)
-            for channel in ("facebook", "instagram", "telegram")
-        }
-        context["upcoming_social_posts"] = (
-            ScheduledPost.objects.filter(
-                status__in=[
-                    ScheduledPost.STATUS_DRAFT,
-                    ScheduledPost.STATUS_SCHEDULED,
-                    ScheduledPost.STATUS_READY,
-                ]
-            )
-            .select_related("product")
-            .order_by("scheduled_for", "pk")[:20]
-        )
+        context.update(_social_autopilot_context(autopilot, form=form))
         return render(request, "automation/staff_control.html", context, status=400)
 
     autopilot = form.save()
@@ -218,10 +234,28 @@ def social_autopilot_update(request):
     reconciled = reconcile_autopilot_state(autopilot)
     if autopilot.enabled:
         result = generate_autopilot_calendar()
-        messages.success(
-            request,
-            f"Social autopilot saved. {result.get('created', 0)} channel post(s) generated.",
+        created = result.get("created", 0)
+        channel_names = ", ".join(
+            CHANNEL_LABELS[channel]
+            for channel in autopilot.channels
+            if channel in CHANNEL_LABELS
         )
+        item_label = "draft" if autopilot.mode == autopilot.MODE_CONTROLLED else "scheduled post"
+        if created:
+            messages.success(
+                request,
+                (
+                    f"Autopilot is ready for {channel_names}. "
+                    f"Created {created} {item_label}{'' if created == 1 else 's'} "
+                    f"covering the next {autopilot.queue_days} day"
+                    f"{'' if autopilot.queue_days == 1 else 's'}."
+                ),
+            )
+        else:
+            messages.success(
+                request,
+                f"Autopilot settings saved for {channel_names}. The existing schedule is already up to date.",
+            )
     else:
         messages.success(
             request,
