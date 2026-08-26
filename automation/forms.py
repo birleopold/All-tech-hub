@@ -176,6 +176,8 @@ class SocialAutopilotForm(BootstrapFormMixin, forms.ModelForm):
             raise forms.ValidationError("Enter whole hours separated by commas.") from exc
         if not hours or any(hour < 0 or hour > 23 for hour in hours):
             raise forms.ValidationError("Each posting hour must be between 0 and 23.")
+        if len(hours) > 4:
+            raise forms.ValidationError("Choose no more than four posting times each day.")
         return hours
 
     def save(self, commit=True):
