@@ -30,6 +30,7 @@
       </div>
       <div class="d-flex align-items-center gap-2">
         <span class="badge {% if autopilot.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">{% if autopilot.enabled %}Running{% else %}Stopped{% endif %}</span>
+        {% if can_change_automation %}<form method="post" action="{% url 'staff_social_autopilot_test_connections' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" type="submit">Test connections</button></form>{% endif %}
         {% if can_change_automation and autopilot.enabled %}<form method="post" action="{% url 'staff_social_autopilot_rebuild' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Rebuild calendar</button></form>{% endif %}
       </div>
     </div>
