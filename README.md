@@ -293,12 +293,19 @@ Set `ALLTECH_ENV=production`, provide a random `ALLTECH_SECRET_KEY` of at least
 HTTPS through Nginx.
 
 ```bash
-python manage.py check --deploy
-python manage.py migrate
-python manage.py collectstatic --noinput
-python manage.py bootstrap_roles
+scripts/manage_production.sh check --deploy
+scripts/manage_production.sh migrate
+scripts/manage_production.sh collectstatic --noinput
+scripts/manage_production.sh bootstrap_roles
 sudo systemctl restart leosoft_gunicorn
 ```
+
+For manual VPS administration, use `scripts/manage_production.sh` instead of
+calling `python manage.py` directly. The wrapper loads the protected `.env`,
+forces production settings and refuses to continue unless the selected database
+is PostgreSQL. Set `ALLTECH_EXPECTED_DB_NAME=leosoft_prod` in production for an
+additional database-name assertion. The readiness endpoint also returns HTTP 503
+and lists pending migrations when deployed code is ahead of the database schema.
 
 Uploaded media must be stored on persistent storage or object storage. Do not
 serve production media directly through Django.
