@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
+from automation.connectors import channel_is_configured
 from automation.control import (
     AutomationControlError,
     cancel_open_job,
@@ -22,9 +23,8 @@ from automation.forms import (
 )
 from automation.models import AutomationJob, SocialAutopilotSettings
 from automation.reporting import automation_control_summary, automation_integrity_findings
-from automation.connectors import channel_is_configured
-from marketing.models import ScheduledPost
 from core.mixins import StaffRequiredMixin
+from marketing.models import ScheduledPost
 
 
 VIEW_PERMISSION = "automation.view_automationjob"
