@@ -249,6 +249,34 @@ Run the marketing regression tests with:
 python manage.py test catalog.test_social_marketing
 ```
 
+## Social media autopilot
+
+The automation control center at **Staff → Automation** can run organic social
+publishing in either controlled or full-autopilot mode. Controlled mode creates
+review drafts. Full mode creates scheduled posts and releases them through the
+existing durable worker.
+
+Autopilot uses published catalogue facts only. It requires a product image and
+description, can require current stock, rotates products using a configurable
+cooldown, gives a one-time preferred product priority, creates first-party
+tracked links and formats separate Facebook, Instagram and Telegram captions.
+It does not call a paid AI or social scheduling service.
+
+Facebook and Instagram use the existing official Meta connector. Telegram uses
+the free Bot API; create a bot with BotFather, make it an administrator of the
+company channel, and configure:
+
+```bash
+ALLTECH_TELEGRAM_AUTO_PUBLISH_ENABLED=1
+ALLTECH_TELEGRAM_BOT_TOKEN=...
+ALLTECH_TELEGRAM_CHANNEL_ID=@your_public_channel
+```
+
+Keep autopilot stopped until each selected channel shows **Connected** in the
+control center. Stopping autopilot prevents new calendar generation but
+preserves existing drafts and scheduled records for review. The master
+automation pause remains the emergency stop for queued delivery work.
+
 ## Production commands
 
 Set `ALLTECH_ENV=production`, provide a random `ALLTECH_SECRET_KEY` of at least
