@@ -258,8 +258,16 @@ existing durable worker.
 
 Autopilot uses published catalogue facts only. It requires a product image and
 description, can require current stock, rotates products using a configurable
-cooldown, gives a one-time preferred product priority, creates first-party
+cooldown, considers previous tracked clicks and leads, creates first-party
 tracked links and formats separate Facebook, Instagram and Telegram captions.
+Content openings rotate between product spotlight, availability, customer
+benefit and service formats.
+
+Authorised staff can queue a priority promotion directly from a product edit
+page. In full mode it is scheduled five minutes ahead; while stopped or in
+controlled mode it becomes a review draft. The Automation control center shows
+caption previews and can cancel and rebuild the future generated calendar after
+rules or priorities change.
 It does not call a paid AI or social scheduling service.
 
 Facebook and Instagram use the existing official Meta connector. Telegram uses
