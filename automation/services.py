@@ -212,9 +212,7 @@ def update_plan_status(plan: PostAutomationPlan) -> None:
 def prepare_post(post: ScheduledPost, *, now=None) -> dict:
     now = now or timezone.now()
     post = (
-        ScheduledPost.objects.select_for_update()
-        .select_related("product")
-        .get(pk=post.pk)
+        ScheduledPost.objects.select_for_update().get(pk=post.pk)
     )
     plan, _ = PostAutomationPlan.objects.select_for_update().get_or_create(post=post)
     channels = {str(channel) for channel in (post.channels or []) if channel}
