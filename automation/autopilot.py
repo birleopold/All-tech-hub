@@ -474,9 +474,7 @@ def publish_autopilot_post_now(post: ScheduledPost, *, actor=None, now=None) -> 
     """Move one automatic post to the durable queue without changing later slots."""
     now = now or timezone.now()
     post = (
-        ScheduledPost.objects.select_for_update()
-        .select_related("product")
-        .get(pk=post.pk)
+        ScheduledPost.objects.select_for_update().get(pk=post.pk)
     )
     if post.status != ScheduledPost.STATUS_SCHEDULED:
         return {"queued": 0, "error": "Only an upcoming scheduled post can be published now."}
