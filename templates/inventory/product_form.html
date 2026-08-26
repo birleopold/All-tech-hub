@@ -1,4 +1,5 @@
 {% extends "staff_base.html" %}
+{% load static %}
 {% block title %}{% if object %}Edit {{ object.name }}{% else %}New product{% endif %}{% endblock %}
 {% block staff_page_name %}{% if object %}Edit product{% else %}New product{% endif %}{% endblock %}
 {% block staff_content %}
@@ -39,7 +40,11 @@
   </form>
 </section>
 {% if object %}
-<div class="modal fade" id="phonePhotoModal" tabindex="-1" aria-labelledby="phonePhotoTitle" aria-hidden="true">
+<div class="modal fade" id="phonePhotoModal"
+     data-start-url="{% url 'staff_product_photo_start' object.pk %}"
+     data-public-key-url="{% url 'staff_push_public_key' %}"
+     data-subscribe-url="{% url 'staff_push_subscribe' %}"
+     tabindex="-1" aria-labelledby="phonePhotoTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
     <div class="modal-header"><h2 class="modal-title h5" id="phonePhotoTitle">Continue photos on your phone</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
     <div class="modal-body">
@@ -55,88 +60,8 @@
     </div>
   </div></div>
 </div>
-<script>
-(() => {
-  const csrf = document.querySelector('[name="csrfmiddlewaretoken"]').value;
-  const startButton = document.getElementById("phone-photo-start");
-  const modalElement = document.getElementById("phonePhotoModal");
-  const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-  let pollTimer;
 
-  async function enablePush() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || Notification.permission === "denied") return false;
-    const keyResponse = await fetch("{% url 'staff_push_public_key' %}", {credentials: "same-origin"});
-    const {public_key: publicKey} = await keyResponse.json();
-    if (!publicKey) return false;
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return false;
-    const registration = await navigator.serviceWorker.ready;
-    const padded = publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(publicKey.length / 4) * 4, "=");
-    const bytes = Uint8Array.from(atob(padded), value => value.charCodeAt(0));
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
-    await fetch("{% url 'staff_push_subscribe' %}", {
-      method: "POST", credentials: "same-origin",
-      headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
-      body: JSON.stringify(subscription.toJSON())
-    });
-    return true;
-  }
-
-  async function startHandoff() {
-    modal.show();
-    document.getElementById("phone-photo-loading").classList.remove("d-none");
-    document.getElementById("phone-photo-ready").classList.add("d-none");
-    document.getElementById("phone-photo-error").classList.add("d-none");
-    try {
-      const pushEnabled = await enablePush().catch(() => false);
-      const response = await fetch("{% url 'staff_product_photo_start' object.pk %}", {
-        method: "POST", credentials: "same-origin", headers: {"X-CSRFToken": csrf}
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not start phone photo upload.");
-      document.getElementById("phone-photo-url").value = data.url;
-      const qrResponse = await fetch(data.qr_url, {credentials: "same-origin"});
-      const qr = await qrResponse.json();
-      document.getElementById("phone-photo-qr").src = qr.image;
-      document.getElementById("phone-photo-push-result").textContent =
-        data.push_sent ? "Notification sent to your registered phone." :
-        (pushEnabled ? "Phone notifications are enabled for this device." : "No phone notification subscription yet—scan the QR code or open this page on your phone once and allow notifications.");
-      document.getElementById("phone-photo-loading").classList.add("d-none");
-      document.getElementById("phone-photo-ready").classList.remove("d-none");
-      const poll = async () => {
-        const status = await fetch(data.status_url, {credentials: "same-origin"}).then(r => r.json());
-        document.getElementById("phone-photo-count").textContent = status.count;
-        const thumbnails = document.getElementById("phone-photo-thumbnails");
-        thumbnails.replaceChildren();
-        status.images.forEach(item => {
-          const col = document.createElement("div");
-          col.className = "col-3";
-          const img = document.createElement("img");
-          img.src = item.url;
-          img.alt = item.alt_text || "";
-          img.className = "img-fluid rounded border";
-          col.appendChild(img);
-          thumbnails.appendChild(col);
-        });
-      };
-      await poll();
-      clearInterval(pollTimer);
-      pollTimer = setInterval(poll, 3000);
-    } catch (error) {
-      document.getElementById("phone-photo-loading").classList.add("d-none");
-      const box = document.getElementById("phone-photo-error");
-      box.textContent = error.message;
-      box.classList.remove("d-none");
-    }
-  }
-  startButton.addEventListener("click", startHandoff);
-  document.getElementById("phone-photo-copy").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(document.getElementById("phone-photo-url").value);
-  });
-  modalElement.addEventListener("hidden.bs.modal", () => clearInterval(pollTimer));
-  if (new URLSearchParams(location.search).get("photos") === "phone") startHandoff();
-})();
-</script>
 {% endif %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/product_photo_handoff.js' %}" defer></script>{% endblock %}
