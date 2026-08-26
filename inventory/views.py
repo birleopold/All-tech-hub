@@ -18,6 +18,7 @@ from core.audit import log_audit_event
 from core.barcodes import label_payload, repeated_labels
 from core.mixins import StaffRequiredMixin
 from core.models import SupportTicket
+from growth.models import ProductGrowthData
 from inventory.forms import (
     JobStockUseForm,
     ProductCommerceProfileForm,
@@ -25,7 +26,6 @@ from inventory.forms import (
     StockAdjustmentForm,
 )
 from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
-from growth.models import ProductGrowthData
 from merchandising.models import ProductCommerceProfile
 from operations.models import JobCard
 
