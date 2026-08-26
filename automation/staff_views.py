@@ -199,9 +199,13 @@ def social_autopilot_update(request):
         return render(request, "automation/staff_control.html", context, status=400)
 
     autopilot = form.save()
-    if autopilot.enabled:
-        from automation.autopilot import generate_autopilot_calendar
+    from automation.autopilot import (
+        generate_autopilot_calendar,
+        reconcile_autopilot_state,
+    )
 
+    reconciled = reconcile_autopilot_state(autopilot)
+    if autopilot.enabled:
         result = generate_autopilot_calendar()
         messages.success(
             request,
@@ -210,6 +214,6 @@ def social_autopilot_update(request):
     else:
         messages.success(
             request,
-            "Social autopilot stopped. Existing scheduled posts were preserved for review.",
+            f"Social autopilot stopped. {reconciled['changed']} future delivery record(s) were stopped.",
         )
     return redirect("staff_automation_control")
