@@ -8,7 +8,10 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
 
-from automation.autopilot import generate_autopilot_calendar
+from automation.autopilot import (
+    generate_autopilot_calendar,
+    reconcile_autopilot_state,
+)
 from automation.connectors import publish_telegram
 from automation.models import PostAutomationPlan, SocialAutopilotSettings
 from catalog.models import Category, Product
@@ -80,6 +83,23 @@ class SocialAutopilotTests(TestCase):
         post = ScheduledPost.objects.get()
         self.assertEqual(post.status, ScheduledPost.STATUS_DRAFT)
         self.assertEqual(post.automation_plan.mode, PostAutomationPlan.MODE_MANUAL)
+
+    def test_stopping_autopilot_cancels_future_posts(self):
+        now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=now)
+        self.settings.refresh_from_db()
+        self.settings.enabled = False
+        self.settings.save(update_fields=["enabled", "updated_at"])
+
+        result = reconcile_autopilot_state(self.settings, now=now)
+
+        self.assertEqual(result["changed"], 3)
+        self.assertEqual(
+            ScheduledPost.objects.filter(
+                status=ScheduledPost.STATUS_CANCELLED
+            ).count(),
+            3,
+        )
 
 
 @override_settings(
