@@ -55,6 +55,8 @@ def _candidate_products(settings_row, *, cutoff, used_ids):
     recently_posted = ScheduledPost.objects.filter(
         product_id__isnull=False,
         scheduled_for__gte=cutoff,
+    ).exclude(
+        status=ScheduledPost.STATUS_CANCELLED
     ).values_list("product_id", flat=True)
     queryset = queryset.exclude(pk__in=recently_posted)
     for product in queryset:
