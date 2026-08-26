@@ -113,6 +113,24 @@ class SocialAutopilotTests(TestCase):
         self.assertEqual(self.settings.posting_hours, [10])
         self.assertEqual(self.settings.posts_per_day, 1)
 
+    def test_schedule_rejects_more_than_four_daily_times(self):
+        form = SocialAutopilotForm(
+            data={
+                "enabled": "on",
+                "mode": SocialAutopilotSettings.MODE_FULL,
+                "channels": ["telegram"],
+                "posting_hours_text": "8,10,12,14,16",
+                "queue_days": "3",
+                "product_cooldown_days": "7",
+                "default_hashtags": "#LEOSOFT",
+                "preferred_product": "",
+            },
+            instance=self.settings,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("posting_hours_text", form.errors)
+
     def test_full_autopilot_generates_channel_posts_and_consumes_priority(self):
         now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
         result = generate_autopilot_calendar(now=now)
