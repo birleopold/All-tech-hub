@@ -6,7 +6,9 @@ from automation.models import AutomationJob, SocialAutopilotSettings
 class BootstrapFormMixin:
     def apply_bootstrap(self):
         for field in self.fields.values():
-            if isinstance(field.widget, forms.CheckboxInput):
+            if isinstance(field.widget, forms.CheckboxSelectMultiple):
+                field.widget.attrs.setdefault("class", "form-check-input")
+            elif isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.setdefault("class", "form-check-input")
             elif isinstance(field.widget, forms.Select):
                 field.widget.attrs.setdefault("class", "form-select")
