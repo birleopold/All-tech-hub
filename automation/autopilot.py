@@ -1,0 +1,218 @@
+from __future__ import annotations
+
+from datetime import datetime, time, timedelta
+
+from django.db import transaction
+from django.utils import timezone
+
+from automation.models import PostAutomationPlan, SocialAutopilotSettings
+from automation.services import configure_post_plan
+from catalog.models import Product
+from core.models import CompanySettings
+from growth.services import absolute_public_url
+from marketing.models import CampaignLink, ScheduledPost
+from marketing.services import product_public_url
+
+SUPPORTED_CHANNELS = {
+    "facebook",
+    "instagram",
+    "telegram",
+}
+AUTOPILOT_MARKER = "[social-autopilot]"
+
+
+def _posting_hours(settings_row: SocialAutopilotSettings) -> list[int]:
+    values = []
+    for value in settings_row.posting_hours or [9]:
+        try:
+            hour = int(value)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= hour <= 23 and hour not in values:
+            values.append(hour)
+    return sorted(values or [9])[: max(1, min(settings_row.posts_per_day, 4))]
+
+
+def _candidate_products(settings_row, *, cutoff, used_ids):
+    queryset = (
+        Product.objects.filter(is_published=True)
+        .select_related("category")
+        .prefetch_related("gallery_images", "variants")
+        .exclude(pk__in=used_ids)
+        .order_by("-is_featured", "-updated_at", "pk")
+    )
+    recently_posted = ScheduledPost.objects.filter(
+        product_id__isnull=False,
+        scheduled_for__gte=cutoff,
+    ).values_list("product_id", flat=True)
+    queryset = queryset.exclude(pk__in=recently_posted)
+    for product in queryset:
+        if not product.primary_display_image:
+            continue
+        if settings_row.require_in_stock and not product.available_to_sell:
+            continue
+        if not (product.short_description or product.description):
+            continue
+        yield product
+
+
+def _choose_product(settings_row, *, cutoff, used_ids):
+    if settings_row.preferred_product_id:
+        product = (
+            Product.objects.filter(
+                pk=settings_row.preferred_product_id,
+                is_published=True,
+            )
+            .select_related("category")
+            .prefetch_related("gallery_images", "variants")
+            .first()
+        )
+        if (
+            product
+            and product.primary_display_image
+            and (
+                not settings_row.require_in_stock
+                or product.available_to_sell
+            )
+        ):
+            return product, True
+    return next(
+        _candidate_products(settings_row, cutoff=cutoff, used_ids=used_ids),
+        None,
+    ), False
+
+
+def _caption(product, channel: str, link_url: str, settings_row) -> str:
+    company = CompanySettings.load()
+    currency = company.currency_code or "UGX"
+    price = product.min_active_variant_price or product.price
+    description = (product.short_description or product.description).strip()
+    description = " ".join(description.split())[:220]
+    price_line = (
+        f" Price: {currency} {price:,.0f}." if settings_row.include_prices else ""
+    )
+    hashtags = (settings_row.default_hashtags or "").strip()
+    if channel == "instagram":
+        return (
+            f"{product.name}\n\n{description}{price_line}\n\n"
+            f"Available from {company.company_name}. Visit {link_url}\n\n{hashtags}"
+        ).strip()
+    if channel == "telegram":
+        return (
+            f"{product.name}\n\n{description}{price_line}\n\n"
+            f"View details or request a quotation: {link_url}\n\n{hashtags}"
+        ).strip()
+    return (
+        f"Looking for {product.name}? {description}{price_line}\n\n"
+        f"View full details and request a quotation from {company.company_name}: "
+        f"{link_url}\n\n{hashtags}"
+    ).strip()
+
+
+def _slot_datetime(day, hour):
+    naive = datetime.combine(day, time(hour=hour))
+    return timezone.make_aware(naive, timezone.get_current_timezone())
+
+
+@transaction.atomic
+def generate_autopilot_calendar(*, now=None) -> dict:
+    now = now or timezone.now()
+    settings_row = SocialAutopilotSettings.objects.select_for_update().filter(
+        singleton_key="primary"
+    ).first()
+    if settings_row is None or not settings_row.enabled:
+        return {"enabled": False, "created": 0, "reason": "disabled"}
+
+    channels = [
+        channel
+        for channel in (settings_row.channels or [])
+        if channel in SUPPORTED_CHANNELS
+    ]
+    if not channels:
+        settings_row.last_error = "Select at least one supported publishing channel."
+        settings_row.last_generated_at = now
+        settings_row.save(
+            update_fields=["last_error", "last_generated_at", "updated_at"]
+        )
+        return {"enabled": True, "created": 0, "reason": "no_channels"}
+
+    hours = _posting_hours(settings_row)
+    horizon = max(1, min(int(settings_row.queue_days), 14))
+    cooldown = max(1, min(int(settings_row.product_cooldown_days), 90))
+    cutoff = now - timedelta(days=cooldown)
+    used_ids = set()
+    created = 0
+    preferred_consumed = False
+
+    for offset in range(horizon):
+        day = timezone.localdate(now) + timedelta(days=offset)
+        for hour in hours:
+            slot = _slot_datetime(day, hour)
+            if slot <= now:
+                continue
+            slot_key = f"{AUTOPILOT_MARKER}:{slot:%Y%m%d%H}"
+            if ScheduledPost.objects.filter(notes__startswith=slot_key).exists():
+                continue
+
+            product, was_preferred = _choose_product(
+                settings_row,
+                cutoff=cutoff,
+                used_ids=used_ids,
+            )
+            if product is None:
+                continue
+            used_ids.add(product.pk)
+            preferred_consumed = preferred_consumed or was_preferred
+
+            for channel in channels:
+                link = CampaignLink.objects.create(
+                    product=product,
+                    name=f"Autopilot: {product.name} — {channel} — {slot:%Y-%m-%d}",
+                    destination_url=product_public_url(product),
+                    source=channel,
+                    medium="organic-social",
+                    content=product.slug,
+                )
+                tracking_url = absolute_public_url(link.get_tracking_path())
+                post = ScheduledPost.objects.create(
+                    product=product,
+                    title=f"{product.name} — {channel.title()}",
+                    caption=_caption(
+                        product,
+                        channel,
+                        tracking_url,
+                        settings_row,
+                    ),
+                    channels=[channel],
+                    status=(
+                        ScheduledPost.STATUS_SCHEDULED
+                        if settings_row.mode == SocialAutopilotSettings.MODE_FULL
+                        else ScheduledPost.STATUS_DRAFT
+                    ),
+                    scheduled_for=slot,
+                    notes=f"{slot_key}:{product.pk}:{channel}",
+                )
+                configure_post_plan(
+                    post,
+                    mode=(
+                        PostAutomationPlan.MODE_AUTOMATIC
+                        if settings_row.mode == SocialAutopilotSettings.MODE_FULL
+                        else PostAutomationPlan.MODE_MANUAL
+                    ),
+                )
+                created += 1
+
+    if preferred_consumed:
+        settings_row.preferred_product = None
+    settings_row.last_generated_at = now
+    settings_row.last_error = ""
+    fields = ["last_generated_at", "last_error", "updated_at"]
+    if preferred_consumed:
+        fields.append("preferred_product")
+    settings_row.save(update_fields=fields)
+    return {
+        "enabled": True,
+        "created": created,
+        "channels": channels,
+        "mode": settings_row.mode,
+    }
