@@ -190,7 +190,9 @@ def generate_autopilot_calendar(*, now=None) -> dict:
             if slot <= now:
                 continue
             slot_key = f"{AUTOPILOT_MARKER}:{slot:%Y%m%d%H}"
-            if ScheduledPost.objects.filter(notes__startswith=slot_key).exists():
+            if ScheduledPost.objects.filter(notes__startswith=slot_key).exclude(
+                status=ScheduledPost.STATUS_CANCELLED
+            ).exists():
                 continue
 
             product, was_preferred = _choose_product(
