@@ -52,7 +52,7 @@ class SocialAutopilotTests(TestCase):
         self.assertEqual(result["created"], 3)
         self.assertEqual(ScheduledPost.objects.count(), 3)
         self.assertEqual(CampaignLink.objects.count(), 3)
-        self.assertTrue(
+        self.assertEqual(
             ScheduledPost.objects.filter(
                 status=ScheduledPost.STATUS_SCHEDULED
             ).count(),
