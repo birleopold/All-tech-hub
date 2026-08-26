@@ -262,3 +262,7 @@ class StockTakeLine(models.Model):
     @property
     def variance(self) -> int:
         return int(self.counted_quantity) - int(self.system_quantity)
+
+
+# Imported here so Django registers the cross-device workflow models.
+from inventory.product_photo_models import ProductPhotoSession, StaffPushSubscription  # noqa: E402,F401
