@@ -58,6 +58,30 @@ class MetaConfig:
         return False
 
 
+@dataclass(frozen=True)
+class TelegramConfig:
+    enabled: bool
+    bot_token: str
+    channel_id: str
+    timeout_seconds: int
+
+    @classmethod
+    def load(cls) -> "TelegramConfig":
+        return cls(
+            enabled=bool(getattr(settings, "TELEGRAM_AUTO_PUBLISH_ENABLED", False)),
+            bot_token=str(getattr(settings, "TELEGRAM_BOT_TOKEN", "")).strip(),
+            channel_id=str(getattr(settings, "TELEGRAM_CHANNEL_ID", "")).strip(),
+            timeout_seconds=max(
+                5,
+                min(60, int(getattr(settings, "AUTOMATION_HTTP_TIMEOUT_SECONDS", 20))),
+            ),
+        )
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.enabled and self.bot_token and self.channel_id)
+
+
 TRANSIENT_META_CODES = {1, 2, 4, 17, 32, 341, 613}
 TRANSIENT_META_PHRASES = (
     "temporarily unavailable",
@@ -189,6 +213,8 @@ def _permalink(config: MetaConfig, object_id: str) -> str:
 
 
 def channel_is_configured(channel: str) -> bool:
+    if channel == "telegram":
+        return TelegramConfig.load().configured
     return MetaConfig.load().supports(channel)
 
 
@@ -320,11 +346,72 @@ def publish_instagram(*, post, image_url: str = "") -> dict:
     }
 
 
+def publish_telegram(*, post, image_url: str = "") -> dict:
+    config = TelegramConfig.load()
+    if not config.configured:
+        raise ConnectorError(
+            "Telegram automatic publishing is not configured.",
+            retryable=False,
+        )
+    method = "sendPhoto" if image_url else "sendMessage"
+    data = {
+        "chat_id": config.channel_id,
+        "caption" if image_url else "text": post.caption[:1024] if image_url else post.caption[:4096],
+    }
+    if image_url:
+        data["photo"] = image_url
+    request = Request(
+        f"https://api.telegram.org/bot{config.bot_token}/{method}",
+        data=urlencode(data).encode("utf-8"),
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "LEOSOFT-Automation/1.0",
+        },
+    )
+    try:
+        with urlopen(request, timeout=config.timeout_seconds) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        retryable = exc.code in {408, 409, 425, 429} or exc.code >= 500
+        raise ConnectorError(
+            f"Telegram API returned HTTP {exc.code}.",
+            retryable=retryable,
+        ) from exc
+    except (URLError, TimeoutError, OSError, ValueError) as exc:
+        raise ConnectorError(
+            "Telegram publishing could not be confirmed. Check the channel before replaying.",
+            retryable=False,
+            code="transport_unknown",
+        ) from exc
+    if not payload.get("ok"):
+        raise ConnectorError(
+            str(payload.get("description") or "Telegram rejected the post.")[:1000],
+            retryable=False,
+        )
+    result = payload.get("result") or {}
+    message_id = str(result.get("message_id") or "")
+    chat = result.get("chat") or {}
+    username = str(chat.get("username") or "").strip("@")
+    return {
+        "external_id": message_id,
+        "external_url": (
+            f"https://t.me/{username}/{message_id}"
+            if username and message_id
+            else ""
+        ),
+        "provider": "telegram",
+    }
+
+
 def publish_social_post(*, channel: str, post, image_url: str = "") -> dict:
     if channel == "facebook":
         return publish_facebook(post=post, image_url=image_url)
     if channel == "instagram":
         return publish_instagram(post=post, image_url=image_url)
+    if channel == "telegram":
+        return publish_telegram(post=post, image_url=image_url)
     raise ConnectorError(
         f"{channel.title()} does not have an automatic publisher in LEOSOFT yet.",
         retryable=False,
