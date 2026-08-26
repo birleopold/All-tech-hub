@@ -8,6 +8,10 @@
       <p class="text-uppercase small fw-semibold text-primary mb-2">Connected product draft</p>
       <h1 class="h3">{{ product.name }}</h1>
       <p class="text-muted">Take new pictures or choose several from your phone. They will appear automatically on the computer.</p>
+      <div class="alert alert-light border mb-3">
+        <button id="enable-phone-push" class="btn btn-outline-primary w-100" type="button"><i class="bi bi-bell me-1"></i>Enable notifications on this phone</button>
+        <small class="d-block text-muted mt-2">Enable once so future product drafts can alert this phone even when the site is closed. On iPhone, first add LEOSOFT to your Home Screen.</small>
+      </div>
       <form id="phone-photo-form" method="post" enctype="multipart/form-data" action="{% url 'staff_product_photo_upload' photo_session.token %}">
         {% csrf_token %}
         <label class="form-label fw-semibold" for="phone-photos">Product photos</label>
@@ -25,6 +29,37 @@
   const input = document.getElementById("phone-photos");
   const preview = document.getElementById("phone-photo-preview");
   const message = document.getElementById("phone-photo-message");
+  const pushButton = document.getElementById("enable-phone-push");
+  const csrf = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+  pushButton.addEventListener("click", async () => {
+    pushButton.disabled = true;
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Push notifications are not supported by this browser.");
+      const keyResponse = await fetch("{% url 'staff_push_public_key' %}", {credentials: "same-origin"});
+      const {public_key: publicKey} = await keyResponse.json();
+      if (!publicKey) throw new Error("Phone notifications are not configured on the server yet.");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("Notification permission was not granted.");
+      const registration = await navigator.serviceWorker.ready;
+      const padded = publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(publicKey.length / 4) * 4, "=");
+      const bytes = Uint8Array.from(atob(padded), value => value.charCodeAt(0));
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: bytes});
+      const response = await fetch("{% url 'staff_push_subscribe' %}", {
+        method: "POST", credentials: "same-origin",
+        headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+        body: JSON.stringify(subscription.toJSON())
+      });
+      if (!response.ok) throw new Error("Could not save this phone.");
+      pushButton.textContent = "Notifications enabled on this phone";
+      message.textContent = "This phone will receive future product photo requests.";
+      message.className = "alert alert-success mt-3";
+    } catch (error) {
+      message.textContent = error.message;
+      message.className = "alert alert-warning mt-3";
+      pushButton.disabled = false;
+    }
+  });
   input.addEventListener("change", () => {
     preview.replaceChildren();
     [...input.files].forEach(file => {
