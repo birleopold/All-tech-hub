@@ -318,6 +318,28 @@ def social_autopilot_test_connections(request):
 
 
 @require_POST
+def social_autopilot_publish_now(request, post_id: int):
+    _require_automation_staff(request, change=True)
+    post = get_object_or_404(ScheduledPost, pk=post_id)
+    from automation.autopilot import publish_autopilot_post_now
+
+    result = publish_autopilot_post_now(post, actor=request.user)
+    if result.get("error"):
+        messages.error(request, result["error"])
+    else:
+        queued = result.get("queued", 0)
+        messages.success(
+            request,
+            (
+                f"Publish now requested. {queued} channel delivery"
+                f"{'' if queued == 1 else 'ies'} queued and expected within one minute. "
+                "The remaining schedule is unchanged."
+            ),
+        )
+    return redirect("staff_automation_control")
+
+
+@require_POST
 def social_autopilot_cancel_post(request, post_id: int):
     _require_automation_staff(request, change=True)
     post = get_object_or_404(ScheduledPost, pk=post_id)
