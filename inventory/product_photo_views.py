@@ -126,6 +126,11 @@ def product_photo_upload(request, token):
         )
         created.append({"id": image.pk, "url": image.image.url, "name": upload.name})
 
+    if created and (request.POST.get("make_primary") == "1" or not session.product.image):
+        primary = ProductImage.objects.get(pk=created[0]["id"], product=session.product)
+        session.product.image.name = primary.image.name
+        session.product.save(update_fields=["image", "updated_at"])
+
     session.last_upload_at = timezone.now()
     session.save(update_fields=["last_upload_at"])
     return JsonResponse({"uploaded": created, "count": len(created)})
@@ -135,20 +140,56 @@ def product_photo_upload(request, token):
 @require_GET
 def product_photo_status(request, token):
     session = _owned_session(request, token)
+    primary_name = session.product.image.name if session.product.image else ""
     images = [
-        {"id": image.pk, "url": image.image.url, "alt_text": image.alt_text}
+        {
+            "id": image.pk,
+            "url": image.image.url,
+            "alt_text": image.alt_text,
+            "is_primary": image.image.name == primary_name,
+            "source": "gallery",
+        }
         for image in session.product.gallery_images.order_by("sort_order", "id")
         if image.image
     ]
+    if primary_name and not any(image["is_primary"] for image in images):
+        images.insert(
+            0,
+            {
+                "id": None,
+                "url": session.product.image.url,
+                "alt_text": session.product.name,
+                "is_primary": True,
+                "source": "main",
+            },
+        )
     return JsonResponse(
         {
             "images": images,
             "count": len(images),
+            "primary_image": session.product.image.url if primary_name else None,
             "last_upload_at": (
                 session.last_upload_at.isoformat() if session.last_upload_at else None
             ),
         }
     )
+
+
+@login_required
+@require_POST
+def product_photo_set_primary(request, token, image_id):
+    session = _owned_session(request, token)
+    image = get_object_or_404(
+        ProductImage,
+        pk=image_id,
+        product=session.product,
+        image__isnull=False,
+    )
+    if not image.image:
+        return JsonResponse({"error": "This gallery item has no image."}, status=400)
+    session.product.image.name = image.image.name
+    session.product.save(update_fields=["image", "updated_at"])
+    return JsonResponse({"ok": True, "primary_image": image.image.url})
 
 
 @login_required
