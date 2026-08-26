@@ -22,77 +22,115 @@
 
 <div class="card border-primary shadow-sm mb-4">
   <div class="card-body p-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
       <div>
-        <p class="text-uppercase small text-primary fw-semibold mb-1">Zero-cost organic publishing</p>
+        <p class="text-uppercase small text-primary fw-semibold mb-1">Guided social publishing</p>
         <h2 class="h4 mb-1">Social media autopilot</h2>
-        <p class="text-muted mb-0">Choose a product once or let inventory, stock, completeness and cooldown rules choose automatically.</p>
+        <p class="text-muted mb-0">Complete the four steps below. The system will choose eligible products, prepare posts and publish them at your chosen Kampala times.</p>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge {% if autopilot.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">{% if autopilot.enabled %}Running{% else %}Stopped{% endif %}</span>
-        {% if can_change_automation %}<form method="post" action="{% url 'staff_social_autopilot_test_connections' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" type="submit">Test connections</button></form>{% endif %}
-        {% if can_change_automation and autopilot.enabled %}<form method="post" action="{% url 'staff_social_autopilot_rebuild' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Rebuild calendar</button></form>{% endif %}
-      </div>
+      <span class="badge {% if autopilot.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">{% if autopilot.enabled %}Running{% else %}Not running{% endif %}</span>
     </div>
-    <div class="row g-2 mb-3">
-      {% for channel, connected in social_connections.items %}
-      <div class="col-sm-4"><div class="border rounded p-2 small"><strong>{{ channel|title }}</strong><span class="float-end badge {% if connected %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if connected %}Connected{% else %}Needs credentials{% endif %}</span></div></div>
-      {% endfor %}
+
+    <div class="row g-2 mb-4" aria-label="Setup steps">
+      <div class="col-6 col-lg-3"><div class="border rounded p-3 h-100"><span class="badge bg-primary rounded-pill me-1">1</span><strong>Connect</strong><small class="d-block text-muted mt-1">Confirm account access.</small></div></div>
+      <div class="col-6 col-lg-3"><div class="border rounded p-3 h-100"><span class="badge bg-primary rounded-pill me-1">2</span><strong>Choose</strong><small class="d-block text-muted mt-1">Select channels and content.</small></div></div>
+      <div class="col-6 col-lg-3"><div class="border rounded p-3 h-100"><span class="badge bg-primary rounded-pill me-1">3</span><strong>Schedule</strong><small class="d-block text-muted mt-1">Set daily Kampala times.</small></div></div>
+      <div class="col-6 col-lg-3"><div class="border rounded p-3 h-100"><span class="badge bg-primary rounded-pill me-1">4</span><strong>Start</strong><small class="d-block text-muted mt-1">Save and review the queue.</small></div></div>
     </div>
-    <div class="card bg-light border-0 mb-3"><div class="card-body">
-      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2"><div><h3 class="h6 mb-1">Publishing readiness</h3><p class="small text-muted mb-0">Live preflight based on catalogue eligibility, queue coverage and selected connections.</p></div><span class="badge {% if autopilot_readiness.ready %}bg-success{% elif autopilot.enabled %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{% if autopilot_readiness.ready %}Ready{% elif autopilot.enabled %}Needs attention{% else %}Stopped{% endif %}</span></div>
-      <div class="row g-2 text-center">
-        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.eligible_products }}</strong><small class="text-muted">Eligible products</small></div></div>
-        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.queued_posts }}</strong><small class="text-muted">Queued channel posts</small></div></div>
-        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.covered_days }}</strong><small class="text-muted">Days covered</small></div></div>
-        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.expected_posts }}</strong><small class="text-muted">Target queue size</small></div></div>
+
+    <section class="border rounded p-3 p-md-4 mb-3" aria-labelledby="connect-heading">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div><h3 class="h5 mb-1" id="connect-heading"><span class="badge bg-primary rounded-pill me-2">1</span>Connect publishing accounts</h3><p class="small text-muted mb-0">A channel must say Connected before it can publish.</p></div>
+        {% if can_change_automation %}<form method="post" action="{% url 'staff_social_autopilot_test_connections' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Test selected connections</button></form>{% endif %}
       </div>
-      {% if autopilot_readiness.issues %}<ul class="small text-warning-emphasis mb-0 mt-3">{% for issue in autopilot_readiness.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
-    </div></div>
-    {% if autopilot.last_error %}<div class="alert alert-warning">{{ autopilot.last_error }}</div>{% endif %}
+      <div class="row g-2">
+        {% for item in social_channel_statuses %}
+        <div class="col-md-4"><div class="border rounded p-3 h-100">
+          <div class="d-flex justify-content-between gap-2"><strong>{{ item.label }}</strong><span class="badge {% if item.connected %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if item.connected %}Connected{% else %}Setup needed{% endif %}</span></div>
+          <small class="d-block text-muted mt-2">{% if item.selected %}Currently selected{% else %}Not selected{% endif %}</small>
+        </div></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    {% if autopilot.last_error %}<div class="alert alert-warning"><strong>Last publishing problem:</strong> {{ autopilot.last_error }}</div>{% endif %}
+
     {% if can_change_automation %}
     <form method="post" action="{% url 'staff_social_autopilot_update' %}">
       {% csrf_token %}
       {% if autopilot_form.non_field_errors %}<div class="alert alert-danger">{{ autopilot_form.non_field_errors }}</div>{% endif %}
-      <div class="row g-3">
-        {% for field in autopilot_form %}
-        <div class="{% if field.name == 'default_hashtags' or field.name == 'preferred_product' or field.name == 'channels' %}col-12{% else %}col-md-6{% endif %}">
-          {% if field.name == 'channels' %}
-          <fieldset>
-            <legend class="form-label fw-semibold mb-2">{{ field.label }}</legend>
-            <div class="row g-2">
-              {% for checkbox in field %}
-              <div class="col-md-4">
-                <div class="form-check border rounded p-3 ps-5 h-100">
-                  {{ checkbox.tag }}
-                  <label class="form-check-label fw-semibold" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </fieldset>
-          {% elif field.field.widget.input_type == 'checkbox' %}
-          <div class="form-check mt-4">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
-          {% else %}
-          <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
-          {% endif %}
-          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-          {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+
+      <section class="border rounded p-3 p-md-4 mb-3" aria-labelledby="choose-heading">
+        <h3 class="h5 mb-1" id="choose-heading"><span class="badge bg-primary rounded-pill me-2">2</span>Choose where and what to publish</h3>
+        <p class="small text-muted">Select one or several channels. You can let LEOSOFT choose products automatically or feature one product first.</p>
+        <fieldset class="mb-3">
+          <legend class="form-label fw-semibold">{{ autopilot_form.channels.label }}</legend>
+          <div class="row g-2">
+            {% for checkbox in autopilot_form.channels %}
+            <div class="col-md-4"><div class="form-check border rounded p-3 ps-5 h-100">{{ checkbox.tag }}<label class="form-check-label fw-semibold" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label></div></div>
+            {% endfor %}
+          </div>
+          <div class="form-text">{{ autopilot_form.channels.help_text }}</div>
+          {% for error in autopilot_form.channels.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </fieldset>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label fw-semibold" for="{{ autopilot_form.mode.id_for_label }}">{{ autopilot_form.mode.label }}</label>{{ autopilot_form.mode }}<div class="form-text">Choose review drafts while learning, or full autopilot when the connection test passes.</div>{% for error in autopilot_form.mode.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="col-md-6"><label class="form-label fw-semibold" for="{{ autopilot_form.preferred_product.id_for_label }}">{{ autopilot_form.preferred_product.label }}</label>{{ autopilot_form.preferred_product }}<div class="form-text">{{ autopilot_form.preferred_product.help_text }}</div>{% for error in autopilot_form.preferred_product.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="col-md-6"><div class="form-check">{{ autopilot_form.include_prices }}<label class="form-check-label" for="{{ autopilot_form.include_prices.id_for_label }}">{{ autopilot_form.include_prices.label }}</label></div></div>
+          <div class="col-md-6"><div class="form-check">{{ autopilot_form.require_in_stock }}<label class="form-check-label" for="{{ autopilot_form.require_in_stock.id_for_label }}">{{ autopilot_form.require_in_stock.label }}</label></div></div>
+          <div class="col-12"><label class="form-label fw-semibold" for="{{ autopilot_form.default_hashtags.id_for_label }}">{{ autopilot_form.default_hashtags.label }}</label>{{ autopilot_form.default_hashtags }}{% for error in autopilot_form.default_hashtags.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
         </div>
-        {% endfor %}
-      </div>
-      <button class="btn btn-primary mt-3" type="submit">Save autopilot controls</button>
+      </section>
+
+      <section class="border rounded p-3 p-md-4 mb-3" aria-labelledby="schedule-heading">
+        <h3 class="h5 mb-1" id="schedule-heading"><span class="badge bg-primary rounded-pill me-2">3</span>Choose the schedule</h3>
+        <p class="small text-muted">Each time creates one post per selected channel. Times use Kampala local time.</p>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label fw-semibold" for="{{ autopilot_form.posting_hours_text.id_for_label }}">{{ autopilot_form.posting_hours_text.label }}</label>{{ autopilot_form.posting_hours_text }}<div class="form-text">{{ autopilot_form.posting_hours_text.help_text }}</div>{% for error in autopilot_form.posting_hours_text.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="col-md-4"><label class="form-label fw-semibold" for="{{ autopilot_form.queue_days.id_for_label }}">{{ autopilot_form.queue_days.label }}</label>{{ autopilot_form.queue_days }}<div class="form-text">{{ autopilot_form.queue_days.help_text }}</div>{% for error in autopilot_form.queue_days.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="col-md-4"><label class="form-label fw-semibold" for="{{ autopilot_form.product_cooldown_days.id_for_label }}">{{ autopilot_form.product_cooldown_days.label }}</label>{{ autopilot_form.product_cooldown_days }}<div class="form-text">Prevents the same product appearing too often.</div>{% for error in autopilot_form.product_cooldown_days.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        </div>
+      </section>
+
+      <section class="border rounded p-3 p-md-4 mb-3" aria-labelledby="start-heading">
+        <h3 class="h5 mb-2" id="start-heading"><span class="badge bg-primary rounded-pill me-2">4</span>Review and start</h3>
+        <div class="row g-2 mb-3">
+          <div class="col-md-4"><div class="bg-light rounded p-3 h-100"><small class="text-muted d-block">Currently selected</small><strong>{{ selected_channel_names }}</strong></div></div>
+          <div class="col-md-4"><div class="bg-light rounded p-3 h-100"><small class="text-muted d-block">Daily times</small><strong>{{ autopilot.posting_hours|join:", "|default:"9" }} Kampala time</strong></div></div>
+          <div class="col-md-4"><div class="bg-light rounded p-3 h-100"><small class="text-muted d-block">Current target</small><strong>{{ target_delivery_count }} queued post{{ target_delivery_count|pluralize }}</strong></div></div>
+        </div>
+        <div class="form-check mb-3">{{ autopilot_form.enabled }}<label class="form-check-label fw-semibold" for="{{ autopilot_form.enabled.id_for_label }}">Turn on Social Autopilot</label><div class="form-text">When unchecked, settings are saved but future automatic work is stopped.</div></div>
+        <button class="btn btn-primary btn-lg" type="submit">{% if autopilot.enabled %}Save and update schedule{% else %}Save and build schedule{% endif %}</button>
+      </section>
     </form>
     {% endif %}
-    <hr class="my-4">
-    <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-2"><div><h3 class="h5 mb-1">30-day channel performance</h3><p class="small text-muted mb-0">First-party results from LEOSOFT tracking links and publishing deliveries. No third-party analytics service is used.</p></div></div>
-    <div class="table-responsive mb-4"><table class="table table-sm align-middle mb-0"><thead><tr><th>Channel</th><th>Published</th><th>Failed</th><th>Clicks</th><th>Leads</th><th>Clicks/post</th><th>Lead rate</th></tr></thead><tbody>
-      {% for row in social_performance %}<tr><td class="fw-semibold">{{ row.channel|title }}</td><td>{{ row.published }}</td><td>{% if row.failed %}<span class="text-danger fw-semibold">{{ row.failed }}</span>{% else %}0{% endif %}{% if row.retrying %} <small class="text-warning">({{ row.retrying }} retrying)</small>{% endif %}</td><td>{{ row.clicks }}</td><td>{{ row.leads }}</td><td>{{ row.clicks_per_post }}</td><td>{{ row.lead_rate }}%</td></tr>{% endfor %}
+
+    <div class="card bg-light border-0 mb-4"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2"><div><h3 class="h6 mb-1">Is everything ready?</h3><p class="small text-muted mb-0">The system checks products, credentials and queue coverage for you.</p></div><span class="badge {% if autopilot_readiness.ready %}bg-success{% elif autopilot.enabled %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{% if autopilot_readiness.ready %}Ready to publish{% elif autopilot.enabled %}Action needed{% else %}Not running{% endif %}</span></div>
+      <div class="row g-2 text-center">
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.eligible_products }}</strong><small class="text-muted">Usable products</small></div></div>
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.queued_posts }}</strong><small class="text-muted">Posts prepared</small></div></div>
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.covered_days }}</strong><small class="text-muted">Days prepared</small></div></div>
+        <div class="col-6 col-lg-3"><div class="bg-white border rounded p-2"><strong class="d-block fs-5">{{ autopilot_readiness.expected_posts }}</strong><small class="text-muted">Target posts</small></div></div>
+      </div>
+      {% if autopilot_readiness.issues %}<ul class="small text-warning-emphasis mb-0 mt-3">{% for issue in autopilot_readiness.issues %}<li>{{ issue }}</li>{% endfor %}</ul>{% endif %}
+    </div></div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+      <div><h3 class="h5 mb-1">Upcoming posts</h3><p class="small text-muted mb-0">Review what will happen next. Remove any item you do not want published.</p></div>
+      {% if can_change_automation and autopilot.enabled %}<form method="post" action="{% url 'staff_social_autopilot_rebuild' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Rebuild upcoming schedule</button></form>{% endif %}
+    </div>
+    <div class="table-responsive mb-4"><table class="table table-sm align-middle mb-0"><thead><tr><th>Publish time</th><th>Product</th><th>Channel</th><th>Preview</th><th>Status</th>{% if can_change_automation %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead><tbody>
+      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Waiting for review" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", "|title }}</td><td class="small">{{ post.caption|truncatechars:120 }}</td><td>{{ post.get_status_display }}</td>{% if can_change_automation %}<td class="text-end"><form method="post" action="{% url 'staff_social_autopilot_cancel_post' post.pk %}" onsubmit="return confirm('Remove this post from the social queue?');">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Remove</button></form></td>{% endif %}</tr>{% empty %}<tr><td colspan="{% if can_change_automation %}6{% else %}5{% endif %}" class="text-muted p-3">No upcoming posts yet. Complete the four setup steps above.</td></tr>{% endfor %}
     </tbody></table></div>
-    <h3 class="h5">Upcoming social queue</h3>
-    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Time</th><th>Product</th><th>Channels</th><th>Caption preview</th><th>Status</th>{% if can_change_automation %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead><tbody>
-      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Review draft" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", " }}</td><td class="small">{{ post.caption|truncatechars:120 }}</td><td>{{ post.get_status_display }}</td>{% if can_change_automation %}<td class="text-end"><form method="post" action="{% url 'staff_social_autopilot_cancel_post' post.pk %}" onsubmit="return confirm('Remove this post from the social queue?');">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Remove</button></form></td>{% endif %}</tr>{% empty %}<tr><td colspan="{% if can_change_automation %}6{% else %}5{% endif %}" class="text-muted">No upcoming social posts.</td></tr>{% endfor %}
-    </tbody></table></div>
+
+    <details>
+      <summary class="fw-semibold mb-3">View 30-day performance</summary>
+      <p class="small text-muted">Results from LEOSOFT tracking links and publishing deliveries.</p>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Channel</th><th>Published</th><th>Failed</th><th>Clicks</th><th>Leads</th><th>Clicks/post</th><th>Lead rate</th></tr></thead><tbody>
+        {% for row in social_performance %}<tr><td class="fw-semibold">{{ row.channel|title }}</td><td>{{ row.published }}</td><td>{% if row.failed %}<span class="text-danger fw-semibold">{{ row.failed }}</span>{% else %}0{% endif %}{% if row.retrying %} <small class="text-warning">({{ row.retrying }} retrying)</small>{% endif %}</td><td>{{ row.clicks }}</td><td>{{ row.leads }}</td><td>{{ row.clicks_per_post }}</td><td>{{ row.lead_rate }}%</td></tr>{% endfor %}
+      </tbody></table></div>
+    </details>
   </div>
 </div>
 
