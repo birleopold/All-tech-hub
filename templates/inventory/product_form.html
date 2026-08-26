@@ -15,6 +15,14 @@
     <div class="staff-section-card-header"><div><h2>Catalogue details</h2><p>Name, category, description, price, stock and publication settings</p></div><i class="bi bi-box-seam text-muted" aria-hidden="true"></i></div>
     <div class="staff-form-shell-body"><div class="staff-form-grid">{% for field in form %}<div class="staff-form-field{% if field.name == 'description' or field.name == 'short_description' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}</div></div>
 
+    <div class="staff-section-card-header"><div><h2>Identity and condition</h2><p>Brand, product condition and manufacturer identifiers used on the website and product feeds.</p></div><i class="bi bi-patch-check text-muted" aria-hidden="true"></i></div>
+    {% if growth_form.non_field_errors %}<div class="alert alert-danger mx-3 mt-3">{{ growth_form.non_field_errors }}</div>{% endif %}
+    <div class="staff-form-shell-body"><div class="staff-form-grid">{% for field in growth_form %}<div class="staff-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}</div></div>
+
+    <div class="staff-section-card-header"><div><h2>Product specifications</h2><p>Processor, memory, storage, display, graphics, operating system, physical condition, warranty and included accessories.</p></div><i class="bi bi-motherboard text-muted" aria-hidden="true"></i></div>
+    {% if commerce_form.non_field_errors %}<div class="alert alert-danger mx-3 mt-3">{{ commerce_form.non_field_errors }}</div>{% endif %}
+    <div class="staff-form-shell-body"><div class="staff-form-grid">{% for field in commerce_form %}<div class="staff-form-field{% if field.name == 'condition_notes' %} staff-form-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}</div>{% endfor %}</div></div>
+
     {% if object %}
     <div class="staff-section-card-header"><div><h2>Gallery images</h2><p>Upload multiple product images and control their display order.</p></div><i class="bi bi-images text-muted" aria-hidden="true"></i></div>
     {{ image_formset.management_form }}
