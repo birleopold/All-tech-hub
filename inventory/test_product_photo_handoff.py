@@ -38,9 +38,12 @@ class ProductPhotoHandoffTests(TestCase):
         session = ProductPhotoSession.objects.get(owner=self.staff)
         response = self.client.post(
             reverse("staff_product_photo_upload", kwargs={"token": session.token}),
-            {"photos": [image_upload()]},
+            {"photos": [image_upload()], "make_primary": "1"},
         )
         self.assertEqual(response.status_code, 200)
+        product_image = ProductImage.objects.get(product=self.product)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.image.name, product_image.image.name)
         self.assertEqual(ProductImage.objects.filter(product=self.product).count(), 1)
         status = self.client.get(
             reverse("staff_product_photo_status", kwargs={"token": session.token})
@@ -48,6 +51,34 @@ class ProductPhotoHandoffTests(TestCase):
         self.assertEqual(status.status_code, 200)
         self.assertEqual(status.json()["count"], 1)
         self.assertEqual(len(status.json()["images"]), 1)
+        self.assertTrue(status.json()["images"][0]["is_primary"])
+
+    def test_staff_can_make_a_gallery_photo_the_main_image(self):
+        session = ProductPhotoSession.objects.create(product=self.product, owner=self.staff)
+        first = ProductImage.objects.create(
+            product=self.product, image=image_upload("first.jpg"), sort_order=0
+        )
+        second = ProductImage.objects.create(
+            product=self.product, image=image_upload("second.jpg"), sort_order=1
+        )
+        self.product.image.name = first.image.name
+        self.product.save(update_fields=["image", "updated_at"])
+
+        response = self.client.post(
+            reverse(
+                "staff_product_photo_set_primary",
+                kwargs={"token": session.token, "image_id": second.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.image.name, second.image.name)
+        status = self.client.get(
+            reverse("staff_product_photo_status", kwargs={"token": session.token})
+        )
+        primary = next(item for item in status.json()["images"] if item["id"] == second.pk)
+        self.assertTrue(primary["is_primary"])
 
     def test_product_edit_loads_deferred_handoff_script_and_runtime_urls(self):
         response = self.client.get(

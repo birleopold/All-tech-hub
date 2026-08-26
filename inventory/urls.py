@@ -15,6 +15,7 @@ urlpatterns = [
     path("inventory/product-photos/<str:token>/", product_photo_views.product_photo_mobile, name="staff_product_photo_mobile"),
     path("inventory/product-photos/<str:token>/upload/", product_photo_views.product_photo_upload, name="staff_product_photo_upload"),
     path("inventory/product-photos/<str:token>/status/", product_photo_views.product_photo_status, name="staff_product_photo_status"),
+    path("inventory/product-photos/<str:token>/images/<int:image_id>/primary/", product_photo_views.product_photo_set_primary, name="staff_product_photo_set_primary"),
     path("inventory/product-photos/<str:token>/qr/", product_photo_views.product_photo_qr, name="staff_product_photo_qr"),
     path("inventory/", StaffInventoryHomeView.as_view(), name="staff_inventory"),
     path(
