@@ -49,6 +49,21 @@ class ProductPhotoHandoffTests(TestCase):
         self.assertEqual(status.json()["count"], 1)
         self.assertEqual(len(status.json()["images"]), 1)
 
+    def test_product_edit_loads_deferred_handoff_script_and_runtime_urls(self):
+        response = self.client.get(
+            reverse("staff_product_edit", kwargs={"pk": self.product.pk})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "js/product_photo_handoff.js")
+        self.assertContains(
+            response,
+            reverse(
+                "staff_product_photo_start",
+                kwargs={"product_id": self.product.pk},
+            ),
+        )
+        self.assertNotContains(response, "const modal = bootstrap.Modal")
+
     def test_other_staff_cannot_open_session(self):
         session = ProductPhotoSession.objects.create(product=self.product, owner=self.staff)
         other = get_user_model().objects.create_user(
