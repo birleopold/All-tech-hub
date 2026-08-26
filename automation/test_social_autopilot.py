@@ -10,9 +10,11 @@ from PIL import Image
 
 from automation.autopilot import (
     generate_autopilot_calendar,
+    queue_product_promotion,
+    rebuild_autopilot_calendar,
     reconcile_autopilot_state,
 )
-from automation.connectors import publish_telegram
+from automation.connectors import diagnose_channel, publish_telegram
 from automation.models import PostAutomationPlan, SocialAutopilotSettings
 from catalog.models import Category, Product
 from marketing.models import CampaignLink, ScheduledPost
@@ -101,6 +103,44 @@ class SocialAutopilotTests(TestCase):
             3,
         )
 
+    def test_priority_product_creates_review_drafts_when_not_in_full_mode(self):
+        self.settings.enabled = False
+        self.settings.channels = ["facebook", "telegram"]
+        self.settings.save()
+
+        result = queue_product_promotion(self.product)
+
+        self.assertEqual(result["created"], 2)
+        self.assertFalse(result["automatic"])
+        self.assertEqual(
+            ScheduledPost.objects.filter(status=ScheduledPost.STATUS_DRAFT).count(),
+            2,
+        )
+        self.assertTrue(
+            all("priority-organic-social" == link.medium for link in CampaignLink.objects.all())
+        )
+
+    def test_calendar_rebuild_replaces_future_autopilot_posts(self):
+        now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=now)
+
+        result = rebuild_autopilot_calendar(now=now)
+
+        self.assertEqual(result["cancelled"], 3)
+        self.assertEqual(result["created"], 3)
+        self.assertEqual(
+            ScheduledPost.objects.filter(
+                status=ScheduledPost.STATUS_CANCELLED
+            ).count(),
+            3,
+        )
+        self.assertEqual(
+            ScheduledPost.objects.filter(
+                status=ScheduledPost.STATUS_SCHEDULED
+            ).count(),
+            3,
+        )
+
 
 @override_settings(
     TELEGRAM_AUTO_PUBLISH_ENABLED=True,
@@ -125,3 +165,23 @@ class TelegramConnectorTests(TestCase):
 
         self.assertEqual(result["external_id"], "42")
         self.assertEqual(result["external_url"], "https://t.me/leosoft/42")
+
+
+@override_settings(
+    TELEGRAM_AUTO_PUBLISH_ENABLED=True,
+    TELEGRAM_BOT_TOKEN="secret-token",
+    TELEGRAM_CHANNEL_ID="@leosoft",
+)
+class SocialConnectionDiagnosticTests(TestCase):
+    @patch("automation.connectors.urlopen")
+    def test_telegram_connection_diagnostic_identifies_channel(self, mocked_urlopen):
+        response = Mock()
+        response.read.return_value = (
+            b'{"ok": true, "result": {"id": -1001, "title": "LEOSOFT Uganda"}}'
+        )
+        mocked_urlopen.return_value.__enter__.return_value = response
+
+        result = diagnose_channel("telegram")
+
+        self.assertTrue(result["ok"])
+        self.assertIn("LEOSOFT Uganda", result["message"])

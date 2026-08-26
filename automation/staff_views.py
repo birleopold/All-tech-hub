@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
-from automation.connectors import channel_is_configured
+from automation.connectors import channel_is_configured, diagnose_channel
 from automation.control import (
     AutomationControlError,
     cancel_open_job,
@@ -23,6 +23,7 @@ from automation.forms import (
 )
 from automation.models import AutomationJob, SocialAutopilotSettings
 from automation.reporting import automation_control_summary, automation_integrity_findings
+from catalog.models import Product
 from core.mixins import StaffRequiredMixin
 from marketing.models import ScheduledPost
 
@@ -216,4 +217,57 @@ def social_autopilot_update(request):
             request,
             f"Social autopilot stopped. {reconciled['changed']} future delivery record(s) were stopped.",
         )
+    return redirect("staff_automation_control")
+
+
+@require_POST
+def social_autopilot_promote_product(request, product_id: int):
+    _require_automation_staff(request, change=True)
+    product = get_object_or_404(Product, pk=product_id)
+    from automation.autopilot import queue_product_promotion
+
+    result = queue_product_promotion(product, actor=request.user)
+    if result.get("error"):
+        messages.error(request, result["error"])
+    elif result.get("automatic"):
+        messages.success(
+            request,
+            f"{result['created']} social post(s) queued for automatic publishing.",
+        )
+    else:
+        messages.success(
+            request,
+            f"{result['created']} social draft(s) created for review.",
+        )
+    return redirect("staff_product_edit", pk=product.pk)
+
+
+@require_POST
+def social_autopilot_rebuild(request):
+    _require_automation_staff(request, change=True)
+    from automation.autopilot import rebuild_autopilot_calendar
+
+    result = rebuild_autopilot_calendar()
+    messages.success(
+        request,
+        (
+            f"Social calendar rebuilt: {result['cancelled']} old future post(s) "
+            f"cancelled and {result['created']} new channel post(s) generated."
+        ),
+    )
+    return redirect("staff_automation_control")
+
+
+@require_POST
+def social_autopilot_test_connections(request):
+    _require_automation_staff(request, change=True)
+    autopilot = SocialAutopilotSettings.load()
+    channels = autopilot.channels or ["facebook", "instagram", "telegram"]
+    for channel in channels:
+        result = diagnose_channel(channel)
+        text = f"{channel.title()}: {result['message']}"
+        if result["ok"]:
+            messages.success(request, text)
+        else:
+            messages.error(request, text)
     return redirect("staff_automation_control")

@@ -28,7 +28,11 @@
         <h2 class="h4 mb-1">Social media autopilot</h2>
         <p class="text-muted mb-0">Choose a product once or let inventory, stock, completeness and cooldown rules choose automatically.</p>
       </div>
-      <span class="badge {% if autopilot.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">{% if autopilot.enabled %}Running{% else %}Stopped{% endif %}</span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge {% if autopilot.enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">{% if autopilot.enabled %}Running{% else %}Stopped{% endif %}</span>
+        {% if can_change_automation %}<form method="post" action="{% url 'staff_social_autopilot_test_connections' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary" type="submit">Test connections</button></form>{% endif %}
+        {% if can_change_automation and autopilot.enabled %}<form method="post" action="{% url 'staff_social_autopilot_rebuild' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-primary" type="submit">Rebuild calendar</button></form>{% endif %}
+      </div>
     </div>
     <div class="row g-2 mb-3">
       {% for channel, connected in social_connections.items %}
@@ -58,8 +62,8 @@
     {% endif %}
     <hr class="my-4">
     <h3 class="h5">Upcoming social queue</h3>
-    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Time</th><th>Product</th><th>Channels</th><th>Status</th></tr></thead><tbody>
-      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Review draft" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", " }}</td><td>{{ post.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4" class="text-muted">No upcoming social posts.</td></tr>{% endfor %}
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Time</th><th>Product</th><th>Channels</th><th>Caption preview</th><th>Status</th></tr></thead><tbody>
+      {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Review draft" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", " }}</td><td class="small">{{ post.caption|truncatechars:120 }}</td><td>{{ post.get_status_display }}</td></tr>{% empty %}<tr><td colspan="5" class="text-muted">No upcoming social posts.</td></tr>{% endfor %}
     </tbody></table></div>
   </div>
 </div>

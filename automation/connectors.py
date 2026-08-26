@@ -416,3 +416,53 @@ def publish_social_post(*, channel: str, post, image_url: str = "") -> dict:
         f"{channel.title()} does not have an automatic publisher in LEOSOFT yet.",
         retryable=False,
     )
+
+
+def diagnose_channel(channel: str) -> dict:
+    try:
+        if channel in {"facebook", "instagram"}:
+            config = MetaConfig.load()
+            if not config.supports(channel):
+                return {"ok": False, "message": f"{channel.title()} credentials are incomplete."}
+            object_id = (
+                config.page_id
+                if channel == "facebook"
+                else config.instagram_account_id
+            )
+            payload = _graph_request(
+                config,
+                "GET",
+                object_id,
+                query={"fields": "id,name,username"},
+            )
+            identity = payload.get("name") or payload.get("username") or payload.get("id")
+            return {
+                "ok": bool(payload.get("id")),
+                "message": f"Connected as {identity}." if identity else "Connection returned no identity.",
+            }
+        if channel == "telegram":
+            config = TelegramConfig.load()
+            if not config.configured:
+                return {"ok": False, "message": "Telegram credentials are incomplete."}
+            url = (
+                f"https://api.telegram.org/bot{config.bot_token}/getChat?"
+                + urlencode({"chat_id": config.channel_id})
+            )
+            with urlopen(url, timeout=config.timeout_seconds) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            if not payload.get("ok"):
+                return {
+                    "ok": False,
+                    "message": str(payload.get("description") or "Telegram rejected the connection."),
+                }
+            chat = payload.get("result") or {}
+            identity = chat.get("title") or chat.get("username") or chat.get("id")
+            return {"ok": True, "message": f"Connected to {identity}."}
+        return {"ok": False, "message": "This channel is not supported by Autopilot."}
+    except ConnectorError as exc:
+        return {"ok": False, "message": str(exc)}
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
+        return {
+            "ok": False,
+            "message": f"Connection test failed: {exc.__class__.__name__}.",
+        }

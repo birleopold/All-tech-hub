@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from automation.models import PostAutomationPlan, SocialAutopilotSettings
@@ -38,12 +39,24 @@ def _candidate_products(settings_row, *, cutoff, used_ids):
         Product.objects.filter(is_published=True)
         .select_related("category")
         .prefetch_related("gallery_images", "variants")
+        .annotate(
+            autopilot_clicks=Sum("marketing_links__click_count"),
+            autopilot_leads=Sum("marketing_links__lead_count"),
+        )
         .exclude(pk__in=used_ids)
-        .order_by("-is_featured", "-updated_at", "pk")
+        .order_by(
+            "-is_featured",
+            "-autopilot_leads",
+            "-autopilot_clicks",
+            "-updated_at",
+            "pk",
+        )
     )
     recently_posted = ScheduledPost.objects.filter(
         product_id__isnull=False,
         scheduled_for__gte=cutoff,
+    ).exclude(
+        status=ScheduledPost.STATUS_CANCELLED
     ).values_list("product_id", flat=True)
     queryset = queryset.exclude(pk__in=recently_posted)
     for product in queryset:
@@ -82,7 +95,14 @@ def _choose_product(settings_row, *, cutoff, used_ids):
     ), False
 
 
-def _caption(product, channel: str, link_url: str, settings_row) -> str:
+def _content_style(product, slot) -> str:
+    if product.kind == Product.KIND_SERVICE:
+        return "service"
+    styles = ("spotlight", "availability", "benefit")
+    return styles[(slot.toordinal() + slot.hour) % len(styles)]
+
+
+def _caption(product, channel: str, link_url: str, settings_row, *, style="spotlight") -> str:
     company = CompanySettings.load()
     currency = company.currency_code or "UGX"
     price = product.min_active_variant_price or product.price
@@ -92,18 +112,27 @@ def _caption(product, channel: str, link_url: str, settings_row) -> str:
         f" Price: {currency} {price:,.0f}." if settings_row.include_prices else ""
     )
     hashtags = (settings_row.default_hashtags or "").strip()
+    if style == "availability":
+        opening = f"Now available: {product.name}."
+    elif style == "benefit":
+        opening = f"Upgrade your setup with {product.name}."
+    elif style == "service":
+        opening = f"Need dependable {product.name}?"
+    else:
+        opening = f"Product spotlight: {product.name}."
+
     if channel == "instagram":
         return (
-            f"{product.name}\n\n{description}{price_line}\n\n"
+            f"{opening}\n\n{description}{price_line}\n\n"
             f"Available from {company.company_name}. Visit {link_url}\n\n{hashtags}"
         ).strip()
     if channel == "telegram":
         return (
-            f"{product.name}\n\n{description}{price_line}\n\n"
+            f"{opening}\n\n{description}{price_line}\n\n"
             f"View details or request a quotation: {link_url}\n\n{hashtags}"
         ).strip()
     return (
-        f"Looking for {product.name}? {description}{price_line}\n\n"
+        f"{opening} {description}{price_line}\n\n"
         f"View full details and request a quotation from {company.company_name}: "
         f"{link_url}\n\n{hashtags}"
     ).strip()
@@ -223,6 +252,7 @@ def generate_autopilot_calendar(*, now=None) -> dict:
                         channel,
                         tracking_url,
                         settings_row,
+                        style=_content_style(product, slot),
                     ),
                     channels=[channel],
                     status=(
@@ -257,3 +287,116 @@ def generate_autopilot_calendar(*, now=None) -> dict:
         "channels": channels,
         "mode": settings_row.mode,
     }
+
+
+@transaction.atomic
+def queue_product_promotion(product: Product, *, actor=None, now=None) -> dict:
+    now = now or timezone.now()
+    settings_row = SocialAutopilotSettings.objects.select_for_update().filter(
+        singleton_key="primary"
+    ).first()
+    if settings_row is None:
+        settings_row = SocialAutopilotSettings.load()
+    product = (
+        Product.objects.select_related("category")
+        .prefetch_related("gallery_images", "variants")
+        .get(pk=product.pk)
+    )
+    if not product.is_published:
+        return {"created": 0, "error": "Publish the product before promoting it."}
+    if not product.primary_display_image:
+        return {"created": 0, "error": "Add a main product image before promoting it."}
+    if not (product.short_description or product.description):
+        return {"created": 0, "error": "Add a product description before promoting it."}
+    if settings_row.require_in_stock and not product.available_to_sell:
+        return {"created": 0, "error": "This product is not currently available to sell."}
+
+    channels = [
+        channel
+        for channel in (settings_row.channels or [])
+        if channel in SUPPORTED_CHANNELS
+    ]
+    if not channels:
+        return {"created": 0, "error": "Select at least one social channel first."}
+
+    full = bool(
+        settings_row.enabled
+        and settings_row.mode == SocialAutopilotSettings.MODE_FULL
+    )
+    slot = now + timedelta(minutes=5)
+    marker = f"[social-priority]:{slot:%Y%m%d%H%M}:{product.pk}"
+    created = 0
+    for channel in channels:
+        link = CampaignLink.objects.create(
+            product=product,
+            name=f"Priority: {product.name} — {channel} — {slot:%Y-%m-%d}",
+            destination_url=product_public_url(product),
+            source=channel,
+            medium="priority-organic-social",
+            content=product.slug,
+            created_by=actor,
+        )
+        tracking_url = absolute_public_url(link.get_tracking_path())
+        post = ScheduledPost.objects.create(
+            product=product,
+            title=f"Priority: {product.name} — {channel.title()}",
+            caption=_caption(
+                product,
+                channel,
+                tracking_url,
+                settings_row,
+                style=_content_style(product, slot),
+            ),
+            channels=[channel],
+            status=(
+                ScheduledPost.STATUS_SCHEDULED
+                if full
+                else ScheduledPost.STATUS_DRAFT
+            ),
+            scheduled_for=slot,
+            notes=f"{marker}:{channel}",
+            created_by=actor,
+        )
+        configure_post_plan(
+            post,
+            mode=(
+                PostAutomationPlan.MODE_AUTOMATIC
+                if full
+                else PostAutomationPlan.MODE_MANUAL
+            ),
+        )
+        created += 1
+    return {"created": created, "scheduled_for": slot, "automatic": full}
+
+
+@transaction.atomic
+def rebuild_autopilot_calendar(*, now=None) -> dict:
+    now = now or timezone.now()
+    settings_row = SocialAutopilotSettings.objects.select_for_update().filter(
+        singleton_key="primary"
+    ).first()
+    if settings_row is None:
+        return {"cancelled": 0, "created": 0}
+    posts = list(
+        ScheduledPost.objects.select_for_update().filter(
+            notes__startswith=AUTOPILOT_MARKER,
+            scheduled_for__gte=now,
+            status__in=[
+                ScheduledPost.STATUS_DRAFT,
+                ScheduledPost.STATUS_SCHEDULED,
+                ScheduledPost.STATUS_READY,
+            ],
+        )
+    )
+    from automation.services import cancel_post_automation
+
+    for post in posts:
+        cancel_post_automation(post)
+        post.status = ScheduledPost.STATUS_CANCELLED
+        post.save(update_fields=["status", "updated_at"])
+    generated = (
+        generate_autopilot_calendar(now=now)
+        if settings_row.enabled
+        else {"created": 0}
+    )
+    return {"cancelled": len(posts), "created": generated.get("created", 0)}
