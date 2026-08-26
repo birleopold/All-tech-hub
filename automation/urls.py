@@ -20,6 +20,11 @@ urlpatterns = [
         name="staff_social_autopilot_test_connections",
     ),
     path(
+        "automation/social-autopilot/posts/<int:post_id>/publish-now/",
+        staff_views.social_autopilot_publish_now,
+        name="staff_social_autopilot_publish_now",
+    ),
+    path(
         "automation/social-autopilot/posts/<int:post_id>/cancel/",
         staff_views.social_autopilot_cancel_post,
         name="staff_social_autopilot_cancel_post",
