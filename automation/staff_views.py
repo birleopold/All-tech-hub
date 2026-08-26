@@ -22,7 +22,11 @@ from automation.forms import (
     SocialAutopilotForm,
 )
 from automation.models import AutomationJob, SocialAutopilotSettings
-from automation.reporting import automation_control_summary, automation_integrity_findings
+from automation.reporting import (
+    automation_control_summary,
+    automation_integrity_findings,
+    social_channel_performance,
+)
 from catalog.models import Product
 from core.mixins import StaffRequiredMixin
 from marketing.models import ScheduledPost
@@ -54,6 +58,7 @@ class AutomationControlDashboardView(
         context["autopilot_form"] = SocialAutopilotForm(instance=autopilot)
         from automation.autopilot import autopilot_readiness
         context["autopilot_readiness"] = autopilot_readiness(autopilot)
+        context["social_performance"] = social_channel_performance(days=30)
         context["social_connections"] = {
             channel: channel_is_configured(channel)
             for channel in ("facebook", "instagram", "telegram")
@@ -186,6 +191,7 @@ def social_autopilot_update(request):
         context["autopilot_form"] = form
         from automation.autopilot import autopilot_readiness
         context["autopilot_readiness"] = autopilot_readiness(autopilot)
+        context["social_performance"] = social_channel_performance(days=30)
         context["social_connections"] = {
             channel: channel_is_configured(channel)
             for channel in ("facebook", "instagram", "telegram")
