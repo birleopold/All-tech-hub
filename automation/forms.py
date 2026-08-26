@@ -1,6 +1,6 @@
 from django import forms
 
-from automation.models import AutomationJob
+from automation.models import AutomationJob, SocialAutopilotSettings
 
 
 class BootstrapFormMixin:
@@ -92,3 +92,89 @@ class AutomationJobCancelForm(BootstrapFormMixin, forms.Form):
         if value != self.expected_confirmation:
             raise forms.ValidationError("The cancellation phrase does not match.")
         return value
+
+
+class SocialAutopilotForm(BootstrapFormMixin, forms.ModelForm):
+    CHANNEL_CHOICES = [
+        ("facebook", "Facebook Page"),
+        ("instagram", "Instagram"),
+        ("telegram", "Telegram channel"),
+    ]
+    channels = forms.MultipleChoiceField(
+        choices=CHANNEL_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Only connected channels publish automatically.",
+    )
+    posting_hours_text = forms.CharField(
+        label="Posting hours",
+        help_text="Kampala-local hours separated by commas, for example 9,18.",
+    )
+
+    class Meta:
+        model = SocialAutopilotSettings
+        fields = (
+            "enabled",
+            "mode",
+            "channels",
+            "posts_per_day",
+            "posting_hours_text",
+            "queue_days",
+            "product_cooldown_days",
+            "include_prices",
+            "require_in_stock",
+            "default_hashtags",
+            "preferred_product",
+        )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial["channels"] = self.instance.channels or [
+            "facebook",
+            "instagram",
+            "telegram",
+        ]
+        self.initial["posting_hours_text"] = ",".join(
+            str(value) for value in (self.instance.posting_hours or [9, 18])
+        )
+        self.fields["preferred_product"].queryset = (
+            self.fields["preferred_product"].queryset.filter(
+                is_published=True
+            ).order_by("-is_featured", "name")
+        )
+        self.apply_bootstrap()
+
+    def clean_posts_per_day(self):
+        value = int(self.cleaned_data["posts_per_day"])
+        if not 1 <= value <= 4:
+            raise forms.ValidationError("Choose between 1 and 4 daily posting slots.")
+        return value
+
+    def clean_queue_days(self):
+        value = int(self.cleaned_data["queue_days"])
+        if not 1 <= value <= 14:
+            raise forms.ValidationError("Queue between 1 and 14 days.")
+        return value
+
+    def clean_product_cooldown_days(self):
+        value = int(self.cleaned_data["product_cooldown_days"])
+        if not 1 <= value <= 90:
+            raise forms.ValidationError("Choose a cooldown between 1 and 90 days.")
+        return value
+
+    def clean_posting_hours_text(self):
+        raw = self.cleaned_data["posting_hours_text"]
+        try:
+            hours = sorted({int(value.strip()) for value in raw.split(",")})
+        except ValueError as exc:
+            raise forms.ValidationError("Enter whole hours separated by commas.") from exc
+        if not hours or any(hour < 0 or hour > 23 for hour in hours):
+            raise forms.ValidationError("Each posting hour must be between 0 and 23.")
+        return hours
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.channels = self.cleaned_data["channels"]
+        instance.posting_hours = self.cleaned_data["posting_hours_text"]
+        if commit:
+            instance.save()
+        return instance
