@@ -6,7 +6,12 @@ from django.conf import settings
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
-from automation.models import (\n    AutomationControl,\n    AutomationJob,\n    AutomationRun,\n    PostChannelDelivery,\n)
+from automation.models import (
+    AutomationControl,
+    AutomationJob,
+    AutomationRun,
+    PostChannelDelivery,
+)
 
 
 def _setting_int(name: str, default: int, *, minimum: int = 1, maximum: int = 10080) -> int:
