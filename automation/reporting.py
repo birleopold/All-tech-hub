@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
-from automation.models import AutomationControl, AutomationJob, AutomationRun
+from automation.models import (\n    AutomationControl,\n    AutomationJob,\n    AutomationRun,\n    PostChannelDelivery,\n)
 
 
 def _setting_int(name: str, default: int, *, minimum: int = 1, maximum: int = 10080) -> int:
@@ -165,3 +165,78 @@ def automation_integrity_findings() -> dict:
         "last_run_status": control.last_run_status,
         "consecutive_failures": control.consecutive_failures,
     }
+
+
+
+def social_channel_performance(*, days: int = 30, now=None) -> list[dict]:
+    """Summarise only first-party tracked, organic social activity."""
+    from marketing.models import CampaignLink
+
+    now = now or timezone.now()
+    days = max(1, min(int(days), 365))
+    cutoff = now - timedelta(days=days)
+    channels = ("facebook", "instagram", "telegram")
+    link_rows = {
+        row["source"]: row
+        for row in CampaignLink.objects.filter(
+            created_at__gte=cutoff,
+            source__in=channels,
+            medium__in=["organic-social", "priority-organic-social"],
+        )
+        .values("source")
+        .annotate(
+            links=Count("id"),
+            clicks=Sum("click_count"),
+            leads=Sum("lead_count"),
+        )
+    }
+    delivery_rows = {
+        row["channel"]: row
+        for row in PostChannelDelivery.objects.filter(
+            created_at__gte=cutoff,
+            channel__in=channels,
+        )
+        .values("channel")
+        .annotate(
+            deliveries=Count("id"),
+            published=Count(
+                "id",
+                filter=Q(status=PostChannelDelivery.STATUS_PUBLISHED),
+            ),
+            failed=Count(
+                "id",
+                filter=Q(status=PostChannelDelivery.STATUS_FAILED),
+            ),
+            retrying=Count(
+                "id",
+                filter=Q(status=PostChannelDelivery.STATUS_RETRYING),
+            ),
+            manual=Count(
+                "id",
+                filter=Q(status=PostChannelDelivery.STATUS_MANUAL),
+            ),
+        )
+    }
+    rows = []
+    for channel in channels:
+        links = link_rows.get(channel, {})
+        deliveries = delivery_rows.get(channel, {})
+        clicks = int(links.get("clicks") or 0)
+        leads = int(links.get("leads") or 0)
+        published = int(deliveries.get("published") or 0)
+        rows.append(
+            {
+                "channel": channel,
+                "links": int(links.get("links") or 0),
+                "clicks": clicks,
+                "leads": leads,
+                "deliveries": int(deliveries.get("deliveries") or 0),
+                "published": published,
+                "failed": int(deliveries.get("failed") or 0),
+                "retrying": int(deliveries.get("retrying") or 0),
+                "manual": int(deliveries.get("manual") or 0),
+                "clicks_per_post": round(clicks / published, 1) if published else 0,
+                "lead_rate": round((leads / clicks) * 100, 1) if clicks else 0,
+            }
+        )
+    return rows
