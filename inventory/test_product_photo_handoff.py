@@ -42,6 +42,12 @@ class ProductPhotoHandoffTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(ProductImage.objects.filter(product=self.product).count(), 1)
+        status = self.client.get(
+            reverse("staff_product_photo_status", kwargs={"token": session.token})
+        )
+        self.assertEqual(status.status_code, 200)
+        self.assertEqual(status.json()["count"], 1)
+        self.assertEqual(len(status.json()["images"]), 1)
 
     def test_other_staff_cannot_open_session(self):
         session = ProductPhotoSession.objects.create(product=self.product, owner=self.staff)
