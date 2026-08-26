@@ -15,6 +15,11 @@ urlpatterns = [
         name="staff_social_autopilot_update",
     ),
     path(
+        "automation/social-autopilot/test-connections/",
+        staff_views.social_autopilot_test_connections,
+        name="staff_social_autopilot_test_connections",
+    ),
+    path(
         "automation/social-autopilot/rebuild/",
         staff_views.social_autopilot_rebuild,
         name="staff_social_autopilot_rebuild",
