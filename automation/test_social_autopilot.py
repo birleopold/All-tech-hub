@@ -17,7 +17,12 @@ from automation.autopilot import (
     reconcile_autopilot_state,
 )
 from automation.connectors import diagnose_channel, publish_telegram
-from automation.models import PostAutomationPlan, SocialAutopilotSettings
+from automation.models import (
+    PostAutomationPlan,
+    PostChannelDelivery,
+    SocialAutopilotSettings,
+)
+from automation.reporting import social_channel_performance
 from catalog.models import Category, Product
 from marketing.models import CampaignLink, ScheduledPost
 
@@ -174,6 +179,31 @@ class SocialAutopilotTests(TestCase):
             ScheduledPost.objects.exclude(status=ScheduledPost.STATUS_CANCELLED).count(),
             2,
         )
+
+
+    def test_channel_performance_uses_tracked_links_and_deliveries(self):
+        now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=now)
+        link = CampaignLink.objects.get(source="facebook")
+        link.click_count = 12
+        link.lead_count = 3
+        link.save(update_fields=["click_count", "lead_count"])
+        post = ScheduledPost.objects.get(channels=["facebook"])
+        PostChannelDelivery.objects.create(
+            plan=post.automation_plan,
+            post=post,
+            channel="facebook",
+            status=PostChannelDelivery.STATUS_PUBLISHED,
+        )
+
+        rows = social_channel_performance(now=now + timedelta(hours=1))
+        facebook = next(row for row in rows if row["channel"] == "facebook")
+
+        self.assertEqual(facebook["published"], 1)
+        self.assertEqual(facebook["clicks"], 12)
+        self.assertEqual(facebook["leads"], 3)
+        self.assertEqual(facebook["clicks_per_post"], 12.0)
+        self.assertEqual(facebook["lead_rate"], 25.0)
 
 
 @override_settings(
