@@ -92,14 +92,8 @@ def product_photo_upload(request, token):
             status=400,
         )
 
-    created = []
-    next_sort = (
-        ProductImage.objects.filter(product=session.product)
-        .order_by("-sort_order")
-        .values_list("sort_order", flat=True)
-        .first()
-        or 0
-    )
+    # Validate the entire batch before persisting anything, so one bad file
+    # cannot leave a partial gallery behind.
     for upload in files:
         content_type = (upload.content_type or "").lower()
         if content_type not in ALLOWED_CONTENT_TYPES:
@@ -112,6 +106,17 @@ def product_photo_upload(request, token):
             return JsonResponse({"error": f"{upload.name} is not a valid image."}, status=400)
         if not width or not height:
             return JsonResponse({"error": f"{upload.name} is not a valid image."}, status=400)
+        upload.seek(0)
+
+    created = []
+    next_sort = (
+        ProductImage.objects.filter(product=session.product)
+        .order_by("-sort_order")
+        .values_list("sort_order", flat=True)
+        .first()
+        or 0
+    )
+    for upload in files:
         next_sort += 10
         image = ProductImage.objects.create(
             product=session.product,
