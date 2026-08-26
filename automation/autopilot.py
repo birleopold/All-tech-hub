@@ -504,6 +504,7 @@ def publish_autopilot_post_now(post: ScheduledPost, *, actor=None, now=None) -> 
 
     result = prepare_post(post, now=now)
     if not result.get("queued"):
+        transaction.set_rollback(True)
         return {
             **result,
             "error": (
