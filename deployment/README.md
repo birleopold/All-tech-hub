@@ -302,12 +302,9 @@ git checkout main
 git pull origin main
 source .venv/bin/activate
 pip install -r requirements.txt
-set -a
-source .env
-set +a
-python manage.py check --deploy
-python manage.py migrate
-python manage.py collectstatic --noinput
+scripts/manage_production.sh check --deploy
+scripts/manage_production.sh migrate
+scripts/manage_production.sh collectstatic --noinput
 sudo systemctl restart leosoft_gunicorn
 sudo systemctl status leosoft_gunicorn --no-pager
 curl -fsS https://leosoftug.com/healthz/
@@ -348,6 +345,15 @@ source .env
 set +a
 python manage.py backup_alltech --output backups
 ```
+
+The guarded wrapper prints the selected PostgreSQL database before executing a
+management command. Add `ALLTECH_EXPECTED_DB_NAME=leosoft_prod` to `.env` so
+an accidental database-name change is rejected. Do not use a bare
+`python manage.py migrate` for production administration.
+
+The readiness endpoint checks both database connectivity and migration state.
+A response with `"migrations": "pending"` is deliberately HTTP 503 and lists
+the unapplied migration names.
 
 ## 12. Troubleshooting
 
