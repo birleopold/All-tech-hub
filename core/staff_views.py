@@ -102,49 +102,56 @@ class StaffGlobalSearchView(StaffRequiredMixin, View):
             from crm.models import Customer
             from operations.models import JobCard
 
-            results["customers"] = Customer.objects.filter(
+            if request.user.has_perm("crm.view_customer"):
+                results["customers"] = Customer.objects.filter(
                 Q(name__icontains=q)
                 | Q(company_name__icontains=q)
                 | Q(email__icontains=q)
                 | Q(phone__icontains=q)
                 | Q(tax_reference__icontains=q)
-            ).order_by("name")[:8]
-            results["documents"] = CommercialDocument.objects.filter(
+                ).order_by("name")[:8]
+            if request.user.has_perm("billing.view_commercialdocument"):
+                results["documents"] = CommercialDocument.objects.filter(
                 Q(number__icontains=q)
                 | Q(customer_name__icontains=q)
                 | Q(customer_company__icontains=q)
                 | Q(customer_email__icontains=q)
                 | Q(title__icontains=q)
                 | Q(contact_reference__icontains=q)
-            ).order_by("-issue_date", "-id")[:8]
-            results["orders"] = Order.objects.select_related("customer").filter(
+                ).order_by("-issue_date", "-id")[:8]
+            if request.user.has_perm("commerce.view_order"):
+                results["orders"] = Order.objects.select_related("customer").filter(
                 Q(reference__icontains=q)
                 | Q(contact_name__icontains=q)
                 | Q(contact_email__icontains=q)
                 | Q(contact_phone__icontains=q)
                 | Q(customer__name__icontains=q)
-            ).order_by("-placed_at")[:8]
-            results["jobs"] = JobCard.objects.select_related("customer").filter(
+                ).order_by("-placed_at")[:8]
+            if request.user.has_perm("operations.view_jobcard"):
+                results["jobs"] = JobCard.objects.select_related("customer").filter(
                 Q(number__icontains=q)
                 | Q(title__icontains=q)
                 | Q(device_make__icontains=q)
                 | Q(device_model__icontains=q)
                 | Q(serial_number__icontains=q)
                 | Q(customer__name__icontains=q)
-            ).order_by("-received_on")[:8]
-            results["tickets"] = SupportTicket.objects.select_related("customer").filter(
+                ).order_by("-received_on")[:8]
+            if request.user.has_perm("core.view_supportticket"):
+                results["tickets"] = SupportTicket.objects.select_related("customer").filter(
                 Q(reference__icontains=q)
                 | Q(subject__icontains=q)
                 | Q(description__icontains=q)
                 | Q(customer__name__icontains=q)
-            ).order_by("-updated_at")[:8]
-            results["products"] = Product.objects.select_related("category").filter(
+                ).order_by("-updated_at")[:8]
+            if request.user.has_perm("catalog.view_product"):
+                results["products"] = Product.objects.select_related("category").filter(
                 Q(name__icontains=q)
                 | Q(sku__icontains=q)
                 | Q(short_description__icontains=q)
                 | Q(variants__sku__icontains=q)
-            ).distinct().order_by("name")[:8]
-            results["serials"] = ProductSerial.objects.select_related(
+                ).distinct().order_by("name")[:8]
+            if request.user.has_perm("catalog.view_productserial"):
+                results["serials"] = ProductSerial.objects.select_related(
                 "product", "sold_to"
             ).filter(
                 Q(serial_number__icontains=q)
@@ -152,7 +159,7 @@ class StaffGlobalSearchView(StaffRequiredMixin, View):
                 | Q(mac_address__icontains=q)
                 | Q(product__name__icontains=q)
                 | Q(sold_to__name__icontains=q)
-            ).order_by("product__name", "serial_number")[:8]
+                ).order_by("product__name", "serial_number")[:8]
         return render(request, self.template_name, {"search_q": q, "results": results})
 
 

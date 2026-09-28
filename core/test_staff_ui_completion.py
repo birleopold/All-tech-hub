@@ -154,7 +154,8 @@ class StaffWorkspaceCompletionTests(TestCase):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "staff-app")
-                self.assertContains(response, "staff_workspace_final_polish.css")
+                self.assertContains(response, "staff_workspace.css")
+                self.assertNotContains(response, "staff_workspace_final_polish.css")
 
     def test_all_redesigned_detail_pages_render(self):
         urls = [

@@ -25,6 +25,20 @@
     </div>
   </div>
 
+  <section class="card staff-panel-card mb-4" aria-labelledby="product-business-title">
+    <div class="card-body">
+      <div class="staff-panel-heading"><h2 id="product-business-title">Product business record</h2><span>Linked records and verified facts</span></div>
+      <div class="row g-3">
+        {% if product_access.sales %}<div class="col-md-4"><small>Non-cancelled order lines</small><p class="h5">{{ product_sales.units|default:0 }} units · {{ company.currency_code }} {{ product_sales.gross|default:0|floatformat:0 }}</p><p class="small text-muted">Gross line value before order discounts, refunds and tax.</p></div>{% endif %}
+        {% if product_access.finance %}<div class="col-md-4"><small>Invoice gross profit with known cost</small><p class="h5">{{ company.currency_code }} {{ product_margin.profit|floatformat:0 }}</p><p class="small text-muted">{{ product_margin.covered }} of {{ product_margin.total }} invoice lines have cost. Figures exclude lines with missing cost.</p></div>{% endif %}
+        {% if product_access.purchasing %}<div class="col-md-4"><small>Last recorded purchase</small>{% if last_purchase %}<p class="h5">{{ last_purchase.purchase_order.supplier.name }}</p><p class="small text-muted">{{ company.currency_code }} {{ last_purchase.unit_cost|floatformat:0 }} per unit · {{ last_purchase.purchase_order.ordered_on }}</p>{% else %}<p>No purchase order linked.</p>{% endif %}</div>{% endif %}
+        <div class="col-md-4"><small>Current listing</small><p class="h5">{{ product.stock_quantity }} base units</p><p class="small text-muted">Reorder at {{ product.reorder_level }} · Average published review {{ product_review_rating|floatformat:1|default:"—" }}</p></div>
+        {% if product_access.marketing or product_access.posts %}<div class="col-md-4"><small>Demand</small>{% if product_access.marketing %}<p class="h5">{{ product_lead_count }} enquiries</p>{% endif %}{% for post in recent_social_posts %}<p class="small mb-1">{% if perms.marketing.change_scheduledpost %}<a href="{% url 'staff_marketing_post_edit' post.pk %}">{{ post.title }}</a>{% else %}{{ post.title }}{% endif %} · {{ post.get_status_display }}</p>{% endfor %}</div>{% endif %}
+      </div>
+      {% if product_access.inventory %}<h3 class="h6 mt-3">Recent stock movements</h3>{% for movement in recent_movements %}<p class="small mb-1">{{ movement.created_at|date:"M j, Y" }} · {{ movement.get_movement_type_display }} · {{ movement.quantity_delta }}</p>{% empty %}<p class="small">No stock movement recorded.</p>{% endfor %}{% endif %}
+    </div>
+  </section>
+
   {% if merchant_missing_fields %}
   <div class="card staff-panel-card mb-4">
     <div class="card-body">

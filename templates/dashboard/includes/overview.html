@@ -19,14 +19,15 @@
       <div class="staff-panel-heading"><h2 id="my-work-title">My Work</h2><a href="{% url 'staff_notifications' %}">Notifications</a></div>
       {% for item in my_work %}
       <div class="border-bottom py-2"><small class="text-muted">{{ item.kind }} · {{ item.customer }}</small><br><a href="{{ item.url }}">{{ item.label }}</a></div>
-      {% empty %}<p class="text-muted mb-0">No open jobs or tickets assigned to you.</p>{% endfor %}
-      <div class="mt-3"><a href="{% url 'staff_jobs' %}">All jobs</a> · <a href="{% url 'staff_tickets' %}">All tickets</a></div>
+      {% empty %}<p class="text-muted mb-0">No open work assigned to you.</p>{% endfor %}
+      <div class="mt-3">{% if dashboard_access.jobs %}<a href="{% url 'staff_jobs' %}">All jobs</a>{% endif %}{% if dashboard_access.tickets %} <a href="{% url 'staff_tickets' %}">All tickets</a>{% endif %}{% if dashboard_access.leads %} <a href="{% url 'staff_marketing_leads' %}">Leads</a>{% endif %}{% if dashboard_access.followups %} <a href="{% url 'staff_retention_dashboard' %}">Follow-ups</a>{% endif %}</div>
     </div></div>
   </section>
 </div>
-{% if show_sales_insights %}
+{% if dashboard_access.orders or dashboard_access.finance %}
 <section class="card staff-panel-card mb-3" aria-labelledby="order-trend-title"><div class="card-body">
-  <div class="staff-panel-heading"><h2 id="order-trend-title">Order value</h2><a href="{% url 'staff_orders' %}">View orders</a></div>
+  <div class="staff-panel-heading"><h2 id="order-trend-title">Commercial activity</h2>{% if dashboard_access.orders %}<a href="{% url 'staff_orders' %}">View orders</a>{% endif %}</div>
+  {% if dashboard_access.orders %}
   <div class="row g-3">
     <div class="col-md-4"><small>Today</small><p class="h4">{{ company.currency_code }} {{ order_value_today|floatformat:0|intcomma }}</p></div>
     <div class="col-md-4"><small>Last 7 days</small><p class="h4">{{ company.currency_code }} {{ order_value_7d|floatformat:0|intcomma }}</p></div>
@@ -36,17 +37,28 @@
   <div class="d-flex align-items-end gap-2" role="img" aria-label="Order totals for each of the last seven calendar days">
     {% for point in order_value_trend %}<div class="flex-fill text-center border-top pt-2"><strong class="d-block small">{{ point.value|floatformat:0|intcomma }}</strong><small class="text-muted">{{ point.label }}</small></div>{% endfor %}
   </div>
+  {% endif %}
+  {% if dashboard_access.finance %}
+  <div class="row g-3 mt-2">
+    <div class="col-md-3"><small>Issued invoices · 7 days</small><p class="h5">{{ company.currency_code }} {{ invoiced_7d|floatformat:0|intcomma }}</p></div>
+    <div class="col-md-3"><small>Previous 7 days</small><p class="h5">{{ company.currency_code }} {{ invoiced_previous_7d|floatformat:0|intcomma }}</p></div>
+    <div class="col-md-3"><small>Recorded payments · 7 days</small><p class="h5">{{ company.currency_code }} {{ payments_recorded_7d|floatformat:0|intcomma }}</p></div>
+    <div class="col-md-3"><small>Outstanding invoices</small><p class="h5">{{ company.currency_code }} {{ receivables_balance|floatformat:0|intcomma }}</p></div>
+  </div>
+  <p class="small text-muted mb-0">Recorded payments combine document payments and account payments; invoices exclude drafts, cancellations and expired documents.</p>
+  {% endif %}
 </div></section>
 {% endif %}
-{% if automation_summary %}
+{% if business_health %}
 <section class="card staff-panel-card mb-3" aria-labelledby="business-health-title"><div class="card-body">
-  <div class="staff-panel-heading"><h2 id="business-health-title">Business health</h2><a href="{% url 'staff_reports' %}">Reports</a></div>
+  <div class="staff-panel-heading"><h2 id="business-health-title">Business health</h2>{% if dashboard_access.finance %}<a href="{% url 'staff_reports' %}">Reports</a>{% endif %}</div>
   <div class="d-flex flex-wrap gap-2 mb-3">{% for item in business_health %}
     <a href="{{ item.url }}" class="badge rounded-pill {% if item.count %}text-bg-warning{% else %}text-bg-success{% endif %} text-decoration-none">{{ item.label }}: {{ item.count }} requiring attention</a>
   {% endfor %}</div>
-  <p class="mb-0"><a href="{% url 'staff_automation_control' %}">Automation: {{ automation_summary.status }}</a>
+  {% if automation_summary %}<p class="mb-0"><a href="{% url 'staff_automation_control' %}">Automation: {{ automation_summary.status }}</a>
     · {{ automation_summary.queued }} queued · {{ automation_summary.failed }} failed
     · Last worker heartbeat: {{ automation_summary.heartbeat|default:"No heartbeat recorded" }}
-    {% if automation_summary.next_run %} · Next due: {{ automation_summary.next_run }}{% endif %}</p>
+    {% if automation_summary.oldest_due %} · Oldest due: {{ automation_summary.oldest_due }}{% endif %}
+    · Last successful run: {{ automation_summary.last_success|default:"None recorded" }}</p>{% endif %}
 </div></section>
 {% endif %}
