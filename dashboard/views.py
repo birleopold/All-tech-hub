@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 
 from automation.models import AutomationJob
+from dashboard.overview import dashboard_overview
 from billing.models import CommercialDocument, PaymentSubmission
 from catalog.models import Product, ProductReview
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
@@ -144,6 +145,7 @@ class StaffDashboardView(StaffRequiredMixin, TemplateView):
         ctx["seo_requires_attention"] = bool(
             seo_snapshot["critical"] or seo_snapshot["warnings"]
         )
+        ctx.update(dashboard_overview(self.request.user, ctx))
         return ctx
 
 

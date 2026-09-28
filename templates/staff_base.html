@@ -67,8 +67,16 @@
         <form method="get" action="{% url 'staff_search' %}" class="staff-topbar-search" role="search">
           <i class="bi bi-search" aria-hidden="true"></i>
           <label class="visually-hidden" for="staff-global-search">Search staff workspace</label>
-          <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search">
+          <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search customers, orders, SKUs, serials…">
         </form>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">New</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{% url 'staff_document_create' %}">New sale or quote</a></li>
+            <li><a class="dropdown-item" href="{% url 'staff_job_create' %}">New repair job</a></li>
+            <li><a class="dropdown-item" href="{% url 'staff_product_create' %}">Add product</a></li>
+          </ul>
+        </div>
         <a class="staff-icon-button" href="{% url 'staff_notifications' %}" aria-label="Notifications{% if staff_unread_notifications %}, {{ staff_unread_notifications }} unread{% endif %}">
           <i class="bi bi-bell" aria-hidden="true"></i>{% if staff_unread_notifications %}<span>{{ staff_unread_notifications }}</span>{% endif %}
         </a>

@@ -15,27 +15,7 @@
     </div>
   </div>
 
-  {% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention or backup_requires_attention or pending_payment_count or overdue_invoice_count or overdue_lead_count or failed_automation_count or pending_retention_followup_count %}
-  <div class="staff-alert-strip" role="status">
-    <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
-    <div>
-      <strong class="d-block mb-1">Attention needed</strong>
-      {% if pending_retention_followup_count %}<a href="{% url 'staff_retention_dashboard' %}">{{ pending_retention_followup_count }} customer follow-up{{ pending_retention_followup_count|pluralize }}</a> · {% endif %}
-      {% if pending_payment_count %}<a href="{% url 'staff_payment_reconciliation' %}">{{ pending_payment_count }} payment{{ pending_payment_count|pluralize }} awaiting verification</a> · {% endif %}
-      {% if overdue_invoice_count %}<a href="{% url 'staff_documents' %}?type=invoice">{{ overdue_invoice_count }} overdue invoice{{ overdue_invoice_count|pluralize }}</a> · {% endif %}
-      {% if overdue_lead_count %}<a href="{% url 'staff_marketing_leads' %}">{{ overdue_lead_count }} overdue sales lead{{ overdue_lead_count|pluralize }}</a> · {% endif %}
-      {% if failed_automation_count %}<a href="{% url 'staff_automation_control' %}">{{ failed_automation_count }} failed automation job{{ failed_automation_count|pluralize }}</a> · {% endif %}
-      {% if overdue_jobs %}<a href="{% url 'staff_jobs' %}?due=overdue">{{ overdue_jobs }} overdue job{{ overdue_jobs|pluralize }}</a>{% endif %}
-      {% if overdue_jobs and overdue_tickets %}<span aria-hidden="true"> · </span>{% endif %}
-      {% if overdue_tickets %}<a href="{% url 'staff_tickets' %}?due=overdue">{{ overdue_tickets }} overdue ticket{{ overdue_tickets|pluralize }}</a>{% endif %}
-      {% if low_stock_count %}{% if overdue_jobs or overdue_tickets %}<span aria-hidden="true"> · </span>{% endif %}<a href="{% url 'staff_products' %}?low=1">{{ low_stock_count }} low-stock item{{ low_stock_count|pluralize }}</a>{% endif %}
-      {% if unhandled_contacts %}{% if overdue_jobs or overdue_tickets or low_stock_count %}<span aria-hidden="true"> · </span>{% endif %}<a href="{% url 'staff_contact_messages' %}?handled=0">{{ unhandled_contacts }} unhandled contact{{ unhandled_contacts|pluralize }}</a>{% endif %}
-      {% if pending_reviews %}{% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts %}<span aria-hidden="true"> · </span>{% endif %}<a href="/admin/catalog/productreview/?is_published__exact=0">{{ pending_reviews }} review{{ pending_reviews|pluralize }} pending</a>{% endif %}
-      {% if catalogue_quality.critical or catalogue_quality.attention %}{% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews %}<span aria-hidden="true"> · </span>{% endif %}<a href="{% url 'staff_catalogue_quality' %}">{{ catalogue_quality.critical }} critical and {{ catalogue_quality.attention }} incomplete catalogue listing{{ catalogue_quality.attention|add:catalogue_quality.critical|pluralize }}</a>{% endif %}
-      {% if backup_requires_attention %}{% if overdue_jobs or overdue_tickets or low_stock_count or unhandled_contacts or pending_reviews or catalogue_quality.critical or catalogue_quality.attention %}<span aria-hidden="true"> · </span>{% endif %}<a href="#operational-health">{% if not backup_status.exists %}No verified backup found{% elif not backup_status.healthy %}Latest backup needs review{% else %}Latest backup is older than 48 hours{% endif %}</a>{% endif %}
-    </div>
-  </div>
-  {% endif %}
+  {% include "dashboard/includes/overview.html" %}
 
   <div class="row g-3 mb-3">
     <div class="col-sm-6 col-xl-3">
