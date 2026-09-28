@@ -4,12 +4,14 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Avg, DecimalField, F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
-from catalog.models import Product
+from billing.models import CommercialDocument, CommercialLine
+from catalog.models import Product, ProductReview
 from catalog.quality import catalogue_quality_rows
+from commerce.models import Order, OrderLine
 from core.audit import log_audit_event
 from core.mixins import StaffRequiredMixin
 from growth.models import ProductGrowthData
@@ -18,6 +20,9 @@ from inventory.forms import (
     ProductCommercialCoreForm,
     ProductGrowthDataForm,
 )
+from inventory.models import StockMovement
+from marketing.models import MarketingLead, ScheduledPost
+from purchasing.models import PurchaseLine
 from merchandising.enrichment import (
     apply_bulk_catalogue_enrichment,
     product_inventory_state,
@@ -64,7 +69,7 @@ class ProductCommercialReviewView(StaffRequiredMixin, View):
         core_form, growth_form, commerce_form = forms
         _, profile = self.related_instances(product)
         missing = profile.merchant_missing_fields()
-        return {
+        context = {
             "product": product,
             "core_form": core_form,
             "growth_form": growth_form,
@@ -73,6 +78,60 @@ class ProductCommercialReviewView(StaffRequiredMixin, View):
             "merchant_readiness_score": profile.merchant_readiness_score,
             "merchant_ready": not missing,
         }
+        user = self.request.user
+        context["product_access"] = {
+            "sales": user.has_perm("commerce.view_order"),
+            "finance": user.has_perm("billing.view_commercialline"),
+            "purchasing": user.has_perm("purchasing.view_purchaseline"),
+            "inventory": user.has_perm("inventory.view_stockmovement"),
+            "marketing": user.has_perm("marketing.view_marketinglead"),
+            "posts": user.has_perm("marketing.view_scheduledpost"),
+        }
+        access = context["product_access"]
+        if access["sales"]:
+            lines = OrderLine.objects.filter(product=product).exclude(
+                order__status=Order.STATUS_CANCELLED)
+            context["product_sales"] = lines.aggregate(
+                units=Sum("quantity"),
+                gross=Sum(F("quantity") * F("unit_price"),
+                          output_field=DecimalField(max_digits=18, decimal_places=2)),
+            )
+        if access["finance"]:
+            invoice_lines = CommercialLine.objects.filter(
+                product=product, document__doc_type=CommercialDocument.TYPE_INVOICE
+            ).exclude(document__status__in=[
+                CommercialDocument.STATUS_DRAFT, CommercialDocument.STATUS_CANCELLED,
+                CommercialDocument.STATUS_EXPIRED,
+            ]).select_related("document").order_by("-document__issue_date", "-pk")
+            counted = 0
+            known = 0
+            gross_profit = 0
+            for line in invoice_lines.iterator(chunk_size=200):
+                counted += 1
+                if line.unit_cost > 0:
+                    known += 1
+                    gross_profit += line.gross_profit
+            context["product_margin"] = {
+                "profit": gross_profit, "covered": known, "total": counted,
+            }
+        if access["purchasing"]:
+            context["last_purchase"] = PurchaseLine.objects.filter(
+                product=product).select_related(
+                "purchase_order", "purchase_order__supplier"
+            ).order_by("-purchase_order__ordered_on", "-pk").first()
+        if access["inventory"]:
+            context["recent_movements"] = StockMovement.objects.filter(
+                product=product).order_by("-created_at")[:6]
+        if access["marketing"]:
+            context["product_lead_count"] = MarketingLead.objects.filter(
+                product=product).count()
+        if access["posts"]:
+            context["recent_social_posts"] = ScheduledPost.objects.filter(
+                product=product).order_by("-created_at")[:5]
+        context["product_review_rating"] = ProductReview.objects.filter(
+            product=product, is_published=True).aggregate(
+            average=Avg("rating"))["average"]
+        return context
 
     def get(self, request, pk: int):
         product = self.get_product(pk)

@@ -11,7 +11,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from django.shortcuts import get_object_or_404, redirect
 
-from billing.models import CommercialDocument
+from billing.models import AccountPayment, CommercialDocument, DocumentPayment
 from commerce.models import Order
 from core.mixins import StaffRequiredMixin
 from core.models import ContactMessage
@@ -29,11 +29,16 @@ class CustomerListView(StaffRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = Customer.objects.select_related("user").annotate(
-            order_count=Count("orders", distinct=True),
-            job_count=Count("job_cards", distinct=True),
-            latest_order=Max("orders__placed_at"),
-        )
+        queryset = Customer.objects.select_related("user")
+        can_orders = self.request.user.has_perm("commerce.view_order")
+        can_jobs = self.request.user.has_perm("operations.view_jobcard")
+        if can_orders:
+            queryset = queryset.annotate(
+                order_count=Count("orders", distinct=True),
+                latest_order=Max("orders__placed_at"),
+            )
+        if can_jobs:
+            queryset = queryset.annotate(job_count=Count("job_cards", distinct=True))
         query = self.request.GET.get("q", "").strip()
         if query:
             queryset = queryset.filter(
@@ -44,11 +49,11 @@ class CustomerListView(StaffRequiredMixin, ListView):
             )
         segment = self.request.GET.get("segment", "")
         cutoff = timezone.now() - timedelta(days=90)
-        if segment == "repeat":
+        if segment == "repeat" and can_orders:
             queryset = queryset.filter(order_count__gte=2)
-        elif segment == "active":
+        elif segment == "active" and can_orders:
             queryset = queryset.filter(latest_order__gte=cutoff)
-        elif segment == "dormant":
+        elif segment == "dormant" and can_orders:
             queryset = queryset.filter(latest_order__lt=cutoff)
         elif segment == "unlinked":
             queryset = queryset.filter(user__isnull=True)
@@ -62,6 +67,8 @@ class CustomerListView(StaffRequiredMixin, ListView):
                 "segment": self.request.GET.get("segment", ""),
                 "customer_count": Customer.objects.count(),
                 "verified_count": Customer.objects.filter(user__isnull=False).count(),
+                "can_view_orders": self.request.user.has_perm("commerce.view_order"),
+                "can_view_jobs": self.request.user.has_perm("operations.view_jobcard"),
             }
         )
         return context
@@ -78,6 +85,14 @@ class CustomerDetailView(StaffRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         customer = self.object
+        can_orders = self.request.user.has_perm("commerce.view_order")
+        can_documents = self.request.user.has_perm("billing.view_commercialdocument")
+        can_finance = self.request.user.has_perm("billing.view_documentpayment")
+        can_jobs = self.request.user.has_perm("operations.view_jobcard")
+        can_tickets = self.request.user.has_perm("core.view_supportticket")
+        can_leads = self.request.user.has_perm("marketing.view_marketinglead")
+        can_contacts = self.request.user.has_perm("core.view_contactmessage")
+        can_serials = self.request.user.has_perm("catalog.view_productserial")
         orders = customer.orders.exclude(status=Order.STATUS_CANCELLED)
         documents = customer.documents.filter(
             doc_type=CommercialDocument.TYPE_INVOICE
@@ -87,39 +102,63 @@ class CustomerDetailView(StaffRequiredMixin, DetailView):
                 CommercialDocument.STATUS_DRAFT,
             )
         )
-        totals = documents.aggregate(total=Sum("total"), paid=Sum("amount_paid"))
-        billed = totals["total"] or Decimal("0")
-        paid = totals["paid"] or Decimal("0")
+        totals = documents.aggregate(total=Sum("total"), paid=Sum("amount_paid")) if can_finance else {}
+        billed = totals.get("total") or Decimal("0")
+        paid = totals.get("paid") or Decimal("0")
         enquiries = MarketingLead.objects.filter(email__iexact=customer.email).select_related(
             "product", "quoted_document", "assigned_to"
-        )[:12] if customer.email else MarketingLead.objects.none()
+        )[:12] if customer.email and can_leads else MarketingLead.objects.none()
         messages_received = ContactMessage.objects.filter(email__iexact=customer.email).select_related(
             "product"
-        )[:12] if customer.email else ContactMessage.objects.none()
+        )[:12] if customer.email and can_contacts else ContactMessage.objects.none()
         timeline = []
-        for order in customer.orders.all()[:8]:
+        for order in customer.orders.all()[:8] if can_orders else []:
             timeline.append({"kind": "Order", "label": order.reference, "occurred_at": order.placed_at, "status": order.get_status_display(), "url": reverse("staff_order_detail", args=[order.pk])})
-        for document in customer.documents.all()[:8]:
-            timeline.append({"kind": document.get_doc_type_display(), "label": document.number, "occurred_at": document.created_at, "status": document.get_status_display(), "url": reverse("staff_document_edit", args=[document.pk])})
+        for document in customer.documents.all()[:8] if can_documents else []:
+            timeline.append({"kind": document.get_doc_type_display(), "label": document.number, "occurred_at": document.created_at, "status": document.get_status_display(), "url": reverse("staff_document_view", args=[document.pk])})
         for lead in enquiries:
             timeline.append({"kind": "Product enquiry", "label": lead.product.name if lead.product_id else lead.name, "occurred_at": lead.created_at, "status": lead.get_status_display(), "url": reverse("staff_marketing_lead_edit", args=[lead.pk])})
         for contact in messages_received:
             timeline.append({"kind": "Customer message", "label": contact.subject, "occurred_at": contact.created_at, "status": "Handled" if contact.handled else "Needs response", "url": reverse("staff_contact_messages")})
         timeline.sort(key=lambda event: event["occurred_at"], reverse=True)
+        recent_payments = (
+            DocumentPayment.objects.filter(document__customer=customer)
+            .select_related("document").order_by("-recorded_at")[:8]
+            if can_finance else []
+        )
+        account_payments = (
+            AccountPayment.objects.filter(customer=customer).order_by("-recorded_at")[:8]
+            if can_finance else []
+        )
+        serials = (
+            customer.purchased_serials.select_related("product").order_by("-sold_at")[:8]
+            if can_serials else []
+        )
         context.update(
             {
-                "recent_orders": customer.orders.all()[:8],
-                "recent_documents": customer.documents.all()[:8],
-                "recent_jobs": customer.job_cards.select_related("assigned_to")[:8],
-                "recent_tickets": customer.support_tickets.all()[:8],
+                "recent_orders": customer.orders.all()[:8] if can_orders else [],
+                "recent_documents": customer.documents.all()[:8] if can_documents else [],
+                "recent_jobs": customer.job_cards.select_related("assigned_to")[:8] if can_jobs else [],
+                "recent_tickets": customer.support_tickets.all()[:8] if can_tickets else [],
                 "recent_enquiries": enquiries,
+                "recent_payments": recent_payments,
+                "recent_account_payments": account_payments,
+                "purchased_serials": serials,
+                "customer_access": {
+                    "orders": can_orders, "documents": can_documents,
+                    "finance": can_finance, "jobs": can_jobs, "tickets": can_tickets,
+                    "leads": can_leads, "serials": can_serials,
+                },
                 "customer_timeline": timeline[:24],
-                "loyalty_account": LoyaltyAccount.objects.filter(customer=customer).first(),
-                "available_credits": customer.credits.filter(status="open"),
-                "order_count": orders.count(),
-                "lifetime_order_value": orders.aggregate(total=Sum("total"))["total"]
-                or Decimal("0"),
-                "outstanding_balance": max(billed - paid, Decimal("0")),
+                "loyalty_account": LoyaltyAccount.objects.filter(customer=customer).first()
+                if self.request.user.has_perm("loyalty.view_loyaltyaccount") else None,
+                "available_credits": customer.credits.filter(status="open")
+                if can_finance else [],
+                "order_count": orders.count() if can_orders else 0,
+                "lifetime_order_value": (orders.aggregate(total=Sum("total"))["total"]
+                or Decimal("0")) if can_orders else Decimal("0"),
+                "outstanding_balance": max(billed - paid, Decimal("0"))
+                if can_finance else Decimal("0"),
             }
         )
         return context

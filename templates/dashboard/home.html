@@ -9,15 +9,16 @@
       <p class="staff-dashboard-date">{% now "l, F j, Y" %}</p>
     </div>
     <div class="staff-dashboard-actions">
-      <a class="btn btn-primary" href="{% url 'staff_document_create' %}"><i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i>New document</a>
-      <a class="btn btn-outline-primary" href="{% url 'staff_job_create' %}"><i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i>New job</a>
-      <a class="btn btn-outline-secondary" href="{% url 'staff_reports' %}"><i class="bi bi-graph-up-arrow me-1" aria-hidden="true"></i>Reports</a>
+      {% if perms.billing.add_commercialdocument %}<a class="btn btn-primary" href="{% url 'staff_document_create' %}"><i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i>New document</a>{% endif %}
+      {% if perms.operations.add_jobcard %}<a class="btn btn-outline-primary" href="{% url 'staff_job_create' %}"><i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i>New job</a>{% endif %}
+      {% if dashboard_access.finance %}<a class="btn btn-outline-secondary" href="{% url 'staff_reports' %}"><i class="bi bi-graph-up-arrow me-1" aria-hidden="true"></i>Reports</a>{% endif %}
     </div>
   </div>
 
   {% include "dashboard/includes/overview.html" %}
 
   <div class="row g-3 mb-3">
+    {% if dashboard_access.orders %}
     <div class="col-sm-6 col-xl-3">
       <a class="staff-metric-card" href="{% url 'staff_orders' %}">
         <div class="card-body">
@@ -29,6 +30,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if dashboard_access.documents %}
     <div class="col-sm-6 col-xl-3">
       <a class="staff-metric-card" href="{% url 'staff_documents' %}">
         <div class="card-body">
@@ -40,6 +43,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if dashboard_access.jobs %}
     <div class="col-sm-6 col-xl-3">
       <a class="staff-metric-card staff-metric-card--amber" href="{% url 'staff_jobs' %}">
         <div class="card-body">
@@ -51,6 +56,8 @@
         </div>
       </a>
     </div>
+    {% endif %}
+    {% if dashboard_access.tickets %}
     <div class="col-sm-6 col-xl-3">
       <a class="staff-metric-card staff-metric-card--green" href="{% url 'staff_tickets' %}">
         <div class="card-body">
@@ -62,10 +69,11 @@
         </div>
       </a>
     </div>
+    {% endif %}
   </div>
 
   <div class="row g-3 mb-3">
-    <div class="col-xl-7">
+    {% if dashboard_access.documents %}<div class="col-xl-7">
       <div class="card staff-panel-card h-100">
         <div class="card-body">
           <div class="staff-panel-heading">
@@ -89,8 +97,8 @@
         </div>
       </div>
     </div>
-
-    <div class="col-xl-5">
+    {% endif %}
+    {% if dashboard_access.jobs %}<div class="col-xl-5">
       <div class="card staff-panel-card h-100">
         <div class="card-body">
           <div class="staff-panel-heading">
@@ -122,31 +130,33 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
 
   <div class="row g-3">
     <div class="col-lg-4">
       <div class="card staff-panel-card h-100" id="operational-health">
         <div class="card-body">
-          <div class="staff-panel-heading"><h2>Operational health</h2><a href="{% url 'staff_catalogue_quality' %}">Catalogue</a></div>
+          <div class="staff-panel-heading"><h2>Operational health</h2>{% if dashboard_access.products %}<a href="{% url 'staff_catalogue_quality' %}">Catalogue</a>{% endif %}</div>
           <div class="staff-health-list">
-            <div class="staff-health-row"><span>Customer follow-ups</span><a href="{% url 'staff_retention_dashboard' %}" class="badge rounded-pill {% if pending_retention_followup_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_retention_followup_count }}</a></div>
-            <div class="staff-health-row"><span>Payments awaiting verification</span><a href="{% url 'staff_payment_reconciliation' %}" class="badge rounded-pill {% if pending_payment_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_payment_count }}</a></div>
-            <div class="staff-health-row"><span>Overdue invoices</span><a href="{% url 'staff_documents' %}?type=invoice" class="badge rounded-pill {% if overdue_invoice_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_invoice_count }} · {{ company.currency_code }} {{ overdue_invoice_balance|floatformat:0 }}</a></div>
-            <div class="staff-health-row"><span>Overdue sales leads</span><a href="{% url 'staff_marketing_leads' %}" class="badge rounded-pill {% if overdue_lead_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_lead_count }}</a></div>
-            <div class="staff-health-row"><span>Failed automation</span><a href="{% url 'staff_automation_control' %}" class="badge rounded-pill {% if failed_automation_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ failed_automation_count }}</a></div>
-            <div class="staff-health-row"><span>Low stock</span><a href="{% url 'staff_products' %}?low=1" class="badge rounded-pill {% if low_stock_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ low_stock_count }}</a></div>
-            <div class="staff-health-row"><span>Catalogue quality</span><a href="{% url 'staff_catalogue_quality' %}" class="badge rounded-pill {% if catalogue_quality.critical %}text-bg-danger{% elif catalogue_quality.attention %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ catalogue_quality.average_score }}%</a></div>
-            <div class="staff-health-row"><span>Latest backup</span><span class="badge rounded-pill {% if not backup_status.healthy %}text-bg-danger{% elif backup_requires_attention %}text-bg-warning{% else %}text-bg-success{% endif %}" title="{{ backup_status.detail }}">{% if backup_status.created_at %}{{ backup_status.created_at|timesince }} ago{% else %}Missing{% endif %}</span></div>
-            <div class="staff-health-row"><span>Overdue jobs</span><a href="{% url 'staff_jobs' %}?due=overdue" class="badge rounded-pill {% if overdue_jobs %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_jobs }}</a></div>
-            <div class="staff-health-row"><span>Overdue tickets</span><a href="{% url 'staff_tickets' %}?due=overdue" class="badge rounded-pill {% if overdue_tickets %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_tickets }}</a></div>
-            <div class="staff-health-row"><span>Contact inbox</span><a href="{% url 'staff_contact_messages' %}?handled=0" class="badge rounded-pill {% if unhandled_contacts %}text-bg-primary{% else %}text-bg-light text-dark{% endif %}">{{ unhandled_contacts }}</a></div>
-            <div class="staff-health-row"><span>CSAT average</span><span class="badge rounded-pill text-bg-light text-dark">{% if avg_job_rating %}{{ avg_job_rating }}/5{% else %}—{% endif %}</span></div>
+            {% if dashboard_access.followups %}<div class="staff-health-row"><span>Customer follow-ups</span><a href="{% url 'staff_retention_dashboard' %}" class="badge rounded-pill {% if pending_retention_followup_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_retention_followup_count }}</a></div>{% endif %}
+            {% if dashboard_access.payments %}<div class="staff-health-row"><span>Payments awaiting verification</span><a href="{% url 'staff_payment_reconciliation' %}" class="badge rounded-pill {% if pending_payment_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ pending_payment_count }}</a></div>{% endif %}
+            {% if dashboard_access.finance %}<div class="staff-health-row"><span>Overdue invoices</span><a href="{% url 'staff_documents' %}?type=invoice" class="badge rounded-pill {% if overdue_invoice_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_invoice_count }} · {{ company.currency_code }} {{ overdue_invoice_balance|floatformat:0 }}</a></div>{% endif %}
+            {% if dashboard_access.leads %}<div class="staff-health-row"><span>Overdue sales leads</span><a href="{% url 'staff_marketing_leads' %}" class="badge rounded-pill {% if overdue_lead_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_lead_count }}</a></div>{% endif %}
+            {% if dashboard_access.automation %}<div class="staff-health-row"><span>Failed automation</span><a href="{% url 'staff_automation_control' %}" class="badge rounded-pill {% if failed_automation_count %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ failed_automation_count }}</a></div>{% endif %}
+            {% if dashboard_access.products %}<div class="staff-health-row"><span>Low stock</span><a href="{% url 'staff_products' %}?low=1" class="badge rounded-pill {% if low_stock_count %}text-bg-warning{% else %}text-bg-light text-dark{% endif %}">{{ low_stock_count }}</a></div>{% endif %}
+            {% if dashboard_access.products %}<div class="staff-health-row"><span>Catalogue quality</span><a href="{% url 'staff_catalogue_quality' %}" class="badge rounded-pill {% if catalogue_quality.critical %}text-bg-danger{% elif catalogue_quality.attention %}text-bg-warning{% else %}text-bg-success{% endif %}">{{ catalogue_quality.average_score }}%</a></div>{% endif %}
+            {% if dashboard_access.system %}<div class="staff-health-row"><span>Latest backup</span><span class="badge rounded-pill {% if not backup_status.healthy %}text-bg-danger{% elif backup_requires_attention %}text-bg-warning{% else %}text-bg-success{% endif %}" title="{{ backup_status.detail }}">{% if backup_status.created_at %}{{ backup_status.created_at|timesince }} ago{% else %}Missing{% endif %}</span></div>{% endif %}
+            {% if dashboard_access.jobs %}<div class="staff-health-row"><span>Overdue jobs</span><a href="{% url 'staff_jobs' %}?due=overdue" class="badge rounded-pill {% if overdue_jobs %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_jobs }}</a></div>{% endif %}
+            {% if dashboard_access.tickets %}<div class="staff-health-row"><span>Overdue tickets</span><a href="{% url 'staff_tickets' %}?due=overdue" class="badge rounded-pill {% if overdue_tickets %}text-bg-danger{% else %}text-bg-light text-dark{% endif %}">{{ overdue_tickets }}</a></div>{% endif %}
+            {% if dashboard_access.contacts %}<div class="staff-health-row"><span>Contact inbox</span><a href="{% url 'staff_contact_messages' %}?handled=0" class="badge rounded-pill {% if unhandled_contacts %}text-bg-primary{% else %}text-bg-light text-dark{% endif %}">{{ unhandled_contacts }}</a></div>{% endif %}
+            {% if dashboard_access.jobs %}<div class="staff-health-row"><span>CSAT average</span><span class="badge rounded-pill text-bg-light text-dark">{% if avg_job_rating %}{{ avg_job_rating }}/5{% else %}—{% endif %}</span></div>{% endif %}
           </div>
         </div>
       </div>
     </div>
 
+    {% if dashboard_access.orders %}
     <div class="col-lg-4">
       <div class="card staff-panel-card h-100">
         <div class="card-body">
@@ -160,6 +170,8 @@
       </div>
     </div>
 
+    {% endif %}
+    {% if dashboard_access.jobs %}
     <div class="col-lg-4">
       <div class="card staff-panel-card h-100">
         <div class="card-body">
@@ -179,6 +191,8 @@
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
 </section>
 {% endblock %}
+
