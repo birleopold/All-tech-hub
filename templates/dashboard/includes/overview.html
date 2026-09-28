@@ -1,0 +1,52 @@
+{% load humanize %}
+<div class="row g-3 mb-3">
+  <section class="col-lg-8" aria-labelledby="action-center-title">
+    <div class="card staff-panel-card h-100"><div class="card-body">
+      <div class="staff-panel-heading"><h2 id="action-center-title">Action Center</h2><span>Critical · Today · Soon</span></div>
+      <div class="list-group list-group-flush">
+        {% for item in action_center %}
+        <a class="list-group-item list-group-item-action d-flex align-items-center justify-content-between gap-3" href="{{ item.url }}">
+          <span><span class="badge {% if item.priority == 'Critical' %}text-bg-danger{% elif item.priority == 'Today' %}text-bg-warning{% else %}text-bg-light{% endif %} me-2">{{ item.priority }}</span>
+          {{ item.count }} {{ item.label }}{{ item.count|pluralize }}{% if item.detail %}<small class="d-block text-muted mt-1">{{ item.detail }}</small>{% endif %}</span>
+          <span aria-hidden="true">→</span>
+        </a>
+        {% empty %}<p class="text-muted mb-0">No outstanding actions in your areas.</p>{% endfor %}
+      </div>
+    </div></div>
+  </section>
+  <section class="col-lg-4" aria-labelledby="my-work-title">
+    <div class="card staff-panel-card h-100"><div class="card-body">
+      <div class="staff-panel-heading"><h2 id="my-work-title">My Work</h2><a href="{% url 'staff_notifications' %}">Notifications</a></div>
+      {% for item in my_work %}
+      <div class="border-bottom py-2"><small class="text-muted">{{ item.kind }} · {{ item.customer }}</small><br><a href="{{ item.url }}">{{ item.label }}</a></div>
+      {% empty %}<p class="text-muted mb-0">No open jobs or tickets assigned to you.</p>{% endfor %}
+      <div class="mt-3"><a href="{% url 'staff_jobs' %}">All jobs</a> · <a href="{% url 'staff_tickets' %}">All tickets</a></div>
+    </div></div>
+  </section>
+</div>
+{% if show_sales_insights %}
+<section class="card staff-panel-card mb-3" aria-labelledby="order-trend-title"><div class="card-body">
+  <div class="staff-panel-heading"><h2 id="order-trend-title">Order value</h2><a href="{% url 'staff_orders' %}">View orders</a></div>
+  <div class="row g-3">
+    <div class="col-md-4"><small>Today</small><p class="h4">{{ company.currency_code }} {{ order_value_today|floatformat:0|intcomma }}</p></div>
+    <div class="col-md-4"><small>Last 7 days</small><p class="h4">{{ company.currency_code }} {{ order_value_7d|floatformat:0|intcomma }}</p></div>
+    <div class="col-md-4"><small>Previous 7 days</small><p class="h4">{{ company.currency_code }} {{ order_value_previous_7d|floatformat:0|intcomma }}</p></div>
+  </div>
+  <p class="small text-muted mb-2">Order totals by placement date, excluding cancelled orders. This is not collected revenue or profit.</p>
+  <div class="d-flex align-items-end gap-2" role="img" aria-label="Order totals for each of the last seven calendar days">
+    {% for point in order_value_trend %}<div class="flex-fill text-center border-top pt-2"><strong class="d-block small">{{ point.value|floatformat:0|intcomma }}</strong><small class="text-muted">{{ point.label }}</small></div>{% endfor %}
+  </div>
+</div></section>
+{% endif %}
+{% if automation_summary %}
+<section class="card staff-panel-card mb-3" aria-labelledby="business-health-title"><div class="card-body">
+  <div class="staff-panel-heading"><h2 id="business-health-title">Business health</h2><a href="{% url 'staff_reports' %}">Reports</a></div>
+  <div class="d-flex flex-wrap gap-2 mb-3">{% for item in business_health %}
+    <a href="{{ item.url }}" class="badge rounded-pill {% if item.count %}text-bg-warning{% else %}text-bg-success{% endif %} text-decoration-none">{{ item.label }}: {{ item.count }} requiring attention</a>
+  {% endfor %}</div>
+  <p class="mb-0"><a href="{% url 'staff_automation_control' %}">Automation: {{ automation_summary.status }}</a>
+    · {{ automation_summary.queued }} queued · {{ automation_summary.failed }} failed
+    · Last worker heartbeat: {{ automation_summary.heartbeat|default:"No heartbeat recorded" }}
+    {% if automation_summary.next_run %} · Next due: {{ automation_summary.next_run }}{% endif %}</p>
+</div></section>
+{% endif %}

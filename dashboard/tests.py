@@ -74,6 +74,43 @@ class DashboardAccessTests(TestCase):
         self.assertContains(response, "overdue invoice")
         self.assertContains(response, "failed automation job")
 
+    def test_action_center_shows_finance_items_to_finance_role(self):
+        from django.contrib.auth.models import Group
+        user = User.objects.create_user("finance-dashboard", is_staff=True)
+        user.groups.add(Group.objects.get_or_create(name="Finance")[0])
+        invoice = CommercialDocument.objects.create(
+            doc_type=CommercialDocument.TYPE_INVOICE,
+            number="INV-DASHBOARD-ROLE",
+            customer_name="Example",
+            status=CommercialDocument.STATUS_ISSUED,
+            total=Decimal("100.00"),
+            due_date=timezone.localdate() - timedelta(days=1),
+        )
+        PaymentSubmission.objects.create(
+            document=invoice, amount=Decimal("50.00"),
+            method="mobile_money", reference="DASHBOARD-ROLE-1",
+        )
+        self.client.force_login(user)
+        response = self.client.get(reverse("staff_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        labels = [item["label"] for item in response.context["action_center"]]
+        self.assertIn("overdue invoice", labels)
+        self.assertIn("payment awaiting verification", labels)
+        self.assertNotIn("failed automation job", labels)
+        self.assertContains(response, "My Work")
+        self.assertContains(response, "Order value")
+
+    def test_technician_action_center_excludes_finance_items(self):
+        from django.contrib.auth.models import Group
+        user = User.objects.create_user("technician-dashboard", is_staff=True)
+        user.groups.add(Group.objects.get_or_create(name="Technician")[0])
+        self.client.force_login(user)
+        response = self.client.get(reverse("staff_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["show_sales_insights"])
+        self.assertNotContains(response, "Order value")
+        self.assertNotContains(response, "Business health")
+
     def test_staff_page_labels_are_readable(self):
         self.assertEqual(
             staff_page_label("staff_payment_reconciliation"),
