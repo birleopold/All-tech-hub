@@ -2,9 +2,11 @@ from decimal import Decimal
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from catalog.models import Category, Product
 from growth.models import ProductGrowthData
+from merchandising.models import ProductCommerceProfile
 
 
 class MarketplaceCommerceExperienceTests(TestCase):
@@ -40,6 +42,11 @@ class MarketplaceCommerceExperienceTests(TestCase):
             product=cls.hp,
             brand="HP",
             condition=ProductGrowthData.CONDITION_REFURBISHED,
+        )
+        ProductCommerceProfile.objects.create(
+            product=cls.hp,
+            identity_verified_at=timezone.now(),
+            condition_verified_at=timezone.now(),
         )
         cls.dell = Product.objects.create(
             category=cls.laptops,
@@ -114,7 +121,9 @@ class MarketplaceCommerceExperienceTests(TestCase):
         product_ids = {card.pk for card in response.context["products"]}
         self.assertIn(self.hp.pk, product_ids)
         self.assertNotIn(self.dell.pk, product_ids)
-        self.assertContains(response, "Save 20%")
+        self.assertContains(response, "UGX 1,200,000")
+        self.assertContains(response, "UGX 1,500,000")
+        self.assertEqual(response.context["products"][0].savings_percent, 20)
 
     def test_business_collection_searches_product_content(self):
         response = self.client.get(

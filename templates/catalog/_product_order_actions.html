@@ -1,0 +1,16 @@
+{% load product_ordering %}
+{% product_order_links p as order_links %}
+{% if order_links.call_url or order_links.whatsapp_url %}
+<div class="product-order-actions" role="group" aria-label="Contact the team about {{ p.name }}">
+  {% if order_links.call_url %}
+  <a class="product-order-action product-order-action--call" href="{{ order_links.call_url }}" aria-label="Call to {% if p.kind == 'service' %}book{% else %}order{% endif %} {{ p.name }}" title="Call to {% if p.kind == 'service' %}book{% else %}order{% endif %}">
+    <i class="bi bi-telephone-fill" aria-hidden="true"></i><span class="product-order-action__label">Call<span class="product-order-action__long-label"> to {% if p.kind == 'service' %}book{% else %}order{% endif %}</span></span>
+  </a>
+  {% endif %}
+  {% if order_links.whatsapp_url %}
+  <a class="product-order-action product-order-action--whatsapp" href="{{ order_links.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="{% if p.kind == 'service' %}Book{% else %}Order{% endif %} {{ p.name }} on WhatsApp" title="{% if p.kind == 'service' %}Book{% else %}Order{% endif %} on WhatsApp">
+    <i class="bi bi-whatsapp" aria-hidden="true"></i><span class="product-order-action__label">WhatsApp</span>
+  </a>
+  {% endif %}
+</div>
+{% endif %}

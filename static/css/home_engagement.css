@@ -2,6 +2,87 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Keep the welcome compact so the next screen starts with real products. */
+.marketplace-home-page .market-home-hero {
+  overflow: visible;
+  z-index: 6;
+}
+
+.marketplace-home-page .market-home-hero__inner {
+  padding-block: 2rem 3.5rem;
+}
+
+.home-welcome-copy {
+  max-width: 46rem;
+}
+
+.marketplace-home-page .market-home-hero__title {
+  max-width: 18ch;
+  font-size: clamp(2rem, 4.2vw, 3.6rem);
+  line-height: 1.06;
+}
+
+.marketplace-home-page .market-home-hero__lead {
+  margin-bottom: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.home-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+.home-welcome-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  font-weight: 700;
+}
+
+.marketplace-home-page .market-hero-search {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  max-width: 38rem;
+  margin-top: 1rem;
+  overflow: visible;
+}
+
+.marketplace-home-page .market-hero-search input {
+  min-height: 2.9rem;
+  font-size: 1rem;
+}
+
+.marketplace-home-page .market-hero-search button {
+  grid-column: auto;
+  padding-inline: 0.9rem;
+  border-radius: 0 0.95rem 0.95rem 0;
+  font-size: 0.8rem;
+}
+
+.marketplace-home-page .home-products-first {
+  padding-block: 1.8rem 2.5rem;
+  scroll-margin-top: 6rem;
+}
+
+.marketplace-home-page .home-products-first .market-section-heading {
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 575.98px) {
+  .marketplace-home-page .market-home-hero__inner {
+    padding-block: 1.5rem 3.5rem;
+  }
+
+  .home-welcome-actions .btn {
+    padding-inline: 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
 .market-home-hero__inner {
   position: relative;
 }

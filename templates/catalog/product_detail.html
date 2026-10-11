@@ -144,6 +144,8 @@
           <a class="btn btn-primary product-primary-action w-100" href="{% url 'contact' %}?type=product&amp;product={{ product.slug|urlencode }}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>Ask about availability</a>
           {% endif %}
 
+          {% include "catalog/_product_order_actions.html" with p=product %}
+
           <div class="product-secondary-actions">
             {% if product.kind == 'physical' %}<form method="post" action="{% url 'product_compare_toggle' product.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn {% if is_in_compare %}btn-primary{% else %}btn-outline-primary{% endif %} w-100" aria-pressed="{% if is_in_compare %}true{% else %}false{% endif %}"><i class="bi bi-columns-gap me-1" aria-hidden="true"></i>{% if is_in_compare %}In comparison{% else %}Compare{% endif %}</button></form>{% endif %}
             {% if user.is_authenticated and user.customer_profile %}<form method="post" action="{% url 'portal_wishlist_add' product.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn btn-outline-secondary w-100"><i class="bi bi-heart me-1" aria-hidden="true"></i>Save</button></form>{% else %}<a class="btn btn-outline-secondary" href="{% url 'contact' %}?type=product&amp;product={{ product.slug|urlencode }}"><i class="bi bi-chat-dots me-1" aria-hidden="true"></i>Ask</a>{% endif %}

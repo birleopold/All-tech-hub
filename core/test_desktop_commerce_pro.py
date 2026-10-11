@@ -51,7 +51,11 @@ class DesktopCommerceProTests(TestCase):
         self.assertContains(response, 'data-market-view="compact"', html=False)
         self.assertContains(response, "Compact grid")
         self.assertContains(response, "Desktop Commerce Test Laptop")
-        self.assertContains(response, '<span class="desktop-action-label">Quick view</span>', html=False)
+        self.assertContains(
+            response,
+            f'<a class="btn btn-primary" href="{self.product.get_absolute_url()}">View details</a>',
+            html=True,
+        )
         self.assertContains(response, '<span class="desktop-action-label">Add</span>', html=False)
         self.assertContains(response, '<span class="desktop-action-label">Compare</span>', html=False)
         self.assertContains(response, '<span class="desktop-action-label">Save</span>', html=False)

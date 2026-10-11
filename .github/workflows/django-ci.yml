@@ -73,6 +73,10 @@ jobs:
           catalog.test_discovery
           catalog.test_responsive_images
           catalog.test_experience
+          catalog.test_product_ordering
+          core.test_homepage_engagement
+          core.test_home_tech_ambient
+          core.test_product_contact_experience
           commerce.test_progress
           commerce.test_customer_messages
           commerce.test_recommendations
@@ -146,6 +150,7 @@ jobs:
             catalog/test_watermarks.py \
             catalog/test_responsive_images.py \
             catalog/test_experience.py \
+            catalog/test_product_ordering.py \
             catalog/management/commands/watermark_product_images.py \
             catalog/management/commands/reprocess_product_images.py \
             catalog/management/commands/generate_product_image_variants.py \

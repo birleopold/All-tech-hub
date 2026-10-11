@@ -604,6 +604,82 @@
 }
 
 /* Homepage discovery */
+/* Separate ordering actions stay visible in every product-card layout. */
+.product-order-actions {
+  display: flex;
+  gap: 0.45rem;
+  margin-block: 0.75rem 0;
+}
+
+.product-order-action {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--market-line);
+  border-radius: 0.55rem;
+  color: var(--market-ink);
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.product-order-action i {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.product-order-action--whatsapp {
+  color: #17663c;
+  background: #eef8f1;
+  border-color: #b9d9c4;
+}
+
+.product-order-action:hover {
+  color: var(--market-blue);
+  border-color: currentColor;
+}
+
+.product-order-action--whatsapp:hover {
+  color: #124d2e;
+  background: #dff1e5;
+}
+
+.product-order-action:focus-visible {
+  outline: 2px solid var(--market-blue);
+  outline-offset: 3px;
+}
+
+.market-product-card .product-order-actions {
+  margin-top: 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--market-line);
+}
+
+@media (max-width: 575.98px) {
+  .market-product-card .product-order-action {
+    gap: 0.25rem;
+    padding-inline: 0.25rem;
+    font-size: 0.7rem;
+  }
+
+  .market-product-card .product-order-action--whatsapp {
+    flex: 0 0 2.75rem;
+  }
+
+  .market-product-card .product-order-action__long-label,
+  .market-product-card .product-order-action--whatsapp .product-order-action__label {
+    display: none;
+  }
+}
+
 .market-home-hero {
   position: relative;
   isolation: isolate;

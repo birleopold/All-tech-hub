@@ -24,38 +24,39 @@
 <section class="market-home-hero">
   {% include "core/_home_tech_ambient.html" %}
   <div class="container market-home-hero__inner">
-    <div class="row align-items-center g-5">
-      <div class="col-lg-7" data-reveal>
-        <p class="public-eyebrow">Technology for work, learning, business and home</p>
-        <h1 class="market-home-hero__title">Find the right technology without the guesswork.</h1>
-        <p class="market-home-hero__lead">Search dependable computers, accessories and professional services. Compare clear options, confirm condition and availability, and get support from enquiry through after-sales.</p>
+      <div class="home-welcome-copy" data-reveal>
+        <p class="public-eyebrow">Welcome to {{ company.company_name }}</p>
+        <h1 class="market-home-hero__title">Technology that works for you.</h1>
+        <p class="market-home-hero__lead">Computers, accessories and expert IT support in Uganda.</p>
+        <div class="home-welcome-actions">
+          <a class="btn btn-light" href="#homepage-products">Shop products <i class="bi bi-arrow-down ms-2" aria-hidden="true"></i></a>
+          <a class="btn btn-outline-light" href="{% url 'service_list' %}">Repairs &amp; services</a>
+        </div>
         <form class="market-hero-search market-search-shell" action="{% url 'product_list' %}" method="get" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
           <i class="bi bi-search" aria-hidden="true"></i>
           <label class="visually-hidden" for="market-hero-search-input">Search the LEOSOFT catalogue</label>
-          <input id="market-hero-search-input" name="q" type="search" placeholder="Try HP ProBook, Core i7, 16GB RAM, SSD, printer or repair" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-hero-search-results" data-market-search-input>
-          <button type="submit">Search catalogue</button>
+          <input id="market-hero-search-input" name="q" type="search" placeholder="Search products or brands" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-hero-search-results" data-market-search-input>
+          <button type="submit">Search</button>
           <div id="market-hero-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
           <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
         </form>
-        <div class="market-hero-popular" aria-label="Popular searches"><span>Popular:</span><a href="/laptop-prices-in-uganda/">Laptop prices</a><a href="/dell-laptops-uganda/">Dell laptops</a><a href="/hp-laptops-uganda/">HP laptops</a><a href="/student-laptops-uganda/">Student laptops</a><a href="/refurbished-laptops-uganda/">Refurbished</a></div>
       </div>
-      <div class="col-lg-5" data-reveal data-reveal-delay="2">
-        <div class="market-hero-panel">
-          <div class="market-hero-panel__head"><div><small>Start with your goal</small><strong>What are you looking for today?</strong></div><span>{% if site_is_open %}Team online{% else %}Send a request{% endif %}</span></div>
-          <div class="market-hero-panel__links">
-            <a href="{% url 'physical_product_list' %}"><i class="bi bi-laptop" aria-hidden="true"></i><span><strong>Buy computers and accessories</strong><small>Browse prices, condition, stock and product options</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-            <a href="{% url 'product_collection' 'deals' %}"><i class="bi bi-tags" aria-hidden="true"></i><span><strong>See current deals</strong><small>Genuine reduced prices and highlighted catalogue offers</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-            <a href="{% url 'service_list' %}"><i class="bi bi-tools" aria-hidden="true"></i><span><strong>Book repair or technical support</strong><small>Diagnostics, installation, networking and IT services</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-            <a href="{% url 'contact' %}?type=quote"><i class="bi bi-file-earmark-text" aria-hidden="true"></i><span><strong>Request a formal quotation</strong><small>For schools, businesses, organisations and personal purchases</small></span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-          </div>
-        </div>
-      </div>
-    </div>
-    <a class="home-scroll-invitation" href="#homepage-discovery" aria-label="Continue to homepage discovery options"><span class="home-scroll-invitation__mouse" aria-hidden="true"></span><span>Explore below</span></a>
+    <a class="home-scroll-invitation" href="#homepage-products" aria-label="Browse products below"><span class="home-scroll-invitation__mouse" aria-hidden="true"></span><span>Explore below</span></a>
   </div>
 </section>
 
-{% include "core/_home_engagement_intro.html" %}
+<section class="market-section home-products-first" id="homepage-products" aria-labelledby="homepage-products-title" tabindex="-1">
+  <div class="container">
+    <div class="market-section-heading" data-reveal>
+      <div class="market-section-heading__copy"><h2 class="market-section-title" id="homepage-products-title">Shop our products</h2></div>
+      <a class="market-section-link" href="{% url 'physical_product_list' %}">View all products <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="market-product-grid">
+      {% for p in featured_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}
+      {% empty %}<div class="market-empty-state"><p>New products are being added to the catalogue.</p><a class="btn btn-primary" href="{% url 'contact' %}?type=product">Ask the team for a product</a></div>{% endfor %}
+    </div>
+  </div>
+</section>
 
 {% if catalog_categories %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by department</p><h2 class="market-section-title">Start with a category</h2><p class="market-section-intro">Move quickly from a broad technology need to the products and services that matter.</p></div><a class="market-section-link" href="{% url 'product_list' %}">View all categories <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-category-rail">{% for category in catalog_categories %}<a class="market-category-tile" href="{% url 'product_category' category.slug %}" data-reveal>{% if forloop.counter == 1 %}<i class="bi bi-laptop" aria-hidden="true"></i>{% elif forloop.counter == 2 %}<i class="bi bi-pc-display" aria-hidden="true"></i>{% elif forloop.counter == 3 %}<i class="bi bi-router" aria-hidden="true"></i>{% elif forloop.counter == 4 %}<i class="bi bi-printer" aria-hidden="true"></i>{% elif forloop.counter == 5 %}<i class="bi bi-device-ssd" aria-hidden="true"></i>{% elif forloop.counter == 6 %}<i class="bi bi-mouse" aria-hidden="true"></i>{% else %}<i class="bi bi-grid" aria-hidden="true"></i>{% endif %}<strong>{{ category.name }}</strong><small>{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</small></a>{% endfor %}</div></div></section>{% endif %}
 
@@ -63,8 +64,7 @@
 
 <section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by purpose</p><h2 class="market-section-title">Choose according to the job</h2><p class="market-section-intro">Start with how the technology will be used, then compare specifications and budget.</p></div></div><div class="market-purpose-grid">{% for collection in purpose_collections %}<a class="market-purpose-card" href="{% url 'product_collection' collection.slug %}" data-reveal><i class="bi {{ collection.icon }}" aria-hidden="true"></i><h3>{{ collection.title }}</h3><p>{{ collection.description }}</p></a>{% endfor %}</div></div></section>
 
-{% if featured_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Team selections</p><h2 class="market-section-title">Featured technology</h2><p class="market-section-intro">A rotating selection of useful computers, accessories and equipment from the live catalogue.</p></div><a class="market-section-link" href="{% url 'product_collection' 'featured' %}">Shop featured products <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in featured_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div></div></section>{% endif %}
-
+{% include "core/_home_engagement_intro.html" %}
 {% include "core/_home_engagement_story.html" %}
 
 {% if brand_collections %}<section class="market-section market-section--soft"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Shop by brand</p><h2 class="market-section-title">Find familiar technology brands</h2><p class="market-section-intro">Brand pages are generated from verified product catalogue data.</p></div></div><div class="market-brand-grid">{% for brand in brand_collections %}<a class="market-brand-card" href="{% url 'product_brand' brand.slug %}"><strong>{{ brand.brand }}</strong><small>{{ brand.product_count }} product{{ brand.product_count|pluralize }}</small></a>{% endfor %}</div></div></section>{% endif %}
