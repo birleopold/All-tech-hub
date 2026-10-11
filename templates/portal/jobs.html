@@ -25,7 +25,7 @@
         <tr>
           <td><a class="fw-semibold text-decoration-none" href="{% url 'portal_job_detail' j.pk %}" aria-label="Open job {{ j.number }}">{{ j.number }}</a></td>
           <td>{{ j.title }}</td>
-          <td><span class="badge text-bg-light border">{{ j.get_status_display }}</span></td>
+          <td><span class="account-status status-{{ j.status|slugify }}">{{ j.get_status_display }}</span></td>
           <td>{{ j.received_on|date:"Y-m-d" }}</td>
           <td>{% if j.estimated_completion %}{{ j.estimated_completion }}{% else %}—{% endif %}</td>
           <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_job_detail' j.pk %}">View</a></td>

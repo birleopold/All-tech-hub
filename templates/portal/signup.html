@@ -2,10 +2,10 @@
 {% block title %}Create account{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
-  <div class="container py-4 py-lg-5 text-center">
+  <div class="container py-4 py-lg-5">
     <p class="text-uppercase small text-white-50 mb-2">Customer account</p>
     <h1 class="display-6 fw-bold mb-3">Create your customer portal account</h1>
-    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 44rem;">Track jobs, orders, documents, support requests, addresses and saved items in one place.</p>
+    <p class="lead text-white-75 mb-0" style="max-width: 44rem;">Track jobs, orders, documents, support requests, addresses and saved items in one place.</p>
   </div>
 </section>
 
@@ -17,7 +17,7 @@
           {% csrf_token %}
           <p class="text-uppercase small fw-semibold text-primary mb-2">Sign up</p>
           <h2 class="h4 mb-3">Your details</h2>
-          {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+          {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
           {% for field in form %}
           <div class="mb-3">
             <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>

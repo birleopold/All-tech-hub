@@ -157,6 +157,13 @@ class Product(models.Model):
         """Explicit main image, falling back to the first gallery image."""
         if self.image:
             return self.image
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+        if "gallery_images" in prefetched:
+            images = sorted(
+                prefetched["gallery_images"],
+                key=lambda image: (image.sort_order, image.pk),
+            )
+            return next((image.image for image in images if image.image), None)
         img = (
             self.gallery_images.filter(image__isnull=False)
             .exclude(image="")

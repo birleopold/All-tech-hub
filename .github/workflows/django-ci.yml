@@ -77,6 +77,7 @@ jobs:
           core.test_homepage_engagement
           core.test_home_tech_ambient
           core.test_product_contact_experience
+          core.test_storefront_polish
           commerce.test_progress
           commerce.test_customer_messages
           commerce.test_recommendations
@@ -115,6 +116,7 @@ jobs:
             reliability \
             marketing/forms.py \
             commerce/apps.py \
+            commerce/cart.py \
             commerce/views.py \
             commerce/forms.py \
             commerce/fulfillment.py \
@@ -169,6 +171,7 @@ jobs:
             core/test_foundation.py \
             core/test_api_experience.py \
             core/test_phase1_security.py \
+            core/test_storefront_polish.py \
             core/management/commands/backup_alltech.py \
             core/management/commands/verify_alltech_backup.py \
             core/management/commands/check_operational_health.py \

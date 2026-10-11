@@ -27,19 +27,17 @@
       <div class="col-lg-8">
         <p class="contact-eyebrow"><i class="bi bi-chat-square-text" aria-hidden="true"></i>Contact and support</p>
         <h1 class="contact-title">Start with the right request.</h1>
-        <p class="contact-summary mb-0">Tell us whether you are buying, requesting a formal quotation, repairing a device or planning an installation. Clear details help the team respond faster and more accurately.</p>
-        <div class="detail-hero-meta">
-          <span class="contact-status-pill {% if is_open_now %}is-open{% else %}is-closed{% endif %}"><i class="bi {% if is_open_now %}bi-circle-fill{% else %}bi-moon-stars{% endif %}" aria-hidden="true"></i>{% if is_open_now %}Open now{% else %}Currently closed{% endif %}</span>
-          <span class="contact-status-pill"><i class="bi bi-shield-check" aria-hidden="true"></i>No passwords or PINs required</span>
-          <span class="contact-status-pill"><i class="bi bi-file-earmark-check" aria-hidden="true"></i>Formal quotations available</span>
-        </div>
+        <p class="contact-summary mb-0">Products, quotations, repairs or installations. Talk to us directly or send the details below.</p>
+        {% include "core/_contact_shortcuts.html" %}
         <div class="contact-hero-actions"><a class="btn btn-light" href="#contact-form"><i class="bi bi-send me-2" aria-hidden="true"></i>Send a request</a><a class="btn btn-outline-light" href="{% url 'product_list' %}"><i class="bi bi-grid me-2" aria-hidden="true"></i>Browse catalogue</a></div>
       </div>
       <div class="col-lg-4">
-        <div class="contact-hero-card">
-          <div class="contact-hero-card__row"><span class="contact-hero-card__icon"><i class="bi bi-list-check" aria-hidden="true"></i></span><span><strong>Share useful details</strong><small>Product, device, quantity, problem, location and timeline</small></span></div>
-          <div class="contact-hero-card__row"><span class="contact-hero-card__icon"><i class="bi bi-person-check" aria-hidden="true"></i></span><span><strong>Reviewed by the team</strong><small>Your request enters the staff contact workflow</small></span></div>
-          <div class="contact-hero-card__row"><span class="contact-hero-card__icon"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span><span><strong>Clear next steps</strong><small>Availability, scope, pricing or service guidance</small></span></div>
+        <div class="contact-location-card">
+          <i class="bi bi-geo-alt" aria-hidden="true"></i>
+          <strong>Visit {{ company.company_name|default:"Leosoft" }}</strong>
+          {% if public_location_label %}<p>{{ public_location_label }}</p>{% else %}<p>Contact the team to arrange your visit.</p>{% endif %}
+          <span class="contact-status-pill {% if is_open_now %}is-open{% else %}is-closed{% endif %}"><i class="bi bi-circle-fill" aria-hidden="true"></i>{% if is_open_now %}Open now{% else %}Currently closed{% endif %}</span>
+          <p>Check the business hours below before travelling.</p>
         </div>
       </div>
     </div>
@@ -64,7 +62,7 @@
       <section class="contact-form-card" id="contact-form" aria-labelledby="contact-form-heading">
         <p class="product-section-kicker">Send a clear request</p>
         <h2 class="contact-section-title" id="contact-form-heading">How can the team help?</h2>
-        <p class="contact-form-intro">Provide enough information for an accurate first response. For products, include quantity and preferred specifications. For repairs, include the device model, symptoms and any error message.</p>
+        <p class="contact-form-intro">Include the model, quantity or problem, plus your location and preferred timing.</p>
         {% if contact_product %}<div class="contact-product-context"><span class="contact-product-context__icon"><i class="bi {% if contact_product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i></span><span><small class="text-muted d-block">Request linked to</small><strong>{{ contact_product.name }}</strong></span><a class="btn btn-sm btn-outline-primary ms-auto" href="{{ contact_product.get_absolute_url }}">View item</a></div>{% endif %}
         {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
         <form method="post" class="contact-field-grid" data-submit-progress>{% csrf_token %}{{ form.website }}{% if contact_product %}<input type="hidden" name="product" value="{{ contact_product.slug }}">{% endif %}

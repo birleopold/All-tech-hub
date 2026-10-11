@@ -170,9 +170,9 @@ def iter_cart_lines(session) -> Iterator[CartLine]:
 
     products = {
         p.pk: p
-        for p in Product.objects.filter(pk__in=p_ids, is_published=True).select_related(
-            "category"
-        )
+        for p in Product.objects.filter(pk__in=p_ids, is_published=True)
+        .select_related("category")
+        .prefetch_related("gallery_images")
     }
     variants = {
         v.pk: v
@@ -180,7 +180,9 @@ def iter_cart_lines(session) -> Iterator[CartLine]:
             pk__in=v_ids,
             is_active=True,
             product__is_published=True,
-        ).select_related("product", "product__category")
+        )
+        .select_related("product", "product__category")
+        .prefetch_related("product__gallery_images")
     }
 
     for kind, oid, qty in rows:

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load humanize static %}
+{% load humanize static catalog_images %}
 {% block title %}Checkout{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body mobile-commerce-page mobile-checkout-page desktop-checkout-page{% endblock %}
 {% block content %}
@@ -74,8 +74,8 @@
           <div class="d-flex justify-content-between align-items-start gap-3 mb-2"><div><p class="text-uppercase small fw-semibold text-primary mb-1">Order summary</p><small class="text-muted">{{ checkout_lines|length }} line item{{ checkout_lines|length|pluralize }}</small></div><a class="small text-decoration-none" href="{% url 'cart' %}">Edit cart</a></div>
           <ul class="list-group list-group-flush mb-3">
             {% for row in checkout_lines %}
-            <li class="list-group-item d-flex justify-content-between gap-3 px-0">
-              <span>{{ row.qty }}× {{ row.line.label }}</span>
+            <li class="list-group-item d-flex justify-content-between gap-3 px-0 checkout-summary-line">
+              <span class="cart-item-identity checkout-item-identity"><span class="cart-item-thumbnail">{% if row.line.product.primary_display_image %}{% responsive_image row.line.product.primary_display_image row.line.product.name "" "48px" "lazy" "low" %}{% else %}<i class="bi {% if row.line.product.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i>{% endif %}</span><span class="checkout-item-name">{{ row.qty }}× {{ row.line.label }}</span></span>
               <strong class="text-nowrap">{{ company.currency_code }} {{ row.line_total|floatformat:0|intcomma }}</strong>
             </li>
             {% endfor %}

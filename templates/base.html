@@ -42,8 +42,9 @@
   <link href="{% static 'css/desktop_commerce_pro.css' %}" rel="stylesheet">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
   {% block extra_css %}{% endblock %}
+  <link href="{% static 'css/storefront_polish.css' %}" rel="stylesheet">
 </head>
-<body class="{% block body_class %}d-flex flex-column min-vh-100 site-body{% endblock %}"
+<body class="{% block body_class %}d-flex flex-column min-vh-100 site-body{% endblock %}{% if resolve_url_name|slice:':7' == 'portal_' %} customer-account-page{% endif %}"
       data-ga4-id="{{ growth_settings.ga4_measurement_id }}"
       data-clarity-id="{{ growth_settings.clarity_project_id }}"
       data-analytics-consent-required="{{ growth_settings.require_analytics_consent|yesno:'1,0' }}"
@@ -150,6 +151,7 @@
 
   <main id="main-content" class="flex-grow-1 site-main">
     {% if messages %}<div class="container mt-3" role="region" aria-live="polite" aria-atomic="true" aria-label="Notifications">{% for message in messages %}<div class="alert alert-{% if 'error' in message.tags %}danger{% elif 'success' in message.tags %}success{% elif 'warning' in message.tags %}warning{% else %}info{% endif %} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button></div>{% endfor %}</div>{% endif %}
+    {% if resolve_url_name|slice:':7' == 'portal_' %}{% include 'portal/_account_navigation.html' %}{% endif %}
     {% block content %}{% endblock %}
   </main>
 

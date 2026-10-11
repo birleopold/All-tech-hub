@@ -22,6 +22,7 @@ private_media/
 staticfiles/
 backups/
 .release
+.vps-update.lock
 
 # Editors and operating systems
 .idea/

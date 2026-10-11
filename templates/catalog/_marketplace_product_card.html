@@ -1,5 +1,5 @@
 {% load catalog_images humanize %}
-<article class="market-product-card market-product-card--compact" data-reveal data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{{ p.public_price }}">
+<article class="market-product-card market-product-card--compact{% if p.kind == 'service' %} market-product-card--service{% endif %}" data-reveal data-analytics-product-card data-item-id="{% if p.sku %}{{ p.sku }}{% else %}{{ p.pk }}{% endif %}" data-item-name="{{ p.name }}" data-item-category="{{ p.category.name }}" data-item-price="{{ p.public_price }}">
   <div class="market-product-card__media">
     <a class="market-product-card__image-link" href="{{ p.get_absolute_url }}" aria-label="View {{ p.name }}">
       {% if p.primary_display_image %}
@@ -9,21 +9,23 @@
         <span class="market-product-card__placeholder"><i class="bi {% if p.kind == 'service' %}bi-tools{% else %}bi-laptop{% endif %}" aria-hidden="true"></i><small>Image coming soon</small></span>
       {% endif %}
     </a>
+    {% if p.kind == 'service' %}<span class="service-card-category"><i class="bi bi-tools me-1" aria-hidden="true"></i>{{ p.category.name }}</span>{% endif %}
   </div>
 
   <div class="market-product-card__body">
     <h3 class="market-product-card__title"><a data-analytics-product-link href="{{ p.get_absolute_url }}">{{ p.name }}</a></h3>
+    {% if p.kind == 'service' %}<p class="service-card-summary">{{ p.short_description|default:p.description|truncatewords:18 }}</p>{% if p.service_duration_hours %}<span class="service-card-duration"><i class="bi bi-clock me-1" aria-hidden="true"></i>Estimated {{ p.service_duration_hours }} hour{{ p.service_duration_hours|pluralize }}</span>{% endif %}{% endif %}
 
     <div class="market-product-card__price-row">
       <div class="market-price">
         {% if p.public_has_variants %}<small>From</small>{% endif %}
-        <strong>{{ company.currency_code }} {{ p.public_price|floatformat:0|intcomma }}</strong>
+        <strong>{% if p.kind == 'service' and not p.public_price %}Request an estimate{% else %}{{ company.currency_code }} {{ p.public_price|floatformat:0|intcomma }}{% endif %}</strong>
         {% if p.public_compare_at_price %}<del>{{ company.currency_code }} {{ p.public_compare_at_price|floatformat:0|intcomma }}</del>{% endif %}
       </div>
     </div>
 
     <div class="market-product-card__actions" aria-label="Actions for {{ p.name }}">
-      <a class="btn btn-primary" href="{{ p.get_absolute_url }}">View details</a>
+      <a class="btn btn-primary" href="{{ p.get_absolute_url }}">{% if p.kind == 'service' %}View service{% else %}View details{% endif %}</a>
       {% if p.kind == 'physical' and p.public_available and not p.public_has_variants %}
       <form method="post" action="{% url 'cart_add' p.pk %}" class="market-quick-add-form" data-market-quick-add>{% csrf_token %}<input type="hidden" name="quantity" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-primary market-quick-add-button" aria-label="Add {{ p.name }} to cart" title="Add to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i><span class="desktop-action-label">Add</span></button></form>
       {% endif %}

@@ -1,0 +1,5 @@
+<nav class="contact-shortcuts" aria-label="Contact Leosoft directly">
+  {% if company.phone %}<a href="tel:{{ company.phone|cut:' ' }}"><i class="bi bi-telephone" aria-hidden="true"></i><span>Call us<small>{{ company.phone }}</small></span></a>{% endif %}
+  {% if social_profiles.whatsapp_url %}<a href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i><span>WhatsApp<small>Talk to the team</small></span></a>{% endif %}
+  {% if growth_settings.google_business_profile_url %}<a href="{{ growth_settings.google_business_profile_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Find us<small>{% if company.city %}{{ company.city }}{% else %}View location{% endif %}</small></span></a>{% elif public_location_label %}<a href="https://www.google.com/maps/search/?api=1&amp;query={{ public_location_label|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-geo-alt" aria-hidden="true"></i><span>Directions<small>{% if company.city %}{{ company.city }}{% else %}View location{% endif %}</small></span></a>{% endif %}
+</nav>

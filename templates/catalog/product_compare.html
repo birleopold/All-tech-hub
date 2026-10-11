@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load catalog_images humanize %}
 {% block title %}Compare products{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body product-comparison-page{% endblock %}
 {% block meta %}
 <meta name="description" content="Compare selected LEOSOFT products side by side by price, availability, category and options.">
 <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% url 'product_compare' %}">

@@ -2,17 +2,17 @@
 {% block title %}Customer portal login{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
-  <div class="container py-4 py-lg-5 text-center">
+  <div class="container py-4 py-lg-5">
     <p class="text-uppercase small text-white-50 mb-2">Customer portal</p>
     <h1 class="display-6 fw-bold mb-3">Access your service history</h1>
-    <p class="lead text-white-75 mb-0 mx-auto" style="max-width: 42rem;">Track orders, repair jobs, documents, support tickets and saved items in one place.</p>
+    <p class="lead text-white-75 mb-0" style="max-width: 42rem;">Track orders, repair jobs, documents, support tickets and saved items in one place.</p>
   </div>
 </section>
 
 <div class="container pb-5">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
-      {% if form.errors %}<div class="alert alert-danger border-0 shadow-sm">Invalid username or password.</div>{% endif %}
+      {% if form.errors %}<div class="alert alert-danger border-0 shadow-sm" role="alert">Invalid username or password.</div>{% endif %}
       <form method="post" class="card border-0 shadow-sm">
         <div class="card-body p-4 p-lg-5">
           {% csrf_token %}

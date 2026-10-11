@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}{{ catalog_page_title }}{% endblock %}
-{% block body_class %}d-flex flex-column min-vh-100 site-body public-catalog-page market-catalog-shell{% endblock %}
+{% block body_class %}d-flex flex-column min-vh-100 site-body public-catalog-page market-catalog-shell{% if current_kind == 'service' %} public-service-page{% endif %}{% endblock %}
 {% block meta %}
 <meta name="description" content="{{ catalog_meta_description }}">
 {% if catalog_noindex %}<meta name="robots" content="noindex,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">{% else %}<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">{% endif %}
@@ -47,6 +47,7 @@
         </form>
       </div>
       <div class="col-lg-4 text-lg-end" data-reveal data-reveal-delay="2">
+        {% if current_kind == 'service' %}<div class="service-hero-mark" aria-hidden="true"><span><i class="bi bi-tools"></i></span><span><i class="bi bi-hdd-network"></i></span><span><i class="bi bi-camera-video"></i></span></div>{% endif %}
         <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
           <a class="public-btn-ghost text-decoration-none" href="{% url 'product_compare' %}"><i class="bi bi-columns-gap" aria-hidden="true"></i> Compare{% if compare_count %} {{ compare_count }}{% endif %}</a>
           <a class="public-btn-primary text-decoration-none" href="{% url 'contact' %}?type={% if current_kind == 'service' %}support{% else %}quote{% endif %}">{% if current_kind == 'service' %}Request service{% else %}Request a quote{% endif %}</a>

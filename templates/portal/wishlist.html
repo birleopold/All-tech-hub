@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}My wishlist{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
@@ -25,7 +26,7 @@
           <span class="badge {% if it.product.kind == 'service' %}badge-kind-service{% else %}badge-kind-product{% endif %} align-self-start mb-2">{% if it.product.kind == 'service' %}Service{% else %}Product{% endif %}</span>
           <h2 class="h6 mb-1"><a class="text-decoration-none text-dark" href="{{ it.product.get_absolute_url }}">{{ it.product.name }}</a></h2>
           <p class="small text-muted mb-2">{{ it.product.category.name }}</p>
-          <p class="fw-semibold mb-2">{% if it.product.has_sellable_variants %}From {{ company.currency_code }} {{ it.product.min_active_variant_price }}{% else %}{{ company.currency_code }} {{ it.product.price }}{% endif %}</p>
+          <p class="fw-semibold mb-2">{% if it.product.has_sellable_variants %}From {{ company.currency_code }} {{ it.product.min_active_variant_price|floatformat:0|intcomma }}{% else %}{{ company.currency_code }} {{ it.product.price|floatformat:0|intcomma }}{% endif %}</p>
           <p class="small text-muted mt-auto">Saved {{ it.created_at|date:"Y-m-d" }}</p>
           <div class="d-flex gap-2"><a class="btn btn-sm btn-primary" href="{{ it.product.get_absolute_url }}">View</a><form method="post" action="{% url 'portal_wishlist_remove' it.product.pk %}" class="m-0">{% csrf_token %}<input type="hidden" name="next" value="{% url 'portal_wishlist' %}"><button type="submit" class="btn btn-sm btn-outline-danger">Remove</button></form></div>
         </div>

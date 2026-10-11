@@ -1,0 +1,17 @@
+{% if user.is_authenticated and user.customer_profile %}
+<div class="account-navigation-shell">
+  <div class="container">
+    <nav class="account-navigation" aria-label="Customer account navigation">
+      {% with u=resolve_url_name %}
+      <a href="{% url 'portal_home' %}" {% if u == 'portal_home' %}aria-current="page"{% endif %}><i class="bi bi-house-door" aria-hidden="true"></i>Overview</a>
+      <a href="{% url 'portal_orders' %}" {% if u == 'portal_orders' or u == 'portal_order_detail' %}aria-current="page"{% endif %}><i class="bi bi-bag" aria-hidden="true"></i>Orders</a>
+      <a href="{% url 'portal_jobs' %}" {% if u == 'portal_jobs' or u == 'portal_job_detail' or u == 'portal_repair_intake' %}aria-current="page"{% endif %}><i class="bi bi-tools" aria-hidden="true"></i>Repairs</a>
+      <a href="{% url 'portal_documents' %}" {% if u == 'portal_documents' %}aria-current="page"{% endif %}><i class="bi bi-file-earmark-text" aria-hidden="true"></i>Documents</a>
+      <a href="{% url 'portal_warranties' %}" {% if u == 'portal_warranties' %}aria-current="page"{% endif %}><i class="bi bi-shield-check" aria-hidden="true"></i>Warranties</a>
+      <a href="{% url 'portal_tickets' %}" {% if u == 'portal_tickets' or u == 'portal_ticket_detail' or u == 'portal_ticket_create' %}aria-current="page"{% endif %}><i class="bi bi-chat-square-text" aria-hidden="true"></i>Support</a>
+      <a href="{% url 'portal_wishlist' %}" {% if u == 'portal_wishlist' %}aria-current="page"{% endif %}><i class="bi bi-heart" aria-hidden="true"></i>Saved items</a>
+      {% endwith %}
+    </nav>
+  </div>
+</div>
+{% endif %}

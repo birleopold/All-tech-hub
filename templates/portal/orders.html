@@ -24,7 +24,7 @@
         {% for o in orders %}
         <tr>
           <td><a class="fw-semibold text-decoration-none" href="{% url 'portal_order_detail' o.pk %}">{{ o.reference }}</a></td>
-          <td><span class="badge text-bg-light border">{{ o.get_status_display }}</span></td>
+          <td><span class="account-status status-{{ o.status|slugify }}">{{ o.get_status_display }}</span></td>
           <td>{{ o.placed_at|date:"Y-m-d H:i" }}</td>
           <td class="text-end fw-semibold">{{ company.currency_code }} {{ o.total|floatformat:2 }}</td>
           <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_order_detail' o.pk %}" aria-label="View order {{ o.reference }}">View</a></td>

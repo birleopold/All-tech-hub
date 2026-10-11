@@ -91,6 +91,26 @@ class HomeView(TemplateView):
 class AboutView(TemplateView):
     template_name = "core/about.html"
 
+    def get_context_data(self, **kwargs):
+        from django.db.models import Q
+
+        from catalog.models import Product
+        from catalog.presentation import prepare_public_products
+
+        context = super().get_context_data(**kwargs)
+        # Use real published catalogue photographs without exposing drafts or
+        # making a gallery lookup for every card on the About page.
+        products = (
+            Product.objects.filter(is_published=True, kind=Product.KIND_PHYSICAL)
+            .filter(Q(image__gt="") | Q(gallery_images__image__gt=""))
+            .select_related("category", "growth_data", "commerce_profile")
+            .prefetch_related("gallery_images", "variants")
+            .distinct()
+            .order_by("-is_featured", "name")[:4]
+        )
+        context["about_products"] = prepare_public_products(products)
+        return context
+
 
 class OfflineView(TemplateView):
     template_name = "core/offline.html"

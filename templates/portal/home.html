@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load warranty_tags %}
+{% load warranty_tags humanize %}
 {% block title %}Customer portal{% endblock %}
 {% block content %}
 <section class="catalog-hero mb-5">
@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
       <div>
         <p class="text-uppercase small text-white-50 mb-2">Customer portal</p>
-        <h1 class="display-6 fw-bold mb-2">Track your jobs, orders and documents</h1>
+        <h1 class="display-6 fw-bold mb-2">{% if user.is_authenticated and user.customer_profile %}Hello, {{ user.customer_profile.name }}.{% else %}Track your jobs, orders and documents{% endif %}</h1>
         <p class="text-white-75 mb-0">Stay updated on repair work, invoices, warranties, support requests, addresses and saved items.</p>
       </div>
       <a class="btn btn-light" href="{% url 'portal_kb' %}">Help articles</a>
@@ -23,9 +23,9 @@
   {% if user.is_authenticated and user.customer_profile %}
   {% with customer=user.customer_profile %}
   {% customer_warranty_summary customer as warranty_summary %}
-  <div class="row g-3 mb-4">
+  <div class="row g-3 mb-4 account-metrics">
     <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-tools" aria-hidden="true"></i></span><p class="small text-muted mt-3 mb-1">Open repair jobs</p><p class="display-6 mb-2">{{ open_jobs_count }}</p><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_jobs' %}">View jobs</a></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><p class="small text-muted mt-3 mb-1">Unpaid invoices</p><p class="h3 mb-2">{{ company.currency_code }} {{ unpaid_invoice_balance|floatformat:2 }}</p><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_documents' %}">Documents</a></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><p class="small text-muted mt-3 mb-1">Unpaid invoices</p><p class="h3 mb-2">{{ company.currency_code }} {{ unpaid_invoice_balance|floatformat:0|intcomma }}</p><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_documents' %}">Documents</a></div></div></div>
     <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-shield-check" aria-hidden="true"></i></span><p class="small text-muted mt-3 mb-1">Active warranties</p><p class="display-6 mb-2">{{ warranty_summary.active }}</p><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_warranties' %}">Warranties</a></div></div></div>
     <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-life-preserver" aria-hidden="true"></i></span><p class="small text-muted mt-3 mb-1">Support requests</p><p class="display-6 mb-2">{{ open_tickets_count }}</p><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_tickets' %}">View support</a></div></div></div>
   </div>
@@ -35,9 +35,9 @@
     <div class="card-body p-4">
       <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Invoices awaiting payment</h2><a class="small" href="{% url 'portal_documents' %}">All documents</a></div>
       {% if pending_payment_count %}<div class="alert alert-info py-2 small">{{ pending_payment_count }} submitted payment{{ pending_payment_count|pluralize }} currently awaiting finance verification.</div>{% endif %}
-      <ul class="list-group list-group-flush">
+      <ul class="list-group list-group-flush account-activity-list">
         {% for invoice in outstanding_invoices %}
-        <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3 flex-wrap"><div><strong>{{ invoice.number }}</strong>{% if invoice.due_date %}<small class="d-block text-muted">Due {{ invoice.due_date|date:"M j, Y" }}</small>{% endif %}</div><div class="d-flex align-items-center gap-2"><strong>{{ company.currency_code }} {{ invoice.balance_due|floatformat:2 }}</strong><form method="post" action="{% url 'portal_document_payment' invoice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success">Pay now</button></form></div></li>
+        <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3 flex-wrap"><div><strong>{{ invoice.number }}</strong>{% if invoice.due_date %}<small class="d-block text-muted">Due {{ invoice.due_date|date:"M j, Y" }}</small>{% endif %}</div><div class="d-flex align-items-center gap-2"><strong>{{ company.currency_code }} {{ invoice.balance_due|floatformat:0|intcomma }}</strong><form method="post" action="{% url 'portal_document_payment' invoice.pk %}">{% csrf_token %}<button class="btn btn-sm btn-success">Pay now</button></form></div></li>
         {% endfor %}
       </ul>
     </div>
@@ -50,13 +50,13 @@
         <div class="card-body p-4">
           <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent activity</h2><a class="small" href="{% url 'portal_orders' %}">All orders</a></div>
           {% if recent_orders %}
-          <ul class="list-group list-group-flush mb-0">
+          <ul class="list-group list-group-flush account-activity-list mb-0">
             {% for o in recent_orders %}
-            <li class="list-group-item px-0 d-flex justify-content-between gap-3"><a class="fw-semibold text-decoration-none" href="{% url 'portal_order_detail' o.pk %}">{{ o.reference }}</a><span class="text-muted small">{{ o.get_status_display }}</span></li>
+            <li class="list-group-item px-0 d-flex justify-content-between gap-3"><a class="fw-semibold text-decoration-none" href="{% url 'portal_order_detail' o.pk %}">{{ o.reference }}</a><span class="account-status status-{{ o.status|slugify }}">{{ o.get_status_display }}</span></li>
             {% endfor %}
           </ul>
           {% else %}
-          <p class="text-muted mb-0">No orders yet.</p>
+          <p class="text-muted">No orders yet.</p><a class="btn btn-sm btn-outline-primary" href="{% url 'physical_product_list' %}">Find your next device <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
           {% endif %}
         </div>
       </div>
@@ -65,14 +65,14 @@
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body p-4">
           <h2 class="h5 mb-3">Quick actions</h2>
-          <div class="d-grid gap-2">
-            <a class="btn btn-primary text-start" href="{% url 'portal_repair_intake' %}"><i class="bi bi-clipboard-plus me-2" aria-hidden="true"></i>Request repair</a>
-            <a class="btn btn-outline-primary text-start" href="{% url 'portal_ticket_create' %}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>New support request</a>
-            <a class="btn btn-outline-primary text-start" href="{% url 'portal_warranties' %}"><i class="bi bi-shield-check me-2" aria-hidden="true"></i>My warranties</a>
-            <a class="btn btn-outline-primary text-start" href="{% url 'portal_loyalty_account' %}"><i class="bi bi-award me-2" aria-hidden="true"></i>My loyalty account</a>
-            <a class="btn btn-outline-primary text-start" href="{% url 'portal_marketing_preferences' %}"><i class="bi bi-sliders me-2" aria-hidden="true"></i>Communication preferences</a>
-            <a class="btn btn-outline-primary text-start" href="{% url 'portal_documents' %}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>My documents</a>
-            <a class="btn btn-outline-primary text-start" href="{% url 'portal_wishlist' %}"><i class="bi bi-heart me-2" aria-hidden="true"></i>Wishlist</a>
+          <div class="account-quick-actions">
+            <a href="{% url 'portal_repair_intake' %}"><i class="bi bi-clipboard-plus me-2" aria-hidden="true"></i>Request repair</a>
+            <a href="{% url 'portal_ticket_create' %}"><i class="bi bi-chat-dots me-2" aria-hidden="true"></i>New support request</a>
+            <a href="{% url 'portal_warranties' %}"><i class="bi bi-shield-check me-2" aria-hidden="true"></i>My warranties</a>
+            <a href="{% url 'portal_loyalty_account' %}"><i class="bi bi-award me-2" aria-hidden="true"></i>My loyalty account</a>
+            <a href="{% url 'portal_marketing_preferences' %}"><i class="bi bi-sliders me-2" aria-hidden="true"></i>Communication preferences</a>
+            <a href="{% url 'portal_documents' %}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>My documents</a>
+            <a href="{% url 'portal_wishlist' %}"><i class="bi bi-heart me-2" aria-hidden="true"></i>Wishlist</a>
           </div>
         </div>
       </div>
@@ -83,9 +83,9 @@
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">
       <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Recent jobs</h2><a class="small" href="{% url 'portal_jobs' %}">All jobs</a></div>
-      <ul class="list-group list-group-flush">
+      <ul class="list-group list-group-flush account-activity-list">
         {% for j in recent_jobs %}
-        <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3"><div><a class="fw-semibold text-decoration-none" href="{% url 'portal_job_detail' j.pk %}">{{ j.number }}</a><span class="text-muted small"> — {{ j.title|truncatechars:48 }}</span></div><span class="badge text-bg-light">{{ j.get_status_display }}</span></li>
+        <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-3"><div><a class="fw-semibold text-decoration-none" href="{% url 'portal_job_detail' j.pk %}">{{ j.number }}</a><span class="text-muted small"> — {{ j.title|truncatechars:48 }}</span></div><span class="account-status status-{{ j.status|slugify }}">{{ j.get_status_display }}</span></li>
         {% endfor %}
       </ul>
     </div>
@@ -97,9 +97,9 @@
     <div class="card-body p-4">
       <div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h5 mb-0">Support requests</h2><span class="badge text-bg-secondary">{{ open_tickets_count }} open</span></div>
       {% if recent_tickets %}
-      <ul class="list-group list-group-flush mb-3">
+      <ul class="list-group list-group-flush account-activity-list mb-3">
         {% for t in recent_tickets %}
-        <li class="list-group-item px-0 d-flex justify-content-between gap-3"><a class="text-decoration-none" href="{% url 'portal_ticket_detail' t.pk %}">{{ t.reference }} — {{ t.subject|truncatechars:40 }}</a><span class="small text-muted">{{ t.get_status_display }}</span></li>
+        <li class="list-group-item px-0 d-flex justify-content-between gap-3"><a class="text-decoration-none" href="{% url 'portal_ticket_detail' t.pk %}">{{ t.reference }} — {{ t.subject|truncatechars:40 }}</a><span class="account-status status-{{ t.status|slugify }}">{{ t.get_status_display }}</span></li>
         {% endfor %}
       </ul>
       {% endif %}

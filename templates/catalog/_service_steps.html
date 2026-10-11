@@ -1,0 +1,9 @@
+<section class="service-planning" aria-labelledby="service-planning-heading">
+  <div class="service-planning__heading"><p class="product-section-kicker">Plan your service</p><h2 class="h5 fw-bold" id="service-planning-heading">A clear next step, from the start.</h2></div>
+  <ol class="service-planning__steps">
+    <li><span aria-hidden="true">01</span><div><strong>Tell us what you need</strong><p>Share the device, task or location.</p></div></li>
+    <li><span aria-hidden="true">02</span><div><strong>Confirm the scope</strong><p>Agree on the work and quotation.</p></div></li>
+    <li><span aria-hidden="true">03</span><div><strong>Plan the work</strong><p>Arrange timing with the team.</p></div></li>
+  </ol>
+  <a class="btn btn-outline-primary" href="{% url 'contact' %}?type=support&amp;product={{ product.slug|urlencode }}">Discuss this service <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+</section>
