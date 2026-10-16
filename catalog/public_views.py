@@ -19,12 +19,13 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Trim
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_GET
 
+from catalog.brand_facets import grouped_brand_rows
 from catalog.discovery import discovery_seed_for_request, order_for_discovery
 from catalog.models import Category, Product, ProductVariant
 from catalog.presentation import prepare_public_products
@@ -248,7 +249,7 @@ class PublicProductListView(ProductListView):
 
         brand = (self.request.GET.get("brand") or "").strip()
         if brand:
-            queryset = queryset.filter(growth_data__brand__iexact=brand)
+            queryset = queryset.alias(_trimmed_brand=Trim('growth_data__brand')).filter(_trimmed_brand__iexact=brand)
 
         condition = (self.request.GET.get("condition") or "").strip().lower()
         valid_conditions = {value for value, _ in ProductGrowthData.CONDITION_CHOICES}
@@ -333,9 +334,9 @@ class PublicProductListView(ProductListView):
             )
             .values("brand")
             .annotate(product_count=Count("product_id", distinct=True))
-            .order_by("-product_count", "brand")[:18]
+            .order_by("-product_count", "brand")
         )
-        context["catalog_brands"] = list(brand_rows)
+        context["catalog_brands"] = grouped_brand_rows(brand_rows)
         context["condition_choices"] = ProductGrowthData.CONDITION_CHOICES
         context["catalog_collections"] = [
             {"slug": slug, **details} for slug, details in self.COLLECTIONS.items()
@@ -348,7 +349,12 @@ class PublicProductListView(ProductListView):
         context["current_collection_details"] = self.COLLECTIONS.get(
             context["current_collection"]
         )
-        context["current_brand"] = (self.request.GET.get("brand") or "").strip()
+        requested_brand = (self.request.GET.get("brand") or "").strip()
+        context["current_brand"] = next(
+            (row["brand"] for row in context["catalog_brands"]
+             if row["brand"].casefold() == requested_brand.casefold()),
+            requested_brand,
+        )
         context["current_condition"] = (
             self.request.GET.get("condition") or ""
         ).strip().lower()
@@ -656,7 +662,7 @@ def public_catalog_suggestions(request):
         .exclude(brand="")
         .values("brand")
         .annotate(product_count=Count("product_id", distinct=True))
-        .order_by("brand")[:4]
+        .order_by("brand")
     )
     brands = [
         {
@@ -664,7 +670,7 @@ def public_catalog_suggestions(request):
             "url": f'{reverse("product_list")}?{urlencode({"brand": row["brand"]})}',
             "count": row["product_count"],
         }
-        for row in brand_rows
+        for row in grouped_brand_rows(brand_rows, limit=4)
     ]
 
     payload = {

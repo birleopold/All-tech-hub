@@ -197,6 +197,16 @@ class PublicProductDetailView(ProductDetailView):
                 },
             }
         else:
+            service_offer = {
+                "@type": "Offer",
+                **offer_common,
+                "availability": "https://schema.org/InStock",
+            }
+            if product.price > 0:
+                service_offer["price"] = str(product.price)
+            else:
+                # Unknown quotation is not a free service.
+                service_offer.pop("priceCurrency", None)
             schema = {
                 "@context": "https://schema.org",
                 "@type": "Service",
@@ -206,12 +216,7 @@ class PublicProductDetailView(ProductDetailView):
                     "@type": "Country",
                     "name": company.country or "Uganda",
                 },
-                "offers": {
-                    "@type": "Offer",
-                    **offer_common,
-                    "price": str(product.price),
-                    "availability": "https://schema.org/InStock",
-                },
+                "offers": service_offer,
             }
         return script_safe_json(schema)
 

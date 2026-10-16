@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from django.db.models import F, Q
+from django.db.models.functions import Trim
 from django.utils.safestring import mark_safe
 
 from catalog.discovery import discovery_seed_for_request, order_for_discovery
@@ -108,7 +109,7 @@ class RefinedPublicProductListView(MarketplaceProductListView):
 
         brand = (self.request.GET.get("brand") or "").strip()
         if brand:
-            queryset = queryset.filter(growth_data__brand__iexact=brand)
+            queryset = queryset.alias(_trimmed_brand=Trim('growth_data__brand')).filter(_trimmed_brand__iexact=brand)
 
         condition = (self.request.GET.get("condition") or "").strip().lower()
         if condition:

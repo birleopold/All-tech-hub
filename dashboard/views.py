@@ -1,12 +1,14 @@
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
 from dashboard.overview import dashboard_overview
 from dashboard.snapshot import dashboard_snapshot
+from catalog.brand_facets import grouped_brand_rows
 from catalog.models import Product
+from growth.models import ProductGrowthData
 from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
 from core.mixins import StaffRequiredMixin
 from core.seo_audit import seo_audit_snapshot
@@ -54,6 +56,18 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
         elif publication == "0":
             products = products.filter(is_published=False)
 
+        # This diagnostic covers every published listing regardless of the
+        # current quality-table filters, so duplicate labels are not hidden.
+        raw_brand_rows = (
+            ProductGrowthData.objects.filter(product__is_published=True)
+            .exclude(brand="")
+            .values("brand")
+            .annotate(product_count=Count("product_id", distinct=True))
+        )
+        duplicate_brands = [
+            group for group in grouped_brand_rows(raw_brand_rows, limit=None)
+            if len(group["variants"]) > 1
+        ]
         all_rows = catalogue_quality_rows(products)
         status = (self.request.GET.get("status") or "").strip().lower()
         if status in {"ready", "attention", "critical"}:
@@ -68,6 +82,8 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
             {
                 "quality_rows": page_obj.object_list,
                 "quality_summary": catalogue_quality_summary(all_rows),
+                "duplicate_brand_groups": duplicate_brands[:8],
+                "duplicate_brand_group_count": len(duplicate_brands),
                 "page_obj": page_obj,
                 "paginator": paginator,
                 "is_paginated": paginator.num_pages > 1,

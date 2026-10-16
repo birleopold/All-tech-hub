@@ -53,6 +53,32 @@
     </div>
   </div>
 
+  {% if duplicate_brand_groups %}
+  <section class="card staff-panel-card mb-4" aria-labelledby="brand-consistency-heading">
+    <div class="card-body">
+      <div class="staff-panel-heading">
+        <h2 id="brand-consistency-heading">Brand names to standardize</h2>
+        <a href="{% url 'staff_catalogue_bulk_enrichment' %}">Open bulk enrichment</a>
+      </div>
+      <p class="text-muted small">The storefront now combines these spelling and capitalization variants in filters. The stored names remain unchanged until staff verify and update them. {% if duplicate_brand_group_count > 8 %}Showing 8 of {{ duplicate_brand_group_count }} groups.{% endif %}</p>
+      <div class="row g-3">
+        {% for group in duplicate_brand_groups %}
+        <div class="col-md-6">
+          <div class="border rounded-3 p-3 h-100">
+            <strong>{{ group.brand }}</strong><small class="text-muted ms-2">{{ group.product_count }} listing{{ group.product_count|pluralize }}</small>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              {% for variant in group.variants %}
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_catalogue_quality' %}?q={{ variant.brand|urlencode }}" title="Find listings to review">{{ variant.brand }}{% if variant.extra_spaces %} (extra spaces){% endif %} · {{ variant.product_count }}</a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <div class="card staff-panel-card">
     <div class="card-body p-0">
       <div class="table-responsive">

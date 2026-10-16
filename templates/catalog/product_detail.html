@@ -11,8 +11,10 @@
 <meta property="og:description" content="{{ meta_description }}">
 <meta property="og:url" content="{{ canonical_url }}">
 {% if social_image_url %}<meta property="og:image" content="{{ social_image_url }}">{% endif %}
+{% if product.kind != 'service' or product.public_price %}
 <meta property="product:price:amount" content="{{ product.public_price|floatformat:0|intcomma }}">
 <meta property="product:price:currency" content="{{ company.currency_code }}">
+{% endif %}
 <meta name="twitter:card" content="{% if social_image_url %}summary_large_image{% else %}summary{% endif %}">
 <meta name="twitter:title" content="{{ share_title }}">
 <meta name="twitter:description" content="{{ meta_description }}">

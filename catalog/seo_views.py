@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from django.db.models import Count
 from django.http import Http404
 from django.urls import reverse
 from django.utils.text import slugify
 
+from catalog.brand_facets import grouped_brand_rows
 from catalog.models import Category, Product
 from catalog.refined_public_views import RefinedPublicProductListView
 from core.models import CompanySettings
@@ -44,11 +46,12 @@ class SEOProductListView(RefinedPublicProductListView):
             brands = (
                 ProductGrowthData.objects.filter(product__is_published=True)
                 .exclude(brand="")
-                .values_list("brand", flat=True)
-                .distinct()
+                .values("brand")
+                .annotate(product_count=Count("product_id", distinct=True))
             )
             self.seo_brand = next(
-                (brand.strip() for brand in brands if slugify(brand) == brand_slug),
+                (row["brand"] for row in grouped_brand_rows(brands, limit=None)
+                 if slugify(row["brand"]) == brand_slug),
                 "",
             )
             if not self.seo_brand:
