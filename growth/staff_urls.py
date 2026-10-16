@@ -24,6 +24,11 @@ urlpatterns = [
     path("ambassadors/conversions/<int:pk>/approve/", views.AmbassadorConversionApproveView.as_view(), name="staff_growth_conversion_approve"),
     path("ambassadors/conversions/<int:pk>/pay/", views.AmbassadorConversionPayView.as_view(), name="staff_growth_conversion_pay"),
     path("content/", staff_only(views.content_asset_workspace), name="staff_growth_content_assets"),
+    path(
+        "content/images/<int:pk>/<str:format_name>/",
+        staff_only(views.content_marketing_image_download),
+        name="staff_growth_content_image",
+    ),
     path("saved-carts/", views.SavedCartListView.as_view(), name="staff_growth_saved_carts"),
     path("stock-alerts/", views.StockAlertListView.as_view(), name="staff_growth_stock_alerts"),
 ]

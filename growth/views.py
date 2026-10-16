@@ -9,17 +9,18 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import F, Q, Sum
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.views import View
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from catalog.models import Product
 from commerce import cart as cart_mod
 from core.mixins import StaffRequiredMixin
+from growth.assets import FORMATS, marketing_image_response
 from growth.forms import (
     AmbassadorForm,
     ContentAssetGeneratorForm,
@@ -378,6 +379,20 @@ def content_asset_workspace(request):
         "growth/content_assets.html",
         {"form": form, "assets": assets},
     )
+
+
+@require_GET
+def content_marketing_image_download(request, pk, format_name):
+    """Staff-only PNG export, using the existing trusted image renderer."""
+    if format_name not in FORMATS:
+        raise Http404("Image format not supported")
+    product = get_object_or_404(
+        Product, pk=pk, kind=Product.KIND_PHYSICAL, is_published=True
+    )
+    response = marketing_image_response(product, format_name)
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def _staff(user):

@@ -29,7 +29,14 @@
         {% for asset in assets %}
         <article class="card border-0 shadow-sm"><div class="card-body p-4">
           <div class="d-flex justify-content-between align-items-start gap-3 mb-2"><div><span class="badge text-bg-light mb-2">{{ asset.get_asset_type_display }}</span><h3 class="h6 mb-0">{{ asset.title }}</h3>{% if asset.product %}<p class="small text-muted mb-0">{{ asset.product.name }}</p>{% endif %}</div><button type="button" class="btn btn-sm btn-outline-secondary" data-copy-asset="asset-{{ asset.pk }}">Copy</button></div>
-          <pre id="asset-{{ asset.pk }}" class="bg-light border rounded p-3 small mb-0 text-wrap">{{ asset.body }}</pre>
+          <pre id="asset-{{ asset.pk }}" class="bg-light border rounded p-3 small mb-3 text-wrap">{{ asset.body }}</pre>
+          {% if asset.product and asset.product.is_published and asset.product.kind == 'physical' %}
+          <div class="d-flex flex-wrap gap-2 align-items-center" aria-label="Download marketing artwork for {{ asset.product.name }}">
+            <span class="small text-muted me-2">Product artwork:</span>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_growth_content_image' asset.product.pk 'square' %}"><i class="bi bi-download me-1" aria-hidden="true"></i>Square PNG</a>
+            <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_growth_content_image' asset.product.pk 'story' %}"><i class="bi bi-download me-1" aria-hidden="true"></i>Story PNG</a>
+          </div>
+          {% endif %>
         </div></article>
         {% empty %}<div class="card border-0 shadow-sm"><div class="card-body text-muted">Generate your first content pack using a published product or service.</div></div>{% endfor %}
       </div>

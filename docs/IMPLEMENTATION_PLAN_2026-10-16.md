@@ -21,7 +21,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
-| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Planned |
+| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | **In progress** |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## P1 work package (first implementation)
@@ -33,6 +33,13 @@ Scope: customer storefront, staff operations, admin configuration, production re
 - [ ] Verify real small-screen and keyboard use of filters, cards and service pages.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
+
+## P7 initial fixes
+- [x] Restore the existing marketing image renderer as a staff-only, validated square/story PNG download route.
+- [x] Expose artwork downloads directly on generated content cards.
+- [x] Add anonymous/unpublished access checks to the existing PNG tests.
+- [ ] Run growth image tests successfully in CI; the previous baseline reported a missing URL name and current hosted runners have no available step logs.
+- [ ] Verify the staff content-generator UI, artwork and print/download files in a real browser.
 
 ## P2–P8 delivery pattern
 For each phase: inspect current models, views, templates and docs → document gaps → implement backend + UI together → add focused tests → confirm permissions and mobile behavior → run full regressions and deployment checks → update this board.
