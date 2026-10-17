@@ -111,6 +111,8 @@ jobs:
           core.test_foundation
           core.test_api_experience
           core.test_phase1_security
+          core.test_phase8_backups
+          core.test_phase8_backups
           reliability
 
       - name: Run Ruff on maintained Python scope
