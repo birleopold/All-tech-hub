@@ -16,8 +16,8 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | Phase | Goal | Acceptance checks | Status |
 |---|---|---|---|
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **Code implemented — verification deferred** |
-| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Implementation in progress** |
-| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | Queued (early safeguards committed; phase not started) |
+| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Code implemented — verification deferred** |
+| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Implementation in progress** |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
@@ -25,7 +25,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active coding phase: P2.** P1 implementation is staged and final integrated testing is postponed until every phase is coded, per owner request. P1 is not verified in production.
+**Active coding phase: P3.** P1 and P2 code is staged and final integrated testing is postponed until every phase is coded, per owner request. Neither P1 nor P2 is verified in production.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -72,6 +72,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
 
 ## P3 first customer-to-staff order protection
+- [x] Restrict pickup and delivery orders to appropriate next statuses, reusing the existing transition engine.
+- [x] Show staff only actionable next steps; hide final-order status actions and pickup shipment forms.
+- [x] Block shipment updates for pickup and cancelled orders in the backend, not only templates.
 - [x] Quote-only services go to the linked quotation request form rather than free checkout.
 - [x] Product detail, sticky mobile action and service enquiry prefill reflect the quotation-required state.
 - [x] Reject direct attempts to add zero-priced services or service options through the cart endpoint.
@@ -92,7 +95,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Use an atomic product gallery save with per-product upload ordering and cleanup of new files on failure.
 - [x] Filter inventory product register by kind and publication; search verified brand and manufacturer part identifiers.
 - [x] Make product/service metrics and quality-check navigation actionable from the staff product register.
-- [ ] Finish remaining inventory editing and workflow checks before integrated testing.
+- [x] Code-stage inventory workflows complete: existing bulk enrichment, product/media/specification editing, stock ledger and cycle counts, plus identity and mobile-HEIC fixes. Integrated verification and live-provider checks are deferred.
 
 ## P7 initial fixes
 - [x] Restore the existing marketing image renderer as a staff-only, validated square/story PNG download route.
