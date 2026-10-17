@@ -9,7 +9,6 @@ from automation.models import AutomationRun
 from automation.services import queue_due_growth_jobs, queue_due_posts
 from automation.worker import process_controlled_automation_jobs
 from customer_campaigns.services import process_scheduled_campaigns
-from marketing.services import process_due_lead_followups
 from reports.followups import refresh_retention_followups
 
 
@@ -52,10 +51,13 @@ class Command(BaseCommand):
                 limit=min(limit, 100),
                 dry_run=inspect_only,
             )
-            leads = process_due_lead_followups(
-                limit=min(limit, 500),
-                dry_run=inspect_only,
-            )
+            # queue_due_growth_jobs already processes lead reminders.
+            # A second pass would report zero after the first one successfully
+            # sent and throttled a reminder, making operator telemetry false.
+            leads = {
+                "reminded": growth["lead_reminders"],
+                "escalated": growth["lead_escalations"],
+            }
             retention = refresh_retention_followups(
                 limit=min(limit, 50),
                 dry_run=inspect_only,

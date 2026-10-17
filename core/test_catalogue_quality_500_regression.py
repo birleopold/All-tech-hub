@@ -38,4 +38,4 @@ class CatalogueQualityPageRegressionTests(TestCase):
             response,
             reverse("staff_product_edit", args=[self.product.pk]),
         )
-        self.assertContains(response, "Review listing")
+        self.assertContains(response, "Commercial review")

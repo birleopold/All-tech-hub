@@ -124,6 +124,15 @@ GitHub Actions for the latest commits report job failures without any job
 steps or available logs (runner provisioning issue); they provide no positive
 test evidence. Preserve the fail-closed release gate until all checks pass.
 
+## Duplicate lead-reminder execution corrected
+
+The same growth-automation command processed due lead follow-ups in both
+`queue_due_growth_jobs()` and `run_growth_automation.handle()`.
+The first path sent and throttled the notification; the second counted
+zero, so the operator summary was inaccurate. The command now reuses the
+first path's counts and issues no second reminder pass. The existing
+integration test asserts both the notification and the reported count.
+
 ## Evidence register
 
 | Gate | Current status | Required real-world evidence |
