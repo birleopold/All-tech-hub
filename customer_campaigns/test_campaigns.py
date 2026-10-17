@@ -271,13 +271,9 @@ class ControlledCustomerCampaignTests(TestCase):
         response = self.client.post(
             reverse("staff_email_log_retry", kwargs={"pk": log.pk})
         )
-        self.assertRedirects(
-            response,
-            reverse(
-                "staff_customer_campaign_detail",
-                kwargs={"pk": self.campaign.pk},
-            ),
-        )
+        # Least privilege rejects generic campaign-mail replay without
+        # management permission (even when the sender created a campaign).
+        self.assertEqual(response.status_code, 403)
         log.refresh_from_db()
         self.assertEqual(log.status, OutboundEmail.STATUS_FAILED)
         self.assertEqual(len(mail.outbox), 0)

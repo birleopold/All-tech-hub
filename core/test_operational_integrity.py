@@ -84,7 +84,7 @@ class ProductionAutomationUnitTests(SimpleTestCase):
             / "scripts"
             / "manage_production.sh"
         ).read_text(encoding="utf-8")
-        self.assertIn('source "$ENV_FILE"', helper)
+        self.assertIn('source "${ENV_FILE}"', helper)
         self.assertIn('exec "${APP_DIR}/.venv/bin/python"', helper)
 
 

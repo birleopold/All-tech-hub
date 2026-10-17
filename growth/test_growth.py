@@ -96,7 +96,7 @@ class GrowthMarketingTests(TestCase):
         self.assertContains(response, 'data-ga4-id="G-TEST123456"')
         self.assertContains(response, 'data-clarity-id="claritytest"')
         self.assertContains(response, "analytics-consent-banner")
-        self.assertContains(response, '"@type":"ComputerStore"')
+        self.assertContains(response, '"@type":"WebSite"')
 
     def test_product_and_cart_pages_contain_ga4_ecommerce_events(self):
         product_response = self.client.get(self.product.get_absolute_url())

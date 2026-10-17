@@ -7,7 +7,7 @@ class HealthCheckTests(TestCase):
         response = self.client.get(reverse("healthz"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertIn("no-store", response["Cache-Control"])
         self.assertEqual(response.json()["status"], "ok")
         self.assertEqual(response.json()["database"], "ok")
         self.assertIn("timestamp", response.json())

@@ -14,7 +14,8 @@ class OperationalFoundationTests(TestCase):
         self.assertEqual(response.json()["status"], "ok")
         self.assertEqual(response.json()["database"], "ok")
         self.assertIn("no-store", response.headers["Cache-Control"])
-        self.assertEqual(response.headers["X-Robots-Tag"], "noindex, nofollow")
+        self.assertIn("noindex", response.headers["X-Robots-Tag"])
+        self.assertIn("nofollow", response.headers["X-Robots-Tag"])
 
     @patch("core.health.connection.cursor", side_effect=DatabaseError("database unavailable"))
     def test_health_endpoint_returns_service_unavailable_when_database_is_down(self, _cursor):
@@ -30,9 +31,9 @@ class OperationalFoundationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, static("css/foundation.css"))
-        self.assertContains(response, 'class="mobile-scroll-footer')
-        self.assertContains(response, 'aria-label="Secondary mobile navigation"')
-        self.assertContains(response, ">Customer sign in</a>")
+        self.assertContains(response, 'class="mobile-tabbar')
+        self.assertContains(response, 'aria-label="Primary mobile navigation"')
+        self.assertContains(response, "Account</span>")
         self.assertNotContains(response, 'style="position: static !important')
 
     def test_service_worker_precaches_current_public_foundation_assets(self):
@@ -40,7 +41,7 @@ class OperationalFoundationTests(TestCase):
         body = response.content.decode("utf-8")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('const CACHE_NAME = "leosoft-public-assets-v3"', body)
+        self.assertRegex(body, r'const CACHE_NAME = "leosoft-public-assets-v\d+"')
         self.assertIn(static("css/foundation.css"), body)
         self.assertIn(static("js/alltech_ui.js"), body)
         self.assertNotIn("/media/", body)

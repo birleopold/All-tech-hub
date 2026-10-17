@@ -87,8 +87,8 @@ class CatalogExperienceTests(TestCase):
             },
         )
         canonical = response.context["catalog_canonical_url"]
-        self.assertIn("kind=physical", canonical)
-        self.assertIn("category=computers", canonical)
+        self.assertTrue(canonical.endswith("/catalog/category/computers/"))
+        self.assertNotIn("kind=", canonical)
         self.assertNotIn("sort=", canonical)
         self.assertNotIn("q=", canonical)
         self.assertNotIn("view=", canonical)

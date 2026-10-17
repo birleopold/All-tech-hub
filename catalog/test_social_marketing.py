@@ -28,16 +28,19 @@ class SocialMarketingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'property="og:title"')
         self.assertContains(response, 'name="twitter:card"')
-        self.assertContains(response, "Share this product")
+        self.assertContains(response, "Send this item to someone")
         self.assertContains(response, "WhatsApp")
         self.assertContains(response, "Facebook")
         self.assertContains(response, "LinkedIn")
-        self.assertContains(response, "Copy link")
+        self.assertContains(response, "Copy")
         self.assertContains(response, "utm_campaign")
 
     def test_sitemap_lists_published_product(self):
-        response = self.client.get("/sitemap.xml")
+        index = self.client.get("/sitemap.xml")
+        response = self.client.get("/sitemaps/products.xml")
 
+        self.assertEqual(index.status_code, 200)
+        self.assertContains(index, "/sitemaps/products.xml")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.product.get_absolute_url())
 

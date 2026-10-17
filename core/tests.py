@@ -150,7 +150,9 @@ class PlatformMaturityTests(TestCase):
                 response = self.client.get(reverse("staff_security_diagnostics"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Backup freshness")
-        self.assertContains(response, "alltech-db-test.sqlite3")
+        # Unverified raw SQLite dumps are intentionally not advertised
+        # as verified recovery points in the security diagnostics.
+        self.assertNotContains(response, "alltech-db-test.sqlite3")
 
 
 class OperationsMonitorCommandTests(TestCase):

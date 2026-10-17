@@ -72,8 +72,10 @@ class ProductImageInteractionTests(TestCase):
         response = self.client.get("/catalog/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "market-card-quick-view")
-        self.assertContains(response, "market-card-quick-view__panel")
+        # Compact listing cards offer accessible direct detail and cart actions
+        # rather than the retired overlay quick-view.
+        self.assertContains(response, "market-product-card__actions")
+        self.assertContains(response, "View details")
         self.assertContains(response, self.product.name)
 
     def test_interaction_assets_include_navigation_motion_and_overflow_guards(self):
@@ -89,7 +91,7 @@ class ProductImageInteractionTests(TestCase):
 
         self.assertIn("market-quick-view-open", marketplace_js)
         self.assertIn("data-market-quick-view-close", marketplace_js)
-        self.assertIn("product-gallery-nav--previous", detail_js)
+        self.assertIn('product-gallery-nav--${direction}', detail_js)
         self.assertIn('event.key === "ArrowLeft"', detail_js)
         self.assertIn('"touchstart"', detail_js)
         self.assertIn("overflow-wrap: anywhere", interaction_css)

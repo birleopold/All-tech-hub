@@ -43,8 +43,8 @@ class PublicExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "public-home-page")
-        self.assertContains(response, "Technology for work, learning and growth")
-        self.assertContains(response, "Find the right technology faster")
+        self.assertContains(response, "Technology that works for you.")
+        self.assertContains(response, "Shop our products")
         self.assertContains(response, self.product.name)
         self.assertContains(response, self.service.name)
         self.assertContains(response, "public_experience.css")
@@ -57,9 +57,9 @@ class PublicExperienceTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "public-catalog-page")
-        self.assertContains(response, "Choose technology with more confidence")
-        self.assertContains(response, "public-filter-panel")
-        self.assertContains(response, "public-catalog-card")
+        self.assertContains(response, "Search, filter and compare with confidence")
+        self.assertContains(response, "market-filter-panel")
+        self.assertContains(response, "market-product-card")
         self.assertContains(response, self.product.name)
         self.assertContains(response, self.service.name)
 
@@ -79,5 +79,5 @@ class PublicExperienceTests(TestCase):
         response = self.client.get(reverse("service_worker"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "leosoft-public-assets-v4")
+        self.assertContains(response, "leosoft-public-assets-v7")
         self.assertContains(response, "public_experience")

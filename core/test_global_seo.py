@@ -235,7 +235,9 @@ class GlobalSEOTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode().strip(), "indexnow-test-key-1234567890")
-        payload = json.loads(output.getvalue().split("\nDry run prepared", 1)[0])
+        # The command writes a JSON object followed by a human-readable
+        # completion line; decode the first complete JSON value.
+        payload, _offset = json.JSONDecoder().raw_decode(output.getvalue())
         self.assertEqual(payload["host"], "leosoftug.com")
         self.assertIn(
             f"https://leosoftug.com{self.product.get_absolute_url()}",
@@ -260,7 +262,7 @@ class GlobalSEOTests(TestCase):
         response = self.client.get(reverse("staff_seo"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SEO readiness and indexing")
+        self.assertContains(response, "SEO, Merchant and search opportunities")
         self.assertContains(response, "https://leosoftug.com/sitemap.xml")
         self.assertContains(response, "Google Search Console verification is configured")
 
@@ -268,4 +270,4 @@ class GlobalSEOTests(TestCase):
         output = StringIO()
         call_command("audit_seo", stdout=output)
         self.assertIn("SEO readiness", output.getvalue())
-        self.assertIn("sitemap index", output.getvalue().lower())
+        self.assertIn("sitemap_index", output.getvalue().lower())

@@ -1,6 +1,9 @@
 from datetime import timedelta
 from decimal import Decimal
-from io import StringIO
+from io import BytesIO, StringIO
+
+from PIL import Image
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -89,6 +92,16 @@ class MarketingAutomationTests(TestCase):
         self.assertEqual(self.link.lead_count, 1)
 
     def test_product_feeds_include_published_product(self):
+        # Feeds must reject imageless products; use a real product photo to
+        # test a legitimately exportable listing.
+        image_bytes = BytesIO()
+        Image.new("RGB", (240, 240), "white").save(image_bytes, format="JPEG")
+        self.product.image.save(
+            "marketing-feed-test.jpg",
+            SimpleUploadedFile("marketing-feed-test.jpg", image_bytes.getvalue(),
+                               content_type="image/jpeg"),
+            save=True,
+        )
         csv_response = self.client.get(reverse("marketing_product_feed_csv"))
         self.assertEqual(csv_response.status_code, 200)
         self.assertIn(b"LEOSOFT Test Laptop", csv_response.content)
