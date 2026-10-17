@@ -54,7 +54,7 @@ class PublicHomeView(HomeView):
         {
             "slug": "available",
             "title": "Available now",
-            "description": "Start with products currently available to order and services ready to book.",
+            "description": "Browse products available to order and services with confirmed listed prices.",
             "icon": "bi-check-circle",
         },
     ]

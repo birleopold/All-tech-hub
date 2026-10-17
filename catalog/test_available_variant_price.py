@@ -77,6 +77,37 @@ class PurchasableVariantPricingTests(TestCase):
         price = next(p["price"] for p in result["products"] if p["name"] == self.service.name)
         self.assertEqual(price, "80000")
 
+    def test_unpriced_services_are_not_treated_as_free_in_price_filters(self):
+        Product.objects.create(
+            category=self.laptop.category, kind=Product.KIND_SERVICE,
+            name="Specialist quotation only service",
+            slug="specialist-quotation-only-service",
+            price=Decimal("0"), is_published=True, track_inventory=False,
+        )
+        filtered = self.client.get(
+            reverse("product_list"),
+            {"kind": "service", "min_price": "0", "max_price": "100000"},
+        )
+        names = [p.name for p in filtered.context["products"]]
+        self.assertIn(self.service.name, names)
+        self.assertNotIn("Specialist quotation only service", names)
+
+        available = self.client.get(
+            reverse("product_list"), {"kind": "service", "available": "1"}
+        )
+        available_names = [p.name for p in available.context["products"]]
+        self.assertIn(self.service.name, available_names)
+        self.assertNotIn("Specialist quotation only service", available_names)
+
+        ordered = self.client.get(
+            reverse("product_list"), {"kind": "service", "sort": "price_low"}
+        )
+        self.assertEqual(ordered.context["products"][0].name, self.service.name)
+        self.assertEqual(
+            ordered.context["products"][-1].name,
+            "Specialist quotation only service",
+        )
+
     def test_zero_only_service_search_result_uses_unknown_price(self):
         service = Product.objects.create(
             category=self.laptop.category, kind=Product.KIND_SERVICE,

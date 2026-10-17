@@ -55,6 +55,7 @@ runner availability; run the same gates in an isolated staging environment.
 - [x] Use the cheapest purchasable active configuration for "From" prices and sort/filter consistency; disable unavailable or unquoted options in the selector.
 - [x] Correct search autocomplete so unpriced services say "Request an estimate" instead of UGX 0.
 - [x] Keep service structured offer pricing consistent with paid variants on product pages.
+- [x] Exclude unpriced services from numeric budget filters and available-now listings; sort unknown prices last in both price orders.
 - [x] Cover empty-result recovery, labeled mobile/desktop filter controls and catalogue variations in regression tests.
 - [x] Add accessible numbered pagination and explicitly carry the validated discovery seed in customer page links while leaving canonical URLs seed-free.
 - [x] Preserve generic catalogue query-string category/brand/collection filters when paginating.

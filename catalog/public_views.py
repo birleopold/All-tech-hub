@@ -69,8 +69,24 @@ def _annotate_marketplace_values(queryset):
                     )
                 ),
             ),
-            Min("variants__price", filter=Q(variants__is_active=True)),
-            F("price"),
+            Min(
+                "variants__price",
+                filter=Q(
+                    kind=Product.KIND_PHYSICAL,
+                    variants__is_active=True,
+                ),
+            ),
+            Case(
+                # An unquoted service has no known price. It must not pass
+                # numeric price filters or sort as a UGX 0 offer.
+                When(
+                    kind=Product.KIND_SERVICE,
+                    price__lte=0,
+                    then=Value(None),
+                ),
+                default=F("price"),
+                output_field=_PRICE_FIELD,
+            ),
             output_field=_PRICE_FIELD,
         ),
     )
@@ -78,8 +94,8 @@ def _annotate_marketplace_values(queryset):
 
 def _available_products_query() -> Q:
     return (
-        Q(kind=Product.KIND_SERVICE)
-        | Q(_has_active_variants=True, _has_sellable_variant=True)
+        Q(kind=Product.KIND_SERVICE, _effective_price__gt=0)
+        | Q(kind=Product.KIND_PHYSICAL, _has_active_variants=True, _has_sellable_variant=True)
         | Q(_has_active_variants=False, track_inventory=False)
         | Q(_has_active_variants=False, stock_quantity__gt=0)
     )
@@ -155,7 +171,7 @@ class PublicProductListView(ProductListView):
         },
         "available": {
             "label": "Available now",
-            "description": "Products currently available to order and services ready to book.",
+            "description": "Available products and services with confirmed listed prices.",
             "icon": "bi-check-circle",
         },
         "business": {
@@ -221,8 +237,8 @@ class PublicProductListView(ProductListView):
 
     SORT_OPTIONS = {
         "newest": ("-created_at", "-pk"),
-        "price_low": ("_effective_price", "name", "pk"),
-        "price_high": ("-_effective_price", "name", "pk"),
+        "price_low": (F("_effective_price").asc(nulls_last=True), "name", "pk"),
+        "price_high": (F("_effective_price").desc(nulls_last=True), "name", "pk"),
         "name": ("name", "pk"),
     }
 
