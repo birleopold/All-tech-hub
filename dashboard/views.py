@@ -9,7 +9,7 @@ from dashboard.snapshot import dashboard_snapshot
 from catalog.brand_facets import grouped_brand_rows
 from catalog.models import Product
 from growth.models import ProductGrowthData
-from catalog.quality import catalogue_quality_rows, catalogue_quality_summary
+from catalog.quality import QUALITY_ISSUES, catalogue_quality_rows, catalogue_quality_summary
 from core.mixins import StaffRequiredMixin
 from core.seo_audit import seo_audit_snapshot
 from merchandising.forms import SearchConsoleCSVImportForm
@@ -76,13 +76,28 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
             status = ""
             visible_rows = all_rows
 
+        quality_summary = catalogue_quality_summary(all_rows)
+        issue_counts = {
+            item["code"]: item["count"]
+            for item in quality_summary["issue_counts"]
+        }
+        requested_issue = (self.request.GET.get("issue") or "").strip().lower()
+        known_issue_codes = {issue.code for issue in QUALITY_ISSUES}
+        current_issue = (
+            requested_issue if requested_issue in known_issue_codes else ""
+        )
         issue_options = sorted(
-            catalogue_quality_summary(all_rows)["issue_counts"],
+            [
+                {
+                    "code": issue.code,
+                    "label": issue.label,
+                    "count": issue_counts.get(issue.code, 0),
+                }
+                for issue in QUALITY_ISSUES
+                if issue.code in issue_counts or issue.code == current_issue
+            ],
             key=lambda item: (-item["count"], item["label"]),
         )
-        requested_issue = (self.request.GET.get("issue") or "").strip().lower()
-        issue_codes = {option["code"] for option in issue_options}
-        current_issue = requested_issue if requested_issue in issue_codes else ""
         if current_issue:
             visible_rows = [
                 row for row in visible_rows
@@ -94,7 +109,7 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
         context.update(
             {
                 "quality_rows": page_obj.object_list,
-                "quality_summary": catalogue_quality_summary(all_rows),
+                "quality_summary": quality_summary,
                 "duplicate_brand_groups": duplicate_brands[:8],
                 "duplicate_brand_group_count": len(duplicate_brands),
                 "page_obj": page_obj,

@@ -103,6 +103,26 @@ CATEGORY_COPY_MISSING = CatalogueQualityIssue(
 )
 
 
+# Single authoritative registry of supported quality issue filters.
+# Keep this in sync with evaluate_product_quality below.
+QUALITY_ISSUES = (
+    IMAGE_MISSING,
+    SHORT_COPY_MISSING,
+    DETAIL_COPY_MISSING,
+    SKU_MISSING,
+    BRAND_MISSING,
+    GROWTH_DATA_MISSING,
+    ALT_TEXT_MISSING,
+    INVALID_COMPARE_PRICE,
+    VARIANT_SKU_MISSING,
+    VARIANT_COMPARE_PRICE,
+    VARIANT_STOCK_MISSING,
+    BASE_STOCK_MISSING,
+    SERVICE_DURATION_MISSING,
+    CATEGORY_COPY_MISSING,
+)
+
+
 def _growth_data(product: Product):
     try:
         return product.growth_data

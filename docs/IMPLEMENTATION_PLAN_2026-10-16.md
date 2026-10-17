@@ -16,7 +16,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | Phase | Goal | Acceptance checks | Status |
 |---|---|---|---|
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **In progress** |
-| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | Planned |
+| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **In progress** |
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | Planned |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
@@ -40,6 +40,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 ## P2 initial staff catalogue-governance improvements
 - [x] Reuse existing product-quality issue codes for staff-side direct issue filtering.
 - [x] Make the common-issue counts clickable and retain filters across pages.
+- [x] Preserve the selected issue when a search or other filter has zero matches.
 - [ ] Run staff UI and permission regression tests and verify real screen-size behavior.
 - [ ] Proceed with remaining inventory editing, image handoff and duplicate detection.
 
