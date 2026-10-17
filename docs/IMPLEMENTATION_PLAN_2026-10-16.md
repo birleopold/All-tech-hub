@@ -82,6 +82,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 ## P2 initial staff catalogue-governance improvements
 - [x] Show existing exact-name suggestions and duplicate SKU warnings on the product form, desktop and mobile.
 - [x] Reject newly conflicting product and variant SKUs in server form validation without blocking unrelated legacy edits.
+- [x] Apply the same SKU validation to the separate commercial product review editor, preventing a bypass through another staff screen.
 - [x] Surface variant SKU validation errors beside the relevant fields.
 - [x] Reuse existing product-quality issue codes for staff-side direct issue filtering.
 - [x] Make the common-issue counts clickable and retain filters across pages.

@@ -103,24 +103,6 @@ ProductVariantFormSet = inlineformset_factory(
     formset=ValidatedVariantFormSet,
 )
 
-PRODUCT_STAFF_FIELDS = (
-    "category",
-    "kind",
-    "name",
-    "sku",
-    "short_description",
-    "description",
-    "price",
-    "compare_at_price",
-    "track_inventory",
-    "stock_quantity",
-    "service_duration_hours",
-    "is_published",
-    "is_featured",
-    "image",
-)
-
-
 class InventoryHomeView(StaffRequiredMixin, TemplateView):
     template_name = "inventory/home.html"
 

@@ -21,17 +21,8 @@ def _style_model_form(form):
         widget.attrs["class"] = f"{existing} {css_class}".strip()
 
 
-class ProductStaffForm(forms.ModelForm):
-    """Protect newly assigned SKUs while preserving legacy catalogue editing."""
-
-    class Meta:
-        model = Product
-        fields = (
-            "category", "kind", "name", "sku", "short_description",
-            "description", "price", "compare_at_price", "track_inventory",
-            "stock_quantity", "service_duration_hours", "is_published",
-            "is_featured", "image",
-        )
+class UniqueSkuForNewAssignments:
+    """Shared model-form rule; legacy unchanged identities remain editable."""
 
     def clean_sku(self):
         sku = (self.cleaned_data.get("sku") or "").strip()
@@ -47,7 +38,19 @@ class ProductStaffForm(forms.ModelForm):
         return sku
 
 
-class ProductCommercialCoreForm(forms.ModelForm):
+class ProductStaffForm(UniqueSkuForNewAssignments, forms.ModelForm):
+    """Protect newly assigned SKUs while preserving legacy catalogue editing."""
+
+    class Meta:
+        model = Product
+        fields = (
+            "category", "kind", "name", "sku", "short_description",
+            "description", "price", "compare_at_price", "track_inventory",
+            "stock_quantity", "service_duration_hours", "is_published",
+            "is_featured", "image",
+        )
+
+class ProductCommercialCoreForm(UniqueSkuForNewAssignments, forms.ModelForm):
     """Core public facts reviewed alongside feed and inspection metadata."""
 
     class Meta:
