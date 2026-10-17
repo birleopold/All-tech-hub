@@ -24,7 +24,7 @@ def _rate(numerator: int, denominator: int) -> Decimal:
 
 
 def marketing_attribution_summary(days: int = 30) -> dict:
-    """Report period-matched tracked clicks, leads, attributed orders, and revenue."""
+    """Period-matched clicks, leads and placed-order values, not cash receipts."""
     days = max(1, min(int(days), 365))
     since = timezone.now() - timedelta(days=days)
     orders = Order.objects.filter(placed_at__gte=since).exclude(
@@ -74,6 +74,7 @@ def marketing_attribution_summary(days: int = 30) -> dict:
         "campaigns": campaign_rows,
         "attributed_orders": attributed_count,
         "attributed_revenue": attributed["revenue"] or Decimal("0.00"),
+        "attributed_order_value": attributed["revenue"] or Decimal("0.00"),
         "unattributed_orders": total_orders - attributed_count,
         "attribution_rate": percentage(attributed_count, total_orders),
     }

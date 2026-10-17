@@ -156,7 +156,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Align canonical Merchant Center and multi-format feeds: omit physical listings lacking real images or positive prices; preserve the existing variant-specific price and availability rules.
 - [x] Keep analytics opt-in when local storage is unavailable; resetting consent reloads to stop previously loaded tags before asking again.
 - [x] Add focused social operator tests for selected-channel connection checks, Autopilot-only queue controls and failed-delivery review.
-- [ ] Improve conversion attribution across actual customer journeys.
+- [x] Avoid closing the wrong sales enquiry after an order: match tracked campaign links and avoid ambiguous same-email leads.
+- [x] Label the attribution report's placed-order value separately from cash received, and cover it in regression tests.
+- [ ] Complete remaining channel delivery recovery, consent and conversion handoff.
 - [ ] Add regression coverage and stage Phase 7 code handoff.
 
 ## P6 coding handoff

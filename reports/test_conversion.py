@@ -149,6 +149,7 @@ class ConversionLifecycleReportTests(TestCase):
 
         self.assertEqual(summary["attributed_orders"], 1)
         self.assertEqual(summary["attributed_revenue"], Decimal("500000.00"))
+        self.assertEqual(summary["attributed_order_value"], Decimal("500000.00"))
         self.assertEqual(summary["attribution_rate"], Decimal("100.00"))
         self.assertEqual(summary["channels"][0]["orders"], 1)
         self.assertEqual(summary["channels"][0]["click_to_order_rate"], Decimal("100.00"))

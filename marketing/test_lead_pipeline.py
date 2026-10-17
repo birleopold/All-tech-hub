@@ -94,6 +94,52 @@ class SalesLeadPipelineTests(TestCase):
         self.assertIsNone(lead.next_follow_up_at)
         self.assertTrue(ContactMessage.objects.get().handled)
 
+    def test_tracked_order_does_not_close_other_campaign_lead(self):
+        customer = Customer.objects.create(
+            name="Shared contact", email="link-mismatch@example.com"
+        )
+        other_link = CampaignLink.objects.create(
+            name="Unrelated referral", source="facebook", medium="social",
+            destination_url="https://example.com/",
+        )
+        incoming = CampaignLink.objects.create(
+            name="Actual referral", source="telegram", medium="social",
+            destination_url="https://example.com/",
+        )
+        lead = MarketingLead.objects.create(
+            name="Shared contact", email=customer.email,
+            source="facebook", medium="social", link=other_link,
+        )
+        order = Order.objects.create(
+            customer=customer, reference="ORD-LEAD-LINK-MISMATCH",
+            contact_name=customer.name, contact_email=customer.email,
+            marketing_link=incoming,
+        )
+        self.assertIsNone(close_lead_from_order(order))
+        lead.refresh_from_db()
+        self.assertEqual(lead.status, MarketingLead.STATUS_NEW)
+        self.assertIsNone(lead.won_order_id)
+
+    def test_multiple_same_email_leads_are_not_automatically_linked_to_order(self):
+        customer = Customer.objects.create(
+            name="Ambiguous contact", email="ambiguous-leads@example.com"
+        )
+        first = MarketingLead.objects.create(
+            name="First request", email=customer.email
+        )
+        second = MarketingLead.objects.create(
+            name="Second request", email=customer.email
+        )
+        order = Order.objects.create(
+            customer=customer, reference="ORD-LEAD-AMBIGUOUS",
+            contact_name=customer.name, contact_email=customer.email,
+        )
+        self.assertIsNone(close_lead_from_order(order))
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertIsNone(first.won_order_id)
+        self.assertIsNone(second.won_order_id)
+
     def test_matching_order_marks_lead_won_and_links_order(self):
         self._send_enquiry()
         customer = Customer.objects.create(name="Interested buyer", email="buyer@example.com")

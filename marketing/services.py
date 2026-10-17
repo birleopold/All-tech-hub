@@ -202,8 +202,10 @@ def create_lead_from_contact(request, contact_message, *, product=None) -> Marke
 @transaction.atomic
 def close_lead_from_order(order) -> MarketingLead | None:
     """Close the most relevant open enquiry when its customer completes checkout."""
+    if not (order.contact_email or "").strip():
+        return None
     candidates = MarketingLead.objects.select_for_update().filter(
-        email__iexact=order.contact_email,
+        email__iexact=order.contact_email.strip(),
         status__in=(
             MarketingLead.STATUS_NEW,
             MarketingLead.STATUS_CONTACTED,
@@ -211,13 +213,15 @@ def close_lead_from_order(order) -> MarketingLead | None:
         ),
         won_order__isnull=True,
     ).order_by("-created_at", "-pk")
-    lead = None
     if order.marketing_link_id:
-        lead = candidates.filter(link_id=order.marketing_link_id).first()
-    if lead is None:
-        lead = candidates.first()
-    if lead is None:
+        # Do not close an enquiry from a different campaign link.
+        matches = list(candidates.filter(link_id=order.marketing_link_id)[:2])
+    else:
+        # Email does not disambiguate multiple independent sales enquiries.
+        matches = list(candidates[:2])
+    if len(matches) != 1:
         return None
+    lead = matches[0]
     lead.status = MarketingLead.STATUS_WON
     lead.won_order = order
     fields = ["status", "won_order", "updated_at"]

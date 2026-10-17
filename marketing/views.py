@@ -95,7 +95,7 @@ class MarketingDashboardView(StaffRequiredMixin, TemplateView):
                 ).order_by("-click_count", "-lead_count")[:8],
                 "channel_performance": attribution["channels"],
                 "attributed_orders_30d": attribution["attributed_orders"],
-                "attributed_revenue_30d": attribution["attributed_revenue"],
+                "attributed_revenue_30d": attribution["attributed_order_value"],
                 "attribution_rate_30d": attribution["attribution_rate"],
                 "social_settings": SocialProfileSettings.load(),
                 "feed_csv_url": self.request.build_absolute_uri(
@@ -346,7 +346,7 @@ class MarketReadinessView(StaffRequiredMixin, TemplateView):
                 "whatsapp_audience": whatsapp_audience,
                 "whatsapp_campaigns": whatsapp_campaigns,
                 "attributed_orders_30d": attribution["attributed_orders"],
-                "attributed_revenue_30d": attribution["attributed_revenue"],
+                "attributed_revenue_30d": attribution["attributed_order_value"],
                 "attribution_rate_30d": attribution["attribution_rate"],
                 "best_marketing_channel": (
                     attribution["channels"][0] if attribution["channels"] else None
