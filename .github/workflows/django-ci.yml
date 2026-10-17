@@ -93,6 +93,7 @@ jobs:
           reports.test_conversion
           reports.test_retention
           portal.test_warranties
+          portal.test_service_hub
           core.test_foundation
           core.test_api_experience
           core.test_phase1_security
@@ -255,5 +256,6 @@ jobs:
           reports.test_retention
           catalog.test_experience
           portal.test_warranties
+          portal.test_service_hub
           core.test_foundation
           core.test_api_experience

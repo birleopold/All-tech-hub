@@ -18,14 +18,14 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **Code implemented — verification deferred** |
 | P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Code implemented — verification deferred** |
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Code implemented — verification deferred** |
-| P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Implementation in progress** |
-| P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
+| P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Code implemented — verification deferred** |
+| P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | **Next coding phase** |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
 | P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active coding phase: P4.** P1–P3 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Next coding phase: P5.** P1–P4 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -100,7 +100,18 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Display recent customer-visible order, repair, invoice and support activity on the account overview, with privacy-safe links, clear dates and an empty state.
 - [x] Add support-request search by ticket, repair, order or invoice, status/category filters, linked references, honest empty states and mobile-friendly pagination.
 - [x] Add regression tests covering job/invoice contextual help, account isolation, forged IDs, staff form ownership, and filtering internal customer messages.
-- [ ] Final code-stage review of portal navigation, support workflow and cross-page access; integrated Django/browser tests deferred.
+- [x] Include the customer-service-hub regression module in both existing Django CI test jobs.
+- [x] Code-stage linked support, recent activity, navigation, search, secure document links and customer-ownership checks.
+- [ ] Run Django migration checks, portal tests, permission scans, keyboard/mobile UI and production email verification during final integration; not certified.
+
+## P4 coding handoff
+Existing `crm.Customer` continues to own the portal data; no shadow CRM or
+messaging database was introduced. A support ticket can attach to a customer-owned
+order, repair, invoice, device or product, and both customers and staff can open
+the linked records. The overview merges customer-visible events without showing
+private staff notes; support requests are searchable/filterable with pagination.
+Formal migrations, full tests, browser/mobile and SMTP checks are intentionally
+deferred and are not certified as successful.
 
 ## P3 coding handoff
 Coding coverage is in `commerce/views.py`, `commerce/forms.py`,

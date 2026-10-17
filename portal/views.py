@@ -620,7 +620,7 @@ class PortalTicketCreateView(FormView):
         ticket.save()
         messages.success(
             self.request,
-            f"Support request {ticket.reference} submitted. We will respond by email.",
+            f"Support request {ticket.reference} submitted. Follow replies under Support in your account.",
         )
         return redirect("portal_tickets")
 

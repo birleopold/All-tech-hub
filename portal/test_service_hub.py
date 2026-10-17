@@ -129,12 +129,16 @@ class CustomerServiceHubTests(TestCase):
         self.assertFalse(SupportTicket.objects.filter(customer=self.customer).exists())
 
     def test_document_order_mismatch_is_rejected(self):
+        second_order = Order.objects.create(
+            reference="ORD-SERVICE-SECOND-A", customer=self.customer,
+            contact_name=self.customer.name, contact_email=self.customer.email,
+        )
         form = PortalSupportTicketForm(
-            data=self._data(related_order=str(self.other_order.pk)),
+            data=self._data(related_order=str(second_order.pk)),
             customer=self.customer,
         )
         self.assertFalse(form.is_valid())
-        self.assertIn("related_order", form.errors)
+        self.assertIn("related_document", form.errors)
 
     def test_model_and_staff_editor_reject_cross_customer_links(self):
         ticket = SupportTicket(
@@ -203,6 +207,43 @@ class CustomerServiceHubTests(TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, "Recent updates")
         self.assertNotContains(page, "INV-SERVICE-B")
+
+    def test_support_search_status_and_empty_states_preserve_customer_scope(self):
+        SupportTicket.objects.create(
+            customer=self.customer, subject="Invoice assistance",
+            description="Explain the amount", category=SupportTicket.CATEGORY_BILLING,
+            status=SupportTicket.STATUS_OPEN, related_document=self.invoice,
+        )
+        SupportTicket.objects.create(
+            customer=self.customer, subject="Repair progress",
+            description="What next?", category=SupportTicket.CATEGORY_GENERAL,
+            status=SupportTicket.STATUS_RESOLVED, related_job=self.job,
+        )
+        SupportTicket.objects.create(
+            customer=self.other_customer, subject="Private invoice",
+            description="Not ours", related_document=self.other_invoice,
+        )
+        invoices = self.client.get(
+            reverse("portal_tickets"),
+            {"q": self.invoice.number, "status": SupportTicket.STATUS_OPEN},
+        )
+        self.assertEqual(invoices.status_code, 200)
+        self.assertEqual(invoices.context["paginator"].count, 1)
+        self.assertContains(invoices, "Invoice assistance")
+        self.assertNotContains(invoices, "Repair progress")
+        self.assertNotContains(invoices, "Private invoice")
+
+        resolved = self.client.get(
+            reverse("portal_tickets"), {"status": SupportTicket.STATUS_RESOLVED}
+        )
+        self.assertEqual(resolved.context["paginator"].count, 1)
+        self.assertContains(resolved, "Repair progress")
+        empty = self.client.get(
+            reverse("portal_tickets"), {"q": "No matching request anywhere"}
+        )
+        self.assertEqual(empty.status_code, 200)
+        self.assertContains(empty, "No matching requests")
+        self.assertContains(empty, "Show all requests")
 
     def test_anonymous_visitors_do_not_receive_activity(self):
         self.client.logout()
