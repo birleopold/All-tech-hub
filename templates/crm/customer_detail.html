@@ -12,6 +12,9 @@
     <div class="staff-detail-actions">
       <a class="btn btn-outline-secondary" href="{% url 'staff_customers' %}">All customers</a>
       {% if perms.crm.change_customer %}<a class="btn btn-primary" href="{% url 'staff_customer_edit' customer.pk %}">Edit customer</a>{% endif %}
+      {% if perms.billing.add_commercialdocument %}<a class="btn btn-outline-primary" href="{% url 'staff_document_create' %}?customer={{ customer.pk }}">New quote or invoice</a>{% endif %}
+      {% if perms.operations.add_jobcard %}<a class="btn btn-outline-primary" href="{% url 'staff_job_create' %}?customer={{ customer.pk }}">New repair job</a>{% endif %}
+      {% if perms.core.add_supportticket %}<a class="btn btn-outline-secondary" href="{% url 'staff_ticket_create' %}?customer={{ customer.pk }}">New support ticket</a>{% endif %}
     </div>
   </header>
   <div class="row g-3 mb-4">

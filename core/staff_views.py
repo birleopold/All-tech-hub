@@ -93,7 +93,7 @@ class StaffGlobalSearchView(StaffRequiredMixin, View):
     template_name = "core/staff_search.html"
 
     def get(self, request):
-        q = (request.GET.get("q") or "").strip()
+        q = (request.GET.get("q") or "").strip()[:120]
         results = {}
         if q:
             from billing.models import CommercialDocument
@@ -101,6 +101,30 @@ class StaffGlobalSearchView(StaffRequiredMixin, View):
             from commerce.models import Order
             from crm.models import Customer
             from operations.models import JobCard
+            from marketing.models import MarketingLead
+
+            if request.user.has_perm("marketing.view_marketinglead"):
+                results["leads"] = MarketingLead.objects.select_related(
+                    "assigned_to", "product", "quoted_document", "won_order"
+                ).filter(
+                    Q(name__icontains=q)
+                    | Q(email__icontains=q)
+                    | Q(phone__icontains=q)
+                    | Q(source__icontains=q)
+                    | Q(product__name__icontains=q)
+                    | Q(quoted_document__number__icontains=q)
+                    | Q(won_order__reference__icontains=q)
+                ).order_by("-updated_at", "-pk")[:8]
+            if request.user.has_perm("core.view_contactmessage"):
+                results["enquiries"] = ContactMessage.objects.select_related(
+                    "product"
+                ).filter(
+                    Q(name__icontains=q)
+                    | Q(email__icontains=q)
+                    | Q(phone__icontains=q)
+                    | Q(subject__icontains=q)
+                    | Q(product__name__icontains=q)
+                ).order_by("handled", "-created_at", "-pk")[:8]
 
             if request.user.has_perm("crm.view_customer"):
                 results["customers"] = Customer.objects.filter(

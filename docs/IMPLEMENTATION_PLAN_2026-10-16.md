@@ -19,13 +19,13 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Code implemented — verification deferred** |
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Code implemented — verification deferred** |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Code implemented — verification deferred** |
-| P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | **Next coding phase** |
+| P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | **Implementation in progress** |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
 | P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Next coding phase: P5.** P1–P4 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Active coding phase: P5.** P1–P4 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -103,6 +103,13 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Include the customer-service-hub regression module in both existing Django CI test jobs.
 - [x] Code-stage linked support, recent activity, navigation, search, secure document links and customer-ownership checks.
 - [ ] Run Django migration checks, portal tests, permission scans, keyboard/mobile UI and production email verification during final integration; not certified.
+
+## P5 staff command centre and CRM implementation
+- [x] Extend permission-aware global search to leads, incoming enquiries, invoices and linked order references.
+- [x] Include repair and support activity alongside orders, quotes, leads and enquiries in existing CRM timeline.
+- [ ] Wire prefilled customer actions through the existing quote, repair and support creation forms.
+- [ ] Add personal priority queues, actionable KPI destinations and role-relevant dashboard actions.
+- [ ] Complete Phase 5 regression coverage and code handoff; integrated testing deferred.
 
 ## P4 coding handoff
 Existing `crm.Customer` continues to own the portal data; no shadow CRM or

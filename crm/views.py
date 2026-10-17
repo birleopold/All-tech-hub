@@ -116,6 +116,20 @@ class CustomerDetailView(StaffRequiredMixin, DetailView):
             timeline.append({"kind": "Order", "label": order.reference, "occurred_at": order.placed_at, "status": order.get_status_display(), "url": reverse("staff_order_detail", args=[order.pk])})
         for document in customer.documents.all()[:8] if can_documents else []:
             timeline.append({"kind": document.get_doc_type_display(), "label": document.number, "occurred_at": document.created_at, "status": document.get_status_display(), "url": reverse("staff_document_view", args=[document.pk])})
+        for job in customer.job_cards.all()[:8] if can_jobs else []:
+            timeline.append({
+                "kind": "Repair", "label": job.number,
+                "occurred_at": job.received_on,
+                "status": job.get_status_display(),
+                "url": reverse("staff_job_detail", args=[job.pk]),
+            })
+        for ticket in customer.support_tickets.all()[:8] if can_tickets else []:
+            timeline.append({
+                "kind": "Support", "label": ticket.reference,
+                "occurred_at": ticket.updated_at,
+                "status": ticket.get_status_display(),
+                "url": reverse("staff_ticket_detail", args=[ticket.pk]),
+            })
         for lead in enquiries:
             timeline.append({"kind": "Product enquiry", "label": lead.product.name if lead.product_id else lead.name, "occurred_at": lead.created_at, "status": lead.get_status_display(), "url": reverse("staff_marketing_lead_edit", args=[lead.pk])})
         for contact in messages_received:
