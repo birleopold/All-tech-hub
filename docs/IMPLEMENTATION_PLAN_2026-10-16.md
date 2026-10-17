@@ -154,7 +154,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Make Publish Now feedback truthful: worker queued, not a guaranteed platform publication time.
 - [ ] Strengthen manual override controls without duplicating delivery jobs or silently enabling unselected channels.
 - [x] Align canonical Merchant Center and multi-format feeds: omit physical listings lacking real images or positive prices; preserve the existing variant-specific price and availability rules.
-- [ ] Improve consent and attribution to actual customer journeys.
+- [x] Keep analytics opt-in when local storage is unavailable; resetting consent reloads to stop previously loaded tags before asking again.
+- [x] Add focused social operator tests for selected-channel connection checks, Autopilot-only queue controls and failed-delivery review.
+- [ ] Improve conversion attribution across actual customer journeys.
 - [ ] Add regression coverage and stage Phase 7 code handoff.
 
 ## P6 coding handoff
