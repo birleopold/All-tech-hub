@@ -36,6 +36,8 @@ jobs:
           node --check static/js/alltech_ui.js
           node --check static/js/pwa.js
           node --check static/js/marketing_analytics.js
+          node --check static/js/marketplace_experience.js
+          node --check static/js/mobile_commerce_pro.js
 
       - name: Check migration drift
         run: python manage.py makemigrations --check --dry-run
@@ -74,6 +76,9 @@ jobs:
           catalog.test_responsive_images
           catalog.test_experience
           catalog.test_product_ordering
+          catalog.test_brand_facet_quality
+          catalog.test_available_variant_price
+          catalog.test_catalogue_journey_refinement
           core.test_homepage_engagement
           core.test_home_tech_ambient
           core.test_product_contact_experience

@@ -42,6 +42,9 @@ creation, with no runner allocated (runner_id=0 and no steps). Earlier runs
 also had real lint/test failures. This is *not* evidence that the latest
 tests passed or failed in Python. Check Actions account/billing and hosted
 runner availability; run the same gates in an isolated staging environment.
+The GitHub-connected editing environment cannot start or inspect the Ubuntu
+production process or create a complete isolated copy of this private repo.
+Never deploy these changes on a live sales site as a substitute for testing.
 
 ## P1 work package (first implementation)
 - [x] Share one canonical display grouping for customer brand filters, search suggestions, homepage brand collections and category/brand SEO pages without changing stored brand values.
@@ -50,6 +53,7 @@ runner availability; run the same gates in an isolated staging environment.
 - [x] Add regression tests for brand grouping, filters, canonical brand route, staff warning and priced/unpriced services.
 - [ ] Execute focused Django tests and full regression suite in the production-like runtime (GitHub-hosted runner currently unavailable).
 - [ ] Confirm GitHub Actions runners start and report real step logs; repair baseline lint and test failures.
+- [x] Wire the new Phase 1 regression modules and catalogue/mobile JavaScript syntax checks into the existing Django CI workflow.
 - [ ] Verify real small-screen and keyboard use of filters, cards and service pages.
 - [x] Add clear sellability/status labels to catalogue cards without inventing exact stock promises.
 - [x] Use the cheapest purchasable active configuration for "From" prices and sort/filter consistency; disable unavailable or unquoted options in the selector.
