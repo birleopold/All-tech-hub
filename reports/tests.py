@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -29,6 +29,14 @@ class ReportAccessTests(TestCase):
 
     def test_phase_three_exports_are_csv(self):
         user = User.objects.create_user("report-exporter", password="pw", is_staff=True)
+        user.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="billing", codename="view_document_margin"
+            ),
+            Permission.objects.get(
+                content_type__app_label="billing", codename="view_documentpayment"
+            ),
+        )
         self.client.force_login(user)
         names = [
             "staff_export_stock_velocity_csv",
@@ -82,6 +90,11 @@ class ReportAccessTests(TestCase):
             amount=Decimal("20.00"),
             method=DocumentPayment.METHOD_MOBILE_MONEY,
             recorded_by=user,
+        )
+        user.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="billing", codename="view_document_margin"
+            )
         )
         self.client.force_login(user)
         response = self.client.get(reverse("staff_reports"))

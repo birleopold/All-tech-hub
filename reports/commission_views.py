@@ -65,8 +65,38 @@ def payable_lines(start_date=None, end_date=None):
 
 
 class ReportsHomeView(views.ReportsHomeView):
+    def get_template_names(self):
+        if not self.request.user.has_perm("billing.view_document_margin"):
+            return ["reports/operations_home.html"]
+        return super().get_template_names()
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx["can_view_financial_reports"] = self.request.user.has_perm(
+            "billing.view_document_margin"
+        )
+        ctx["can_view_jobs"] = self.request.user.has_perm(
+            "operations.view_jobcard"
+        )
+        ctx["can_view_orders"] = self.request.user.has_perm(
+            "commerce.view_order"
+        )
+        ctx["can_view_stock"] = self.request.user.has_perm(
+            "catalog.view_product"
+        )
+        if not ctx["can_view_financial_reports"]:
+            # Never pass cost and profitability details to the operational
+            # staff template (not even through context variables).
+            for key in (
+                "document_margin_30", "external_item_margin_30",
+                "top_margin_lines_30", "partner_payables_30",
+                "partner_payables_total_30", "top_customers_90",
+                "payment_exceptions", "invoice_aging",
+                "document_sales_today", "cash_received_today",
+                "discount_leakage_30", "document_sequence_gaps",
+            ):
+                ctx.pop(key, None)
+            return ctx
         today = timezone.localdate()
         start_30 = today - timedelta(days=30)
         today_documents = recognized_documents(start_date=today, end_date=today)
@@ -168,7 +198,10 @@ class ReportsHomeView(views.ReportsHomeView):
 
 
 def staff_export_documents_csv(request):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.view_document_margin")
+    ):
         raise Http404
     documents = CommercialDocument.objects.select_related(
         "customer", "salesperson"
@@ -231,7 +264,10 @@ def staff_export_documents_csv(request):
 
 
 def staff_export_customer_value_csv(request):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.view_document_margin")
+    ):
         raise Http404
     start_90 = timezone.localdate() - timedelta(days=90)
     response = HttpResponse(content_type="text/csv; charset=utf-8")
@@ -252,7 +288,10 @@ def staff_export_customer_value_csv(request):
 
 
 def staff_export_margin_lines_csv(request):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.view_document_margin")
+    ):
         raise Http404
     start_30 = timezone.localdate() - timedelta(days=30)
     response = HttpResponse(content_type="text/csv; charset=utf-8")
@@ -289,7 +328,10 @@ def staff_export_margin_lines_csv(request):
 
 
 def staff_export_partner_payables_csv(request):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.view_document_margin")
+    ):
         raise Http404
     start_30 = timezone.localdate() - timedelta(days=30)
     response = HttpResponse(content_type="text/csv; charset=utf-8")

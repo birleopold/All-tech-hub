@@ -236,7 +236,10 @@ def staff_export_stock_velocity_csv(request):
 
 
 def staff_export_payment_exceptions_csv(request):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.view_documentpayment")
+    ):
         raise Http404
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="payment_exceptions.csv"'

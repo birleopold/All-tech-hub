@@ -136,6 +136,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Keep existing historical refunds untouched during migration (nullable unique idempotency key), avoiding destructive cleanup or failed constraints on legacy duplicates.
 - [x] Ensure repeat reconciliation does not rewrite history; clarify that recording an adjustment is not proof of actual money disbursement.
 - [x] Expose the job cost ledger read-only in Django admin, without editable historical transactions.
+- [x] Separate operational reports from sensitive cost, profit and partner-payable reports by the existing billing margin permission.
+- [x] Restrict sensitive reports CSV exports to finance permissions, including payment reconciliation exceptions.
 - [ ] Continue with field/financial margin reporting and approval integration.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 

@@ -1,0 +1,46 @@
+{% extends "staff_base.html" %}
+{% block title %}Operations reports{% endblock %}
+{% block staff_page_name %}Operations reports{% endblock %}
+{% block staff_content %}
+<section class="staff-page">
+  <header class="staff-page-header"><div>
+    <p class="staff-page-eyebrow">Work overview</p>
+    <h1>Operations reports</h1>
+    <p>Current orders, repairs and stock. Financial profit and cost details
+    are available only to authorised finance staff.</p>
+  </div></header>
+  <div class="row g-3 mb-4">
+    {% if can_view_orders %}
+    <div class="col-md-6"><article class="card border-0 shadow-sm h-100">
+      <div class="card-body"><h2 class="h5">Order fulfilment</h2>
+      <p><strong>{{ unfulfilled_orders }}</strong> active orders awaiting completion</p>
+      <div class="d-flex gap-2 flex-wrap mb-3">
+        {% for item in fulfillment_counts %}
+        <span class="badge text-bg-light">{{ item.label }}: {{ item.count }}</span>
+        {% endfor %}
+      </div>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_orders' %}">Open orders</a>
+      </div></article></div>
+    {% endif %}
+    {% if can_view_jobs %}
+    <div class="col-md-6"><article class="card border-0 shadow-sm h-100">
+      <div class="card-body"><h2 class="h5">Repair progress</h2>
+      <p><strong>{{ sla_summary.open_jobs }}</strong> open jobs and
+      <strong>{{ sla_summary.overdue_jobs }}</strong> overdue jobs</p>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_jobs' %}">Open jobs</a>
+      </div></article></div>
+    {% endif %}
+    {% if can_view_stock %}
+    <div class="col-md-6"><article class="card border-0 shadow-sm h-100">
+      <div class="card-body"><h2 class="h5">Stock alerts</h2>
+      <p><strong>{{ low_stock_count }}</strong> products near reorder level</p>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_products' %}?low=1">Check products</a>
+      </div></article></div>
+    {% endif %}
+  </div>
+  {% if not can_view_orders and not can_view_jobs and not can_view_stock %}
+  <p class="text-muted">Your staff role has no operational report areas assigned.
+  Contact your administrator for the correct access.</p>
+  {% endif %}
+</section>
+{% endblock %}
