@@ -67,6 +67,7 @@ jobs:
           growth.test_growth
           growth.test_ambassador_payouts
           marketing.test_automation
+          marketing.test_social_manual_confirm
           marketing.test_integrations
           marketing.test_lead_pipeline
           customer_campaigns

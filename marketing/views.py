@@ -8,12 +8,14 @@ from qrcode.image.svg import SvgPathImage
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
+from django.db import transaction
 from django.db.models import Count, F, Q, Sum
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, ListView, TemplateView, UpdateView
 
 from catalog.models import Product, ProductReview
@@ -794,17 +796,16 @@ def mark_post_published(request, pk):
 
     now = timezone.now()
     if plan:
-        deliveries = plan.deliveries.select_for_update().filter(
-            channel=post.channels[0]
+        delivery, _ = PostChannelDelivery.objects.select_for_update().get_or_create(
+            plan=plan, post=post, channel=post.channels[0],
         )
-        for delivery in deliveries:
-            delivery.status = PostChannelDelivery.STATUS_PUBLISHED
-            delivery.method = PostChannelDelivery.METHOD_MANUAL
-            delivery.published_at = now
-            delivery.last_error = ""
-            delivery.save(update_fields=[
-                "status", "method", "published_at", "last_error", "updated_at"
-            ])
+        delivery.status = PostChannelDelivery.STATUS_PUBLISHED
+        delivery.method = PostChannelDelivery.METHOD_MANUAL
+        delivery.published_at = now
+        delivery.last_error = ""
+        delivery.save(update_fields=[
+            "status", "method", "published_at", "last_error", "updated_at"
+        ])
     post.status = ScheduledPost.STATUS_PUBLISHED
     post.published_at = now
     post.save(update_fields=["status", "published_at", "updated_at"])

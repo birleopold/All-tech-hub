@@ -159,7 +159,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Add focused social operator tests for selected-channel connection checks, Autopilot-only queue controls and failed-delivery review.
 - [x] Avoid closing the wrong sales enquiry after an order: match tracked campaign links and avoid ambiguous same-email leads.
 - [x] Label the attribution report's placed-order value separately from cash received, and cover it in regression tests.
-- [ ] Complete remaining channel delivery recovery, consent and conversion handoff.
+- [x] Keep failed external-post outcomes in the manual review queue; prohibit blind worker replay while making confirmed manual status consistent with channel delivery records.
+- [x] Test the manual override end-to-end, including permission checks, multi-channel rejection and duplicate prevention.
+- [ ] Complete conversion and consent handoff with documentation and full Phase 7 regression suite.
 - [ ] Add regression coverage and stage Phase 7 code handoff.
 
 ## P6 coding handoff
