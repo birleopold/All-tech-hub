@@ -194,6 +194,22 @@ class SocialAutopilotTests(TestCase):
         self.assertEqual(job.status, AutomationJob.STATUS_QUEUED)
         self.assertEqual(job.next_attempt_at, publish_now)
 
+    def test_publish_now_rejects_channel_removed_from_selected_accounts(self):
+        self.settings.channels = ["telegram"]
+        self.settings.save(update_fields=["channels", "updated_at"])
+        calendar_now = timezone.make_aware(datetime(2026, 8, 26, 8, 0))
+        generate_autopilot_calendar(now=calendar_now)
+        post = ScheduledPost.objects.get()
+        self.settings.channels = ["facebook"]
+        self.settings.save(update_fields=["channels", "updated_at"])
+        result = publish_autopilot_post_now(
+            post, now=calendar_now + timedelta(minutes=15)
+        )
+        self.assertIn("error", result)
+        self.assertFalse(AutomationJob.objects.exists())
+        post.refresh_from_db()
+        self.assertEqual(post.status, ScheduledPost.STATUS_SCHEDULED)
+
     def test_publish_now_does_not_bypass_controlled_review(self):
         self.settings.mode = SocialAutopilotSettings.MODE_CONTROLLED
         self.settings.channels = ["telegram"]

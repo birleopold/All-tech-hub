@@ -152,7 +152,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Restrict Autopilot queue controls to Autopilot and priority posts, rather than unrelated marketing content.
 - [x] Show recent failed/manual channel deliveries with the original error and review links; keep uncertain external posts blocked from automatic replay.
 - [x] Make Publish Now feedback truthful: worker queued, not a guaranteed platform publication time.
-- [ ] Strengthen manual override controls without duplicating delivery jobs or silently enabling unselected channels.
+- [x] Reject Publish Now for unselected channels or unrelated manually created posts, preserving queued-worker idempotency.
+- [x] Require explicit, permission-controlled, single-channel manual publication confirmation and block marking active automatic deliveries as published.
 - [x] Align canonical Merchant Center and multi-format feeds: omit physical listings lacking real images or positive prices; preserve the existing variant-specific price and availability rules.
 - [x] Keep analytics opt-in when local storage is unavailable; resetting consent reloads to stop previously loaded tags before asking again.
 - [x] Add focused social operator tests for selected-channel connection checks, Autopilot-only queue controls and failed-delivery review.

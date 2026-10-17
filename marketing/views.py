@@ -767,14 +767,56 @@ def _staff(user):
 
 
 @user_passes_test(_staff)
+@require_POST
+@transaction.atomic
 def mark_post_published(request, pk):
-    if request.method != "POST":
+    if not request.user.has_perm("marketing.change_scheduledpost"):
+        raise Http404
+    post = get_object_or_404(ScheduledPost.objects.select_for_update(), pk=pk)
+    from automation.models import PostAutomationPlan, PostChannelDelivery
+    from automation.services import update_plan_status
+
+    plan = PostAutomationPlan.objects.select_for_update().filter(post=post).first()
+    if (
+        post.status in (ScheduledPost.STATUS_PUBLISHED, ScheduledPost.STATUS_CANCELLED)
+        or (plan is not None and plan.mode == PostAutomationPlan.MODE_AUTOMATIC)
+        or len(post.channels or []) != 1
+    ):
+        messages.error(
+            request,
+            "Only an unpublished, single-channel manual post can be confirmed here. "
+            "Review automatic deliveries in Automation Control.",
+        )
         return redirect("staff_marketing_posts")
-    post = get_object_or_404(ScheduledPost, pk=pk)
+    if request.POST.get("confirm_posted") != "yes":
+        messages.error(request, "Confirm the content was published on the channel first.")
+        return redirect("staff_marketing_posts")
+
+    now = timezone.now()
+    if plan:
+        deliveries = plan.deliveries.select_for_update().filter(
+            channel=post.channels[0]
+        )
+        for delivery in deliveries:
+            delivery.status = PostChannelDelivery.STATUS_PUBLISHED
+            delivery.method = PostChannelDelivery.METHOD_MANUAL
+            delivery.published_at = now
+            delivery.last_error = ""
+            delivery.save(update_fields=[
+                "status", "method", "published_at", "last_error", "updated_at"
+            ])
     post.status = ScheduledPost.STATUS_PUBLISHED
-    post.published_at = timezone.now()
+    post.published_at = now
     post.save(update_fields=["status", "published_at", "updated_at"])
-    messages.success(request, "Post marked as published.")
+    if plan:
+        update_plan_status(plan)
+    from core.audit import log_audit_event
+    log_audit_event(
+        actor=request.user, verb="marketing.post_confirmed_manual",
+        summary=f"Manually confirmed post #{post.pk} on {post.channels[0]}",
+        target=post,
+    )
+    messages.success(request, "Manual publication recorded for the selected channel.")
     return redirect("staff_marketing_posts")
 
 

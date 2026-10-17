@@ -41,7 +41,7 @@
         </td>
         <td class="small">{{ item.scheduled_for|date:"Y-m-d H:i"|default:"—" }}</td>
         <td>{% if plan %}<span class="badge text-bg-light">{{ plan.get_mode_display }}</span><div class="small mt-1">{{ plan.get_status_display }}</div>{% if plan.last_error %}<div class="small text-danger" title="{{ plan.last_error }}">{{ plan.last_error|truncatewords:10 }}</div>{% endif %}{% else %}<span class="badge text-bg-light">Manual</span><div class="small mt-1">{{ item.get_status_display }}</div>{% endif %}</td>
-        <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_post_edit' item.pk %}">Edit</a>{% if item.status != 'published' %} <form method="post" action="{% url 'staff_marketing_post_published' item.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-outline-success" type="submit">Published manually</button></form>{% endif %}</td>
+        <td class="text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{% url 'staff_marketing_post_edit' item.pk %}">Edit</a>{% if item.status != 'published' and item.status != 'cancelled' and item.channels|length == 1 and plan.mode != 'automatic' and perms.marketing.change_scheduledpost %} <form method="post" action="{% url 'staff_marketing_post_published' item.pk %}" class="d-inline" onsubmit="return confirm('Confirm you personally verified this post is live on the selected channel?');">{% csrf_token %}<input type="hidden" name="confirm_posted" value="yes"><button class="btn btn-sm btn-outline-success" type="submit">Confirm manually published</button></form>{% endif %}</td>
       </tr>
       {% endwith %}
       {% empty %}<tr><td colspan="5" class="text-muted">No scheduled posts yet.</td></tr>{% endfor %}

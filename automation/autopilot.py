@@ -492,6 +492,17 @@ def publish_autopilot_post_now(post: ScheduledPost, *, actor=None, now=None) -> 
             "queued": 0,
             "error": "Turn on Full autopilot before publishing an item immediately.",
         }
+    if not (
+        post.notes.startswith(AUTOPILOT_MARKER)
+        or post.notes.startswith("[social-priority]")
+    ):
+        return {"queued": 0, "error": "Only Autopilot posts can use Publish Now."}
+    selected = set(settings_row.channels or [])
+    if len(post.channels or []) != 1 or post.channels[0] not in selected:
+        return {
+            "queued": 0,
+            "error": "This post no longer matches a selected publishing channel. Review its schedule.",
+        }
 
     original_time = post.scheduled_for
     post.scheduled_for = now
