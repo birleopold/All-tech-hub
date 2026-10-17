@@ -1,5 +1,6 @@
 from django import forms
 
+from commerce.fulfillment import allowed_order_transitions
 from commerce.models import Order, Shipment
 
 
@@ -13,6 +14,17 @@ class OrderStatusForm(forms.Form):
         max_length=255,
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
+
+    def __init__(self, *args, order=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if order is not None:
+            allowed = allowed_order_transitions(order)
+            self.fields["status"].choices = [
+                (value, label)
+                for value, label in Order.STATUS_CHOICES
+                if value in allowed
+            ]
+
 
 
 class ShipmentForm(forms.ModelForm):
