@@ -54,13 +54,17 @@
       {% if order.marketing_source %}<article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Marketing attribution</h2><p>The verified tracked link that generated this order</p></div><i class="bi bi-graph-up-arrow text-primary" aria-hidden="true"></i></header><div class="staff-section-card-body"><div class="staff-info-grid"><div class="staff-info-item"><small>Channel</small><strong>{{ order.marketing_source }}</strong></div><div class="staff-info-item"><small>Medium</small><strong>{{ order.marketing_medium|default:"—" }}</strong></div><div class="staff-info-item"><small>Campaign</small><strong>{{ order.marketing_campaign|default:"—" }}</strong></div><div class="staff-info-item"><small>Tracked click</small><strong>{{ order.marketing_attributed_at|date:"M j, Y H:i"|default:"—" }}</strong></div></div>{% if order.marketing_link %}<a class="btn btn-sm btn-outline-primary mt-3" href="{% url 'staff_marketing_link_edit' order.marketing_link.pk %}">Open tracked link</a>{% endif %}</div></article>{% endif %}
       <article class="staff-section-card">
         <header class="staff-section-card-header"><div><h2>Advance order status</h2><p>Move the order through its fulfilment workflow</p></div><i class="bi bi-arrow-repeat text-muted" aria-hidden="true"></i></header>
+        {% if available_transitions %}
         <div class="staff-section-card-body"><form method="post" action="{% url 'staff_order_transition' order.pk %}">{% csrf_token %}{% for field in status_form %}<div class="mb-3"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<button class="btn btn-primary w-100" type="submit">Update order status</button></form></div>
+        {% else %}<div class="staff-section-card-body"><p class="text-muted mb-0">This order has reached its final status. No further status changes are available.</p></div>{% endif %}
       </article>
 
+      {% if order.fulfillment_type == 'delivery' and order.status != 'cancelled' %}
       <article class="staff-section-card">
         <header class="staff-section-card-header"><div><h2>Shipment tracking</h2><p>Carrier, tracking number and delivery progress</p></div><i class="bi bi-truck text-muted" aria-hidden="true"></i></header>
         <div class="staff-section-card-body"><form method="post" action="{% url 'staff_order_shipment' order.pk %}" class="row g-2">{% csrf_token %}{% for field in shipment_form %}<div class="col-12"><label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field.errors }}{{ field }}</div>{% endfor %}<div class="col-12"><button class="btn btn-outline-primary w-100" type="submit">Save shipment details</button></div></form></div>
       </article>
+      {% endif %}
 
       <article class="staff-section-card">
         <header class="staff-section-card-header"><div><h2>Stock reservation</h2><p>Inventory commitment for this order</p></div>{% if reservation %}<span class="staff-status-pill staff-status-pill--{% if reservation.status == 'committed' %}success{% elif reservation.status == 'reserved' %}warning{% else %}neutral{% endif %}">{{ reservation.get_status_display }}</span>{% endif %}</header>
