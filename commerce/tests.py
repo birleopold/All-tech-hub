@@ -435,6 +435,48 @@ class CouponTests(TestCase):
 
 
 class CustomerReturnTests(TestCase):
+    def test_service_line_cannot_be_returned_into_stock(self):
+        from django.contrib.auth.models import User
+
+        category = Category.objects.create(
+            name="Service returns", slug="service-returns-prohibited"
+        )
+        service = Product.objects.create(
+            category=category, name="Network installation",
+            slug="network-installation-return-protection",
+            kind=Product.KIND_SERVICE, price=Decimal("50000"),
+            track_inventory=False,
+        )
+        customer = Customer.objects.create(
+            name="Service buyer", email="servicebuyer-return@example.com"
+        )
+        order = Order.objects.create(
+            reference="ORD-SERVICE-RETURN",
+            customer=customer, contact_name=customer.name,
+            contact_email=customer.email, status=Order.STATUS_FULFILLED,
+        )
+        line = order.lines.create(
+            product=service, description=service.name,
+            quantity=1, unit_price=service.price,
+        )
+        staff = User.objects.create_user(
+            "service-return-staff", password="pw", is_staff=True
+        )
+        self.client.force_login(staff)
+        response = self.client.post(
+            reverse("staff_order_return", args=[order.pk]),
+            {
+                "order_line": line.pk,
+                "quantity": 1,
+                "reason": "Customer unhappy",
+                "disposition": CustomerReturn.DISPOSITION_RESTOCK,
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(CustomerReturn.objects.filter(order_line=line).exists())
+        detail = self.client.get(reverse("staff_order_detail", args=[order.pk]))
+        self.assertFalse(detail.context["can_record_inventory_return"])
+
     def test_return_before_fulfillment_is_blocked_without_stock_change(self):
         from django.contrib.auth.models import User
 

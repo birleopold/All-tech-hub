@@ -17,15 +17,15 @@ Scope: customer storefront, staff operations, admin configuration, production re
 |---|---|---|---|
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **Code implemented — verification deferred** |
 | P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Code implemented — verification deferred** |
-| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Implementation in progress** |
-| P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
+| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Code implemented — verification deferred** |
+| P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Next coding phase** |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
 | P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active coding phase: P3.** P1 and P2 code is staged and final integrated testing is postponed until every phase is coded, per owner request. Neither P1 nor P2 is verified in production.
+**Next coding phase: P4.** P1–P3 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -87,7 +87,21 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Reject direct attempts to add zero-priced services or service options through the cart endpoint.
 - [x] Remove old quote-only service entries from customer sessions before showing cart or processing checkout.
 - [ ] Run service/checkout regression tests and validate the quotation-to-lead handoff in staging.
-- [ ] Complete remaining checkout and fulfillment lifecycle, payment and exception-path tests.
+- [x] Code-stage the checkout-to-fulfillment journey: guest/customer checkout, priced delivery or pickup, tax totals, reserved stock, idempotent submissions, customer tracking, staff status/shipments, cancellation/refund checks and return restrictions. Reuse existing payment and outbound-message integrations rather than creating duplicate gateways.
+- [x] Add focused exception-path coverage for unpriced delivery, shipment regression, cancellation and invalid inventory returns.
+- [ ] Run integrated checkout/fulfillment and payment-provider tests during final verification; production providers remain unverified.
+
+## P3 coding handoff
+Coding coverage is in `commerce/views.py`, `commerce/forms.py`,
+`commerce/fulfillment.py`, `commerce/staff_views.py`,
+`commerce/customer_messages.py` and the existing `reliability/`
+transaction and payment modules. Delivery fees are accepted only from priced
+zones; an unpriced area requires staff quotation. Stock reservations, refund
+checks, order status history and idempotent confirmation exist in the
+underlying engines. Backend shipment and inventory-return safety restrictions
+have been reinforced. **Not certified:** provider sandbox, shipping quote
+rules, billing reconciliation, Django tests, and real-browser/mobile tests.
+Do not claim a successful payment or delivery integration before validation.
 
 ## P2 initial staff catalogue-governance improvements
 - [x] Show existing exact-name suggestions and duplicate SKU warnings on the product form, desktop and mobile.
