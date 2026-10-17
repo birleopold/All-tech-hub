@@ -94,6 +94,7 @@ jobs:
           inventory.tests
           operations.test_job_expense_ledger
           billing.test_finance_controls
+          operations.test_financial_reconciliation
           reports.test_field_finance_access
           reports.test_conversion
           reports.test_retention
