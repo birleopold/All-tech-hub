@@ -88,7 +88,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Make the common-issue counts clickable and retain filters across pages.
 - [x] Preserve the selected issue when a search or other filter has zero matches.
 - [ ] Run staff UI and permission regression tests and verify real screen-size behavior.
-- [ ] Proceed with remaining inventory editing, image handoff and duplicate detection.
+- [x] Make iPhone HEIC/HEIF uploads browser-compatible by decoding, validating and converting to JPEG.
+- [x] Use an atomic product gallery save with per-product upload ordering and cleanup of new files on failure.
+- [ ] Finish remaining inventory editing and workflow checks before integrated testing.
 
 ## P7 initial fixes
 - [x] Restore the existing marketing image renderer as a staff-only, validated square/story PNG download route.

@@ -6,6 +6,7 @@ Django==5.2.15
 gunicorn==23.0.0
 packaging==26.2
 pillow==12.2.0
+pillow-heif==1.8.1
 psycopg==3.3.4
 psycopg-binary==3.3.4
 qrcode==8.2

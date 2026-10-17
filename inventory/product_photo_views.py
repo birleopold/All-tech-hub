@@ -4,8 +4,7 @@ from io import BytesIO
 import qrcode
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
-from django.core.files.images import get_image_dimensions
+from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -13,12 +12,11 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from catalog.models import Product, ProductImage
+from inventory.photo_validation import InvalidProductPhoto, prepare_product_photo
 from inventory.product_photo_models import ProductPhotoSession, StaffPushSubscription
 from inventory.product_photo_push import send_product_photo_push
 
-MAX_PHOTO_BYTES = 12 * 1024 * 1024
 MAX_PHOTOS_PER_REQUEST = 12
-ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 
 
 def _staff_only(request):
@@ -92,49 +90,48 @@ def product_photo_upload(request, token):
             status=400,
         )
 
-    # Validate the entire batch before persisting anything, so one bad file
-    # cannot leave a partial gallery behind.
-    for upload in files:
-        content_type = (upload.content_type or "").lower()
-        if content_type not in ALLOWED_CONTENT_TYPES:
-            return JsonResponse({"error": f"{upload.name} is not a supported image."}, status=400)
-        if upload.size > MAX_PHOTO_BYTES:
-            return JsonResponse({"error": f"{upload.name} is larger than 12 MB."}, status=400)
-        try:
-            width, height = get_image_dimensions(upload)
-        except (TypeError, ValueError, ValidationError):
-            return JsonResponse({"error": f"{upload.name} is not a valid image."}, status=400)
-        if not width or not height:
-            return JsonResponse({"error": f"{upload.name} is not a valid image."}, status=400)
-        upload.seek(0)
+    # Validate every upload before writing anything to persistent storage.
+    try:
+        prepared = [prepare_product_photo(upload) for upload in files]
+    except InvalidProductPhoto as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
 
     created = []
-    next_sort = (
-        ProductImage.objects.filter(product=session.product)
-        .order_by("-sort_order")
-        .values_list("sort_order", flat=True)
-        .first()
-        or 0
-    )
-    for upload in files:
-        next_sort += 10
-        image = ProductImage.objects.create(
-            product=session.product,
-            image=upload,
-            sort_order=next_sort,
-            alt_text=session.product.name,
-        )
-        created.append({"id": image.pk, "url": image.image.url, "name": upload.name})
+    stored_files = []
+    try:
+        with transaction.atomic():
+            # Lock one product during uploads so phones sharing a product do not
+            # get conflicting sort orders or primary-image selections.
+            product = Product.objects.select_for_update().get(pk=session.product_id)
+            next_sort = (
+                ProductImage.objects.filter(product=product)
+                .order_by("-sort_order")
+                .values_list("sort_order", flat=True)
+                .first() or 0
+            )
+            for upload in prepared:
+                next_sort += 10
+                record = ProductImage(product=product, sort_order=next_sort, alt_text=product.name)
+                record.image.save(upload.name, upload, save=False)
+                stored_files.append((record.image.storage, record.image.name))
+                record.save()
+                created.append({"id": record.pk, "url": record.image.url, "name": upload.name})
 
-    if created and (request.POST.get("make_primary") == "1" or not session.product.image):
-        primary = ProductImage.objects.get(pk=created[0]["id"], product=session.product)
-        session.product.image.name = primary.image.name
-        session.product.save(update_fields=["image", "updated_at"])
-
-    session.last_upload_at = timezone.now()
-    session.save(update_fields=["last_upload_at"])
+            if created and (request.POST.get("make_primary") == "1" or not product.image):
+                primary = ProductImage.objects.get(pk=created[0]["id"], product=product)
+                product.image.name = primary.image.name
+                product.save(update_fields=["image", "updated_at"])
+            session.last_upload_at = timezone.now()
+            session.save(update_fields=["last_upload_at"])
+    except Exception:
+        # Django database transactions do not roll back external file storage.
+        for storage, name in stored_files:
+            try:
+                storage.delete(name)
+            except Exception:
+                pass
+        return JsonResponse({"error": "Photos could not be saved. Retry the upload."}, status=500)
     return JsonResponse({"uploaded": created, "count": len(created)})
-
 
 @login_required
 @require_GET
