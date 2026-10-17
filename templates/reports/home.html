@@ -122,6 +122,24 @@
   </div>
 </div>
 
+<section class="card border-0 shadow-sm mb-4" aria-labelledby="job-expense-report-title">
+  <div class="card-body">
+    <div class="d-flex justify-content-between flex-wrap gap-3 align-items-start mb-3">
+      <div><h2 class="h6 text-muted text-uppercase mb-1" id="job-expense-report-title">Recorded field-job expenses (last 30 days)</h2>
+      <p class="small text-muted mb-0">Receipt-backed direct costs by job, separate from invoices, supplier payables and uncosted inventory parts.</p></div>
+      <div class="text-end"><small class="d-block text-muted">{{ recorded_job_expenses_30.entries }} entries</small>
+        <strong>{{ company.currency_code }} {{ recorded_job_expenses_30.total|floatformat:2 }}</strong></div>
+    </div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th>Job</th><th>Description</th><th class="text-end">Cost entries</th><th class="text-end">Recorded direct cost</th></tr></thead>
+      <tbody>{% for row in top_recorded_job_costs_30 %}
+        <tr><td><a href="{% url 'staff_job_detail' row.job_id %}">{{ row.job__number }}</a></td><td>{{ row.job__title }}</td><td class="text-end">{{ row.entries }}</td><td class="text-end">{{ company.currency_code }} {{ row.amount|floatformat:2 }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-muted">No direct job expenses have been entered for this period.</td></tr>{% endfor %}</tbody>
+    </table></div>
+    <p class="small text-muted mt-2 mb-0">This is not total job cost or net profit. Costs not entered in the job expense ledger are not included.</p>
+  </div>
+</section>
+
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">

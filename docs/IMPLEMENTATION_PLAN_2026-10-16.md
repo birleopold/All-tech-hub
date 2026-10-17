@@ -138,7 +138,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Expose the job cost ledger read-only in Django admin, without editable historical transactions.
 - [x] Separate operational reports from sensitive cost, profit and partner-payable reports by the existing billing margin permission.
 - [x] Restrict sensitive reports CSV exports to finance permissions, including payment reconciliation exceptions.
-- [ ] Continue with field/financial margin reporting and approval integration.
+- [x] Add a finance-only job-expense summary and per-job drill-down to existing business reports, explicitly excluding uncosted items and financial profit claims.
+- [ ] Continue with integrated field margins, approvals and exception handling.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
 ## P5 coding handoff
