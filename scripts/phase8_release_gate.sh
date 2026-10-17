@@ -105,7 +105,7 @@ PY
 ALLTECH_DB_NAME="$WORK/restore.sqlite3" python manage.py migrate --check --noinput
 
 printf 'Running isolated Django tests...\n'
-if [[ "$#" -gt 0 ]];
+if [[ "$#" -gt 0 ]]; then
     python manage.py test --noinput "$@"
 else
     python manage.py test --noinput
