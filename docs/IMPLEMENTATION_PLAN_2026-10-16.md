@@ -170,6 +170,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Check payment, email, social-provider and Merchant Center sandbox/external-service outcomes.
 - [ ] Validate backups, restore rehearsal, release rollback, monitoring and VPS readiness before production certification.
 - [x] Add Phase 7 focused regression modules to the existing CI test gate.
+- [x] Extend the PostgreSQL transaction test gate across purchasing, job-cost, refund and marketing-attribution workflows; successful execution still required.
 
 ## P6 coding handoff
 The existing purchasing, stock, billing and operations subsystems remain the source of truth. Received purchase costs and suppliers are protected from historical edits. Job expenses are documented separately from invoice costs; job-to-invoice comparison refuses speculative allocation for shared invoices and cross-customer records. Refund adjustment references and reconciliation are protected against duplicates, and finance approvals and sensitive reports require existing permissions. Supplier returns and recorded refunds do not falsely imply a supplier payout or money movement. New migrations and regression modules are staged, **not deployed or integration-tested**. Final verification must cover database migrations, transactional concurrency, accounting reconciliation, account permissions and responsive screens.

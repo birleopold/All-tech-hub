@@ -260,6 +260,14 @@ jobs:
           python manage.py test
           reliability
           automation
+          marketing.test_attribution
+          marketing.test_attribution_metrics
+          growth.test_growth
+          billing.test_finance_controls
+          operations.test_financial_reconciliation
+          operations.test_job_expense_ledger
+          purchasing.tests
+          inventory.tests
           messaging.test_deliverability
           commerce
           customer_campaigns
