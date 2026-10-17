@@ -23,6 +23,17 @@ ALLOWED_TRANSITIONS = {
 }
 
 
+def allowed_order_transitions(order: Order) -> set[str]:
+    """Return valid next states for this order's actual fulfilment method."""
+    choices = set(ALLOWED_TRANSITIONS.get(order.status, set()))
+    if order.fulfillment_type == Order.FULFILLMENT_PICKUP:
+        choices.discard(Order.STATUS_DISPATCHED)
+        choices.discard(Order.STATUS_DELIVERED)
+    else:
+        choices.discard(Order.STATUS_FULFILLED)
+    return choices
+
+
 @transaction.atomic
 def restore_cancelled_order_stock(order: Order, actor=None) -> bool:
     order = Order.objects.select_for_update().prefetch_related(
@@ -66,7 +77,7 @@ def transition_order(order: Order, new_status: str, actor=None, note: str = ""):
     old_status = order.status
     if new_status == old_status:
         return order
-    if new_status not in ALLOWED_TRANSITIONS.get(old_status, set()):
+    if new_status not in allowed_order_transitions(order):
         raise ValidationError(
             f"Cannot move order from {order.get_status_display()} to "
             f"{dict(Order.STATUS_CHOICES).get(new_status, new_status)}."
