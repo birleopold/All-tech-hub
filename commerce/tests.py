@@ -435,6 +435,40 @@ class CouponTests(TestCase):
 
 
 class CustomerReturnTests(TestCase):
+    def test_return_before_fulfillment_is_blocked_without_stock_change(self):
+        from django.contrib.auth.models import User
+
+        cat = Category.objects.create(name="Return gate", slug="return-gate")
+        product = Product.objects.create(
+            category=cat, name="Uncollected item", slug="uncollected-item",
+            price=Decimal("10"), stock_quantity=0,
+        )
+        customer = Customer.objects.create(
+            name="Customer", email="returns-gate@example.com"
+        )
+        order = Order.objects.create(
+            reference="ORD-RETURN-GATE",
+            customer=customer, contact_name=customer.name,
+            contact_email=customer.email, status=Order.STATUS_PENDING,
+        )
+        line = order.lines.create(
+            product=product, description=product.name,
+            quantity=1, unit_price=Decimal("10"),
+        )
+        staff = User.objects.create_user("return-gate-staff", password="pw", is_staff=True)
+        self.client.force_login(staff)
+        response = self.client.post(
+            reverse("staff_order_return", args=[order.pk]),
+            {
+                "order_line": str(line.pk), "quantity": "1",
+                "reason": "Not yet dispatched", "disposition": "restock",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(CustomerReturn.objects.filter(order_line=line).exists())
+        product.refresh_from_db()
+        self.assertEqual(product.stock_quantity, 0)
+
     def test_restock_return_creates_movement(self):
         from django.contrib.auth.models import User
 
@@ -455,6 +489,7 @@ class CustomerReturnTests(TestCase):
             contact_name="Buyer",
             contact_email=customer.email,
             total=Decimal("20"),
+            status=Order.STATUS_DELIVERED,
         )
         line = order.lines.create(
             product=product,

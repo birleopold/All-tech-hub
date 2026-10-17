@@ -74,6 +74,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 ## P3 first customer-to-staff order protection
 - [x] Disable delivery at checkout when no priced delivery area exists, instead of silently charging zero; pickup remains usable.
 - [x] Exclude configured delivery areas with missing prices and give customers a visible quote-enquiry path.
+- [x] Allow staff returns only for delivered/collected orders; protect backend and provide a helpful UI state.
+- [x] Lock the order row when staff generate an invoice so double submissions cannot create competing invoices.
 - [x] Preserve the selected delivery amount in checkout error re-renders and keep pickup shipping fields blank.
 - [x] Prevent shipment status regression after delivery and completed-order shipment progress changes at the backend, preserving pending, transit and exception states.
 - [x] Restrict pickup and delivery orders to appropriate next statuses, reusing the existing transition engine.

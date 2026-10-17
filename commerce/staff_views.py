@@ -92,7 +92,9 @@ def staff_create_invoice_from_order(request, pk: int):
     if not request.user.is_staff:
         raise Http404
     order = get_object_or_404(
-        Order.objects.prefetch_related("lines__product", "lines__product_variant"),
+        Order.objects.select_for_update().prefetch_related(
+            "lines__product", "lines__product_variant"
+        ),
         pk=pk,
     )
     if request.method != "POST":
@@ -144,7 +146,13 @@ def staff_create_invoice_from_order(request, pk: int):
 def staff_customer_return(request, pk: int):
     if not request.user.is_staff or request.method != "POST":
         raise Http404
-    order = get_object_or_404(Order, pk=pk)
+    order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
+    if order.status not in {Order.STATUS_DELIVERED, Order.STATUS_FULFILLED}:
+        messages.error(
+            request,
+            "Record a return only after the order is delivered or collected.",
+        )
+        return redirect("staff_order_detail", pk=pk)
     form = CustomerReturnForm(request.POST, order=order)
     if not form.is_valid():
         messages.error(
