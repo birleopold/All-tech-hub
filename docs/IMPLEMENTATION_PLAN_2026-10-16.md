@@ -113,6 +113,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Add lead search (name, phone, product, quote and order) and retain status/owner/follow-up filters across pages.
 - [x] Link a sales enquiry to an existing CRM customer only when its email matches exactly one customer; ambiguous matches are never merged or assigned automatically.
 - [x] Block quotation conversion on duplicate customer email matches instead of selecting an arbitrary CRM identity; staff receives an actionable review message.
+- [x] Flag duplicate customer emails in the staff CRM profile and suppress speculative unlinked lead/contact attribution without affecting truly customer-owned orders or jobs.
 - [x] Restrict topbar creation menu to actual add permissions, with clear accessible control labeling.
 - [x] Add focused tests for permission-aware search, customer form prefill, CRM timelines, lead queues and pagination, and role-aware dashboard.
 - [ ] Complete Phase 5 final coding handoff; integrated tests, browser review and production verification deferred.

@@ -105,12 +105,21 @@ class CustomerDetailView(StaffRequiredMixin, DetailView):
         totals = documents.aggregate(total=Sum("total"), paid=Sum("amount_paid")) if can_finance else {}
         billed = totals.get("total") or Decimal("0")
         paid = totals.get("paid") or Decimal("0")
+        # A matching email is an identity hint, not proof of customer
+        # ownership. Never attribute unlinked leads/messages to one of
+        # several legacy CRM records sharing the same address.
+        duplicate_email = bool(
+            customer.email and Customer.objects.filter(
+                email__iexact=customer.email
+            ).exclude(pk=customer.pk).exists()
+        )
+        identity_is_unambiguous = bool(customer.email and not duplicate_email)
         enquiries = MarketingLead.objects.filter(email__iexact=customer.email).select_related(
             "product", "quoted_document", "assigned_to"
-        )[:12] if customer.email and can_leads else MarketingLead.objects.none()
+        )[:12] if identity_is_unambiguous and can_leads else MarketingLead.objects.none()
         messages_received = ContactMessage.objects.filter(email__iexact=customer.email).select_related(
             "product"
-        )[:12] if customer.email and can_contacts else ContactMessage.objects.none()
+        )[:12] if identity_is_unambiguous and can_contacts else ContactMessage.objects.none()
         timeline = []
         for order in customer.orders.all()[:8] if can_orders else []:
             timeline.append({"kind": "Order", "label": order.reference, "occurred_at": order.placed_at, "status": order.get_status_display(), "url": reverse("staff_order_detail", args=[order.pk])})
@@ -164,6 +173,7 @@ class CustomerDetailView(StaffRequiredMixin, DetailView):
                     "leads": can_leads, "serials": can_serials,
                 },
                 "customer_timeline": timeline[:24],
+                "customer_identity_review_required": duplicate_email,
                 "loyalty_account": LoyaltyAccount.objects.filter(customer=customer).first()
                 if self.request.user.has_perm("loyalty.view_loyaltyaccount") else None,
                 "available_credits": customer.credits.filter(status="open")

@@ -81,6 +81,18 @@ class StaffCommandCentreTests(TestCase):
         self.assertIn(self.customer, r.context["results"]["customers"])
         self.assertNotIn("leads", r.context["results"])
 
+    def test_duplicate_customer_email_requires_review_on_profile(self):
+        Customer.objects.create(
+            name="Duplicate email record", email=self.customer.email,
+        )
+        response = self.client.get(
+            reverse("staff_customer_detail", args=[self.customer.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["customer_identity_review_required"])
+        self.assertContains(response, "Customer identity review needed")
+        self.assertFalse(response.context["recent_enquiries"])
+
     def test_lead_queue_links_unambiguous_existing_customer(self):
         response = self.client.get(
             reverse("staff_marketing_leads"), {"q": "Priority Client"}

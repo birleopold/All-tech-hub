@@ -17,6 +17,15 @@
       {% if perms.core.add_supportticket %}<a class="btn btn-outline-secondary" href="{% url 'staff_ticket_create' %}?customer={{ customer.pk }}">New support ticket</a>{% endif %}
     </div>
   </header>
+  {% if customer_identity_review_required %}
+  <div class="alert alert-warning" role="alert">
+    <strong>Customer identity review needed.</strong>
+    Another CRM record uses this email address. Sales enquiries and contact
+    messages are not automatically linked to either record until staff
+    resolve the duplication. Existing orders, repairs and invoices remain
+    attached to their original customer records.
+  </div>
+  {% endif %}
   <div class="row g-3 mb-4">
     {% if customer_access.orders %}
     <div class="col-md-4"><div class="card border-0 shadow-sm"><div class="card-body"><small>Active orders</small><div class="h3 mb-0">{{ order_count }}</div></div></div></div>
