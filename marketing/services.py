@@ -243,9 +243,21 @@ def create_quote_from_lead(lead: MarketingLead, *, actor) -> CommercialDocument:
 
     customer = None
     if lead.email:
-        customer = Customer.objects.filter(email__iexact=lead.email).order_by("pk").first()
+        matches = list(
+            Customer.objects.select_for_update()
+            .filter(email__iexact=lead.email)
+            .order_by("pk")[:2]
+        )
+        if len(matches) > 1:
+            raise ValueError(
+                "More than one customer record uses this email. "
+                "Resolve the CRM records before creating a linked quotation."
+            )
+        customer = matches[0] if matches else None
         if customer is None:
-            customer = Customer.objects.create(name=lead.name, email=lead.email, phone=lead.phone)
+            customer = Customer.objects.create(
+                name=lead.name, email=lead.email, phone=lead.phone
+            )
     company = CompanySettings.load()
     document = CommercialDocument.objects.create(
         doc_type=CommercialDocument.TYPE_QUOTE,

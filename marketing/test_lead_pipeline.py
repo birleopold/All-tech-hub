@@ -7,6 +7,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from billing.models import CommercialDocument
 from catalog.models import Category, Product
 from commerce.models import Order
 from core.models import ContactMessage, StaffNotification, SupportTicket
@@ -177,6 +178,24 @@ class SalesLeadPipelineTests(TestCase):
         self.assertEqual(first.customer.email, "buyer@example.com")
         self.assertEqual(first.lines.get().product, product)
         self.assertEqual(lead.status, MarketingLead.STATUS_QUALIFIED)
+
+    def test_quote_conversion_does_not_choose_first_duplicate_customer(self):
+        user_model = get_user_model()
+        actor = self.salesperson
+        Customer.objects.create(name="A", email="duplicate@example.com")
+        Customer.objects.create(name="B", email="DUPLICATE@example.com")
+        lead = MarketingLead.objects.create(
+            name="Ambiguous customer", email="duplicate@example.com",
+        )
+        with self.assertRaisesMessage(ValueError, "More than one customer"):
+            create_quote_from_lead(lead, actor=actor)
+        lead.refresh_from_db()
+        self.assertIsNone(lead.quoted_document)
+        self.assertEqual(
+            CommercialDocument.objects.filter(
+                customer__email__iexact="duplicate@example.com"
+            ).count(), 0,
+        )
 
     def test_overdue_enquiry_is_reminded_and_escalated_once(self):
         manager = get_user_model().objects.create_user(username="lead-manager", password="strong-test-password", is_staff=True, is_superuser=True)
