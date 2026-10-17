@@ -44,6 +44,31 @@ class CatalogBrandConsistencyTests(TestCase):
         self.assertEqual(groups[0]["product_count"], 6)
         self.assertEqual(len(groups[0]["variants"]), 3)
 
+    def test_selected_uncommon_brand_stays_visible_in_filter_dropdown(self):
+        category = self.products[0].category
+        for index in range(22):
+            product = Product.objects.create(
+                category=category,
+                name=f"Less common brand product {index}",
+                slug=f"less-common-brand-product-{index}",
+                price=Decimal("200000.00"),
+                stock_quantity=1,
+                is_published=True,
+            )
+            ProductGrowthData.objects.create(
+                product=product, brand=f"SampleBrand{index:02d}"
+            )
+        result = self.client.get(
+            reverse("product_list"), {"brand": "SampleBrand21"}
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.context["paginator"].count, 1)
+        self.assertIn(
+            "SampleBrand21",
+            [row["brand"] for row in result.context["catalog_brands"]],
+        )
+        self.assertContains(result, 'value="SampleBrand21" selected')
+
     def test_public_filters_group_case_and_space_variations(self):
         response = self.client.get(reverse("product_list"))
         self.assertEqual(response.status_code, 200)

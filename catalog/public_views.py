@@ -363,7 +363,7 @@ class PublicProductListView(ProductListView):
             .annotate(product_count=Count("product_id", distinct=True))
             .order_by("-product_count", "brand")
         )
-        context["catalog_brands"] = grouped_brand_rows(brand_rows)
+        all_brands = grouped_brand_rows(brand_rows, limit=None)
         context["condition_choices"] = ProductGrowthData.CONDITION_CHOICES
         context["catalog_collections"] = [
             {"slug": slug, **details} for slug, details in self.COLLECTIONS.items()
@@ -377,11 +377,27 @@ class PublicProductListView(ProductListView):
             context["current_collection"]
         )
         requested_brand = (self.request.GET.get("brand") or "").strip()
-        context["current_brand"] = next(
-            (row["brand"] for row in context["catalog_brands"]
-             if row["brand"].casefold() == requested_brand.casefold()),
-            requested_brand,
+        selected_brand = next(
+            (
+                row for row in all_brands
+                if row["brand"].casefold() == requested_brand.casefold()
+            ),
+            None,
         )
+        context["current_brand"] = (
+            selected_brand["brand"] if selected_brand else requested_brand
+        )
+        # The dropdown only shows popular options, but a selected less-common
+        # brand must not disappear from the control on its own landing page.
+        visible_brands = all_brands[:18]
+        if selected_brand and selected_brand not in visible_brands:
+            visible_brands = [*visible_brands, selected_brand]
+        elif requested_brand and selected_brand is None:
+            visible_brands = [
+                *visible_brands,
+                {"brand": requested_brand, "product_count": 0, "variants": []},
+            ]
+        context["catalog_brands"] = visible_brands
         context["current_condition"] = (
             self.request.GET.get("condition") or ""
         ).strip().lower()

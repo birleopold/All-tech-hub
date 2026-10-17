@@ -60,6 +60,7 @@ runner availability; run the same gates in an isolated staging environment.
 - [x] Add accessible numbered pagination and explicitly carry the validated discovery seed in customer page links while leaving canonical URLs seed-free.
 - [x] Preserve generic catalogue query-string category/brand/collection filters when paginating.
 - [x] Make mobile and desktop filter forms submit to the universal catalogue URL so category, brand, collection and kind controls work from SEO landing pages too.
+- [x] Keep a selected uncommon brand visible in the brand dropdown even when it falls outside the top 18 popular brands.
 - [x] Send hero searches from SEO landing pages to the universal catalogue rather than silently restricting results to the previous landing URL.
 - [ ] Validate real inventory states and mobile accessibility on a running server.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.
