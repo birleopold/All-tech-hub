@@ -150,6 +150,59 @@ def clear_coupon(session) -> None:
     session.modified = True
 
 
+def prune_quote_only_services(session) -> int:
+    """Remove legacy unquoted service items before cart or checkout rendering.
+
+    A zero price on an IT service means 'quotation required', not free work.
+    Preserve unrelated physical products and configured-price services.
+    """
+    cart = _cart_dict(session)
+    if not cart:
+        return 0
+    product_ids: set[int] = set()
+    variant_ids: set[int] = set()
+    for raw_key in cart:
+        parsed = normalize_line_key(raw_key)
+        if not parsed:
+            continue
+        if parsed[0] == "p":
+            product_ids.add(parsed[1])
+        elif parsed[0] == "v":
+            variant_ids.add(parsed[1])
+
+    unpriced_product_ids = set(
+        Product.objects.filter(
+            pk__in=product_ids,
+            kind=Product.KIND_SERVICE,
+            price__lte=0,
+        ).exclude(
+            variants__is_active=True
+        ).values_list("pk", flat=True)
+    ) if product_ids else set()
+    unpriced_variant_ids = set(
+        ProductVariant.objects.filter(
+            pk__in=variant_ids,
+            product__kind=Product.KIND_SERVICE,
+            price__lte=0,
+        ).values_list("pk", flat=True)
+    ) if variant_ids else set()
+    invalid_keys = []
+    for key in cart:
+        parsed = normalize_line_key(key)
+        if not parsed:
+            continue
+        kind, object_id = parsed
+        if (kind == "p" and object_id in unpriced_product_ids) or (
+            kind == "v" and object_id in unpriced_variant_ids
+        ):
+            invalid_keys.append(key)
+    for key in invalid_keys:
+        del cart[key]
+    if invalid_keys:
+        set_cart(session, cart)
+    return len(invalid_keys)
+
+
 def iter_cart_lines(session) -> Iterator[CartLine]:
     cart = _cart_dict(session)
     if not cart:
@@ -194,12 +247,16 @@ def iter_cart_lines(session) -> Iterator[CartLine]:
                 continue
             if not p.available_to_sell:
                 continue
+            if p.kind == Product.KIND_SERVICE and p.price <= 0:
+                continue
             yield CartLine(product=p, variant=None, quantity=qty)
         else:
             v = variants.get(oid)
             if not v:
                 continue
             if not v.available_to_sell:
+                continue
+            if v.product.kind == Product.KIND_SERVICE and v.price <= 0:
                 continue
             yield CartLine(product=v.product, variant=v, quantity=qty)
 

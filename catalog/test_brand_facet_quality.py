@@ -55,6 +55,15 @@ class CatalogBrandConsistencyTests(TestCase):
         self.assertEqual(filtered.context["paginator"].count, 3)
         self.assertEqual(filtered.context["current_brand"], "Samsung")
 
+    def test_homepage_brand_links_also_group_case_variants(self):
+        response = self.client.get(reverse("home"))
+        samsung = [
+            brand for brand in response.context["brand_collections"]
+            if brand["slug"] == "samsung"
+        ]
+        self.assertEqual(len(samsung), 1)
+        self.assertEqual(samsung[0]["product_count"], 3)
+
     def test_canonical_brand_route_and_search_suggestions(self):
         response = self.client.get(reverse("product_brand", args=["samsung"]))
         self.assertEqual(response.status_code, 200)

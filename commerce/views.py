@@ -1,11 +1,13 @@
 import secrets
 import uuid
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
@@ -63,6 +65,12 @@ def _qty_field_to_row_key(field_name: str) -> str | None:
 
 
 def cart_view(request):
+    if cart_mod.prune_quote_only_services(request.session):
+        messages.warning(
+            request,
+            "A service needing a quotation was removed from the cart. "
+            "Please request a service quote before ordering.",
+        )
     lines = list(cart_mod.iter_cart_lines(request.session))
     company = CompanySettings.load()
     tax_rate = company.default_tax_rate
@@ -125,8 +133,15 @@ def cart_add(request, product_id: int):
     product = get_object_or_404(Product, pk=product_id, is_published=True)
     qty = _positive_int(request.POST.get("quantity"), default=1)
     variant_id = request.POST.get("variant_id")
+    has_variants = product.has_sellable_variants()
 
-    if product.has_sellable_variants():
+    if product.kind == Product.KIND_SERVICE and not has_variants and product.price <= 0:
+        messages.info(request, "This service needs an approved quotation before ordering.")
+        return redirect(
+            f"{reverse('contact')}?{urlencode({'type': 'quote', 'product': product.slug})}"
+        )
+
+    if has_variants:
         if not variant_id or not str(variant_id).isdigit():
             messages.error(request, "Choose an option before adding to cart.")
             return redirect("product_detail", slug=product.slug)
@@ -136,6 +151,11 @@ def cart_add(request, product_id: int):
             product=product,
             is_active=True,
         )
+        if variant.product.kind == Product.KIND_SERVICE and variant.price <= 0:
+            messages.error(request, "This service option requires a quotation.")
+            return redirect(
+                f"{reverse('contact')}?{urlencode({'type': 'quote', 'product': product.slug})}"
+            )
         if not variant.available_to_sell:
             messages.error(request, "That option is not available.")
             return redirect("product_detail", slug=product.slug)
@@ -204,6 +224,13 @@ def checkout_view(request):
                 view_key=existing_order.view_key,
             )
 
+    if cart_mod.prune_quote_only_services(request.session):
+        messages.warning(
+            request,
+            "A service needing a quotation was removed from your cart. "
+            "Review your cart and request a formal service quote.",
+        )
+        return redirect("cart")
     lines = list(cart_mod.iter_cart_lines(request.session))
     if not lines:
         messages.warning(request, "Your cart is empty.")

@@ -17,7 +17,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 |---|---|---|---|
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **In progress** |
 | P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **In progress** |
-| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | Planned |
+| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **In progress** |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
@@ -25,7 +25,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## P1 work package (first implementation)
-- [x] Share one canonical display grouping for customer brand filters, search suggestions and category/brand SEO pages without changing stored brand values.
+- [x] Share one canonical display grouping for customer brand filters, search suggestions, homepage brand collections and category/brand SEO pages without changing stored brand values.
 - [x] Surface published brand spelling/capitalization inconsistencies on Staff → Catalogue quality with editable-listing search links.
 - [x] Do not advertise an unquoted service as a zero-price offer in product metadata or structured data.
 - [x] Add regression tests for brand grouping, filters, canonical brand route, staff warning and priced/unpriced services.
@@ -36,6 +36,13 @@ Scope: customer storefront, staff operations, admin configuration, production re
 - [ ] Validate real inventory states and mobile accessibility on a running server.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
+
+## P3 first customer-to-staff order protection
+- [x] Quote-only services go to the linked quotation request form rather than free checkout.
+- [x] Reject direct attempts to add zero-priced services or service options through the cart endpoint.
+- [x] Remove old quote-only service entries from customer sessions before showing cart or processing checkout.
+- [ ] Run service/checkout regression tests and validate the quotation-to-lead handoff in staging.
+- [ ] Complete remaining checkout and fulfillment lifecycle, payment and exception-path tests.
 
 ## P2 initial staff catalogue-governance improvements
 - [x] Reuse existing product-quality issue codes for staff-side direct issue filtering.

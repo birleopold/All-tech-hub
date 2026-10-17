@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.text import slugify
 
+from catalog.brand_facets import grouped_brand_rows
 from catalog.discovery import new_rotation_seed, order_for_discovery
 from catalog.experience import recent_products
 from catalog.models import Product
@@ -135,15 +136,15 @@ class PublicHomeView(HomeView):
         context["recently_viewed_products"] = prepare_public_products(
             recent_products(self.request, limit=8)
         )
-        brand_rows = list(
+        brand_rows = grouped_brand_rows(
             ProductGrowthData.objects.filter(
                 product__is_published=True,
                 product__kind=Product.KIND_PHYSICAL,
                 brand__gt="",
             )
             .values("brand")
-            .annotate(product_count=Count("product_id", distinct=True))
-            .order_by("-product_count", "brand")[:10]
+            .annotate(product_count=Count("product_id", distinct=True)),
+            limit=10,
         )
         for brand in brand_rows:
             brand["slug"] = slugify(brand["brand"])
