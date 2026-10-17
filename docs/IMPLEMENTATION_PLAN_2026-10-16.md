@@ -108,7 +108,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Extend permission-aware global search to leads, incoming enquiries, invoices and linked order references.
 - [x] Include repair and support activity alongside orders, quotes, leads and enquiries in existing CRM timeline.
 - [x] Wire verified customer prefill into existing quote/invoice, job-card and support-ticket creation forms; invalid IDs cannot select a customer.
-- [x] Add permission-aware dashboard work-area shortcuts, overdue lead queue links and preexisting personal assigned work.
+- [x] Add permission-aware dashboard work-area shortcuts, accurate personal lead counts and preexisting personal assigned work.
+- [x] Combine overdue follow-ups and unanswered first-contact alerts into one lead attention filter matching dashboard counts.
 - [x] Add lead search (name, phone, product, quote and order) and retain status/owner/follow-up filters across pages.
 - [x] Restrict topbar creation menu to actual add permissions, with clear accessible control labeling.
 - [ ] Complete Phase 5 regression coverage and code handoff; integrated testing deferred.

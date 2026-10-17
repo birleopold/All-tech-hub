@@ -65,6 +65,7 @@
           <label class="visually-hidden" for="staff-global-search">Search staff workspace</label>
           <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search customers, orders, SKUs, serials…">
         </form>
+        {% if perms.billing.add_commercialdocument or perms.operations.add_jobcard or perms.catalog.add_product or perms.core.add_supportticket %}
         <div class="dropdown">
           <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Create a new permitted record">New</button>
           <ul class="dropdown-menu dropdown-menu-end">
@@ -74,6 +75,7 @@
             {% if perms.core.add_supportticket %}<li><a class="dropdown-item" href="{% url 'staff_ticket_create' %}">New support ticket</a></li>{% endif %}
           </ul>
         </div>
+        {% endif %}
         <a class="staff-icon-button" href="{% url 'staff_notifications' %}" aria-label="Notifications{% if staff_unread_notifications %}, {{ staff_unread_notifications }} unread{% endif %}">
           <i class="bi bi-bell" aria-hidden="true"></i>{% if staff_unread_notifications %}<span>{{ staff_unread_notifications }}</span>{% endif %}
         </a>

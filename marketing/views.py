@@ -571,7 +571,18 @@ class LeadListView(MarketingListMixin, ListView):
         if source:
             qs = qs.filter(source=source)
         follow_up = self.request.GET.get("follow_up")
-        if follow_up == "overdue":
+        if follow_up == "needs_attention":
+            qs = qs.filter(
+                Q(next_follow_up_at__lte=timezone.now())
+                | Q(
+                    status=MarketingLead.STATUS_NEW,
+                    first_contacted_at__isnull=True,
+                    response_due_at__lte=timezone.now(),
+                )
+            ).exclude(
+                status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)
+            )
+        elif follow_up == "overdue":
             qs = qs.filter(next_follow_up_at__lte=timezone.now()).exclude(
                 status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST)
             )

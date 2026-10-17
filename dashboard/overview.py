@@ -39,7 +39,7 @@ def dashboard_overview(user, counts):
             reverse("staff_payment_reconciliation"))
     if access["leads"]:
         add("Today", "overdue sales lead", counts["overdue_lead_count"],
-            reverse("staff_marketing_leads") + "?follow_up=overdue")
+            reverse("staff_marketing_leads") + "?follow_up=needs_attention")
     if access["followups"]:
         add("Soon", "customer follow-up", counts["pending_retention_followup_count"],
             reverse("staff_retention_dashboard"))
@@ -73,8 +73,16 @@ def dashboard_overview(user, counts):
         })
 
     if access["leads"]:
+        mine_count = MarketingLead.objects.filter(
+            assigned_to=user,
+            status__in=[
+                MarketingLead.STATUS_NEW,
+                MarketingLead.STATUS_CONTACTED,
+                MarketingLead.STATUS_QUALIFIED,
+            ],
+        ).count()
         focus("Sales enquiries", reverse("staff_marketing_leads") + "?owner=mine",
-              "Follow up on assigned enquiries", counts["overdue_lead_count"])
+              "Follow up on your assigned enquiries", mine_count)
         focus("Unassigned leads", reverse("staff_marketing_leads") + "?owner=unassigned",
               "Claim an enquiry before responding")
     if access["jobs"]:
