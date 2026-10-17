@@ -118,6 +118,8 @@ class PortalSupportTicketForm(forms.ModelForm):
             "description",
             "priority",
             "related_order",
+            "related_job",
+            "related_document",
             "related_product",
             "related_serial",
         )
@@ -138,6 +140,8 @@ class PortalSupportTicketForm(forms.ModelForm):
             ),
             "priority": forms.Select(attrs={"class": "form-select"}),
             "related_order": forms.Select(attrs={"class": "form-select"}),
+            "related_job": forms.Select(attrs={"class": "form-select"}),
+            "related_document": forms.Select(attrs={"class": "form-select"}),
             "related_product": forms.Select(attrs={"class": "form-select"}),
             "related_serial": forms.Select(attrs={"class": "form-select"}),
         }
@@ -151,6 +155,10 @@ class PortalSupportTicketForm(forms.ModelForm):
         ]
         self.fields["related_order"].required = False
         self.fields["related_order"].empty_label = "— optional —"
+        for relation in ("related_job", "related_document"):
+            self.fields[relation].required = False
+            self.fields[relation].empty_label = "— optional —"
+            self.fields[relation].queryset = self.fields[relation].queryset.none()
         self.fields["related_product"].required = False
         self.fields["related_product"].empty_label = "— optional —"
         self.fields["related_product"].queryset = self.fields[
@@ -162,9 +170,17 @@ class PortalSupportTicketForm(forms.ModelForm):
             "related_serial"
         ].queryset.none()
         if customer is not None:
+            from billing.models import CommercialDocument
             from catalog.models import ProductSerial
             from commerce.models import Order
+            from operations.models import JobCard
 
+            self.fields["related_job"].queryset = JobCard.objects.filter(
+                customer=customer
+            ).order_by("-received_on")
+            self.fields["related_document"].queryset = CommercialDocument.objects.filter(
+                customer=customer
+            ).order_by("-issue_date", "-pk")
             self.fields["related_order"].queryset = Order.objects.filter(
                 customer=customer
             ).order_by("-placed_at")
@@ -183,6 +199,12 @@ class PortalSupportTicketForm(forms.ModelForm):
         self.fields["related_product"].help_text = (
             "Choose the exact product or service this support request concerns."
         )
+        self.fields["related_job"].help_text = (
+            "Choose your repair or installation job number, if applicable."
+        )
+        self.fields["related_document"].help_text = (
+            "Choose your invoice, quote or other document, if applicable."
+        )
         self.fields["priority"].help_text = (
             "Use High only for urgent business interruptions or serious service issues."
         )
@@ -193,6 +215,13 @@ class PortalSupportTicketForm(forms.ModelForm):
         serial = cleaned.get("related_serial")
         product = cleaned.get("related_product")
         order = cleaned.get("related_order")
+        document = cleaned.get("related_document")
+        if document is not None and order is not None and document.order_id:
+            if document.order_id != order.pk:
+                self.add_error(
+                    "related_document",
+                    "Choose a document belonging to the selected order.",
+                )
 
         if category == SupportTicket.CATEGORY_WARRANTY and serial is None:
             self.add_error(
@@ -245,6 +274,8 @@ class StaffSupportTicketForm(forms.ModelForm):
             "priority",
             "assigned_to",
             "related_order",
+            "related_job",
+            "related_document",
             "related_product",
             "related_serial",
         )
@@ -257,6 +288,8 @@ class StaffSupportTicketForm(forms.ModelForm):
             "priority": forms.Select(attrs={"class": "form-select"}),
             "assigned_to": forms.Select(attrs={"class": "form-select"}),
             "related_order": forms.Select(attrs={"class": "form-select"}),
+            "related_job": forms.Select(attrs={"class": "form-select"}),
+            "related_document": forms.Select(attrs={"class": "form-select"}),
             "related_product": forms.Select(attrs={"class": "form-select"}),
             "related_serial": forms.Select(attrs={"class": "form-select"}),
         }

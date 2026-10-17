@@ -266,6 +266,14 @@ class SupportTicket(models.Model):
         blank=True,
         related_name="support_tickets",
     )
+    related_job = models.ForeignKey(
+        "operations.JobCard", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="support_tickets",
+    )
+    related_document = models.ForeignKey(
+        "billing.CommercialDocument", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="support_tickets",
+    )
     related_product = models.ForeignKey(
         "catalog.Product",
         on_delete=models.SET_NULL,
@@ -288,6 +296,32 @@ class SupportTicket(models.Model):
 
     def __str__(self) -> str:
         return f"{self.reference or 'TK'} — {self.subject}"
+
+    def clean(self):
+        """Keep sensitive linked records inside the same customer account."""
+        from django.core.exceptions import ValidationError
+
+        super().clean()
+        if not self.customer_id:
+            return
+        errors = {}
+        for field, label in (
+            ("related_order", "order"),
+            ("related_job", "repair"),
+            ("related_document", "document"),
+            ("related_serial", "purchased device"),
+        ):
+            if getattr(self, f"{field}_id", None):
+                obj = getattr(self, field)
+                owner = obj.sold_to_id if field == "related_serial" else obj.customer_id
+                if owner != self.customer_id:
+                    errors[field] = f"The selected {label} belongs to another customer."
+        if self.related_document_id and self.related_order_id:
+            document = self.related_document
+            if document.order_id and document.order_id != self.related_order_id:
+                errors["related_document"] = "The document belongs to another order."
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def is_open(self) -> bool:
