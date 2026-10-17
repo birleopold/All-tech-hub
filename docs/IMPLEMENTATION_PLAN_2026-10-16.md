@@ -131,7 +131,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Expose receipt-backed expenses and actual cost totals in the job detail screen, only to users with job expense permissions.
 - [x] Add focused expense-entry, duplicate-reference, nonpositive cost and cost-data confidentiality regression tests.
 - [x] Restrict payment refunds and reconciliation to finance permissions in backend and payment-history UI.
-- [x] Require refund adjustment references and enforce one unique reference per recorded payment, to protect retries.
+- [x] Require refund adjustment references, reject historical reference duplicates at the application layer, and enforce unique keys for all new refund adjustments.
+- [x] Keep existing historical refunds untouched during migration (nullable unique idempotency key), avoiding destructive cleanup or failed constraints on legacy duplicates.
 - [x] Ensure repeat reconciliation does not rewrite history; clarify that recording an adjustment is not proof of actual money disbursement.
 - [x] Expose the job cost ledger read-only in Django admin, without editable historical transactions.
 - [ ] Continue with field/financial margin reporting and approval integration.

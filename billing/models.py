@@ -807,6 +807,13 @@ class PaymentSubmission(models.Model):
 
 
 class PaymentRefund(models.Model):
+    # Null on historical refunds: legacy records may contain duplicate
+    # references, which must be audited, not deleted by a migration.
+    # Newly recorded refunds always use a deterministic unique key.
+    idempotency_key = models.CharField(
+        max_length=200, unique=True, null=True, editable=False
+    )
+
     payment = models.ForeignKey(
         DocumentPayment, on_delete=models.PROTECT, related_name="refunds"
     )
@@ -830,21 +837,38 @@ class PaymentRefund(models.Model):
 
     class Meta:
         ordering = ["-processed_at", "-id"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["payment", "reference"],
-                condition=~models.Q(reference=""),
-                name="unique_payment_refund_reference",
-            )
-        ]
 
     def clean(self):
         super().clean()
         self.reference = (self.reference or "").strip()
+        if self.payment_id and self.reference:
+            duplicates = type(self).objects.filter(
+                payment_id=self.payment_id,
+                reference__iexact=self.reference,
+            )
+            if self.pk:
+                duplicates = duplicates.exclude(pk=self.pk)
+            if duplicates.exists():
+                raise ValidationError(
+                    {"reference": "This refund reference is already recorded for this payment."}
+                )
         if self.amount <= 0:
             raise ValidationError("Refund amount must be positive.")
         if self.payment_id and self.amount > self.payment.refundable_amount:
             raise ValidationError("Refund exceeds the remaining refundable amount.")
+
+    def save(self, *args, **kwargs):
+        if self.payment_id and self.reference and not self.idempotency_key:
+            import hashlib
+
+            normalized = self.reference.strip().casefold()
+            key = f"{self.payment_id}:{normalized}".encode("utf-8")
+            self.idempotency_key = hashlib.sha256(key).hexdigest()
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {
+                    "idempotency_key"
+                }
+        super().save(*args, **kwargs)
 
 
 class DocumentRevision(models.Model):

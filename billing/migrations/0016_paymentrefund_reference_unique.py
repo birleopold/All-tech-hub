@@ -7,12 +7,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddConstraint(
+        migrations.AddField(
             model_name="paymentrefund",
-            constraint=models.UniqueConstraint(
-                fields=("payment", "reference"),
-                condition=~models.Q(reference=""),
-                name="unique_payment_refund_reference",
+            name="idempotency_key",
+            field=models.CharField(
+                editable=False, max_length=200, null=True, unique=True
             ),
         ),
     ]
