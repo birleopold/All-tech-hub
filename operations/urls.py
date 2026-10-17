@@ -15,6 +15,7 @@ urlpatterns = [
     path("jobs/<int:pk>/bench/status/", views.job_bench_status, name="staff_job_bench_status"),
     path("jobs/<int:pk>/edit/", views.JobCardUpdateView.as_view(), name="staff_job_edit"),
     path("jobs/<int:pk>/note/", views.job_add_note, name="staff_job_note"),
+    path("jobs/<int:pk>/expense/", views.job_add_expense, name="staff_job_expense"),
     path("jobs/<int:pk>/pdf/", views.job_pdf_view, name="staff_job_pdf"),
     path("jobs/<int:pk>/labels/", views.job_label_sheet, name="staff_job_labels"),
     path("jobs/<int:pk>/time/", views.job_add_time, name="staff_job_time"),

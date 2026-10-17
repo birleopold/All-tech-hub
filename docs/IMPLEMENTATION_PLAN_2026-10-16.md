@@ -126,7 +126,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Prevent applying a stock adjustment twice using existing unique movement linkage and row locks.
 - [x] Disallow new parts consumption for completed/cancelled jobs in both the UI and backend.
 - [x] Make job status changes, cancellation part returns and history entries atomic to avoid half-written stock/job states.
-- [ ] Continue with repair/installation costing, approvals, refund and margin workflows.
+- [x] Create a direct job expense ledger for actual, receipt-backed parts, labour, transport and subcontractor costs, without inventing rates or profits.
+- [x] Restrict cost entry/view to explicit expense permissions; Finance and Manager roles receive these permissions after bootstrap.
+- [ ] Continue with financial approvals, refund controls, margin reports and field workflow integration.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
 ## P5 coding handoff

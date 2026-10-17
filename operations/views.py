@@ -1,8 +1,10 @@
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -18,9 +20,11 @@ from core.filters import apply_job_filters
 from core.mixins import StaffRequiredMixin
 from core.models import StaffSavedSearch
 from inventory.forms import JobStockUseForm
-from operations.forms import JobAttachmentForm, JobCardForm, JobNoteForm, TimeEntryForm
+from operations.forms import (
+    JobAttachmentForm, JobCardForm, JobExpenseForm, JobNoteForm, TimeEntryForm,
+)
 from operations.job_status import allowed_next_statuses
-from operations.models import JobCard
+from operations.models import JobCard, JobExpense
 from operations.pdf import pdf_response
 
 
@@ -154,6 +158,23 @@ class JobCardDetailView(StaffRequiredMixin, DetailView):
             self.object.status_events.select_related("actor").order_by("created_at", "id")
         )
         ctx["feedback"] = getattr(self.object, "feedback", None)
+        can_view_expenses = self.request.user.has_perm(
+            "operations.view_jobexpense"
+        )
+        ctx["can_view_job_expenses"] = can_view_expenses
+        ctx["can_add_job_expense"] = self.request.user.has_perm(
+            "operations.add_jobexpense"
+        )
+        if can_view_expenses:
+            entries = self.object.expenses.select_related("recorded_by")
+            ctx["job_expenses"] = entries
+            ctx["recorded_direct_cost"] = entries.aggregate(
+                total=Sum("amount")
+            )["total"] or Decimal("0")
+        else:
+            ctx["job_expenses"] = []
+            ctx["recorded_direct_cost"] = None
+        ctx["expense_form"] = JobExpenseForm() if ctx["can_add_job_expense"] else None
         return ctx
 
 
@@ -203,6 +224,47 @@ def job_bench_status(request, pk: int):
     return redirect("staff_job_bench_detail", pk=job.pk)
 
 
+@require_POST
+def job_add_expense(request, pk: int):
+    if not request.user.is_staff or not request.user.has_perm(
+        "operations.add_jobexpense"
+    ):
+        raise Http404
+    job = get_object_or_404(JobCard, pk=pk)
+    form = JobExpenseForm(request.POST)
+    if not form.is_valid():
+        messages.error(
+            request, "Expense not recorded. Check its amount, reference and description."
+        )
+        return redirect("staff_job_detail", pk=pk)
+
+    expense = form.save(commit=False)
+    expense.job = job
+    expense.recorded_by = request.user
+    try:
+        expense.full_clean()
+        with transaction.atomic():
+            expense.save()
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        return redirect("staff_job_detail", pk=pk)
+    except IntegrityError:
+        messages.error(
+            request, "This reference is already recorded for this job. "
+            "Review the existing expense before entering another."
+        )
+        return redirect("staff_job_detail", pk=pk)
+    log_audit_event(
+        actor=request.user,
+        verb="job.expense_recorded",
+        summary=f"{job.number}: {expense.reference} {expense.amount}",
+        target=expense,
+    )
+    messages.success(request, "Direct job expense recorded.")
+    return redirect("staff_job_detail", pk=pk)
+
+
+@require_POST
 def job_add_note(request, pk: int):
     if not request.user.is_staff:
         raise Http404

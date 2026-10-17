@@ -1,6 +1,6 @@
 from django import forms
 
-from operations.models import JobAttachment, JobCard, JobNote, TimeEntry
+from operations.models import JobAttachment, JobCard, JobExpense, JobNote, TimeEntry
 
 
 class JobCardForm(forms.ModelForm):
@@ -89,6 +89,24 @@ class JobCardForm(forms.ModelForm):
                 target=obj,
             )
         return obj
+
+
+class JobExpenseForm(forms.ModelForm):
+    class Meta:
+        model = JobExpense
+        fields = ("category", "description", "reference", "amount")
+        widgets = {
+            "category": forms.Select(attrs={"class": "form-select"}),
+            "description": forms.TextInput(attrs={
+                "class": "form-control", "placeholder": "What was paid for?"
+            }),
+            "reference": forms.TextInput(attrs={
+                "class": "form-control", "placeholder": "Receipt or voucher ID"
+            }),
+            "amount": forms.NumberInput(attrs={
+                "class": "form-control", "min": "0.01", "step": "0.01"
+            }),
+        }
 
 
 class JobNoteForm(forms.ModelForm):

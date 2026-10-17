@@ -57,6 +57,7 @@ ROLE_PERMISSIONS = {
         "operations": {"jobcard"},
     },
     "Finance": {
+        "operations": {"jobexpense"},
         "billing": {
             "commercialdocument", "commercialline", "documentpayment",
             "documentsequence", "paymentrefund", "documentrevision",

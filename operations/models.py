@@ -288,6 +288,70 @@ class JobCard(models.Model):
             reversal.apply()
 
 
+class JobExpense(models.Model):
+    """Recorded direct cost on a repair or installation; not an invoice/payment.
+
+    Every entry needs a source reference so duplicate submissions cannot
+    silently increase reported costs. Existing parts movements and time
+    entries remain separate; no invented unit costs are implied here.
+    """
+
+    CATEGORY_PARTS = "parts"
+    CATEGORY_LABOUR = "labour"
+    CATEGORY_TRANSPORT = "transport"
+    CATEGORY_SUBCONTRACTOR = "subcontractor"
+    CATEGORY_OTHER = "other"
+    CATEGORY_CHOICES = [
+        (CATEGORY_PARTS, "Direct parts purchase"),
+        (CATEGORY_LABOUR, "Actual labour cost"),
+        (CATEGORY_TRANSPORT, "Transport and field travel"),
+        (CATEGORY_SUBCONTRACTOR, "Subcontractor / external service"),
+        (CATEGORY_OTHER, "Other direct expense"),
+    ]
+
+    job = models.ForeignKey(
+        JobCard, on_delete=models.PROTECT, related_name="expenses"
+    )
+    category = models.CharField(max_length=24, choices=CATEGORY_CHOICES)
+    description = models.CharField(max_length=255)
+    reference = models.CharField(
+        max_length=120,
+        help_text="Unique receipt, payment, job voucher or supplier invoice reference.",
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, related_name="job_expenses_recorded",
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-recorded_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["job", "reference"],
+                name="unique_expense_reference_per_job",
+            ),
+            models.CheckConstraint(
+                check=models.Q(amount__gt=0),
+                name="job_expense_amount_positive",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError({"amount": "Record a positive actual cost."})
+        self.reference = (self.reference or "").strip()
+        if not self.reference:
+            raise ValidationError(
+                {"reference": "A source receipt or voucher reference is required."}
+            )
+
+    def __str__(self):
+        return f"{self.job.number}: {self.reference} ({self.amount})"
+
+
 class JobNote(models.Model):
     job = models.ForeignKey(JobCard, on_delete=models.CASCADE, related_name="notes")
     author = models.ForeignKey(
