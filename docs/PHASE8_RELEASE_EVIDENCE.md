@@ -96,6 +96,34 @@ to `~/leosoft-release-logs/`, and **will not** invoke the existing
 It also refuses to deploy from a checkout containing tracked local edits.
 Do not use the raw `update_vps.sh` while Phase 8 is blocked.
 
+## 752-test VPS run on 217db7b and Phase 8 remediation
+
+The user-supplied 2026-10-18 VPS output for source commit `217db7b`
+completed **752 Django tests with 39 failures and 7 errors**. The temporary
+SQLite migration rehearsal and backup/restore integrity checks succeeded.
+The historic interactive multi-command paste **continued to deploy**
+`217db7b` despite the failed suite. Its public readiness check returned
+HTTP 200; this does not certify customer or staff workflows.
+
+Remediation commits after that VPS run corrected:
+
+- queued campaign delivery that had never performed a first send;
+- quotation-only services incorrectly included in 'available now';
+- blank extra commercial-document line rows treated as filled forms;
+- valid category hubs incorrectly filtered away by optional search synonyms;
+- retired UX/SEO assertions rewritten to match actual current screens,
+  strict unverified-schema omissions and revised sitemap structure;
+- checkout tests updated for explicit pickup when delivery tariffs are absent;
+- email tests updated for the durable notification worker rather than
+  synchronous database-signal delivery;
+- test fixtures now include real Merchant feed images and verified identity
+  when the claimed metadata has actually been checked.
+
+The corrected suite has **not yet been executed in full on the VPS**.
+GitHub Actions for the latest commits report job failures without any job
+steps or available logs (runner provisioning issue); they provide no positive
+test evidence. Preserve the fail-closed release gate until all checks pass.
+
 ## Evidence register
 
 | Gate | Current status | Required real-world evidence |

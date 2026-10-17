@@ -78,6 +78,20 @@ class ProductionAutomationUnitTests(SimpleTestCase):
         self.assertIn("EnvironmentFile=/home/admin/All-tech-hub/.env", service)
         self.assertIn("OnUnitActiveSec=15min", timer)
 
+    def test_phase8_wrapper_blocks_failed_tests_before_vps_update(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "scripts" / "phase8_verified_deploy.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("set -Eeuo pipefail", script)
+        self.assertIn("bash scripts/phase8_release_gate.sh", script)
+        self.assertIn("exec bash scripts/update_vps.sh", script)
+        self.assertLess(
+            script.index("bash scripts/phase8_release_gate.sh"),
+            script.index("exec bash scripts/update_vps.sh"),
+        )
+        self.assertIn('tee "$log"', script)
+
     def test_production_management_helper_loads_the_same_environment(self):
         helper = (
             Path(__file__).resolve().parents[1]
