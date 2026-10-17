@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 from billing.models import CommercialDocument, allocate_document_number
@@ -211,6 +211,7 @@ class JobCard(models.Model):
                     }
                 )
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if self.scheduled_for and not self.scheduled_until:
             self.scheduled_until = self.scheduled_for + timedelta(hours=1)

@@ -123,6 +123,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 ## P6 finance and field operations implementation
 - [x] Separate purchase-order gross receipts, supplier returns and net goods value, using immutable receipt quantities and original purchase unit costs.
 - [x] Make the value reconciliation visible to staff on the purchase order without claiming a supplier refund was issued.
+- [x] Prevent applying a stock adjustment twice using existing unique movement linkage and row locks.
+- [x] Disallow new parts consumption for completed/cancelled jobs in both the UI and backend.
+- [x] Make job status changes, cancellation part returns and history entries atomic to avoid half-written stock/job states.
 - [ ] Continue with repair/installation costing, approvals, refund and margin workflows.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 

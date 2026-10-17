@@ -35,6 +35,25 @@ class JobStockUseFormTests(TestCase):
         )
         self.assertFalse(form.is_valid())
 
+    def test_same_adjustment_cannot_move_stock_twice(self):
+        category = Category.objects.create(name="Idempotent", slug="idempotent-adjustment")
+        product = Product.objects.create(
+            category=category, name="One-time part", slug="one-time-part",
+            price=Decimal("10"), stock_quantity=5,
+        )
+        adjustment = StockAdjustment.objects.create(
+            product=product, quantity_delta=-2,
+            reason=StockAdjustment.REASON_JOB,
+        )
+        adjustment.apply()
+        with self.assertRaisesMessage(ValidationError, "already been applied"):
+            adjustment.apply()
+        product.refresh_from_db()
+        self.assertEqual(product.stock_quantity, 3)
+        self.assertEqual(
+            StockMovement.objects.filter(adjustment=adjustment).count(), 1
+        )
+
     def test_adjustment_cannot_make_stock_negative(self):
         cat = Category.objects.create(name="Guard", slug="guard-stock")
         product = Product.objects.create(
@@ -74,6 +93,24 @@ class JobPartUsageViewTests(TestCase):
             status=JobCard.STATUS_INTAKE,
         )
         self.user = User.objects.create_user("inv", "inv@example.com", "pw", is_staff=True)
+
+    def test_completed_job_rejects_new_part_usage(self):
+        self.job.status = JobCard.STATUS_COMPLETED
+        self.job.save(update_fields=["status"])
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("staff_job_stock_use", args=[self.job.pk]),
+            {
+                "product": self.product.pk,
+                "product_variant": "",
+                "quantity_delta": "-2",
+                "note": "Too late",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.stock_quantity, 10)
+        self.assertFalse(StockAdjustment.objects.filter(job=self.job).exists())
 
     def test_post_records_adjustment_and_stock(self):
         self.client.force_login(self.user)

@@ -700,12 +700,18 @@ def stocktake_post(request, pk: int):
     return redirect("staff_stocktake_detail", pk=take.pk)
 
 
+@transaction.atomic
 def job_record_part_usage(request, job_pk: int):
     if not request.user.is_staff:
         raise Http404
     if request.method != "POST":
         return redirect(_safe_redirect_target(request, reverse("staff_job_detail", kwargs={"pk": job_pk})))
-    job = get_object_or_404(JobCard, pk=job_pk)
+    job = get_object_or_404(JobCard.objects.select_for_update(), pk=job_pk)
+    if not job.is_open:
+        messages.error(
+            request, "Parts cannot be consumed after a job is completed or cancelled."
+        )
+        return redirect("staff_job_detail", pk=job_pk)
     form = JobStockUseForm(request.POST)
     if form.is_valid():
         adj = form.save(commit=False)

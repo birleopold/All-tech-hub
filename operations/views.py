@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
@@ -171,10 +172,11 @@ class JobBenchDetailView(JobCardDetailView):
 
 
 @require_POST
+@transaction.atomic
 def job_bench_status(request, pk: int):
     if not request.user.is_staff:
         raise Http404
-    job = get_object_or_404(JobCard, pk=pk)
+    job = get_object_or_404(JobCard.objects.select_for_update(), pk=pk)
     new_status = request.POST.get("status")
     note = (request.POST.get("note") or "").strip()
     valid_statuses = dict(JobCard.STATUS_CHOICES)

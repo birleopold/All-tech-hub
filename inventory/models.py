@@ -78,13 +78,18 @@ class StockAdjustment(models.Model):
     def apply(self) -> None:
         from catalog.models import Product, ProductVariant
 
-        delta = int(self.quantity_delta)
-        if self.product_variant_id:
+        if not self.pk:
+            raise ValidationError("Save the stock adjustment before applying it.")
+        current = StockAdjustment.objects.select_for_update().get(pk=self.pk)
+        if StockMovement.objects.filter(adjustment_id=current.pk).exists():
+            raise ValidationError("This stock adjustment has already been applied.")
+        delta = int(current.quantity_delta)
+        if current.product_variant_id:
             qs = ProductVariant.objects.select_for_update().filter(
-                pk=self.product_variant_id
+                pk=current.product_variant_id
             )
         else:
-            qs = Product.objects.select_for_update().filter(pk=self.product_id)
+            qs = Product.objects.select_for_update().filter(pk=current.product_id)
         if delta < 0:
             qs = qs.filter(stock_quantity__gte=-delta)
         updated = qs.update(stock_quantity=models.F("stock_quantity") + delta)
@@ -93,14 +98,14 @@ class StockAdjustment(models.Model):
         from inventory.services import record_stock_movement
 
         record_stock_movement(
-            product=self.product,
-            product_variant=self.product_variant,
+            product=current.product,
+            product_variant=current.product_variant,
             quantity_delta=delta,
             movement_type=StockMovement.TYPE_ADJUSTMENT,
-            reference=f"ADJ-{self.pk}",
-            note=self.note or self.get_reason_display(),
-            actor=self.created_by,
-            adjustment=self,
+            reference=f"ADJ-{current.pk}",
+            note=current.note or current.get_reason_display(),
+            actor=current.created_by,
+            adjustment=current,
         )
 
 
