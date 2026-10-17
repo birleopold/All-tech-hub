@@ -20,12 +20,12 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Code implemented — verification deferred** |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Code implemented — verification deferred** |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | **Code implemented — verification deferred** |
-| P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | **Implementation in progress** |
-| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
+| P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | **Code implemented — verification deferred** |
+| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | **Implementation in progress** |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active coding phase: P6.** P1–P5 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Active coding phase: P7.** P1–P6 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -142,9 +142,19 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Add protected job-to-invoice comparison with customer ownership checks, one-to-one allocation rule, issued document validation, and explicit warnings about overlapping cost sources.
 - [x] Enforce quote approval permission and atomic quote approval; protect cancelled/expired documents from approval.
 - [x] Require payment verification permissions in the backend and review UI; allow read-only finance review without write access.
-- [ ] Finalise financial exception regression cases and move on to Phase 7 after code handoff.
+- [x] Add and stage approval, customer ownership and shared-invoice exception regression tests in the focused Django CI workflow.
+- [x] Code-stage the full Phase 6 supplier, inventory, field-cost, refund, approval and finance-reporting workflow; integrations and access certification deferred.
 - [x] Stage expense report access and finance CSV confidentiality tests in the focused CI suite.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
+
+## P7 marketing and integrations implementation
+- [ ] Make channel readiness, publish-now, scheduled posts and failed-delivery recovery accurate and accessible across the staff UI.
+- [ ] Strengthen manual override controls without duplicating delivery jobs or silently enabling unselected channels.
+- [ ] Improve consent, merchant feed data quality, and attribution to actual customer journeys.
+- [ ] Add regression coverage and stage Phase 7 code handoff.
+
+## P6 coding handoff
+The existing purchasing, stock, billing and operations subsystems remain the source of truth. Received purchase costs and suppliers are protected from historical edits. Job expenses are documented separately from invoice costs; job-to-invoice comparison refuses speculative allocation for shared invoices and cross-customer records. Refund adjustment references and reconciliation are protected against duplicates, and finance approvals and sensitive reports require existing permissions. Supplier returns and recorded refunds do not falsely imply a supplier payout or money movement. New migrations and regression modules are staged, **not deployed or integration-tested**. Final verification must cover database migrations, transactional concurrency, accounting reconciliation, account permissions and responsive screens.
 
 ## P5 coding handoff
 Core workflows reuse `dashboard/overview.py`, `core/staff_views.py`,
