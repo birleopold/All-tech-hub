@@ -93,7 +93,8 @@ class CatalogExperienceTests(TestCase):
         self.assertNotIn("q=", canonical)
         self.assertNotIn("view=", canonical)
         self.assertTrue(response.context["catalog_noindex"])
-        self.assertContains(response, 'name="robots" content="noindex,follow"')
+        # Extra preview/snippet directives must not invalidate noindex.
+        self.assertContains(response, 'name="robots" content="noindex,follow')
 
     def test_product_schema_includes_feed_metadata_shipping_and_return_policy(self):
         ProductGrowthData.objects.create(

@@ -124,4 +124,11 @@ class CommercialDocumentWorkflowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Walk-in customer")
-        self.assertContains(response, "Download PDF")
+        document = CommercialDocument.objects.get()
+        # The register uses an icon button with an accessible name rather
+        # than visible "Download PDF" text. Verify the actual PDF action.
+        self.assertContains(response, f'aria-label="Download {document.number} PDF"')
+        self.assertContains(
+            response,
+            f'{reverse("staff_document_pdf", args=[document.pk])}?download=1',
+        )

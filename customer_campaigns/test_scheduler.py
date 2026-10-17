@@ -261,11 +261,15 @@ class ScheduledCampaignTests(TestCase):
             log.save(update_fields=["status", "error", "sent_at"])
             return log
 
+        # A newly queued message must use the first-send API, not the retry
+        # path which is reserved for explicitly approved retries.
         with patch(
-            "customer_campaigns.services.retry_outbound_email",
+            "customer_campaigns.services.send_queued_outbound_email",
             side_effect=fail_delivery,
-        ):
+        ) as first_send:
             summary = process_scheduled_campaigns(limit=10)
+
+        self.assertEqual(first_send.call_count, 2)
 
         self.campaign.refresh_from_db()
         self.assertEqual(summary["failed"], 2)

@@ -75,7 +75,8 @@ class PurchasableVariantPricingTests(TestCase):
         self.assertEqual(schema["offers"]["priceCurrency"], "UGX")
         result = self.client.get(reverse("catalog_suggestions"), {"q": "Network Setup Options"}).json()
         price = next(p["price"] for p in result["products"] if p["name"] == self.service.name)
-        self.assertEqual(price, "80000")
+        # JSON may preserve decimal places; the monetary value must match.
+        self.assertEqual(Decimal(str(price)), Decimal("80000"))
 
     def test_unpriced_services_are_not_treated_as_free_in_price_filters(self):
         Product.objects.create(

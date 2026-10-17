@@ -180,3 +180,21 @@ The existing `scripts/deploy_production.sh` already checks release settings,
 performs backups before migrations, runs SEO/merchant audits, collects hashed
 assets and checks Gunicorn readiness; Phase 8 adds evidence, not a second
 production deployment implementation.
+
+## 754-test VPS run on e5ebe9579dce (2026-10-18)
+
+The latest uploaded guarded release log completed **754 Django tests with 6 failures
+and no errors**. The isolated migration and SQLite backup/restore checks passed.
+The six remaining failing assertions were: document-register icon-only PDF action,
+search suggestion decimal representation, filtered catalogue robots directives,
+a scheduler test mocking a retired email retry entry point, immediate cached
+checkout marketing consent, and the production helper's configurable virtualenv
+path. The scheduled delivery mock has been updated to exercise the first-send
+API and verify that failure-count/circuit-breaker behavior still runs. Checkout
+consent updates now reuse the locked OneToOne instance instead of retaining a
+stale cached default. No assertion or permission controls were removed to
+bypass the release gate.
+
+These changes still require a full, successful isolated VPS verification on the
+new commit. A successful deploy or HTTP 200 readiness result alone is not
+sufficient evidence of Phase 8 certification.

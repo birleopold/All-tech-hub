@@ -122,7 +122,9 @@ class ProductionAutomationUnitTests(SimpleTestCase):
             / "manage_production.sh"
         ).read_text(encoding="utf-8")
         self.assertIn('source "${ENV_FILE}"', helper)
-        self.assertIn('exec "${APP_DIR}/.venv/bin/python"', helper)
+        # The production helper deliberately supports a configurable venv.
+        self.assertIn('exec "${VENV_DIR}/bin/python" manage.py "$@"', helper)
+        self.assertIn('if connection.vendor != "postgresql"', helper)
 
 
 class ReliabilityRoleTests(TestCase):

@@ -76,9 +76,9 @@ def update_marketing_preference(
     special_offers: bool,
     source: str,
 ) -> CustomerMarketingPreference:
-    preference = ensure_marketing_preference(customer)
-    preference = CustomerMarketingPreference.objects.select_for_update().get(
-        pk=preference.pk
+    # Use the instance cached on the customer for initial consent changes.
+    preference, _ = CustomerMarketingPreference.objects.select_for_update().get_or_create(
+        customer=customer
     )
     previous_state = _consent_state(preference)
     preference.email_marketing = bool(email_marketing)
@@ -101,9 +101,10 @@ def add_checkout_consent(
 ) -> CustomerMarketingPreference | None:
     if not email_marketing and not whatsapp_marketing:
         return None
-    preference = ensure_marketing_preference(customer)
-    preference = CustomerMarketingPreference.objects.select_for_update().get(
-        pk=preference.pk
+    # Updating the same OneToOne object returned by get_or_create prevents
+    # newly granted consent appearing off in the cached customer relation.
+    preference, _ = CustomerMarketingPreference.objects.select_for_update().get_or_create(
+        customer=customer
     )
     previous_state = _consent_state(preference)
     preference.email_marketing = preference.email_marketing or bool(email_marketing)
