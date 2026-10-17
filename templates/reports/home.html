@@ -122,6 +122,7 @@
   </div>
 </div>
 
+{% if can_view_job_expenses %}
 <section class="card border-0 shadow-sm mb-4" aria-labelledby="job-expense-report-title">
   <div class="card-body">
     <div class="d-flex justify-content-between flex-wrap gap-3 align-items-start mb-3">
@@ -139,6 +140,7 @@
     <p class="small text-muted mt-2 mb-0">This is not total job cost or net profit. Costs not entered in the job expense ledger are not included.</p>
   </div>
 </section>
+{% endif %}
 
 <div class="card border-0 shadow-sm mb-4">
   <div class="card-body">

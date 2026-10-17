@@ -107,20 +107,24 @@ class ReportsHomeView(views.ReportsHomeView):
         ctx["document_sales_today"] = today_summary["recognized_income"]
         ctx["document_customer_total_today"] = today_summary["customer_total"]
         ctx["document_owner_payout_today"] = today_summary["owner_payout"]
-        recorded_costs = JobExpense.objects.filter(
-            recorded_at__date__gte=start_30
+        ctx["can_view_job_expenses"] = self.request.user.has_perm(
+            "operations.view_jobexpense"
         )
-        ctx["recorded_job_expenses_30"] = recorded_costs.aggregate(
-            total=Sum("amount"), entries=Count("pk")
-        )
-        ctx["recorded_job_expenses_30"]["total"] = (
-            ctx["recorded_job_expenses_30"]["total"] or Decimal("0")
-        )
-        ctx["top_recorded_job_costs_30"] = (
-            recorded_costs.values("job_id", "job__number", "job__title")
-            .annotate(amount=Sum("amount"), entries=Count("pk"))
-            .order_by("-amount", "job__number")[:10]
-        )
+        if ctx["can_view_job_expenses"]:
+            recorded_costs = JobExpense.objects.filter(
+                recorded_at__date__gte=start_30
+            )
+            ctx["recorded_job_expenses_30"] = recorded_costs.aggregate(
+                total=Sum("amount"), entries=Count("pk")
+            )
+            ctx["recorded_job_expenses_30"]["total"] = (
+                ctx["recorded_job_expenses_30"]["total"] or Decimal("0")
+            )
+            ctx["top_recorded_job_costs_30"] = (
+                recorded_costs.values("job_id", "job__number", "job__title")
+                .annotate(amount=Sum("amount"), entries=Count("pk"))
+                .order_by("-amount", "job__number")[:10]
+            )
         ctx["partner_payables_30"] = partner_payables_30[:10]
         ctx["partner_payables_total_30"] = sum(
             (row["amount_due"] for row in partner_payables_30), Decimal("0.00")
