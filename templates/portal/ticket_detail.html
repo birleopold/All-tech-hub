@@ -26,9 +26,11 @@
             </div>
             <span class="badge text-bg-light border">{{ ticket.get_category_display }}</span>
           </div>
-          {% if ticket.related_order or ticket.related_serial %}
+          {% if ticket.related_order or ticket.related_job or ticket.related_document or ticket.related_serial %}
           <div class="row g-2 mb-3">
-            {% if ticket.related_order %}<div class="col-md-6"><div class="p-3 rounded bg-light"><p class="small text-muted mb-1">Related order</p><strong>{{ ticket.related_order.reference }}</strong></div></div>{% endif %}
+            {% if ticket.related_order %}<div class="col-md-6"><div class="p-3 rounded bg-light"><p class="small text-muted mb-1">Related order</p><strong><a href="{% url 'portal_order_detail' ticket.related_order.pk %}">{{ ticket.related_order.reference }}</a></strong></div></div>{% endif %}
+            {% if ticket.related_job %}<div class="col-md-6"><div class="p-3 rounded bg-light"><p class="small text-muted mb-1">Related repair</p><strong><a href="{% url 'portal_job_detail' ticket.related_job.pk %}">{{ ticket.related_job.number }}</a></strong><div class="small text-muted">{{ ticket.related_job.get_status_display }}</div></div></div>{% endif %}
+            {% if ticket.related_document %}<div class="col-md-6"><div class="p-3 rounded bg-light"><p class="small text-muted mb-1">Related document</p><strong>{{ ticket.related_document.number }}</strong><div><a class="small" href="{% url 'portal_document_pdf' ticket.related_document.pk %}">View protected PDF</a></div></div></div>{% endif %}
             {% if ticket.related_serial %}<div class="col-md-6"><div class="p-3 rounded bg-light"><p class="small text-muted mb-1">Related device</p><strong>{{ ticket.related_serial.product.name }}</strong><div class="small text-muted">SN {{ ticket.related_serial.serial_number }}{% if ticket.related_serial.warranty_expires_on %} · Warranty until {{ ticket.related_serial.warranty_expires_on }}{% endif %}</div></div></div>{% endif %}
           </div>
           {% endif %}

@@ -18,14 +18,14 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **Code implemented — verification deferred** |
 | P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Code implemented — verification deferred** |
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Code implemented — verification deferred** |
-| P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Next coding phase** |
+| P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Implementation in progress** |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
 | P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Next coding phase: P4.** P1–P3 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Active coding phase: P4.** P1–P3 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -90,6 +90,15 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Code-stage the checkout-to-fulfillment journey: guest/customer checkout, priced delivery or pickup, tax totals, reserved stock, idempotent submissions, customer tracking, staff status/shipments, cancellation/refund checks and return restrictions. Reuse existing payment and outbound-message integrations rather than creating duplicate gateways.
 - [x] Add focused exception-path coverage for unpriced delivery, shipment regression, cancellation and invalid inventory returns.
 - [ ] Run integrated checkout/fulfillment and payment-provider tests during final verification; production providers remain unverified.
+
+## P4 customer service hub implementation
+- [x] Reuse the existing customer account, records and helpdesk conversation; no parallel CRM or support database.
+- [x] Link support tickets to owned repair jobs and commercial documents, with nullable relations and migration.
+- [x] Restrict customer support form selections to owned jobs, documents, orders and serials; validate ownership at the model boundary.
+- [x] Add linked support shortcuts to repair pages and customer documents, and prefill the original record safely.
+- [x] Show related repair/document links on customer and staff ticket details and associate repair support replies with the job.
+- [ ] Display all recent customer-visible activities together and improve follow-ups/empty states.
+- [ ] Add permission, privacy and regression test cases and complete remaining P4 code; final integrated testing deferred.
 
 ## P3 coding handoff
 Coding coverage is in `commerce/views.py`, `commerce/forms.py`,

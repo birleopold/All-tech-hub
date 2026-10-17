@@ -9,7 +9,7 @@
         <h1 class="display-6 fw-bold mb-2">{{ job.number }}</h1>
         <p class="text-white-75 mb-0">{{ job.title }}</p>
       </div>
-      <a class="btn btn-light" href="{% url 'portal_jobs' %}">Back to jobs</a>
+      <div class="d-flex gap-2 flex-wrap"><a class="btn btn-light" href="{% url 'portal_jobs' %}">Back to jobs</a><a class="btn btn-outline-light" href="{% url 'portal_ticket_create' %}?job={{ job.pk }}">Ask about this repair</a></div>
     </div>
   </div>
 </section>
@@ -17,6 +17,7 @@
 <div class="container pb-5">
   <div class="row g-4 align-items-start">
     <div class="col-lg-8">
+      {% if related_tickets %}<div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center gap-2 mb-3"><h2 class="h5 mb-0">Support for this job</h2><a class="small" href="{% url 'portal_tickets' %}">All requests</a></div><ul class="list-group list-group-flush">{% for ticket in related_tickets %}<li class="list-group-item px-0 d-flex justify-content-between gap-3"><a href="{% url 'portal_ticket_detail' ticket.pk %}">{{ ticket.reference }} — {{ ticket.subject|truncatechars:56 }}</a><span class="small text-muted">{{ ticket.get_status_display }}</span></li>{% endfor %}</ul></div></div>{% endif %}
       {% if can_leave_feedback %}
       <div class="alert alert-info border-0 shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2"><span>Job is complete — share your experience with our service.</span><a class="btn btn-sm btn-primary" href="{% url 'portal_job_feedback' job.pk %}">Leave feedback</a></div>
       {% elif feedback %}

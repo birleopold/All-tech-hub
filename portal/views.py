@@ -279,11 +279,16 @@ def my_job_detail(request, pk: int):
     if job.closed_on:
         timeline.append({"label": "Closed", "dt": job.closed_on})
     feedback = getattr(job, "feedback", None)
+    related_tickets = list(
+        SupportTicket.objects.filter(customer=customer, related_job=job)
+        .order_by("-updated_at")[:5]
+    )
     return render(
         request,
         "portal/job_detail.html",
         {
             "job": job,
+            "related_tickets": related_tickets,
             "notes": notes,
             "attachments": attachments,
             "timeline": timeline,
@@ -492,6 +497,26 @@ class PortalTicketCreateView(FormView):
                     initial["category"] = SupportTicket.CATEGORY_RMA
                     item_name = product.name if product is not None else order.reference
                     initial["subject"] = f"Return request: {item_name}"[:200]
+
+        job_id = (self.request.GET.get("job") or "").strip()
+        if job_id.isdigit():
+            job = JobCard.objects.filter(pk=int(job_id), customer=customer).first()
+            if job is not None:
+                initial["related_job"] = job.pk
+                if not initial.get("subject"):
+                    initial["subject"] = f"Support for repair {job.number}"[:200]
+
+        document_id = (self.request.GET.get("document") or "").strip()
+        if document_id.isdigit():
+            document = CommercialDocument.objects.filter(
+                pk=int(document_id), customer=customer
+            ).first()
+            if document is not None:
+                initial["related_document"] = document.pk
+                if document.order_id and not initial.get("related_order"):
+                    initial["related_order"] = document.order_id
+                initial["category"] = SupportTicket.CATEGORY_BILLING
+                initial["subject"] = f"Question about {document.number}"[:200]
 
         serial_id = (self.request.GET.get("serial") or "").strip()
         if not serial_id.isdigit():

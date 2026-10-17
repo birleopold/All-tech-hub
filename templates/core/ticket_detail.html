@@ -27,6 +27,8 @@
 
   <div class="staff-workflow-columns">
     <div>
+      {% if ticket.related_job or ticket.related_document %}
+      <article class="staff-section-card"><header class="staff-section-card-header"><div><h2>Linked customer records</h2><p>Open the repair or invoice behind this request</p></div></header><div class="staff-section-card-body d-flex gap-2 flex-wrap">{% if ticket.related_job %}<a class="btn btn-sm btn-outline-primary" href="{% url 'staff_job_detail' ticket.related_job.pk %}">Repair {{ ticket.related_job.number }}</a>{% endif %}{% if ticket.related_document %}<a class="btn btn-sm btn-outline-primary" href="{% url 'staff_document_edit' ticket.related_document.pk %}">Document {{ ticket.related_document.number }}</a>{% endif %}</div></article>{% endif %}
       <article class="staff-section-card">
         <header class="staff-section-card-header"><div><h2>Issue description</h2><p>Original customer request and problem details</p></div><i class="bi bi-chat-left-text text-muted" aria-hidden="true"></i></header>
         <div class="staff-section-card-body staff-prose">{{ ticket.description|linebreaks }}</div>
