@@ -76,6 +76,19 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
             status = ""
             visible_rows = all_rows
 
+        issue_options = sorted(
+            catalogue_quality_summary(all_rows)["issue_counts"],
+            key=lambda item: (-item["count"], item["label"]),
+        )
+        requested_issue = (self.request.GET.get("issue") or "").strip().lower()
+        issue_codes = {option["code"] for option in issue_options}
+        current_issue = requested_issue if requested_issue in issue_codes else ""
+        if current_issue:
+            visible_rows = [
+                row for row in visible_rows
+                if any(issue.code == current_issue for issue in row.issues)
+            ]
+
         paginator = Paginator(visible_rows, 40)
         page_obj = paginator.get_page(self.request.GET.get("page"))
         context.update(
@@ -90,6 +103,9 @@ class CatalogueQualityView(StaffRequiredMixin, TemplateView):
                 "current_query": query,
                 "current_status": status,
                 "current_publication": publication,
+                "current_issue": current_issue,
+                "quality_issue_options": issue_options,
+                "filtered_quality_count": len(visible_rows),
             }
         )
         return context

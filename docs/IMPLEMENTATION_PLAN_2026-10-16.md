@@ -31,8 +31,17 @@ Scope: customer storefront, staff operations, admin configuration, production re
 - [x] Add regression tests for brand grouping, filters, canonical brand route, staff warning and priced/unpriced services.
 - [ ] Execute focused Django tests and full regression suite in the production-like runtime.
 - [ ] Verify real small-screen and keyboard use of filters, cards and service pages.
+- [x] Add clear sellability/status labels to catalogue cards without inventing exact stock promises.
+- [x] Add accessible numbered pagination retaining filters, sort and rotating discovery seed.
+- [ ] Validate real inventory states and mobile accessibility on a running server.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
+
+## P2 initial staff catalogue-governance improvements
+- [x] Reuse existing product-quality issue codes for staff-side direct issue filtering.
+- [x] Make the common-issue counts clickable and retain filters across pages.
+- [ ] Run staff UI and permission regression tests and verify real screen-size behavior.
+- [ ] Proceed with remaining inventory editing, image handoff and duplicate detection.
 
 ## P7 initial fixes
 - [x] Restore the existing marketing image renderer as a staff-only, validated square/story PNG download route.

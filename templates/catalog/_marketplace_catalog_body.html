@@ -54,7 +54,28 @@
 
       {% if compare_count %}<div class="public-compare-dock mt-3"><p><strong>{{ compare_count }} product{{ compare_count|pluralize }}</strong> selected for comparison.</p><a class="btn btn-light" href="{% url 'product_compare' %}">Compare now <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>{% endif %}
 
-      {% if is_paginated %}<nav class="mt-4 public-pagination" aria-label="Catalogue pagination"><ul class="pagination justify-content-center gap-1">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link rounded px-3" href="?page={{ page_obj.previous_page_number }}{% if catalog_pagination_suffix %}&amp;{{ catalog_pagination_suffix|safe }}{% endif %}">Previous</a></li>{% endif %}<li class="page-item active"><span class="page-link rounded">{{ page_obj.number }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link rounded px-3" href="?page={{ page_obj.next_page_number }}{% if catalog_pagination_suffix %}&amp;{{ catalog_pagination_suffix|safe }}{% endif %}">Next</a></li>{% endif %}</ul><p class="text-center text-muted small">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p></nav>{% endif %}
+      {% if is_paginated %}
+      <nav class="mt-4 public-pagination" aria-label="Catalogue pagination">
+        <ul class="pagination justify-content-center align-items-center flex-wrap gap-2">
+          {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link rounded px-3 py-2" aria-label="Previous page" rel="prev" href="?page={{ page_obj.previous_page_number }}{% if catalog_pagination_suffix %}&amp;{{ catalog_pagination_suffix|safe }}{% endif %}">Previous</a></li>
+          {% endif %}
+          {% for item in catalog_page_options %}
+            {% if item.gap %}
+            <li class="page-item disabled" aria-hidden="true"><span class="page-link border-0">…</span></li>
+            {% elif item.number == page_obj.number %}
+            <li class="page-item active"><span class="page-link rounded px-3 py-2" aria-current="page" aria-label="Page {{ item.number }}, current page">{{ item.number }}</span></li>
+            {% else %}
+            <li class="page-item"><a class="page-link rounded px-3 py-2" aria-label="Go to page {{ item.number }}" href="?page={{ item.number }}{% if catalog_pagination_suffix %}&amp;{{ catalog_pagination_suffix|safe }}{% endif %}">{{ item.number }}</a></li>
+            {% endif %}
+          {% endfor %}
+          {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link rounded px-3 py-2" aria-label="Next page" rel="next" href="?page={{ page_obj.next_page_number }}{% if catalog_pagination_suffix %}&amp;{{ catalog_pagination_suffix|safe }}{% endif %}">Next</a></li>
+          {% endif %}
+        </ul>
+        <p class="text-center text-muted small">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
+      </nav>
+      {% endif %}
     </main>
   </div>
 </div>

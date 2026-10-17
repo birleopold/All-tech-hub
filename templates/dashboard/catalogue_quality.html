@@ -31,9 +31,10 @@
         <div class="card-body">
           <div class="staff-panel-heading"><h2>Filter listings</h2><a href="{% url 'staff_catalogue_quality' %}">Reset</a></div>
           <form method="get" class="row g-3 align-items-end">
-            <div class="col-lg-5"><label class="form-label" for="quality-search">Search</label><input id="quality-search" class="form-control" name="q" value="{{ current_query }}" placeholder="Product, SKU, category or brand"></div>
-            <div class="col-sm-6 col-lg-3"><label class="form-label" for="quality-status">Quality status</label><select id="quality-status" class="form-select" name="status"><option value="">All statuses</option><option value="critical" {% if current_status == 'critical' %}selected{% endif %}>Critical</option><option value="attention" {% if current_status == 'attention' %}selected{% endif %}>Needs attention</option><option value="ready" {% if current_status == 'ready' %}selected{% endif %}>Ready</option></select></div>
+            <div class="col-lg-4"><label class="form-label" for="quality-search">Search</label><input id="quality-search" class="form-control" name="q" value="{{ current_query }}" placeholder="Product, SKU, category or brand"></div>
+            <div class="col-sm-6 col-lg-2"><label class="form-label" for="quality-status">Quality status</label><select id="quality-status" class="form-select" name="status"><option value="">All statuses</option><option value="critical" {% if current_status == 'critical' %}selected{% endif %}>Critical</option><option value="attention" {% if current_status == 'attention' %}selected{% endif %}>Needs attention</option><option value="ready" {% if current_status == 'ready' %}selected{% endif %}>Ready</option></select></div>
             <div class="col-sm-6 col-lg-2"><label class="form-label" for="quality-published">Visibility</label><select id="quality-published" class="form-select" name="published"><option value="">All</option><option value="1" {% if current_publication == '1' %}selected{% endif %}>Published</option><option value="0" {% if current_publication == '0' %}selected{% endif %}>Draft</option></select></div>
+            <div class="col-sm-6 col-lg-2"><label class="form-label" for="quality-issue">Specific issue</label><select id="quality-issue" class="form-select" name="issue"><option value="">All issues</option>{% for issue in quality_issue_options %}<option value="{{ issue.code }}" {% if current_issue == issue.code %}selected{% endif %}>{{ issue.label }} ({{ issue.count }})</option>{% endfor %}</select></div>
             <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Apply</button></div>
           </form>
         </div>
@@ -45,7 +46,7 @@
           <div class="staff-panel-heading"><h2>Most common gaps</h2></div>
           <div class="staff-health-list">
             {% for issue in quality_summary.issue_counts|slice:':6' %}
-            <div class="staff-health-row"><span>{{ issue.label }}</span><span class="badge rounded-pill text-bg-light text-dark">{{ issue.count }}</span></div>
+            <div class="staff-health-row"><a href="?q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}&amp;issue={{ issue.code|urlencode }}" aria-label="Show listings with {{ issue.label }}">{{ issue.label }}</a><span class="badge rounded-pill text-bg-light text-dark">{{ issue.count }}</span></div>
             {% empty %}<div class="staff-empty-state">No catalogue gaps detected.</div>{% endfor %}
           </div>
         </div>
@@ -79,11 +80,17 @@
   </section>
   {% endif %}
 
+  {% if current_query or current_status or current_publication or current_issue %}
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" role="status">
+    <p class="mb-0 text-muted">Showing <strong>{{ filtered_quality_count }}</strong> matching listing{{ filtered_quality_count|pluralize }}.</p>
+    <a class="btn btn-sm btn-outline-secondary" href="{% url 'staff_catalogue_quality' %}">Clear filters</a>
+  </div>
+  {% endif %}
   <div class="card staff-panel-card">
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table align-middle mb-0">
-          <thead><tr><th>Product</th><th>Score</th><th>Issues to correct</th><th>Visibility</th><th class="text-end">Action</th></tr></thead>
+          <thead><tr><th scope="col">Product</th><th scope="col">Score</th><th scope="col">Issues to correct</th><th scope="col">Visibility</th><th scope="col" class="text-end">Action</th></tr></thead>
           <tbody>
             {% for row in quality_rows %}
             <tr>
@@ -104,9 +111,9 @@
 
   {% if is_paginated %}
   <nav class="mt-4" aria-label="Catalogue quality pages"><ul class="pagination justify-content-center">
-    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&amp;q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}">Previous</a></li>{% endif %}
+    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&amp;q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}&amp;issue={{ current_issue|urlencode }}">Previous</a></li>{% endif %}
     <li class="page-item active"><span class="page-link">{{ page_obj.number }} of {{ paginator.num_pages }}</span></li>
-    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&amp;q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}">Next</a></li>{% endif %}
+    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&amp;q={{ current_query|urlencode }}&amp;status={{ current_status|urlencode }}&amp;published={{ current_publication|urlencode }}&amp;issue={{ current_issue|urlencode }}">Next</a></li>{% endif %}
   </ul></nav>
   {% endif %}
 </section>

@@ -278,6 +278,12 @@ class SEOProductListView(RefinedPublicProductListView):
             )
 
         pagination_parameters = self._pagination_parameters(context)
+        page_options = [
+            {"number": number, "gap": not isinstance(number, int)}
+            for number in context["paginator"].get_elided_page_range(
+                page_number, on_each_side=1, on_ends=1
+            )
+        ]
         context.update(
             {
                 "catalog_page_title": copy["title"],
@@ -289,6 +295,7 @@ class SEOProductListView(RefinedPublicProductListView):
                 "catalog_noindex": not indexable_landing,
                 "catalog_social_image_url": social_image,
                 "catalog_pagination_suffix": pagination_parameters.urlencode(),
+                "catalog_page_options": page_options,
                 "catalog_item_list_json": script_safe_json(item_list),
                 "catalog_breadcrumb_json": script_safe_json(
                     {
