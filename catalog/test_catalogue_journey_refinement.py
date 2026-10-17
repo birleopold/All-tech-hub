@@ -97,6 +97,18 @@ class CataloguePaginationAndAvailabilityTests(TestCase):
         self.assertEqual(response.context["page_obj"].number, 2)
         self.assertContains(response, 'aria-label="Go to page 1"')
 
+    def test_filter_controls_have_labels_and_empty_results_offer_recovery(self):
+        response = self.client.get(
+            reverse("product_list"), {"q": "no products with this unlikely exact phrase"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="mobile-market-kind"')
+        self.assertContains(response, 'id="desktop-market-kind"')
+        self.assertContains(response, 'aria-controls="mobile-market-filter-panel"')
+        self.assertContains(response, "No matching items found")
+        self.assertContains(response, "Clear filters")
+        self.assertContains(response, "Ask the team")
+
     def test_product_cards_show_availability_honestly(self):
         response = self.client.get(
             reverse("product_list"), {"q": "Paging Test Unavailable"}

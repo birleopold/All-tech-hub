@@ -202,10 +202,18 @@ class PublicProductDetailView(ProductDetailView):
                 **offer_common,
                 "availability": "https://schema.org/InStock",
             }
-            if product.price > 0:
-                service_offer["price"] = str(product.price)
+            if active_variants:
+                # Match the visible 'From' price: zero-priced variants need a
+                # quotation and should not advertise a free service.
+                quoted_prices = [
+                    variant.price for variant in active_variants if variant.price > 0
+                ]
+                advertised_price = min(quoted_prices) if quoted_prices else None
             else:
-                # Unknown quotation is not a free service.
+                advertised_price = product.price if product.price > 0 else None
+            if advertised_price is not None:
+                service_offer["price"] = str(advertised_price)
+            else:
                 service_offer.pop("priceCurrency", None)
             schema = {
                 "@context": "https://schema.org",

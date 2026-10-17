@@ -16,24 +16,46 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | Phase | Goal | Acceptance checks | Status |
 |---|---|---|---|
 | P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **In progress** |
-| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **In progress** |
-| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **In progress** |
+| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | Queued (early fixes committed; phase not started) |
+| P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | Queued (early safeguards committed; phase not started) |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | Planned |
-| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | **In progress** |
+| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
+
+## Strict sequential phase policy (2026-10-17)
+**Active phase: P1 only.** Do not advance to P2 until P1 is accepted.
+Code already merged in later-phase areas is early work only and does not imply
+those phases have started or passed acceptance.
+
+A phase is done only when:
+1. Customer/staff journey is usable from the relevant navigation on both mobile and desktop.
+2. Backend validation prevents bypasses and handles empty, failed and duplicate requests.
+3. Focused regression tests pass, the full suite passes, and database migration checks pass.
+4. UI touch targets/keyboard interaction and the 320px–large-screen layout are checked.
+5. Production or staging verifies the feature against the running Django app.
+6. The roadmap lists actual evidence and remaining exceptions.
+
+Current blocker: GitHub-hosted Actions jobs fail about 2 seconds after job
+creation, with no runner allocated (runner_id=0 and no steps). Earlier runs
+also had real lint/test failures. This is *not* evidence that the latest
+tests passed or failed in Python. Check Actions account/billing and hosted
+runner availability; run the same gates in an isolated staging environment.
 
 ## P1 work package (first implementation)
 - [x] Share one canonical display grouping for customer brand filters, search suggestions, homepage brand collections and category/brand SEO pages without changing stored brand values.
 - [x] Surface published brand spelling/capitalization inconsistencies on Staff → Catalogue quality with editable-listing search links.
 - [x] Do not advertise an unquoted service as a zero-price offer in product metadata or structured data.
 - [x] Add regression tests for brand grouping, filters, canonical brand route, staff warning and priced/unpriced services.
-- [ ] Execute focused Django tests and full regression suite in the production-like runtime.
+- [ ] Execute focused Django tests and full regression suite in the production-like runtime (GitHub-hosted runner currently unavailable).
+- [ ] Confirm GitHub Actions runners start and report real step logs; repair baseline lint and test failures.
 - [ ] Verify real small-screen and keyboard use of filters, cards and service pages.
 - [x] Add clear sellability/status labels to catalogue cards without inventing exact stock promises.
 - [x] Use the cheapest purchasable active configuration for "From" prices and sort/filter consistency; disable unavailable or unquoted options in the selector.
 - [x] Correct search autocomplete so unpriced services say "Request an estimate" instead of UGX 0.
+- [x] Keep service structured offer pricing consistent with paid variants on product pages.
+- [x] Cover empty-result recovery, labeled mobile/desktop filter controls and catalogue variations in regression tests.
 - [x] Add accessible numbered pagination retaining filters, sort and rotating discovery seed.
 - [ ] Validate real inventory states and mobile accessibility on a running server.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.

@@ -1,4 +1,5 @@
 """Regression tests: storefront prices must match selectable options."""
+import json
 from decimal import Decimal
 
 from django.test import TestCase, override_settings
@@ -68,6 +69,10 @@ class PurchasableVariantPricingTests(TestCase):
         self.assertContains(detail, "Basic setup")
         self.assertContains(detail, "Add priced service to request")
         self.assertNotContains(detail, "From UGX 0")
+        schema = json.loads(str(detail.context["product_schema_json"]))
+        self.assertEqual(schema["@type"], "Service")
+        self.assertEqual(schema["offers"]["price"], "80000")
+        self.assertEqual(schema["offers"]["priceCurrency"], "UGX")
         result = self.client.get(reverse("catalog_suggestions"), {"q": "Network Setup Options"}).json()
         price = next(p["price"] for p in result["products"] if p["name"] == self.service.name)
         self.assertEqual(price, "80000")
