@@ -141,6 +141,76 @@ class ReceivingIntegrityTests(TestCase):
         self.assertEqual(self.line.received_quantity, 1)
         self.assertEqual(self.product.stock_quantity, 1)
 
+    def _po_payload(self, **overrides):
+        data = {
+            "supplier": str(self.supplier.pk),
+            "status": PurchaseOrder.STATUS_PARTIAL,
+            "ordered_on": str(self.po.ordered_on),
+            "expected_on": "",
+            "notes": "Keep delivery history unchanged",
+            "lines-TOTAL_FORMS": "1",
+            "lines-INITIAL_FORMS": "1",
+            "lines-MIN_NUM_FORMS": "0",
+            "lines-MAX_NUM_FORMS": "1000",
+            "lines-0-id": str(self.line.pk),
+            "lines-0-product": str(self.product.pk),
+            "lines-0-product_variant": "",
+            "lines-0-description": "",
+            "lines-0-quantity": "2",
+            "lines-0-unit_cost": "5.00",
+        }
+        data.update(overrides)
+        return data
+
+    def test_received_line_original_cost_is_immutable(self):
+        self.client.force_login(self.user)
+        self.client.post(
+            reverse("staff_po_receive", args=[self.po.pk]),
+            {f"quantity_{self.line.pk}": "1"},
+        )
+        result = self.client.post(
+            reverse("staff_po_edit", args=[self.po.pk]),
+            self._po_payload(**{"lines-0-unit_cost": "5000.00"}),
+        )
+        self.assertEqual(result.status_code, 302)
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.unit_cost, Decimal("5"))
+        self.assertEqual(self.line.received_quantity, 1)
+
+    def test_order_cannot_reduce_quantity_below_received(self):
+        self.client.force_login(self.user)
+        self.client.post(
+            reverse("staff_po_receive", args=[self.po.pk]),
+            {f"quantity_{self.line.pk}": "2"},
+        )
+        response = self.client.post(
+            reverse("staff_po_edit", args=[self.po.pk]),
+            self._po_payload(**{
+                "lines-0-quantity": "1",
+                "status": PurchaseOrder.STATUS_RECEIVED,
+            }),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ordered quantity cannot be below")
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.quantity, 2)
+
+    def test_cannot_change_supplier_once_goods_are_received(self):
+        self.client.force_login(self.user)
+        self.client.post(
+            reverse("staff_po_receive", args=[self.po.pk]),
+            {f"quantity_{self.line.pk}": "1"},
+        )
+        other_supplier = Supplier.objects.create(name="Not original supplier")
+        result = self.client.post(
+            reverse("staff_po_edit", args=[self.po.pk]),
+            self._po_payload(supplier=str(other_supplier.pk)),
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertContains(result, "Cannot change the supplier")
+        self.po.refresh_from_db()
+        self.assertEqual(self.po.supplier_id, self.supplier.pk)
+
     def test_partial_receiving_rejects_quantities_above_remaining(self):
         self.client.force_login(self.user)
         receipt_count = StockReceipt.objects.count()
