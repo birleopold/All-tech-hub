@@ -8,6 +8,24 @@
   const clarityId = (body.dataset.clarityId || "").trim();
   const requireConsent = body.dataset.analyticsConsentRequired === "1";
   const consentKey = "leosoft_analytics_consent";
+  // Browsers and privacy modes may block storage. Keep consent opt-in even
+  // when its choice cannot be persisted.
+  const readConsent = () => {
+    try {
+      const value = window.localStorage.getItem(consentKey);
+      return value === "granted" || value === "denied" ? value : null;
+    } catch (_error) {
+      return null;
+    }
+  };
+  const saveConsent = (choice) => {
+    try {
+      if (choice) window.localStorage.setItem(consentKey, choice);
+      else window.localStorage.removeItem(consentKey);
+    } catch (_error) {
+      // Do not silently enable tracking if the browser rejects storage.
+    }
+  };
   let integrationsLoaded = false;
   let vitalsObserved = false;
 
@@ -191,7 +209,7 @@
 
   const banner = document.getElementById("analytics-consent-banner");
   const setConsent = (choice) => {
-    localStorage.setItem(consentKey, choice);
+    saveConsent(choice);
     if (banner) banner.hidden = true;
     if (choice === "granted") loadIntegrations();
   };
@@ -209,8 +227,14 @@
     }
     const reset = event.target.closest("[data-analytics-consent-reset]");
     if (reset) {
-      localStorage.removeItem(consentKey);
-      if (banner) banner.hidden = false;
+      saveConsent(null);
+      if (integrationsLoaded) {
+        // Scripts loaded during this page cannot be reliably unloaded.
+        // Reload without consent before offering another choice.
+        window.location.reload();
+      } else if (banner) {
+        banner.hidden = false;
+      }
       return;
     }
 
@@ -240,7 +264,7 @@
     return;
   }
 
-  const choice = localStorage.getItem(consentKey);
+  const choice = readConsent();
   if (!requireConsent || choice === "granted") {
     if (banner) banner.hidden = true;
     loadIntegrations();
