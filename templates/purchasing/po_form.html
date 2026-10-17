@@ -13,8 +13,18 @@
     <div class="staff-record-stat"><small>Status</small><strong><span class="staff-status-pill staff-status-pill--{{ object.status|staff_status_tone }}">{{ object.get_status_display }}</span></strong></div>
     <div class="staff-record-stat"><small>Line items</small><strong>{{ object.lines.count }}</strong><span>Products ordered</span></div>
     <div class="staff-record-stat"><small>Ordered value</small><strong>{{ company.currency_code }} {{ object.total_ordered_value|floatformat:2 }}</strong></div>
-    <div class="staff-record-stat"><small>Received value</small><strong>{{ company.currency_code }} {{ object.total_received_value|floatformat:2 }}</strong>{% if object.expected_on %}<span>Expected {{ object.expected_on|date:"M j, Y" }}</span>{% endif %}</div>
+    <div class="staff-record-stat"><small>Received value (gross)</small><strong>{{ company.currency_code }} {{ object.total_received_value|floatformat:2 }}</strong>{% if object.expected_on %}<span>Expected {{ object.expected_on|date:"M j, Y" }}</span>{% endif %}</div>
   </div></div>
+
+  <section class="card border-0 shadow-sm mb-3" aria-label="Supplier return reconciliation">
+    <div class="card-body">
+      <div class="d-flex justify-content-between gap-3 flex-wrap">
+        <div><small class="d-block text-muted">Goods returned to supplier</small><strong>{{ company.currency_code }} {{ object.total_returned_value|floatformat:2 }}</strong></div>
+        <div><small class="d-block text-muted">Net value of goods received</small><strong>{{ company.currency_code }} {{ object.net_received_value|floatformat:2 }}</strong></div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Values use original purchase costs. These are stock values, not supplier refunds, supplier credits or cash payments.</p>
+    </div>
+  </section>
 
   <form method="post" novalidate class="staff-form-shell mb-3">
     {% csrf_token %}

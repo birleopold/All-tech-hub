@@ -20,12 +20,12 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | **Code implemented — verification deferred** |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Code implemented — verification deferred** |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | **Code implemented — verification deferred** |
-| P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | **Next coding phase** |
+| P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | **Implementation in progress** |
 | P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | Queued (early fixes committed; phase not started) |
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Next coding phase: P6.** P1–P5 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Active coding phase: P6.** P1–P5 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -119,6 +119,12 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Code-stage Phase 5: global search, permission-aware staff dashboard, CRM customer timelines and contextual creation, lead response/follow-up queues, and an existing lead → quotation → order handoff.
 - [x] Add focused regression tests and wire them into both existing Django CI suites.
 - [ ] Final verification: run Django suite/CI, role permissions, migrated database, staff navigation, responsive browser workflows and sales-to-payment integration. Not yet run or certified.
+
+## P6 finance and field operations implementation
+- [x] Separate purchase-order gross receipts, supplier returns and net goods value, using immutable receipt quantities and original purchase unit costs.
+- [x] Make the value reconciliation visible to staff on the purchase order without claiming a supplier refund was issued.
+- [ ] Continue with repair/installation costing, approvals, refund and margin workflows.
+- [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
 ## P5 coding handoff
 Core workflows reuse `dashboard/overview.py`, `core/staff_views.py`,

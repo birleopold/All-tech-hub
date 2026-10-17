@@ -73,8 +73,31 @@ class PurchaseOrder(models.Model):
 
     @property
     def total_received_value(self) -> Decimal:
+        """Gross stock received, before any subsequent supplier returns."""
         return sum(
             (line.received_total for line in self.lines.all()), Decimal("0")
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def total_returned_value(self) -> Decimal:
+        """Value of recorded returns at the original purchase-line cost."""
+        returns = SupplierReturn.objects.filter(
+            purchase_line__purchase_order=self
+        ).select_related("purchase_line")
+        return sum(
+            (
+                Decimal(returned.quantity) * returned.purchase_line.unit_cost
+                for returned in returns
+            ),
+            Decimal("0"),
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def net_received_value(self) -> Decimal:
+        """Goods value retained; not a record of supplier refunds or cash paid."""
+        return max(
+            Decimal("0.00"),
+            self.total_received_value - self.total_returned_value,
         ).quantize(Decimal("0.01"))
 
     def sync_receiving_status(self) -> None:

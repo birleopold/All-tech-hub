@@ -101,6 +101,32 @@ class ReceivingIntegrityTests(TestCase):
         self.assertEqual(self.product.stock_quantity, 1)
         self.assertEqual(SupplierReturn.objects.count(), 1)
 
+    def test_supplier_returns_reduce_net_received_value_without_rewriting_history(self):
+        self.line.received_quantity = 2
+        self.line.save(update_fields=["received_quantity"])
+        self.product.stock_quantity = 2
+        self.product.save(update_fields=["stock_quantity"])
+        self.client.force_login(self.user)
+        self.assertEqual(self.po.total_received_value, Decimal("10.00"))
+        response = self.client.post(
+            reverse("staff_po_return", args=[self.po.pk]),
+            {
+                "purchase_line": self.line.pk,
+                "quantity": 1,
+                "reason": "Faulty goods",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.po.refresh_from_db()
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.received_quantity, 2)
+        self.assertEqual(self.po.total_received_value, Decimal("10.00"))
+        self.assertEqual(self.po.total_returned_value, Decimal("5.00"))
+        self.assertEqual(self.po.net_received_value, Decimal("5.00"))
+        detail = self.client.get(reverse("staff_po_edit", args=[self.po.pk]))
+        self.assertContains(detail, "Net value of goods received")
+        self.assertContains(detail, "5.00")
+
     def test_purchase_order_can_receive_a_partial_shipment(self):
         self.client.force_login(self.user)
         response = self.client.post(
