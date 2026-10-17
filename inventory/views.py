@@ -639,10 +639,28 @@ def stocktake_add_line(request, pk: int):
     except ValueError:
         messages.error(request, "Counted quantity must be a whole number.")
         return redirect("staff_stocktake_detail", pk=take.pk)
+    if counted < 0:
+        messages.error(request, "Counted stock cannot be negative.")
+        return redirect("staff_stocktake_detail", pk=take.pk)
     product = get_object_or_404(Product, pk=product_id)
     variant = None
     if variant_id:
         variant = get_object_or_404(ProductVariant, pk=variant_id, product=product)
+    if product.kind != Product.KIND_PHYSICAL:
+        messages.error(request, "Services do not have physical stock to count.")
+        return redirect("staff_stocktake_detail", pk=take.pk)
+    if variant:
+        trackable = variant.track_inventory
+    else:
+        trackable = product.track_inventory and not product.has_sellable_variants()
+    if not trackable:
+        messages.error(request, "Choose an inventory-tracked product or configuration.")
+        return redirect("staff_stocktake_detail", pk=take.pk)
+    if StockTakeLine.objects.filter(
+        take=take, product=product, product_variant=variant
+    ).exists():
+        messages.error(request, "This item already has a count line.")
+        return redirect("staff_stocktake_detail", pk=take.pk)
     system_qty = variant.stock_quantity if variant else product.stock_quantity
     StockTakeLine.objects.create(
         take=take,
