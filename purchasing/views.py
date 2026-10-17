@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.forms import inlineformset_factory
+from django.forms.models import BaseInlineFormSet
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import TemplateView
@@ -20,12 +21,54 @@ from purchasing.models import (
     SupplierReturn,
 )
 
+class SafePurchaseLineFormSet(BaseInlineFormSet):
+    """Received goods keep their original identity, price and receipt trail."""
+
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        if form.instance.pk and form.instance.received_quantity:
+            for name in ("product", "product_variant", "unit_cost", "DELETE"):
+                if name in form.fields:
+                    form.fields[name].disabled = True
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        for form in self.forms:
+            data = getattr(form, "cleaned_data", None)
+            if not data or not form.instance.pk:
+                continue
+            before = PurchaseLine.objects.filter(pk=form.instance.pk).values(
+                "product_id", "product_variant_id", "unit_cost",
+                "received_quantity",
+            ).first()
+            if not before or not before["received_quantity"]:
+                continue
+            if data.get("DELETE"):
+                form.add_error(
+                    None, "Received purchase lines cannot be removed."
+                )
+                continue
+            for field in ("product", "product_variant"):
+                selected = data.get(field)
+                if (selected.pk if selected else None) != before[field + "_id"]:
+                    form.add_error(
+                        field, "Cannot change an item after goods were received."
+                    )
+            if data.get("unit_cost") != before["unit_cost"]:
+                form.add_error(
+                    "unit_cost", "Received goods keep their original unit cost."
+                )
+
+
 PurchaseLineFormSet = inlineformset_factory(
     PurchaseOrder,
     PurchaseLine,
     fields=("product", "product_variant", "description", "quantity", "unit_cost"),
     extra=1,
     can_delete=True,
+    formset=SafePurchaseLineFormSet,
 )
 
 
@@ -71,14 +114,36 @@ class PurchaseOrderUpdateView(StaffRequiredMixin, UpdateView):
         return ctx
 
     def form_valid(self, form):
-        ctx = self.get_context_data(form=form)
-        fs = ctx["lines_formset"]
-        if not fs.is_valid():
-            return self.render_to_response(ctx)
         with transaction.atomic():
+            self.object = PurchaseOrder.objects.select_for_update().get(
+                pk=self.object.pk
+            )
+            ctx = self.get_context_data(form=form)
+            fs = ctx["lines_formset"]
+            if self.object.lines.filter(received_quantity__gt=0).exists():
+                if form.cleaned_data["supplier"].pk != self.object.supplier_id:
+                    form.add_error(
+                        "supplier",
+                        "Cannot change the supplier after stock has been received.",
+                    )
+            if not fs.is_valid() or form.errors:
+                return self.render_to_response(ctx)
+            form.instance = self.object
             self.object = form.save()
             fs.instance = self.object
             fs.save()
+            # Never trust manually chosen 'received' or 'partial' labels
+            # over actual goods receipts.
+            if self.object.status != PurchaseOrder.STATUS_CANCELLED:
+                self.object.sync_receiving_status()
+                if self.object.status in (
+                    PurchaseOrder.STATUS_PARTIAL,
+                    PurchaseOrder.STATUS_RECEIVED,
+                ) and not self.object.lines.filter(
+                    received_quantity__gt=0
+                ).exists():
+                    self.object.status = PurchaseOrder.STATUS_SENT
+                self.object.save(update_fields=["status", "updated_at"])
         messages.success(self.request, "Purchase order saved.")
         return redirect("staff_po_edit", pk=self.object.pk)
 
