@@ -140,6 +140,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Restrict sensitive reports CSV exports to finance permissions, including payment reconciliation exceptions.
 - [x] Add a finance-only job-expense summary and per-job drill-down to existing business reports, explicitly excluding uncosted items and financial profit claims.
 - [ ] Continue with integrated field margins, approvals and exception handling.
+- [x] Stage expense report access and finance CSV confidentiality tests in the focused CI suite.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
 ## P5 coding handoff
