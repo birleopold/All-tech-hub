@@ -32,6 +32,8 @@ Scope: customer storefront, staff operations, admin configuration, production re
 - [ ] Execute focused Django tests and full regression suite in the production-like runtime.
 - [ ] Verify real small-screen and keyboard use of filters, cards and service pages.
 - [x] Add clear sellability/status labels to catalogue cards without inventing exact stock promises.
+- [x] Use the cheapest purchasable active configuration for "From" prices and sort/filter consistency; disable unavailable or unquoted options in the selector.
+- [x] Correct search autocomplete so unpriced services say "Request an estimate" instead of UGX 0.
 - [x] Add accessible numbered pagination retaining filters, sort and rotating discovery seed.
 - [ ] Validate real inventory states and mobile accessibility on a running server.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.

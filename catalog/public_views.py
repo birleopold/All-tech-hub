@@ -58,6 +58,17 @@ def _annotate_marketplace_values(queryset):
         _has_active_variants=Exists(active_variants),
         _has_sellable_variant=Exists(sellable_variants),
         _effective_price=Coalesce(
+            Min(
+                "variants__price",
+                filter=(
+                    Q(variants__is_active=True)
+                    & (
+                        Q(kind=Product.KIND_SERVICE, variants__price__gt=0)
+                        | Q(kind=Product.KIND_PHYSICAL, variants__track_inventory=False)
+                        | Q(kind=Product.KIND_PHYSICAL, variants__stock_quantity__gt=0)
+                    )
+                ),
+            ),
             Min("variants__price", filter=Q(variants__is_active=True)),
             F("price"),
             output_field=_PRICE_FIELD,
@@ -616,7 +627,11 @@ def public_catalog_suggestions(request):
                 "brand": product.public_brand,
                 "condition": product.public_condition,
                 "kind": product.kind,
-                "price": str(product.public_price),
+                "price": (
+                    None
+                    if product.kind == Product.KIND_SERVICE and product.public_price <= 0
+                    else str(product.public_price)
+                ),
                 "currency": company.currency_code,
                 "available": product.public_available,
                 "image": image_url,

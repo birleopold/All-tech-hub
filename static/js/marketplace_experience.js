@@ -119,7 +119,9 @@
               meta: metaParts.join(" · "),
               image: product.image,
               icon: product.kind === "service" ? "bi-tools" : "bi-laptop",
-              price: `${product.currency} ${Number(product.price).toLocaleString()}`,
+              price: product.price === null || product.price === undefined
+                ? "Request an estimate"
+                : `${product.currency} ${Number(product.price).toLocaleString()}`,
             });
           });
         }

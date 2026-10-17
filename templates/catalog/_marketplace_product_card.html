@@ -30,7 +30,7 @@
           {% if p.public_low_stock %}<span class="badge rounded-pill text-bg-warning">Limited stock</span>{% else %}<span class="badge rounded-pill text-bg-light text-success border">Available to order</span>{% endif %}
         {% else %}<span class="badge rounded-pill text-bg-light text-secondary border">Check availability</span>{% endif %}
         {% if p.public_condition %}<span class="badge rounded-pill text-bg-light text-dark border">{{ p.public_condition }}</span>{% endif %}
-      {% else %}<span class="badge rounded-pill text-bg-light text-primary border">Book by enquiry</span>{% endif %}
+      {% else %}<span class="badge rounded-pill text-bg-light text-primary border">{% if p.public_price %}Service enquiry{% else %}Quotation required{% endif %}</span>{% endif %}
     </div>
     <div class="market-product-card__actions" aria-label="Actions for {{ p.name }}">
       <a class="btn btn-primary" href="{{ p.get_absolute_url }}">{% if p.kind == 'service' %}View service{% else %}View details{% endif %}</a>

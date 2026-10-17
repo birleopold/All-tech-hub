@@ -138,7 +138,20 @@ def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCa
             key=lambda variant: (variant.price, variant.sort_order, variant.pk or 0),
         )
         has_variants = bool(active_variants)
-        min_price = active_variants[0].price if active_variants else None
+        # Lead with an option the customer can actually choose. An unavailable
+        # cheaper configuration must not set the advertised "From" price.
+        purchasable_variants = [
+            variant for variant in active_variants
+            if (
+                (product.kind == Product.KIND_SERVICE and variant.price > 0)
+                or (
+                    product.kind == Product.KIND_PHYSICAL
+                    and (not variant.track_inventory or variant.stock_quantity > 0)
+                )
+            )
+        ]
+        price_variants = purchasable_variants or active_variants
+        min_price = price_variants[0].price if price_variants else None
 
         if product.kind == Product.KIND_SERVICE:
             available = True
@@ -200,8 +213,8 @@ def prepare_public_products(products: Iterable[Product]) -> list[PublicProductCa
 
         display_price = min_price if min_price is not None else product.price
         compare_at = None
-        if active_variants:
-            cheapest_variant = active_variants[0]
+        if price_variants:
+            cheapest_variant = price_variants[0]
             if (
                 cheapest_variant.compare_at_price is not None
                 and cheapest_variant.compare_at_price > cheapest_variant.price
