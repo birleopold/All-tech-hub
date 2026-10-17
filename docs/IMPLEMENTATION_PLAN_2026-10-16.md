@@ -97,7 +97,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Restrict customer support form selections to owned jobs, documents, orders and serials; validate ownership at the model boundary.
 - [x] Add linked support shortcuts to repair pages and customer documents, and prefill the original record safely.
 - [x] Show related repair/document links on customer and staff ticket details and associate repair support replies with the job.
-- [ ] Display all recent customer-visible activities together and improve follow-ups/empty states.
+- [x] Display recent customer-visible order, repair, invoice and support activity on the account overview, with privacy-safe links, clear dates and an empty state.
 - [ ] Add permission, privacy and regression test cases and complete remaining P4 code; final integrated testing deferred.
 
 ## P3 coding handoff

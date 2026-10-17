@@ -30,6 +30,28 @@
     <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><span class="home-feature-icon"><i class="bi bi-life-preserver" aria-hidden="true"></i></span><p class="small text-muted mt-3 mb-1">Support requests</p><p class="display-6 mb-2">{{ open_tickets_count }}</p><a class="btn btn-sm btn-outline-primary" href="{% url 'portal_tickets' %}">View support</a></div></div></div>
   </div>
 
+  <section class="card border-0 shadow-sm mb-4" aria-labelledby="customer-latest-updates">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
+        <div><p class="small text-uppercase fw-semibold text-primary mb-1">Your activity</p><h2 class="h5 mb-1" id="customer-latest-updates">Recent updates</h2><p class="small text-muted mb-0">Orders, repair progress, documents and customer-visible support replies in one place.</p></div>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_ticket_create' %}">Ask for help</a>
+      </div>
+      {% if service_activity %}
+      <ol class="list-group list-group-flush account-activity-list mb-0">
+        {% for update in service_activity %}
+        <li class="list-group-item px-0 py-3 d-flex align-items-start justify-content-between flex-wrap gap-3">
+          <div class="flex-grow-1">
+            <a class="fw-semibold text-decoration-none" href="{{ update.url }}">{{ update.label }}</a>
+            <p class="small text-muted mb-0">{{ update.detail }}</p>
+          </div>
+          <time class="small text-muted" datetime="{{ update.at|date:'c' }}">{{ update.at|date:"M j, Y H:i" }}</time>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}<div class="staff-empty-state py-3"><p class="text-muted mb-0">No updates yet. Your orders, repairs, documents and support replies will appear here.</p></div>{% endif %}
+    </div>
+  </section>
+
   {% if outstanding_invoices %}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">

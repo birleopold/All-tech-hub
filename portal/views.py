@@ -25,6 +25,7 @@ from core.forms import PortalSupportTicketForm, PortalTicketReplyForm
 from core.models import Announcement, KnowledgeArticle, SupportTicket, TicketComment
 from crm.models import Customer, CustomerAddress
 from operations.models import JobCard, JobFeedback, JobNote, JobStatusEvent
+from portal.activity import customer_service_activity
 from portal.forms import CustomerAddressForm, CustomerSignUpForm, PortalRepairIntakeForm
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,7 @@ class PortalHomeView(TemplateView):
         ctx["recent_tickets"] = list(
             SupportTicket.objects.filter(customer=customer).order_by("-updated_at")[:5]
         )
+        ctx["service_activity"] = customer_service_activity(customer)
         return ctx
 
 
