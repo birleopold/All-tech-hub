@@ -94,6 +94,7 @@ jobs:
           reports.test_retention
           portal.test_warranties
           portal.test_service_hub
+          dashboard.test_staff_command_centre
           core.test_foundation
           core.test_api_experience
           core.test_phase1_security
@@ -257,5 +258,6 @@ jobs:
           catalog.test_experience
           portal.test_warranties
           portal.test_service_hub
+          dashboard.test_staff_command_centre
           core.test_foundation
           core.test_api_experience

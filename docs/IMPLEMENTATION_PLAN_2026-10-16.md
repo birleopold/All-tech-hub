@@ -112,7 +112,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Combine overdue follow-ups and unanswered first-contact alerts into one lead attention filter matching dashboard counts.
 - [x] Add lead search (name, phone, product, quote and order) and retain status/owner/follow-up filters across pages.
 - [x] Restrict topbar creation menu to actual add permissions, with clear accessible control labeling.
-- [ ] Complete Phase 5 regression coverage and code handoff; integrated testing deferred.
+- [x] Add focused tests for permission-aware search, customer form prefill, CRM timelines, lead queues and pagination, and role-aware dashboard.
+- [ ] Complete Phase 5 final coding handoff; integrated tests, browser review and production verification deferred.
 
 ## P4 coding handoff
 Existing `crm.Customer` continues to own the portal data; no shadow CRM or
