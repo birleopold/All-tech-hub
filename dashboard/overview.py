@@ -39,7 +39,7 @@ def dashboard_overview(user, counts):
             reverse("staff_payment_reconciliation"))
     if access["leads"]:
         add("Today", "overdue sales lead", counts["overdue_lead_count"],
-            reverse("staff_marketing_leads"))
+            reverse("staff_marketing_leads") + "?follow_up=overdue")
     if access["followups"]:
         add("Soon", "customer follow-up", counts["pending_retention_followup_count"],
             reverse("staff_retention_dashboard"))
@@ -63,6 +63,35 @@ def dashboard_overview(user, counts):
         add("Critical", "backup requiring review", 1, "#operational-health")
     rank = {"Critical": 0, "Today": 1, "Soon": 2}
     actions.sort(key=lambda item: rank[item["priority"]])
+
+    # Each employee sees shortcuts they are allowed to use, ordered by
+    # operational urgency instead of an identical manager dashboard menu.
+    focus_actions = []
+    def focus(label, url, detail, count=0):
+        focus_actions.append({
+            "label": label, "url": url, "detail": detail, "count": count,
+        })
+
+    if access["leads"]:
+        focus("Sales enquiries", reverse("staff_marketing_leads") + "?owner=mine",
+              "Follow up on assigned enquiries", counts["overdue_lead_count"])
+        focus("Unassigned leads", reverse("staff_marketing_leads") + "?owner=unassigned",
+              "Claim an enquiry before responding")
+    if access["jobs"]:
+        focus("Technician bench", reverse("staff_job_bench"),
+              "Start or update repair work", counts["overdue_jobs"])
+    if access["tickets"]:
+        focus("Support queue", reverse("staff_tickets") + "?due=overdue",
+              "Resolve overdue customer requests", counts["overdue_tickets"])
+    if access["orders"]:
+        focus("Active orders", reverse("staff_orders") + "?queue=active",
+              "Prepare, dispatch or collect orders", counts["orders_in_transit"])
+    if access["payments"]:
+        focus("Verify payments", reverse("staff_payment_reconciliation"),
+              "Check customer payment evidence", counts["pending_payment_count"])
+    if access["products"]:
+        focus("Inventory alerts", reverse("staff_products") + "?low=1",
+              "Review stock before accepting new orders", counts["low_stock_count"])
 
     work = []
     if access["jobs"]:
@@ -110,6 +139,7 @@ def dashboard_overview(user, counts):
     work.sort(key=lambda item: item["due"])
     result = {
         "action_center": actions, "my_work": work[:8],
+        "staff_focus_actions": focus_actions[:7],
         "show_sales_insights": access["orders"] or access["finance"],
     }
     if access["orders"]:

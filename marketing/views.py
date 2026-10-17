@@ -553,6 +553,17 @@ class LeadListView(MarketingListMixin, ListView):
         qs = super().get_queryset().select_related(
             "campaign", "link", "product", "assigned_to", "won_order", "quoted_document"
         )
+        query = (self.request.GET.get("q") or "").strip()[:120]
+        if query:
+            qs = qs.filter(
+                Q(name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(phone__icontains=query)
+                | Q(notes__icontains=query)
+                | Q(product__name__icontains=query)
+                | Q(quoted_document__number__icontains=query)
+                | Q(won_order__reference__icontains=query)
+            )
         status = self.request.GET.get("status")
         source = self.request.GET.get("source")
         if status:
@@ -587,8 +598,15 @@ class LeadListView(MarketingListMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        pagination_params = self.request.GET.copy()
+        pagination_params.pop("page", None)
         context.update(
             {
+                "lead_search_q": (self.request.GET.get("q") or "").strip()[:120],
+                "lead_pagination_params": (
+                    "&" + pagination_params.urlencode()
+                    if pagination_params else ""
+                ),
                 "lead_status": self.request.GET.get("status") or "",
                 "lead_source": self.request.GET.get("source") or "",
                 "lead_follow_up": self.request.GET.get("follow_up") or "",

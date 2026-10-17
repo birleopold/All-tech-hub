@@ -66,11 +66,12 @@
           <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search customers, orders, SKUs, serials…">
         </form>
         <div class="dropdown">
-          <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">New</button>
+          <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Create a new permitted record">New</button>
           <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="{% url 'staff_document_create' %}">New sale or quote</a></li>
-            <li><a class="dropdown-item" href="{% url 'staff_job_create' %}">New repair job</a></li>
-            <li><a class="dropdown-item" href="{% url 'staff_product_create' %}">Add product</a></li>
+            {% if perms.billing.add_commercialdocument %}<li><a class="dropdown-item" href="{% url 'staff_document_create' %}">New sale or quote</a></li>{% endif %}
+            {% if perms.operations.add_jobcard %}<li><a class="dropdown-item" href="{% url 'staff_job_create' %}">New repair job</a></li>{% endif %}
+            {% if perms.catalog.add_product %}<li><a class="dropdown-item" href="{% url 'staff_product_create' %}">Add product</a></li>{% endif %}
+            {% if perms.core.add_supportticket %}<li><a class="dropdown-item" href="{% url 'staff_ticket_create' %}">New support ticket</a></li>{% endif %}
           </ul>
         </div>
         <a class="staff-icon-button" href="{% url 'staff_notifications' %}" aria-label="Notifications{% if staff_unread_notifications %}, {{ staff_unread_notifications }} unread{% endif %}">

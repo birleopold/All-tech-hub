@@ -1,4 +1,21 @@
 {% load humanize %}
+{% if staff_focus_actions %}
+<section class="card staff-panel-card mb-3" aria-labelledby="staff-focus-title">
+  <div class="card-body">
+    <div class="staff-panel-heading"><h2 id="staff-focus-title">My work areas</h2><span>Actions for your access level</span></div>
+    <div class="row g-2">
+      {% for action in staff_focus_actions %}
+      <div class="col-sm-6 col-xl-4">
+        <a href="{{ action.url }}" class="border rounded p-3 text-decoration-none d-flex justify-content-between align-items-start gap-2 h-100">
+          <span><strong class="d-block">{{ action.label }}</strong><small class="text-muted">{{ action.detail }}</small></span>
+          {% if action.count %}<span class="badge text-bg-warning rounded-pill">{{ action.count }}</span>{% else %}<i class="bi bi-arrow-up-right" aria-hidden="true"></i>{% endif %}
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 <div class="row g-3 mb-3">
   <section class="col-lg-8" aria-labelledby="action-center-title">
     <div class="card staff-panel-card h-100"><div class="card-body">
