@@ -23,10 +23,23 @@ flock -n 9 || fail "Another VPS update is already running."
 cd "$APP_DIR"
 [[ "$(git branch --show-current)" == main ]] || fail "The production checkout must be on main."
 [[ -z "$(git ls-files --unmerged)" ]] || fail "Resolve the existing Git merge conflict first."
+
+# When invoked by the verified wrapper, never deploy a commit that has not
+# passed its isolated test suite. Reject a moving origin/main before changes.
+TESTED_RELEASE="${ALLTECH_TESTED_RELEASE:-}"
+if [[ -n "$TESTED_RELEASE" ]]; then
+  [[ "$TESTED_RELEASE" =~ ^[0-9a-f]{40}$ ]] || fail "Invalid tested release SHA."
+  git fetch origin main
+  [[ "$(git rev-parse HEAD)" == "$TESTED_RELEASE" ]] || fail "Local checkout changed after tests; rerun the release gate."
+  [[ "$(git rev-parse origin/main)" == "$TESTED_RELEASE" ]] || fail "origin/main advanced after tests; rerun the release gate."
+fi
 sudo -v
 
 printf '\nPulling origin/main (existing local edits are preserved)...\n'
 git pull --ff-only origin main
+if [[ -n "$TESTED_RELEASE" && "$(git rev-parse HEAD)" != "$TESTED_RELEASE" ]]; then
+  fail "A different commit was pulled after tests; deployment cancelled."
+fi
 EXPECTED_RELEASE="$(git rev-parse --short HEAD)"
 printf '\nInstalling locked dependencies for %s...\n' "$EXPECTED_RELEASE"
 "$VENV_DIR/bin/python" -m pip install -r requirements.lock

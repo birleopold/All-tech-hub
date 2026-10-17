@@ -19,10 +19,20 @@ cd "$APP_DIR"
   exit 2
 }
 
+# Verify the latest published commit, not a stale local checkout.
+# This is safe: no dependencies, production settings or database are touched.
+git fetch origin main
+git merge --ff-only origin/main
+tested_release="$(git rev-parse HEAD)"
+[[ "$tested_release" == "$(git rev-parse origin/main)" ]] || {
+  echo "Source changed while preparing the test gate. Retry." >&2
+  exit 2
+}
+
 mkdir -p "$HOME/leosoft-release-logs"
 log="$HOME/leosoft-release-logs/phase8-$(date +%Y%m%d-%H%M%S).log"
 
-echo "Checking source $(git rev-parse --short HEAD) before any production changes."
+echo "Checking source ${tested_release:0:12} before any production changes."
 echo "Full release-gate log: $log"
 (
   source .venv/bin/activate
@@ -30,5 +40,7 @@ echo "Full release-gate log: $log"
   bash scripts/phase8_release_gate.sh
 ) 2>&1 | tee "$log"
 
-echo "All isolated checks passed. Beginning existing guarded VPS update."
+echo "All isolated checks passed for $tested_release. Beginning existing guarded VPS update."
+# The updater refuses to install a different Git revision from the one tested.
+export ALLTECH_TESTED_RELEASE="$tested_release"
 exec bash scripts/update_vps.sh

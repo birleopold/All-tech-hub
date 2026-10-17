@@ -92,6 +92,29 @@ class ProductionAutomationUnitTests(SimpleTestCase):
         )
         self.assertIn('tee "$log"', script)
 
+    def test_verified_deploy_checks_latest_head_and_pins_deployed_revision(self):
+        root = Path(__file__).resolve().parents[1]
+        wrapper = (root / "scripts" / "phase8_verified_deploy.sh").read_text(
+            encoding="utf-8"
+        )
+        updater = (root / "scripts" / "update_vps.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("git fetch origin main", wrapper)
+        self.assertIn("git merge --ff-only origin/main", wrapper)
+        self.assertLess(
+            wrapper.index("git merge --ff-only origin/main"),
+            wrapper.index("bash scripts/phase8_release_gate.sh"),
+        )
+        self.assertIn('export ALLTECH_TESTED_RELEASE="$tested_release"', wrapper)
+        self.assertIn('TESTED_RELEASE="${ALLTECH_TESTED_RELEASE:-}"', updater)
+        self.assertIn('"$(git rev-parse origin/main)" == "$TESTED_RELEASE"', updater)
+        self.assertIn('"$(git rev-parse HEAD)" != "$TESTED_RELEASE"', updater)
+        self.assertLess(
+            updater.index('fail "A different commit was pulled after tests'),
+            updater.index('"$VENV_DIR/bin/python" -m pip install'),
+        )
+
     def test_production_management_helper_loads_the_same_environment(self):
         helper = (
             Path(__file__).resolve().parents[1]
