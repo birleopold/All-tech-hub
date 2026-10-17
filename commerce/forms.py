@@ -58,6 +58,14 @@ class CheckoutForm(forms.Form):
             + (f" · {zone.lead_time}" if zone.lead_time else "")
         )
         self.delivery_zones_available = self.fields["delivery_zone"].queryset.exists()
+        if not self.delivery_zones_available:
+            # Do not accept zero-charge delivery when no delivery rates exist.
+            # Pickup is still a complete, usable customer journey.
+            self.fields["fulfillment_type"].choices = [
+                choice for choice in Order.FULFILLMENT_CHOICES
+                if choice[0] == Order.FULFILLMENT_PICKUP
+            ]
+            self.fields["fulfillment_type"].initial = Order.FULFILLMENT_PICKUP
         autocomplete = {
             "name": "name",
             "email": "email",
@@ -94,7 +102,12 @@ class CheckoutForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         if cleaned_data.get("fulfillment_type") == Order.FULFILLMENT_DELIVERY:
-            if self.delivery_zones_available and not cleaned_data.get("delivery_zone"):
+            if not self.delivery_zones_available:
+                self.add_error(
+                    "fulfillment_type",
+                    "Delivery is currently unavailable. Choose pickup or contact the team.",
+                )
+            elif not cleaned_data.get("delivery_zone"):
                 self.add_error("delivery_zone", "Choose the area where we should deliver.")
         else:
             cleaned_data["delivery_zone"] = None

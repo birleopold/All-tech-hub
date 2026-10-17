@@ -240,6 +240,28 @@ def staff_order_shipment(request, pk: int):
 
             shipment = form.save(commit=False)
             shipment.order = order
+            if order.is_terminal and (
+                current_shipment is None or
+                shipment.status != current_shipment.status
+            ):
+                raise ValidationError(
+                    "Completed orders cannot change shipment progress. "
+                    "You may correct carrier or tracking details without "
+                    "changing the delivered status."
+                )
+            if current_shipment is not None:
+                progression = {
+                    Shipment.STATUS_PREPARING: 0,
+                    Shipment.STATUS_IN_TRANSIT: 1,
+                    Shipment.STATUS_DELIVERED: 2,
+                }
+                if progression.get(shipment.status, -1) < progression.get(
+                    current_shipment.status, -1
+                ):
+                    raise ValidationError(
+                        "Shipment progress cannot move backward. "
+                        "Contact an administrator to correct an exceptional case."
+                    )
             if (
                 shipment.status == shipment.STATUS_IN_TRANSIT
                 and not shipment.dispatched_at

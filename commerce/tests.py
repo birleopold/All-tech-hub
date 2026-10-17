@@ -94,6 +94,34 @@ class OrderFulfillmentTests(TestCase):
         response = self.client.get(reverse("staff_orders"))
         self.assertEqual(response.status_code, 200)
 
+    def test_delivered_shipment_cannot_regress_to_preparing(self):
+        for target in (
+            Order.STATUS_CONFIRMED,
+            Order.STATUS_PROCESSING,
+            Order.STATUS_READY,
+            Order.STATUS_DISPATCHED,
+            Order.STATUS_DELIVERED,
+        ):
+            transition_order(self.order, target, actor=self.user)
+        Shipment.objects.create(
+            order=self.order, carrier="Demo Courier",
+            tracking_number="TRACK-1", status=Shipment.STATUS_DELIVERED,
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("staff_order_shipment", args=[self.order.pk]),
+            {
+                "carrier": "Demo Courier", "tracking_number": "TRACK-1",
+                "tracking_url": "", "status": Shipment.STATUS_PREPARING,
+                "estimated_delivery": "", "note": "",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        shipment = Shipment.objects.get(order=self.order)
+        self.assertEqual(shipment.status, Shipment.STATUS_DELIVERED)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Order.STATUS_DELIVERED)
+
     def test_shipment_update_advances_order(self):
         transition_order(self.order, Order.STATUS_CONFIRMED, actor=self.user)
         transition_order(self.order, Order.STATUS_PROCESSING, actor=self.user)

@@ -42,6 +42,22 @@ class CheckoutDeliveryAndIdentityTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.delivery_fee, Decimal("15000.00"))
 
+    def test_no_delivery_zones_disables_delivery_without_inventing_zero_shipping(self):
+        self.zone.is_active = False
+        self.zone.save(update_fields=["is_active"])
+        form = CheckoutForm(data=self.base_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("fulfillment_type", form.errors)
+        pickup = CheckoutForm(
+            data={**self.base_data, "fulfillment_type": Order.FULFILLMENT_PICKUP}
+        )
+        self.assertTrue(pickup.is_valid(), pickup.errors)
+        self.assertEqual(pickup.delivery_fee, Decimal("0.00"))
+        self.assertEqual(
+            list(CheckoutForm().fields["fulfillment_type"].choices),
+            [(Order.FULFILLMENT_PICKUP, "Pickup")],
+        )
+
     def test_store_pickup_does_not_add_delivery_fee(self):
         form = CheckoutForm(
             data={
