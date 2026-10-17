@@ -68,7 +68,7 @@ class ValidatedVariantFormSet(AllowEmptyExtraInlineFormSet):
                 continue
             sku = normal_sku(data.get("sku"))
             if sku:
-                old_sku = normal_sku(getattr(form.instance, "sku", ""))
+                old_sku = normal_sku(form.initial.get("sku"))
                 changed = not form.instance.pk or sku != old_sku
                 groups.setdefault(sku, []).append((form, changed))
         for sku, forms in groups.items():
