@@ -271,8 +271,14 @@ class CustomerReturn(models.Model):
                 "Inventory returns are for physical products only. "
                 "Use a credit note for service adjustments."
             )
-        if self.quantity <= 0:
+        # Django ModelForms call model.clean() even when a submitted foreign
+        # key or quantity has already failed field validation. Do not access a
+        # missing related object or compare None with a number: let the form
+        # show the original field error instead of returning HTTP 500.
+        if self.quantity is not None and self.quantity <= 0:
             raise ValidationError("Return quantity must be positive.")
+        if not self.order_line_id or self.quantity is None:
+            return
         if self.previously_returned + self.quantity > self.order_line.quantity:
             raise ValidationError("Return quantity exceeds the quantity sold.")
 

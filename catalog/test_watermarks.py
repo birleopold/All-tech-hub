@@ -69,6 +69,22 @@ class ProductImageWatermarkTests(TestCase):
         product.refresh_from_db()
         self.assertEqual(product.image.name, first_name)
 
+    def test_tiny_gallery_image_does_not_crash_watermark_layout(self):
+        product = Product.objects.create(
+            category=self.category,
+            name="Tiny preview product",
+            price="180000.00",
+            stock_quantity=1,
+        )
+        gallery = ProductImage.objects.create(
+            product=product,
+            image=_uploaded_image("tiny-preview.jpg", size=(20, 20)),
+            alt_text="Tiny source image",
+        )
+        self.assertTrue(Path(gallery.image.name).name.startswith("wm_"))
+        with Image.open(gallery.image.path) as image:
+            self.assertEqual(image.size, (20, 20))
+
     def test_gallery_upload_is_processed(self):
         product = Product.objects.create(
             category=self.category,

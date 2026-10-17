@@ -353,20 +353,24 @@ def _render_watermark(raw: bytes, original_name: str) -> tuple[bytes, str]:
     bottom = height - max(10, height // 50)
     left = max(horizontal_margin, right - brand_width - padding_x * 2)
     top = max(10, bottom - brand_height - padding_y * 2)
-    overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.rounded_rectangle(
-        (left, top, right, bottom),
-        radius=max(8, padding_y),
-        fill=(8, 25, 44, 205),
-        outline=(255, 255, 255, 180),
-        width=max(1, font_size // 22),
-    )
-    overlay_draw.text(
-        (left + padding_x, top + padding_y),
-        brand,
-        font=brand_font,
-        fill=(255, 255, 255, 245),
-    )
+    # Tiny thumbnails cannot fit the branded corner plaque. The repeated
+    # watermark above remains, and the original dimensions are preserved.
+    # Never draw an inverted rectangle (Pillow raises ValueError for it).
+    if width >= 160 and height >= 80:
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rounded_rectangle(
+            (left, top, right, bottom),
+            radius=max(8, padding_y),
+            fill=(8, 25, 44, 205),
+            outline=(255, 255, 255, 180),
+            width=max(1, font_size // 22),
+        )
+        overlay_draw.text(
+            (left + padding_x, top + padding_y),
+            brand,
+            font=brand_font,
+            fill=(255, 255, 255, 245),
+        )
 
     watermarked = Image.alpha_composite(image, overlay)
     extension, output_format = _safe_extension(original_name, image_format)

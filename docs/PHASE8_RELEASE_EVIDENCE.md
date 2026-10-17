@@ -44,6 +44,28 @@ expense records. Re-run the isolated release gate and require its success
 before applying any production database migrations. This entry documents
 the code fix; no successful VPS rerun is claimed.
 
+## Interrupted VPS certification run (2026-10-18)
+
+The user's captured VPS output for release `83d7b5f` confirms:
+
+- Django `check`, migration drift detection and clean SQLite migrations passed.
+- Checksummed backup verification and disposable SQLite restore passed.
+- The full suite found **750 tests** but produced multiple `E` and `F`
+  markers. The captured log ends before the test-result summary and therefore
+  does not establish the number or identity of all failures.
+- An invalid customer return triggered a genuine HTTP 500 in
+  `CustomerReturn.clean()` when `order_line` was absent, now guarded.
+- Very small watermarked images raised a Pillow inverted-coordinate error,
+  now handled without discarding their image output.
+- Some HTTP 403/404/400 responses are intentional security tests, not failures
+  unless their associated test assertion is marked `F` or `E`.
+
+The release gate MUST remain blocking until the captured full-suite failures
+are understood and corrected. Use a detached shell with persistent stdout and
+stderr logs; never use interactive `set -e` to launch a prolonged certification
+session over an unreliable SSH connection. No production deployment was
+confirmed by this interrupted run.
+
 ## Evidence register
 
 | Gate | Current status | Required real-world evidence |

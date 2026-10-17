@@ -435,6 +435,43 @@ class CouponTests(TestCase):
 
 
 class CustomerReturnTests(TestCase):
+    def test_missing_order_line_is_a_form_error_not_an_http_500(self):
+        from django.contrib.auth.models import User
+
+        category = Category.objects.create(
+            name="Return missing line", slug="return-missing-line"
+        )
+        product = Product.objects.create(
+            category=category, name="USB adapter",
+            slug="return-missing-line-adapter", price=Decimal("20000"),
+            stock_quantity=5,
+        )
+        customer = Customer.objects.create(
+            name="Return buyer", email="missingline-return@example.com"
+        )
+        order = Order.objects.create(
+            reference="ORD-MISSING-RETURN-LINE",
+            customer=customer, contact_name=customer.name,
+            contact_email=customer.email, status=Order.STATUS_DELIVERED,
+        )
+        order.lines.create(
+            product=product, description=product.name,
+            quantity=1, unit_price=product.price,
+        )
+        staff = User.objects.create_user(
+            "return-missing-line-staff", password="pw", is_staff=True
+        )
+        self.client.force_login(staff)
+        response = self.client.post(
+            reverse("staff_order_return", args=[order.pk]),
+            {"order_line": "", "quantity": "1", "reason": "Wrong size",
+             "disposition": CustomerReturn.DISPOSITION_RESTOCK},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(CustomerReturn.objects.exists())
+        product.refresh_from_db()
+        self.assertEqual(product.stock_quantity, 5)
+
     def test_service_line_cannot_be_returned_into_stock(self):
         from django.contrib.auth.models import User
 
