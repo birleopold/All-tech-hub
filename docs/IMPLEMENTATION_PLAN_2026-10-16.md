@@ -128,6 +128,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Make job status changes, cancellation part returns and history entries atomic to avoid half-written stock/job states.
 - [x] Create a direct job expense ledger for actual, receipt-backed parts, labour, transport and subcontractor costs, without inventing rates or profits.
 - [x] Restrict cost entry/view to explicit expense permissions; Finance and Manager roles receive these permissions after bootstrap.
+- [x] Expose receipt-backed expenses and actual cost totals in the job detail screen, only to users with job expense permissions.
+- [x] Add focused expense-entry, duplicate-reference, nonpositive cost and cost-data confidentiality regression tests.
 - [ ] Continue with financial approvals, refund controls, margin reports and field workflow integration.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 

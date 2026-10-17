@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.core.exceptions import ValidationError
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -9,7 +9,7 @@ from django.utils import timezone
 from core.models import AuditEvent, StaffNotification, SupportTicket
 from crm.models import Customer
 from operations.job_status import allowed_next_statuses, validate_job_status_transition
-from operations.models import JobCard, JobFeedback, JobStatusEvent
+from operations.models import JobCard, JobExpense, JobFeedback, JobStatusEvent
 
 
 class JobStatusFsmTests(TestCase):

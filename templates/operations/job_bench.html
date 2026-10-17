@@ -10,6 +10,7 @@
     <a class="btn btn-outline-secondary" href="{% url 'staff_job_bench' %}">Bench</a>
     <a class="btn btn-outline-primary" href="{% url 'staff_job_labels' job.pk %}" target="_blank" rel="noopener noreferrer">Labels</a>
     <a class="btn btn-outline-primary" href="{% url 'staff_job_pdf' job.pk %}" target="_blank" rel="noopener noreferrer">PDF</a>
+    <a class="btn btn-outline-primary" href="{% url 'staff_job_detail' job.pk %}">Full job record</a>
     <a class="btn btn-primary" href="{% url 'staff_job_edit' job.pk %}">Edit full card</a>
   </div>
 </div>

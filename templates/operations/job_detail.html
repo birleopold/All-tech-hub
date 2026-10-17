@@ -82,6 +82,37 @@
         <div class="staff-section-card-body border-top">{% if job.is_open %}<form method="post" action="{% url 'staff_job_stock_use' job.pk %}" class="row g-2 align-items-end">{% csrf_token %}<div class="col-12"><label class="form-label small fw-semibold">Product</label>{{ job_stock_form.product }}</div><div class="col-12"><label class="form-label small fw-semibold">Variant</label>{{ job_stock_form.product_variant }}</div><div class="col-4"><label class="form-label small fw-semibold">Quantity</label>{{ job_stock_form.quantity_delta }}</div><div class="col-8"><label class="form-label small fw-semibold">Note</label>{{ job_stock_form.note }}</div><div class="col-12"><button type="submit" class="btn btn-outline-primary w-100">Record part usage</button></div></form>{% else %}<p class="small text-muted mb-0">This job is {{ job.get_status_display|lower }}. Parts consumption is closed; any automatic cancellation returns remain visible in the stock history.</p>{% endif %}</div>
       </article>
 
+      {% if can_view_job_expenses %}
+      <article class="staff-section-card">
+        <header class="staff-section-card-header"><div><h2>Direct job expenses</h2><p>Only costs supported by actual receipts or internal vouchers</p></div><i class="bi bi-receipt text-muted" aria-hidden="true"></i></header>
+        <div class="staff-section-card-body">
+          <p class="mb-1 small text-muted">Recorded direct costs</p>
+          <p class="h5">{{ company.currency_code }} {{ recorded_direct_cost|floatformat:2 }}</p>
+          <p class="small text-muted">These expenses exclude costs not recorded here, including unpriced parts and uncosted technician time. This is not a full job margin, a supplier payment, or customer revenue.</p>
+          {% if job_expenses %}
+          <div class="table-responsive"><table class="table table-sm align-middle mb-3">
+            <thead><tr><th>Expense</th><th>Source</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>{% for expense in job_expenses %}<tr>
+              <td><strong>{{ expense.get_category_display }}</strong><div class="small">{{ expense.description }}</div><div class="small text-muted">{{ expense.recorded_at|date:"M j, Y H:i" }}{% if expense.recorded_by %} · {{ expense.recorded_by.get_username }}{% endif %}</div></td>
+              <td class="small">{{ expense.reference }}</td>
+              <td class="text-end">{{ company.currency_code }} {{ expense.amount|floatformat:2 }}</td>
+            </tr>{% endfor %}</tbody>
+          </table></div>
+          {% else %}<p class="text-muted small">No direct job expenses recorded.</p>{% endif %}
+          {% if can_add_job_expense %}
+          <form method="post" action="{% url 'staff_job_expense' job.pk %}" class="row g-2">
+            {% csrf_token %}
+            <div class="col-sm-5"><label class="form-label small fw-semibold" for="{{ expense_form.category.id_for_label }}">Type</label>{{ expense_form.category }}</div>
+            <div class="col-sm-7"><label class="form-label small fw-semibold" for="{{ expense_form.amount.id_for_label }}">Actual cost ({{ company.currency_code }})</label>{{ expense_form.amount }}</div>
+            <div class="col-12"><label class="form-label small fw-semibold" for="{{ expense_form.description.id_for_label }}">Description</label>{{ expense_form.description }}</div>
+            <div class="col-12"><label class="form-label small fw-semibold" for="{{ expense_form.reference.id_for_label }}">Unique receipt or voucher reference</label>{{ expense_form.reference }}<div class="form-text">Use a new reference for each expense. Duplicates cannot be recorded against the same job.</div></div>
+            <div class="col-12"><button type="submit" class="btn btn-outline-primary w-100">Record direct expense</button></div>
+          </form>
+          {% endif %}
+        </div>
+      </article>
+      {% endif %}
+
       <article class="staff-section-card">
         <header class="staff-section-card-header"><div><h2>Technician time</h2><p>Labour entries and billable minutes</p></div><span class="staff-status-pill staff-status-pill--neutral">{{ job.time_entries.count }}</span></header>
         <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead><tr><th>Technician</th><th class="text-end">Minutes</th><th>Billable</th></tr></thead><tbody>{% for entry in job.time_entries.all %}<tr><td>{{ entry.technician.get_username }}<small class="d-block text-muted">{{ entry.started_at|date:"M j H:i" }}{% if entry.ended_at %}–{{ entry.ended_at|date:"H:i" }}{% endif %}</small></td><td class="text-end">{{ entry.minutes }}</td><td>{% if entry.is_billable %}<span class="staff-status-pill staff-status-pill--success">Yes</span>{% else %}<span class="staff-status-pill staff-status-pill--neutral">No</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted">No time entries.</td></tr>{% endfor %}</tbody></table></div>
