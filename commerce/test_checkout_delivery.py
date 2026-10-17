@@ -42,6 +42,14 @@ class CheckoutDeliveryAndIdentityTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.delivery_fee, Decimal("15000.00"))
 
+    def test_unpriced_active_delivery_zone_is_not_offered_as_free(self):
+        self.zone.fee_from = None
+        self.zone.save(update_fields=["fee_from"])
+        form = CheckoutForm(data={**self.base_data, "delivery_zone": self.zone.pk})
+        self.assertFalse(form.is_valid())
+        self.assertIn("fulfillment_type", form.errors)
+        self.assertNotIn(self.zone, form.fields["delivery_zone"].queryset)
+
     def test_no_delivery_zones_disables_delivery_without_inventing_zero_shipping(self):
         self.zone.is_active = False
         self.zone.save(update_fields=["is_active"])

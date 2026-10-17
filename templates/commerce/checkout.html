@@ -31,6 +31,14 @@
           {% if checkout_token %}<input type="hidden" name="checkout_token" value="{{ checkout_token }}">{% endif %}
           <p class="text-uppercase small fw-semibold text-primary mb-2">Customer details</p>
           <h2 class="h4 mb-3">Where should we reach you?</h2>
+          {% if not delivery_zones_available %}
+          <div class="alert alert-info" role="status">
+            <strong>Pickup is available.</strong> Online delivery pricing is not
+            currently configured. For a delivered order, please
+            <a href="{% url 'contact' %}?type=quote">request a delivery quotation</a>
+            before placing your order.
+          </div>
+          {% endif %}
           {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
           <div class="desktop-checkout-fields">
           {% for field in form %}

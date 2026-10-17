@@ -292,8 +292,13 @@ def checkout_view(request):
                         contact_email=form.cleaned_data["email"],
                         contact_phone=form.cleaned_data.get("phone") or "",
                         billing_summary=form.cleaned_data["billing_address"],
-                        shipping_summary=form.cleaned_data.get("shipping_address")
-                        or form.cleaned_data["billing_address"],
+                        shipping_summary=(
+                            form.cleaned_data.get("shipping_address")
+                            or form.cleaned_data["billing_address"]
+                            if form.cleaned_data["fulfillment_type"]
+                            == Order.FULFILLMENT_DELIVERY
+                            else ""
+                        ),
                         fulfillment_type=form.cleaned_data["fulfillment_type"],
                         delivery_zone_name=selected_zone.name if selected_zone else "",
                         delivery_fee=delivery_fee,
@@ -377,6 +382,14 @@ def checkout_view(request):
                 reference=order.reference,
                 view_key=order.view_key,
             )
+    if request.method == "POST" and getattr(form, "cleaned_data", None):
+        # Preserve the chosen delivery price when unrelated form validation
+        # fails, instead of showing an incorrect zero-delivery summary.
+        delivery_fee = form.delivery_fee
+        delivery_tax = (
+            delivery_fee * tax_rate / Decimal("100")
+        ).quantize(Decimal("0.01"))
+
     if request.method != "POST":
         initial = {}
         if request.user.is_authenticated:

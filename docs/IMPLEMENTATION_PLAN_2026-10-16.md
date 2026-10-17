@@ -72,7 +72,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
 
 ## P3 first customer-to-staff order protection
-- [x] Disable delivery at checkout when no active delivery area exists, instead of silently charging zero; pickup remains usable.
+- [x] Disable delivery at checkout when no priced delivery area exists, instead of silently charging zero; pickup remains usable.
+- [x] Exclude configured delivery areas with missing prices and give customers a visible quote-enquiry path.
+- [x] Preserve the selected delivery amount in checkout error re-renders and keep pickup shipping fields blank.
 - [x] Prevent shipment status regression after delivery and completed-order shipment progress changes at the backend, preserving pending, transit and exception states.
 - [x] Restrict pickup and delivery orders to appropriate next statuses, reusing the existing transition engine.
 - [x] Show staff only actionable next steps; hide final-order status actions and pickup shipment forms.

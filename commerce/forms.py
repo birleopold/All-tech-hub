@@ -51,7 +51,11 @@ class CheckoutForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.request_user = kwargs.pop("request_user", None)
         super().__init__(*args, **kwargs)
-        self.fields["delivery_zone"].queryset = DeliveryZone.objects.filter(is_active=True)
+        # A zone without a confirmed price is an enquiry, not a zero-fee
+        # checkout option. Customers can still arrange it with staff.
+        self.fields["delivery_zone"].queryset = DeliveryZone.objects.filter(
+            is_active=True, fee_from__isnull=False, fee_from__gte=0
+        )
         self.fields["delivery_zone"].label_from_instance = lambda zone: (
             f"{zone.name} — {zone.areas}"
             + (f" · from {zone.fee_from:,.0f}" if zone.fee_from is not None else "")
