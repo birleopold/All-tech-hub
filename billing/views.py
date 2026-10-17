@@ -747,6 +747,9 @@ class CommercialDocumentDetailView(StaffRequiredMixin, DetailView):
                         kwargs={"token": doc.payment_request_token},
                     )
                 )
+        ctx["can_approve_quote"] = self.request.user.has_perm(
+            "billing.approve_high_value_document"
+        )
         ctx["quote_approval_pending"] = (
             doc.doc_type == CommercialDocument.TYPE_QUOTE
             and doc.quote_requires_internal_approval
@@ -1312,7 +1315,10 @@ def customer_statement(request, customer_pk: int):
 
 
 def payment_reconciliation(request):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.view_documentpayment")
+    ):
         raise Http404
     date_value = request.GET.get("date")
     try:
@@ -1351,6 +1357,12 @@ def payment_reconciliation(request):
         "billing/payment_reconciliation.html",
         {
             "selected_date": selected_date,
+            "can_review_submissions": request.user.has_perm(
+                "billing.change_paymentsubmission"
+            ),
+            "can_add_account_payment": request.user.has_perm(
+                "billing.add_accountpayment"
+            ),
             "payments": payments,
             "account_payments": account_payments,
             "method_totals": totals.values(),
@@ -1366,7 +1378,10 @@ def payment_reconciliation(request):
 
 @require_POST
 def payment_submission_approve(request, submission_pk: int):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.change_paymentsubmission")
+    ):
         raise Http404
     submission = get_object_or_404(PaymentSubmission, pk=submission_pk)
     try:
@@ -1384,7 +1399,10 @@ def payment_submission_approve(request, submission_pk: int):
 
 @require_POST
 def payment_submission_reject(request, submission_pk: int):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.change_paymentsubmission")
+    ):
         raise Http404
     submission = get_object_or_404(PaymentSubmission, pk=submission_pk)
     try:
@@ -1682,10 +1700,22 @@ def convert_document(request, pk: int, target: str):
 
 
 @require_POST
+@transaction.atomic
 def quote_internal_approve(request, pk: int):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.approve_high_value_document")
+    ):
         raise Http404
-    doc = get_object_or_404(CommercialDocument, pk=pk)
+    doc = get_object_or_404(
+        CommercialDocument.objects.select_for_update(), pk=pk
+    )
+    if doc.status in (
+        CommercialDocument.STATUS_CANCELLED,
+        CommercialDocument.STATUS_EXPIRED,
+    ):
+        messages.error(request, "Cancelled or expired quotations cannot be approved.")
+        return redirect("staff_document_view", pk=pk)
     if doc.doc_type != CommercialDocument.TYPE_QUOTE:
         messages.error(request, "Only quotations can be approved this way.")
         return redirect("staff_document_view", pk=pk)

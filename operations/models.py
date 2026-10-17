@@ -174,6 +174,29 @@ class JobCard(models.Model):
             from operations.job_status import validate_job_status_transition
 
             validate_job_status_transition(previous=prev, new=self.status)
+        if self.customer_id:
+            if self.related_invoice_id:
+                if (
+                    self.related_invoice.customer_id is not None
+                    and self.related_invoice.customer_id != self.customer_id
+                ):
+                    raise ValidationError({
+                        "related_invoice": "Invoice belongs to a different customer."
+                    })
+                if (
+                    self.related_invoice.doc_type !=
+                    self.related_invoice.TYPE_INVOICE
+                ):
+                    raise ValidationError({
+                        "related_invoice": "Only a customer invoice can be linked."
+                    })
+            if self.related_order_id and (
+                self.related_order.customer_id is not None
+                and self.related_order.customer_id != self.customer_id
+            ):
+                raise ValidationError({
+                    "related_order": "Order belongs to a different customer."
+                })
         self._validate_schedule_overlap()
 
     def _schedule_window(self) -> tuple:

@@ -89,6 +89,23 @@
           <p class="mb-1 small text-muted">Recorded direct costs</p>
           <p class="h5">{{ company.currency_code }} {{ recorded_direct_cost|floatformat:2 }}</p>
           <p class="small text-muted">These expenses exclude costs not recorded here, including unpriced parts and uncosted technician time. This is not a full job margin, a supplier payment, or customer revenue.</p>
+          {% if job_financial_reconciliation %}
+          <div class="border rounded p-3 mb-3" aria-label="Invoice and job cost reconciliation">
+            <h3 class="h6">Invoice and job-cost comparison</h3>
+            <p class="small mb-2"><strong>{{ job_financial_reconciliation.status }}</strong> — {{ job_financial_reconciliation.note }}</p>
+            {% if job_financial_reconciliation.invoice %}
+            <a class="small" href="{% url 'staff_document_view' job_financial_reconciliation.invoice.pk %}">Open invoice {{ job_financial_reconciliation.invoice.number }}</a>
+            {% endif %}
+            {% if job_financial_reconciliation.invoice_income is not None %}
+            <dl class="row small mt-3 mb-0">
+              <dt class="col-7">Recognised invoice income</dt><dd class="col-5 text-end">{{ company.currency_code }} {{ job_financial_reconciliation.invoice_income|floatformat:2 }}</dd>
+              <dt class="col-7">Invoiced business cost</dt><dd class="col-5 text-end">{{ company.currency_code }} {{ job_financial_reconciliation.invoice_business_cost|floatformat:2 }}</dd>
+              <dt class="col-7">Invoiced partner amount</dt><dd class="col-5 text-end">{{ company.currency_code }} {{ job_financial_reconciliation.invoice_partner_due|floatformat:2 }}</dd>
+              <dt class="col-7">Invoice contribution before job-expense reconciliation</dt><dd class="col-5 text-end">{{ company.currency_code }} {{ job_financial_reconciliation.invoice_contribution|floatformat:2 }}</dd>
+            </dl>
+            {% endif %}
+          </div>
+          {% endif %}
           {% if job_expenses %}
           <div class="table-responsive"><table class="table table-sm align-middle mb-3">
             <thead><tr><th>Expense</th><th>Source</th><th class="text-end">Amount</th></tr></thead>

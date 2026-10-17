@@ -23,6 +23,7 @@ from inventory.forms import JobStockUseForm
 from operations.forms import (
     JobAttachmentForm, JobCardForm, JobExpenseForm, JobNoteForm, TimeEntryForm,
 )
+from operations.job_financials import job_financial_reconciliation
 from operations.job_status import allowed_next_statuses
 from operations.models import JobCard, JobExpense
 from operations.pdf import pdf_response
@@ -175,6 +176,13 @@ class JobCardDetailView(StaffRequiredMixin, DetailView):
             ctx["job_expenses"] = []
             ctx["recorded_direct_cost"] = None
         ctx["expense_form"] = JobExpenseForm() if ctx["can_add_job_expense"] else None
+        ctx["job_financial_reconciliation"] = (
+            job_financial_reconciliation(self.object)
+            if can_view_expenses and self.request.user.has_perm(
+                "billing.view_document_margin"
+            )
+            else None
+        )
         return ctx
 
 

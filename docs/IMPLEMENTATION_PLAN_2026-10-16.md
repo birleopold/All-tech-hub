@@ -139,7 +139,10 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Separate operational reports from sensitive cost, profit and partner-payable reports by the existing billing margin permission.
 - [x] Restrict sensitive reports CSV exports to finance permissions, including payment reconciliation exceptions.
 - [x] Add a finance-only job-expense summary and per-job drill-down to existing business reports, explicitly excluding uncosted items and financial profit claims.
-- [ ] Continue with integrated field margins, approvals and exception handling.
+- [x] Add protected job-to-invoice comparison with customer ownership checks, one-to-one allocation rule, issued document validation, and explicit warnings about overlapping cost sources.
+- [x] Enforce quote approval permission and atomic quote approval; protect cancelled/expired documents from approval.
+- [x] Require payment verification permissions in the backend and review UI; allow read-only finance review without write access.
+- [ ] Finalise financial exception regression cases and move on to Phase 7 after code handoff.
 - [x] Stage expense report access and finance CSV confidentiality tests in the focused CI suite.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
