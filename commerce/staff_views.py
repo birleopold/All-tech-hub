@@ -251,8 +251,9 @@ def staff_order_shipment(request, pk: int):
                 )
             if current_shipment is not None:
                 progression = {
-                    Shipment.STATUS_PREPARING: 0,
+                    Shipment.STATUS_PENDING: 0,
                     Shipment.STATUS_IN_TRANSIT: 1,
+                    Shipment.STATUS_EXCEPTION: 1,
                     Shipment.STATUS_DELIVERED: 2,
                 }
                 if progression.get(shipment.status, -1) < progression.get(

@@ -73,7 +73,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 
 ## P3 first customer-to-staff order protection
 - [x] Disable delivery at checkout when no active delivery area exists, instead of silently charging zero; pickup remains usable.
-- [x] Prevent shipment status regression after delivery and completed-order shipment progress changes at the backend.
+- [x] Prevent shipment status regression after delivery and completed-order shipment progress changes at the backend, preserving pending, transit and exception states.
 - [x] Restrict pickup and delivery orders to appropriate next statuses, reusing the existing transition engine.
 - [x] Show staff only actionable next steps; hide final-order status actions and pickup shipment forms.
 - [x] Block shipment updates for pickup and cancelled orders in the backend, not only templates.

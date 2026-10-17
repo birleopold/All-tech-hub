@@ -94,7 +94,7 @@ class OrderFulfillmentTests(TestCase):
         response = self.client.get(reverse("staff_orders"))
         self.assertEqual(response.status_code, 200)
 
-    def test_delivered_shipment_cannot_regress_to_preparing(self):
+    def test_delivered_shipment_cannot_regress_to_pending(self):
         for target in (
             Order.STATUS_CONFIRMED,
             Order.STATUS_PROCESSING,
@@ -112,7 +112,7 @@ class OrderFulfillmentTests(TestCase):
             reverse("staff_order_shipment", args=[self.order.pk]),
             {
                 "carrier": "Demo Courier", "tracking_number": "TRACK-1",
-                "tracking_url": "", "status": Shipment.STATUS_PREPARING,
+                "tracking_url": "", "status": Shipment.STATUS_PENDING,
                 "estimated_delivery": "", "note": "",
             },
         )
