@@ -42,6 +42,16 @@ def strict_google_merchant_feed(request):
                 item_id = product.sku or f"LEOSOFT-{product.pk}"
                 eligible[item_id] = profile
     except (OperationalError, ProgrammingError):
+        # A broken approval schema cannot be treated as permission to export
+        # all unreviewed products. Try again after the database is repaired.
+        response = HttpResponse(
+            "Merchant readiness is temporarily unavailable.",
+            status=503,
+            content_type="text/plain; charset=utf-8",
+        )
+        response["Cache-Control"] = "no-store"
+        response["Retry-After"] = "300"
+        response["X-Robots-Tag"] = "noindex, nofollow"
         response["X-Merchant-Readiness"] = "schema-unavailable"
         return response
 
