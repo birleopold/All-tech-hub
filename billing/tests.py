@@ -450,6 +450,10 @@ class PaymentRefundTests(TestCase):
             method=DocumentPayment.METHOD_CASH,
             recorded_by=user,
         )
+        user.user_permissions.add(Permission.objects.get(
+            content_type__app_label="billing",
+            codename="add_paymentrefund",
+        ))
         self.client.force_login(user)
         response = self.client.post(
             reverse("staff_payment_refund", args=[payment.pk]),

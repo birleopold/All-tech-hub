@@ -130,7 +130,11 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Restrict cost entry/view to explicit expense permissions; Finance and Manager roles receive these permissions after bootstrap.
 - [x] Expose receipt-backed expenses and actual cost totals in the job detail screen, only to users with job expense permissions.
 - [x] Add focused expense-entry, duplicate-reference, nonpositive cost and cost-data confidentiality regression tests.
-- [ ] Continue with financial approvals, refund controls, margin reports and field workflow integration.
+- [x] Restrict payment refunds and reconciliation to finance permissions in backend and payment-history UI.
+- [x] Require refund adjustment references and enforce one unique reference per recorded payment, to protect retries.
+- [x] Ensure repeat reconciliation does not rewrite history; clarify that recording an adjustment is not proof of actual money disbursement.
+- [x] Expose the job cost ledger read-only in Django admin, without editable historical transactions.
+- [ ] Continue with field/financial margin reporting and approval integration.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
 ## P5 coding handoff

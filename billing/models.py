@@ -830,9 +830,17 @@ class PaymentRefund(models.Model):
 
     class Meta:
         ordering = ["-processed_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["payment", "reference"],
+                condition=~models.Q(reference=""),
+                name="unique_payment_refund_reference",
+            )
+        ]
 
     def clean(self):
         super().clean()
+        self.reference = (self.reference or "").strip()
         if self.amount <= 0:
             raise ValidationError("Refund amount must be positive.")
         if self.payment_id and self.amount > self.payment.refundable_amount:

@@ -502,6 +502,21 @@ class PaymentRecordForm(forms.ModelForm):
 
 
 class PaymentRefundForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["reference"].required = True
+        self.fields["reference"].help_text = (
+            "Required: unique refund adjustment reference for this payment."
+        )
+
+    def clean_reference(self):
+        reference = (self.cleaned_data.get("reference") or "").strip()
+        if not reference:
+            raise forms.ValidationError(
+                "Enter the reference for this refund adjustment."
+            )
+        return reference
+
     class Meta:
         model = PaymentRefund
         fields = ("amount", "reason", "reference")

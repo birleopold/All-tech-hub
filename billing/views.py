@@ -727,6 +727,12 @@ class CommercialDocumentDetailView(StaffRequiredMixin, DetailView):
             status=PaymentSubmission.STATUS_PENDING
         )
         ctx["refund_form"] = PaymentRefundForm()
+        ctx["can_refund_payment"] = self.request.user.has_perm(
+            "billing.add_paymentrefund"
+        )
+        ctx["can_reconcile_payment"] = self.request.user.has_perm(
+            "billing.change_documentpayment"
+        )
         if show_pay and doc.balance_due > 0:
             ctx["payment_request_text"] = (
                 f"Hello {doc.display_customer_name}, please pay "
@@ -858,7 +864,10 @@ def document_record_payment(request, pk: int):
 @require_POST
 @transaction.atomic
 def payment_refund(request, payment_pk: int):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.add_paymentrefund")
+    ):
         raise Http404
     payment = get_object_or_404(
         DocumentPayment.objects.select_for_update().select_related(
@@ -905,15 +914,27 @@ def payment_refund(request, payment_pk: int):
         summary=f"{doc.number}: refund {refund.amount}, credit note {credit.number}",
         target=doc,
     )
-    messages.success(request, f"Refund recorded and {credit.number} created.")
+    messages.success(
+        request, f"Refund adjustment and credit note {credit.number} recorded. "
+        "Verify the actual return of funds separately with the payment provider."
+    )
     return redirect("staff_document_view", pk=doc.pk)
 
 
 @require_POST
+@transaction.atomic
 def payment_reconcile(request, payment_pk: int):
-    if not request.user.is_staff:
+    if not (
+        request.user.is_staff
+        and request.user.has_perm("billing.change_documentpayment")
+    ):
         raise Http404
-    payment = get_object_or_404(DocumentPayment, pk=payment_pk)
+    payment = get_object_or_404(
+        DocumentPayment.objects.select_for_update(), pk=payment_pk
+    )
+    if payment.reconciled:
+        messages.info(request, "This payment was already reconciled.")
+        return redirect("staff_document_view", pk=payment.document_id)
     payment.reconciled = True
     payment.reconciled_at = timezone.now()
     payment.reconciled_by = request.user

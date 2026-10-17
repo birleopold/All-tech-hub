@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from operations.models import JobCard, JobFeedback, JobNote, JobStatusEvent, TimeEntry
+from operations.models import JobCard, JobExpense, JobFeedback, JobNote, JobStatusEvent, TimeEntry
 
 
 class JobNoteInline(admin.TabularInline):
@@ -43,3 +43,27 @@ class JobFeedbackAdmin(admin.ModelAdmin):
     list_display = ("job", "rating", "submitted_at")
     list_filter = ("rating",)
     raw_id_fields = ("job",)
+
+
+@admin.register(JobExpense)
+class JobExpenseAdmin(admin.ModelAdmin):
+    list_display = (
+        "job", "category", "description", "reference",
+        "amount", "recorded_by", "recorded_at",
+    )
+    list_filter = ("category", "recorded_at")
+    search_fields = ("job__number", "reference", "description")
+    raw_id_fields = ("job", "recorded_by")
+    readonly_fields = (
+        "job", "category", "description", "reference",
+        "amount", "recorded_by", "recorded_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
