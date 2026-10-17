@@ -71,7 +71,7 @@ class PurchasableVariantPricingTests(TestCase):
         self.assertNotContains(detail, "From UGX 0")
         schema = json.loads(str(detail.context["product_schema_json"]))
         self.assertEqual(schema["@type"], "Service")
-        self.assertEqual(schema["offers"]["price"], "80000")
+        self.assertEqual(Decimal(schema["offers"]["price"]), Decimal("80000"))
         self.assertEqual(schema["offers"]["priceCurrency"], "UGX")
         result = self.client.get(reverse("catalog_suggestions"), {"q": "Network Setup Options"}).json()
         price = next(p["price"] for p in result["products"] if p["name"] == self.service.name)

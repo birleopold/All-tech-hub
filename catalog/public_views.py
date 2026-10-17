@@ -96,8 +96,8 @@ def _available_products_query() -> Q:
     return (
         Q(kind=Product.KIND_SERVICE, _effective_price__gt=0)
         | Q(kind=Product.KIND_PHYSICAL, _has_active_variants=True, _has_sellable_variant=True)
-        | Q(_has_active_variants=False, track_inventory=False)
-        | Q(_has_active_variants=False, stock_quantity__gt=0)
+        | Q(kind=Product.KIND_PHYSICAL, _has_active_variants=False, track_inventory=False)
+        | Q(kind=Product.KIND_PHYSICAL, _has_active_variants=False, stock_quantity__gt=0)
     )
 
 

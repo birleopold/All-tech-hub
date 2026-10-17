@@ -20,7 +20,7 @@ from customer_campaigns.models import (
 from loyalty.models import CustomerMarketingPreference, MarketingConsentEvent
 from marketing.models import MarketingLead
 from messaging.models import OutboundEmail
-from messaging.utils import retry_outbound_email
+from messaging.utils import retry_outbound_email, send_queued_outbound_email
 
 
 class CampaignOperationError(Exception):
@@ -446,6 +446,7 @@ def _create_delivery_log(
         subject=(subject or "")[:200],
         body=body,
         status=OutboundEmail.STATUS_QUEUED,
+        category=OutboundEmail.CATEGORY_MARKETING,
         created_by=user,
     )
     recipient.outbound_email = log
@@ -727,7 +728,9 @@ def send_campaign_batch(
         )
         if log is None:
             continue
-        retry_outbound_email(log)
+        # A freshly queued message needs a first send, not a retry.
+        # Retried/uncertain deliveries must not be automatically replayed.
+        send_queued_outbound_email(log)
         log.refresh_from_db()
         _finalize_delivery(recipient_id, log=log, event=event)
 

@@ -172,6 +172,18 @@ def send_outbound_email(
     )
 
 
+def send_queued_outbound_email(log: OutboundEmail) -> OutboundEmail:
+    """Send the first attempt of a new queued record with suppression checks.
+
+    Previously attempted or uncertain deliveries cannot be sent here; manual
+    retry remains governed by retry_outbound_email().
+    """
+    log.refresh_from_db()
+    if log.status != OutboundEmail.STATUS_QUEUED or log.attempt_count:
+        return log
+    return _send_existing_log(log)
+
+
 def retry_outbound_email(
     log: OutboundEmail,
     *,
