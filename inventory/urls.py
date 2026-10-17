@@ -35,6 +35,7 @@ urlpatterns = [
         name="staff_job_stock_use",
     ),
     path("inventory/products/", ProductWorkspaceListView.as_view(), name="staff_products"),
+    path("inventory/products/identity-check/", views.product_identity_check, name="staff_product_identity_check"),
     path(
         "inventory/catalogue-enrichment/",
         CatalogueBulkEnrichmentView.as_view(),

@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from catalog.models import Product, ProductVariant
+from inventory.product_identity import conflicting_sku, normal_sku
 from growth.models import ProductGrowthData
 from inventory.models import StockAdjustment
 from merchandising.models import ProductCommerceProfile
@@ -18,6 +19,32 @@ def _style_model_form(form):
             css_class = "form-control"
         existing = widget.attrs.get("class", "")
         widget.attrs["class"] = f"{existing} {css_class}".strip()
+
+
+class ProductStaffForm(forms.ModelForm):
+    """Protect newly assigned SKUs while preserving legacy catalogue editing."""
+
+    class Meta:
+        model = Product
+        fields = (
+            "category", "kind", "name", "sku", "short_description",
+            "description", "price", "compare_at_price", "track_inventory",
+            "stock_quantity", "service_duration_hours", "is_published",
+            "is_featured", "image",
+        )
+
+    def clean_sku(self):
+        sku = (self.cleaned_data.get("sku") or "").strip()
+        if not sku:
+            return ""
+        if self.instance.pk and normal_sku(self.instance.sku) == normal_sku(sku):
+            return sku
+        match = conflicting_sku(sku, exclude_product=self.instance.pk)
+        if match:
+            raise forms.ValidationError(
+                f"SKU already belongs to {match['name']}. Review that record or use another SKU."
+            )
+        return sku
 
 
 class ProductCommercialCoreForm(forms.ModelForm):

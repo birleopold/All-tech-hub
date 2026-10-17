@@ -1,13 +1,14 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.forms import inlineformset_factory
 from django.forms.models import BaseInlineFormSet
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
@@ -21,11 +22,13 @@ from core.models import SupportTicket
 from growth.models import ProductGrowthData
 from inventory.forms import (
     JobStockUseForm,
+    ProductStaffForm,
     ProductCommerceProfileForm,
     ProductGrowthDataForm,
     StockAdjustmentForm,
 )
 from inventory.models import StockAdjustment, StockMovement, StockTake, StockTakeLine
+from inventory.product_identity import conflicting_sku, normal_sku, same_name_products
 from merchandising.models import ProductCommerceProfile
 from operations.models import JobCard
 
@@ -49,6 +52,39 @@ ProductImageFormSet = inlineformset_factory(
     formset=AllowEmptyExtraInlineFormSet,
 )
 
+class ValidatedVariantFormSet(AllowEmptyExtraInlineFormSet):
+    """Catch newly reused SKUs, including duplicates in the same submission."""
+
+    parent_sku = ""
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        groups = {}
+        for form in self.forms:
+            data = getattr(form, "cleaned_data", None)
+            if not data or data.get("DELETE"):
+                continue
+            sku = normal_sku(data.get("sku"))
+            if sku:
+                old_sku = normal_sku(getattr(form.instance, "sku", ""))
+                changed = not form.instance.pk or sku != old_sku
+                groups.setdefault(sku, []).append((form, changed))
+        for sku, forms in groups.items():
+            for form, changed in forms:
+                if not changed:
+                    continue
+                if len(forms) > 1:
+                    form.add_error("sku", "This SKU is used by another option here.")
+                elif sku == normal_sku(self.parent_sku):
+                    form.add_error("sku", "A variant cannot reuse the main product SKU.")
+                else:
+                    conflict = conflicting_sku(sku, exclude_variant=form.instance.pk)
+                    if conflict:
+                        form.add_error("sku", f"SKU belongs to {conflict['name']}.")
+
+
 ProductVariantFormSet = inlineformset_factory(
     Product,
     ProductVariant,
@@ -64,7 +100,7 @@ ProductVariantFormSet = inlineformset_factory(
     ),
     extra=1,
     can_delete=True,
-    formset=AllowEmptyExtraInlineFormSet,
+    formset=ValidatedVariantFormSet,
 )
 
 PRODUCT_STAFF_FIELDS = (
@@ -235,6 +271,26 @@ class ProductManageListView(StaffRequiredMixin, ListView):
         return ctx
 
 
+@login_required
+@require_GET
+def product_identity_check(request):
+    """Staff-only lookup for duplicate names and conflicting SKUs."""
+    if not request.user.is_staff:
+        raise Http404
+    try:
+        product_id = int(request.GET.get("product_id") or 0)
+    except (ValueError, TypeError):
+        product_id = 0
+    return JsonResponse({
+        "name_matches": same_name_products(
+            (request.GET.get("name") or "")[:200], exclude_product=product_id
+        ),
+        "sku_conflict": conflicting_sku(
+            (request.GET.get("sku") or "")[:64], exclude_product=product_id
+        ),
+    })
+
+
 class ProductRelatedFormsMixin:
     """Keep product identity, condition and specifications on the main workspace."""
 
@@ -261,7 +317,7 @@ class ProductRelatedFormsMixin:
 
 class ProductCreateView(ProductRelatedFormsMixin, StaffRequiredMixin, CreateView):
     model = Product
-    fields = PRODUCT_STAFF_FIELDS
+    form_class = ProductStaffForm
     template_name = "inventory/product_form.html"
 
     def get_context_data(self, **kwargs):
@@ -313,7 +369,7 @@ class ProductCreateView(ProductRelatedFormsMixin, StaffRequiredMixin, CreateView
 
 class ProductUpdateView(ProductRelatedFormsMixin, StaffRequiredMixin, UpdateView):
     model = Product
-    fields = PRODUCT_STAFF_FIELDS
+    form_class = ProductStaffForm
     template_name = "inventory/product_form.html"
 
     def get_context_data(self, **kwargs):
@@ -345,8 +401,12 @@ class ProductUpdateView(ProductRelatedFormsMixin, StaffRequiredMixin, UpdateView
         growth_form, commerce_form = self.related_forms(
             self.object, data=request.POST
         )
+        core_valid = form.is_valid()
+        variant_fs.parent_sku = (
+            form.cleaned_data.get("sku", "") if core_valid else self.object.sku
+        )
         validations = (
-            form.is_valid(),
+            core_valid,
             image_fs.is_valid(),
             variant_fs.is_valid(),
             growth_form.is_valid(),

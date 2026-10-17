@@ -15,8 +15,8 @@ Scope: customer storefront, staff operations, admin configuration, production re
 
 | Phase | Goal | Acceptance checks | Status |
 |---|---|---|---|
-| P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **In progress** |
-| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | Queued (early fixes committed; phase not started) |
+| P1 | Trustworthy storefront catalogue | Stable search/facets, correct prices and stock, consistent brand/category labels, mobile filters, intuitive product actions, public-page tests | **Code implemented — verification deferred** |
+| P2 | Product data and inventory | Bulk editing, images, verified specifications, duplicate checks, stock movements, multi-device image workflow; staff tests | **Implementation in progress** |
 | P3 | Checkout and fulfillment | Guest/customer orders, precise delivery fees, payment method honesty, staff fulfillment queue, cancellation, idempotent confirmation, customer tracking | Queued (early safeguards committed; phase not started) |
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | Planned |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | Planned |
@@ -25,7 +25,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active phase: P1 only.** Do not advance to P2 until P1 is accepted.
+**Active coding phase: P2.** P1 implementation is staged and final integrated testing is postponed until every phase is coded, per owner request. P1 is not verified in production.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -80,6 +80,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Complete remaining checkout and fulfillment lifecycle, payment and exception-path tests.
 
 ## P2 initial staff catalogue-governance improvements
+- [x] Show existing exact-name suggestions and duplicate SKU warnings on the product form, desktop and mobile.
+- [x] Reject newly conflicting product and variant SKUs in server form validation without blocking unrelated legacy edits.
+- [x] Surface variant SKU validation errors beside the relevant fields.
 - [x] Reuse existing product-quality issue codes for staff-side direct issue filtering.
 - [x] Make the common-issue counts clickable and retain filters across pages.
 - [x] Preserve the selected issue when a search or other filter has zero matches.
