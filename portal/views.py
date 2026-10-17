@@ -443,7 +443,46 @@ class MyTicketsView(ListView):
         customer = _customer_for_request(self.request)
         if customer is None:
             return SupportTicket.objects.none()
-        return SupportTicket.objects.filter(customer=customer).order_by("-updated_at")
+        queryset = SupportTicket.objects.filter(customer=customer).select_related(
+            "related_order", "related_job", "related_document",
+            "related_serial__product",
+        )
+        q = (self.request.GET.get("q") or "").strip()[:100]
+        status = (self.request.GET.get("status") or "").strip()
+        category = (self.request.GET.get("category") or "").strip()
+        if q:
+            queryset = queryset.filter(
+                Q(reference__icontains=q) | Q(subject__icontains=q)
+                | Q(related_order__reference__icontains=q)
+                | Q(related_job__number__icontains=q)
+                | Q(related_document__number__icontains=q)
+            )
+        if status in dict(SupportTicket.STATUS_CHOICES):
+            queryset = queryset.filter(status=status)
+        if category in dict(SupportTicket.CATEGORY_CHOICES):
+            queryset = queryset.filter(category=category)
+        return queryset.order_by("-updated_at", "-pk")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        q = (self.request.GET.get("q") or "").strip()[:100]
+        status = (self.request.GET.get("status") or "").strip()
+        category = (self.request.GET.get("category") or "").strip()
+        selected_status = status if status in dict(SupportTicket.STATUS_CHOICES) else ""
+        selected_category = (
+            category if category in dict(SupportTicket.CATEGORY_CHOICES) else ""
+        )
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        context.update({
+            "search_q": q, "selected_status": selected_status,
+            "selected_category": selected_category,
+            "status_choices": SupportTicket.STATUS_CHOICES,
+            "category_choices": SupportTicket.CATEGORY_CHOICES,
+            "filter_querystring": params.urlencode(),
+            "filters_active": bool(q or selected_status or selected_category),
+        })
+        return context
 
     def dispatch(self, request, *args, **kwargs):
         if _customer_for_request(request) is None:

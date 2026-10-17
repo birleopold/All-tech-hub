@@ -15,6 +15,14 @@
 </section>
 
 <div class="container pb-5 col-lg-9">
+  <form method="get" role="search" class="card border-0 shadow-sm mb-3"><div class="card-body p-3 p-md-4">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-5"><label class="form-label small fw-semibold" for="support-search">Search support</label><input class="form-control" type="search" id="support-search" name="q" value="{{ search_q }}" maxlength="100" placeholder="Ticket, repair, order, invoice"></div>
+      <div class="col-sm-6 col-md-3"><label class="form-label small fw-semibold" for="support-status">Status</label><select class="form-select" name="status" id="support-status"><option value="">All statuses</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-sm-6 col-md-4"><label class="form-label small fw-semibold" for="support-category">Request type</label><select class="form-select" name="category" id="support-category"><option value="">All types</option>{% for value,label in category_choices %}<option value="{{ value }}" {% if value == selected_category %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-12 d-flex flex-wrap gap-2 mt-3"><button class="btn btn-primary" type="submit">Find requests</button>{% if filters_active %}<a class="btn btn-outline-secondary" href="{% url 'portal_tickets' %}">Clear filters</a>{% endif %}</div>
+    </div>
+  </div></form>
   {% if tickets %}
   <div class="list-group shadow-sm">
     {% for t in tickets %}
@@ -25,6 +33,9 @@
           <div class="small text-muted mt-1">
             Updated {{ t.updated_at|date:"Y-m-d H:i" }} · {{ t.get_priority_display }} priority{% if t.due_in_label %} · {{ t.due_in_label }}{% endif %}
           </div>
+          {% if t.related_order %}<div class="small text-muted">Order: {{ t.related_order.reference }}</div>{% endif %}
+          {% if t.related_job %}<div class="small text-muted">Repair: {{ t.related_job.number }}</div>{% endif %}
+          {% if t.related_document %}<div class="small text-muted">Document: {{ t.related_document.number }}</div>{% endif %}
           {% if t.related_serial %}<div class="small text-muted">Device: {{ t.related_serial.product.name }} · SN {{ t.related_serial.serial_number }}</div>{% endif %}
         </div>
         <span class="badge {% if t.is_overdue %}text-bg-danger{% else %}text-bg-light border{% endif %}">{{ t.get_status_display }}</span>
@@ -33,7 +44,8 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-life-preserver display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">No support requests yet</h2><p class="text-muted mb-4">Open a request when you need help with an order, repair, document or technical issue.</p><a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">New support request</a></div></div>
+  <div class="card border-0 shadow-sm text-center"><div class="card-body py-5"><i class="bi bi-life-preserver display-5 text-primary" aria-hidden="true"></i><h2 class="h4 mt-3">{% if filters_active %}No matching requests{% else %}No support requests yet{% endif %}</h2><p class="text-muted mb-4">{% if filters_active %}Try another ticket number or remove a filter.{% else %}Open a request when you need help with an order, repair, document or technical issue.{% endif %}</p>{% if filters_active %}<a class="btn btn-outline-primary me-2" href="{% url 'portal_tickets' %}">Show all requests</a>{% endif %}<a class="btn btn-primary" href="{% url 'portal_ticket_create' %}">New support request</a></div></div>
   {% endif %}
+  {% if is_paginated %}<nav class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3" aria-label="Support request pages"><span class="small text-muted">Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div class="d-flex flex-wrap gap-2">{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-primary" href="?{% if filter_querystring %}{{ filter_querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-primary" href="?{% if filter_querystring %}{{ filter_querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
 </div>
 {% endblock %}
