@@ -111,6 +111,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Add permission-aware dashboard work-area shortcuts, accurate personal lead counts and preexisting personal assigned work.
 - [x] Combine overdue follow-ups and unanswered first-contact alerts into one lead attention filter matching dashboard counts.
 - [x] Add lead search (name, phone, product, quote and order) and retain status/owner/follow-up filters across pages.
+- [x] Link a sales enquiry to an existing CRM customer only when its email matches exactly one customer; ambiguous matches are never merged or assigned automatically.
 - [x] Restrict topbar creation menu to actual add permissions, with clear accessible control labeling.
 - [x] Add focused tests for permission-aware search, customer form prefill, CRM timelines, lead queues and pagination, and role-aware dashboard.
 - [ ] Complete Phase 5 final coding handoff; integrated tests, browser review and production verification deferred.

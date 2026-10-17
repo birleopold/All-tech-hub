@@ -611,6 +611,32 @@ class LeadListView(MarketingListMixin, ListView):
         context = super().get_context_data(**kwargs)
         pagination_params = self.request.GET.copy()
         pagination_params.pop("page", None)
+        # A lead is not a new customer account. Only link a single matching
+        # CRM record; duplicate email identities need staff review first.
+        if self.request.user.has_perm("crm.view_customer"):
+            current_leads = list(context["object_list"])
+            emails = {
+                lead.email.strip().casefold()
+                for lead in current_leads if lead.email.strip()
+            }
+            if emails:
+                email_filter = Q()
+                for email in emails:
+                    email_filter |= Q(email__iexact=email)
+                customer_by_email = {}
+                ambiguous = set()
+                for customer in Customer.objects.filter(email_filter).only(
+                    "pk", "email", "name"
+                ):
+                    key = customer.email.strip().casefold()
+                    if key in customer_by_email:
+                        ambiguous.add(key)
+                    else:
+                        customer_by_email[key] = customer
+                for lead in current_leads:
+                    key = lead.email.strip().casefold()
+                    if key in customer_by_email and key not in ambiguous:
+                        lead.crm_customer = customer_by_email[key]
         context.update(
             {
                 "lead_search_q": (self.request.GET.get("q") or "").strip()[:120],

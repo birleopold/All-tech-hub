@@ -81,6 +81,27 @@ class StaffCommandCentreTests(TestCase):
         self.assertIn(self.customer, r.context["results"]["customers"])
         self.assertNotIn("leads", r.context["results"])
 
+    def test_lead_queue_links_unambiguous_existing_customer(self):
+        response = self.client.get(
+            reverse("staff_marketing_leads"), {"q": "Priority Client"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("staff_customer_detail", args=[self.customer.pk]),
+        )
+        # A second CRM record with the same email is a data-quality
+        # exception; don't guess who should own the enquiry.
+        Customer.objects.create(
+            name="Other record", email=self.customer.email,
+        )
+        ambiguous = self.client.get(
+            reverse("staff_marketing_leads"), {"q": "Priority Client"}
+        )
+        self.assertNotContains(
+            ambiguous, 'Open CRM customer: Priority Client'
+        )
+
     def test_customer_shortcuts_prefill_existing_record_forms(self):
         r = self.client.get(
             reverse("staff_customer_detail", args=[self.customer.pk])
