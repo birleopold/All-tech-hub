@@ -30,6 +30,7 @@
         <label for="order-search">Search orders</label>
         <div class="staff-input-with-icon"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" id="order-search" type="search" name="q" value="{{ q }}" placeholder="Reference, customer, email or phone"></div>
       </div>
+      <div class="staff-filter-field"><label for="order-fulfillment">Fulfilment</label><select id="order-fulfillment" name="fulfillment" class="form-select"><option value="">All fulfilment types</option><option value="pickup"{% if selected_fulfillment == 'pickup' %} selected{% endif %}>Pickup</option><option value="delivery"{% if selected_fulfillment == 'delivery' %} selected{% endif %}>Delivery</option></select></div>
       <div class="staff-filter-field">
         <label for="order-status">Status</label>
         <select id="order-status" name="status" class="form-select">
@@ -39,7 +40,7 @@
       </div>
       <div class="staff-filter-actions">
         <button class="btn btn-primary" type="submit">Apply filters</button>
-        {% if q or selected_status or selected_queue %}<a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}">Clear</a>{% endif %}
+        {% if q or selected_status or selected_queue or selected_fulfillment %}<a class="btn btn-outline-secondary" href="{% url 'staff_orders' %}">Clear</a>{% endif %}
       </div>
     </div>
   </form>
