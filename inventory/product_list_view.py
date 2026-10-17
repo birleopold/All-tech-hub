@@ -44,6 +44,14 @@ class ProductManageListView(StaffRequiredMixin, ListView):
         queryset = Product.objects.select_related("category", "category__parent").prefetch_related(
             "variants"
         )
+        kind = (self.request.GET.get("kind") or "").strip()
+        if kind in {Product.KIND_PHYSICAL, Product.KIND_SERVICE}:
+            queryset = queryset.filter(kind=kind)
+        publication = (self.request.GET.get("published") or "").strip()
+        if publication == "1":
+            queryset = queryset.filter(is_published=True)
+        elif publication == "0":
+            queryset = queryset.filter(is_published=False)
 
         if query:
             queryset = queryset.filter(
@@ -52,6 +60,8 @@ class ProductManageListView(StaffRequiredMixin, ListView):
                 | Q(category__name__icontains=query)
                 | Q(category__parent__name__icontains=query)
                 | Q(variants__sku__icontains=query)
+                | Q(growth_data__brand__icontains=query)
+                | Q(growth_data__mpn__icontains=query)
             ).distinct()
 
         if category_slug:
@@ -83,6 +93,8 @@ class ProductManageListView(StaffRequiredMixin, ListView):
                 "selected_sort": selected_sort,
                 "sort_options": self.SORT_OPTIONS,
                 "low_only": self.request.GET.get("low") == "1",
+                "selected_kind": (self.request.GET.get("kind") or "").strip(),
+                "selected_publication": (self.request.GET.get("published") or "").strip(),
                 "querystring": query_params.urlencode(),
             }
         )

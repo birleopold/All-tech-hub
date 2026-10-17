@@ -90,6 +90,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Run staff UI and permission regression tests and verify real screen-size behavior.
 - [x] Make iPhone HEIC/HEIF uploads browser-compatible by decoding, validating and converting to JPEG.
 - [x] Use an atomic product gallery save with per-product upload ordering and cleanup of new files on failure.
+- [x] Filter inventory product register by kind and publication; search verified brand and manufacturer part identifiers.
+- [x] Make product/service metrics and quality-check navigation actionable from the staff product register.
 - [ ] Finish remaining inventory editing and workflow checks before integrated testing.
 
 ## P7 initial fixes
