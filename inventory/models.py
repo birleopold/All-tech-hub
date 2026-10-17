@@ -207,29 +207,57 @@ class StockTake(models.Model):
 
     @transaction.atomic
     def post(self, actor=None) -> int:
-        """Apply each line as a counted vs system delta. Returns line count posted."""
-        if self.status != self.STATUS_OPEN:
+        """Reject stale counts and apply every variance at most once."""
+        from catalog.models import Product, ProductVariant
+
+        take = StockTake.objects.select_for_update().get(pk=self.pk)
+        if not take.is_open:
             return 0
-        posted = 0
-        for line in self.lines.select_for_update().all():
-            delta = line.counted_quantity - line.system_quantity
-            if delta != 0:
-                adj = StockAdjustment(
-                    product=line.product,
-                    product_variant=line.product_variant,
-                    quantity_delta=delta,
-                    reason=StockAdjustment.REASON_COUNT,
-                    note=f"Stock take {self.reference} (line {line.pk})",
+        lines = list(
+            take.lines.select_for_update().select_related(
+                "product", "product_variant"
+            ).order_by("product_id", "product_variant_id", "pk")
+        )
+        seen = set()
+        for line in lines:
+            key = (line.product_id, line.product_variant_id)
+            if key in seen:
+                raise ValidationError("This stocktake contains duplicate count lines.")
+            seen.add(key)
+            if line.product.kind != Product.KIND_PHYSICAL:
+                raise ValidationError("Services cannot be counted as physical stock.")
+            if line.product_variant_id:
+                target = ProductVariant.objects.select_for_update().get(
+                    pk=line.product_variant_id
+                )
+                if target.product_id != line.product_id or not target.track_inventory:
+                    raise ValidationError("A counted configuration is invalid.")
+            else:
+                target = Product.objects.select_for_update().get(pk=line.product_id)
+                if not target.track_inventory or target.has_sellable_variants():
+                    raise ValidationError("Count tracked configurations individually.")
+            if int(target.stock_quantity) != int(line.system_quantity):
+                raise ValidationError(
+                    f"Stock changed for {line.product.name} since counting. "
+                    "Review the quantity and begin a fresh count before posting."
+                )
+
+        for line in lines:
+            delta = int(line.counted_quantity) - int(line.system_quantity)
+            if delta:
+                adjustment = StockAdjustment.objects.create(
+                    product=line.product, product_variant=line.product_variant,
+                    quantity_delta=delta, reason=StockAdjustment.REASON_COUNT,
+                    note=f"Stock take {take.reference} (line {line.pk})",
                     created_by=actor,
                 )
-                adj.save()
-                adj.apply()
-            posted += 1
-        self.status = self.STATUS_POSTED
-        self.posted_at = timezone.now()
-        self.save(update_fields=["status", "posted_at"])
-        return posted
-
+                adjustment.apply()
+        take.status = self.STATUS_POSTED
+        take.posted_at = timezone.now()
+        take.save(update_fields=["status", "posted_at"])
+        self.status = take.status
+        self.posted_at = take.posted_at
+        return len(lines)
 
 class StockTakeLine(models.Model):
     take = models.ForeignKey(StockTake, on_delete=models.CASCADE, related_name="lines")
