@@ -263,6 +263,14 @@ class CustomerReturn(models.Model):
         from django.core.exceptions import ValidationError
 
         super().clean()
+        if self.order_line_id and (
+            self.order_line.product is None
+            or self.order_line.product.kind != self.order_line.product.KIND_PHYSICAL
+        ):
+            raise ValidationError(
+                "Inventory returns are for physical products only. "
+                "Use a credit note for service adjustments."
+            )
         if self.quantity <= 0:
             raise ValidationError("Return quantity must be positive.")
         if self.previously_returned + self.quantity > self.order_line.quantity:

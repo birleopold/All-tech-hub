@@ -64,6 +64,12 @@ class StaffOrderDetailView(StaffRequiredMixin, DetailView):
         shipment = getattr(self.object, "shipment", None)
         ctx["shipment_form"] = ShipmentForm(instance=shipment)
         ctx["return_form"] = CustomerReturnForm(order=self.object)
+        ctx["can_record_inventory_return"] = (
+            self.object.status in {Order.STATUS_DELIVERED, Order.STATUS_FULFILLED}
+            and self.object.lines.filter(
+                product__kind=Product.KIND_PHYSICAL
+            ).exists()
+        )
         ctx["customer_returns"] = CustomerReturn.objects.filter(
             order_line__order=self.object
         ).select_related("order_line", "processed_by")

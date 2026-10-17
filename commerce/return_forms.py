@@ -1,5 +1,6 @@
 from django import forms
 
+from catalog.models import Product
 from commerce.models import CustomerReturn
 
 
@@ -17,6 +18,7 @@ class CustomerReturnForm(forms.ModelForm):
     def __init__(self, *args, order=None, **kwargs):
         super().__init__(*args, **kwargs)
         if order is not None:
-            self.fields["order_line"].queryset = order.lines.select_related(
-                "product", "product_variant"
+            self.fields["order_line"].queryset = (
+                order.lines.select_related("product", "product_variant")
+                .filter(product__kind=Product.KIND_PHYSICAL)
             )
