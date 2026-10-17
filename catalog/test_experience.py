@@ -6,6 +6,8 @@ from django.urls import reverse
 from catalog.experience import COMPARE_SESSION_KEY, RECENT_SESSION_KEY
 from catalog.models import Category, Product
 from growth.models import GrowthSettings, ProductGrowthData
+from merchandising.models import ProductCommerceProfile
+from django.utils import timezone
 
 
 class CatalogExperienceTests(TestCase):
@@ -101,6 +103,12 @@ class CatalogExperienceTests(TestCase):
             mpn="T14-G2",
             condition=ProductGrowthData.CONDITION_REFURBISHED,
         )
+        ProductCommerceProfile.objects.create(
+            product=self.products[0],
+            identity_verified_at=timezone.now(),
+            condition_verified_at=timezone.now(),
+            merchant_shipping_price="15000.00",
+        )
         settings = GrowthSettings.load()
         settings.merchant_country = "UG"
         settings.merchant_shipping_price = "15000.00"
@@ -114,7 +122,9 @@ class CatalogExperienceTests(TestCase):
         self.assertEqual(schema["mpn"], "T14-G2")
         self.assertEqual(schema["itemCondition"], "https://schema.org/RefurbishedCondition")
         self.assertEqual(schema["offers"]["shippingDetails"]["shippingDestination"]["addressCountry"], "UG")
-        self.assertEqual(schema["offers"]["hasMerchantReturnPolicy"]["url"], "https://leosoftug.com/returns/")
+        # A URL alone cannot claim a verified MerchantReturnPolicy; the
+        # dedicated strict SEO view deliberately omits this incomplete claim.
+        self.assertNotIn("hasMerchantReturnPolicy", schema["offers"])
 
     def test_clearing_comparison_removes_session_selection(self):
         session = self.client.session

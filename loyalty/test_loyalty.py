@@ -77,7 +77,7 @@ class ConsentAndLoyaltyTests(TestCase):
                 "phone": "+256700000002",
                 "billing_address": "Kampala",
                 "shipping_address": "Kampala",
-                "fulfillment_type": Order.FULFILLMENT_DELIVERY,
+                "fulfillment_type": Order.FULFILLMENT_PICKUP,
                 "marketing_email_opt_in": "on",
             }
         )
@@ -112,7 +112,7 @@ class ConsentAndLoyaltyTests(TestCase):
                 "phone": self.customer.phone,
                 "billing_address": "Kampala",
                 "shipping_address": "Kampala",
-                "fulfillment_type": Order.FULFILLMENT_DELIVERY,
+                "fulfillment_type": Order.FULFILLMENT_PICKUP,
             }
         )
         self.assertTrue(form.is_valid(), form.errors)

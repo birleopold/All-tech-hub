@@ -8,7 +8,10 @@ from django.urls import reverse
 from crm.models import Customer
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+@override_settings(
+    EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    DEBUG=True,  # Simulate development mail, not production delivery
+)
 class CustomerAccountSecurityTests(TestCase):
     def test_existing_customer_is_linked_only_after_email_verification(self):
         customer = Customer.objects.create(

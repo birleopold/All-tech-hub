@@ -302,7 +302,7 @@ class GrowthMarketingTests(TestCase):
                 "billing_address": "Kampala, Uganda",
                 "shipping_address": "Kampala, Uganda",
                 "customer_note": "",
-                "fulfillment_type": Order.FULFILLMENT_DELIVERY,
+                "fulfillment_type": Order.FULFILLMENT_PICKUP,
             },
         )
         self.assertEqual(checkout_response.status_code, 302)

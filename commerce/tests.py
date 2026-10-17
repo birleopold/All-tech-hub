@@ -313,7 +313,7 @@ class CheckoutStockAndTokenTests(TestCase):
             "billing_address": "123 St",
             "shipping_address": "",
             "customer_note": "",
-            "fulfillment_type": Order.FULFILLMENT_DELIVERY,
+            "fulfillment_type": Order.FULFILLMENT_PICKUP,
             "checkout_token": token,
         }
 

@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from automation.models import AutomationJob
+
 from django.core import mail
 from django.test import TestCase, override_settings
 
@@ -74,9 +76,13 @@ class CustomerOrderEmailTests(TestCase):
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend")
     def test_console_backend_is_not_treated_as_customer_delivery(self):
-        row = send_order_confirmation(self.order)
+        # The worker refuses to pretend a console backend delivered real mail.
+        with self.assertRaisesMessage(RuntimeError, "console mail backend"):
+            send_order_confirmation(self.order)
 
-        self.assertIsNone(row)
+        self.assertIsNone(OutboundEmail.objects.filter(
+            idempotency_key=f"order-confirmation:{self.order.pk}"
+        ).first())
         self.assertFalse(OutboundEmail.objects.exists())
         self.assertEqual(len(mail.outbox), 0)
 
@@ -90,7 +96,16 @@ class CustomerOrderEmailTests(TestCase):
                 visible_to_customer=True,
             )
 
-        row = OutboundEmail.objects.get(subject=f"Order {self.order.reference}: Confirmed")
+        # Delivery is durable and worker-owned, not synchronous inside a
+        # database signal. Verify the queued event and execute its handler.
+        event = OrderStatusEvent.objects.get(
+            order=self.order, to_status=Order.STATUS_CONFIRMED
+        )
+        job = AutomationJob.objects.get(idempotency_key=f"order-status:{event.pk}")
+        self.assertEqual(job.job_type, AutomationJob.TYPE_ORDER_STATUS_EMAIL)
+        self.assertEqual(len(mail.outbox), 0)
+        from commerce.customer_messages import deliver_order_status_update_by_id
+        row = deliver_order_status_update_by_id(event.pk)
         self.assertEqual(row.status, OutboundEmail.STATUS_SENT)
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("Payment reference received", mail.outbox[0].body)
@@ -112,8 +127,11 @@ class CustomerOrderEmailTests(TestCase):
             "commerce.customer_messages.send_mail",
             side_effect=RuntimeError("SMTP unavailable"),
         ):
-            row = send_order_confirmation(self.order)
+            # The worker needs this exception to classify and retry a failure.
+            with self.assertRaisesMessage(RuntimeError, "SMTP unavailable"):
+                send_order_confirmation(self.order)
 
+        row = OutboundEmail.objects.get(idempotency_key=f"order-confirmation:{self.order.pk}")
         self.assertEqual(row.status, OutboundEmail.STATUS_FAILED)
         self.assertIn("SMTP unavailable", row.error)
 
