@@ -375,7 +375,8 @@ class WhatsAppCustomerCampaignTests(TestCase):
         self.assertEqual(recipient.email_address, "amina-wa@example.com")
         url = open_whatsapp_recipient(recipient, user=self.creator)
         self.assertTrue(url.startswith("https://wa.me/256700000010?text="))
-        self.assertIn("preferences%2Funsubscribe", url)
+        from urllib.parse import unquote
+        self.assertIn("/preferences/unsubscribe/", unquote(url))
         recipient.refresh_from_db()
         self.assertIsNotNone(recipient.attempted_at)
         mark_whatsapp_recipient_sent(recipient, user=self.creator)

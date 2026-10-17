@@ -166,6 +166,13 @@ class RetentionExperienceTests(TestCase):
                 visible_to_customer=True,
             )
 
+        from automation.models import AutomationJob
         subjects = set(OutboundEmail.objects.values_list("subject", flat=True))
-        self.assertIn(f"Order {self.order.reference}: Fulfilled", subjects)
+        # Status notifications are persisted for the durable worker, while the
+        # review request is committed through its own scheduled callback.
+        event = OrderStatusEvent.objects.get(order=self.order, to_status=Order.STATUS_FULFILLED)
+        self.assertTrue(AutomationJob.objects.filter(
+            idempotency_key=f"order-status:{event.pk}",
+            job_type=AutomationJob.TYPE_ORDER_STATUS_EMAIL,
+        ).exists())
         self.assertIn(order_review_subject(self.order), subjects)

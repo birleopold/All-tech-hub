@@ -102,4 +102,4 @@ class ReportAccessTests(TestCase):
         self.assertIn("document_margin_30", response.context)
         self.assertEqual(response.context["document_margin_30"]["profit"], Decimal("40.00"))
         self.assertEqual(response.context["payment_exceptions"]["unreconciled_count"], 1)
-        self.assertContains(response, "Gross profit (30d)")
+        self.assertContains(response, "Highest profit lines (last 30 days)")

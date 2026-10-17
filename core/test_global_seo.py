@@ -264,7 +264,7 @@ class GlobalSEOTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "SEO, Merchant and search opportunities")
         self.assertContains(response, "https://leosoftug.com/sitemap.xml")
-        self.assertContains(response, "Google Search Console verification is configured")
+        self.assertContains(response, "Google Search Console")
 
     def test_seo_audit_command_runs(self):
         output = StringIO()

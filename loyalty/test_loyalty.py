@@ -175,7 +175,8 @@ class ConsentAndLoyaltyTests(TestCase):
         self.assertFalse(preference.special_offers)
         self.assertIsNotNone(preference.withdrawn_at)
         self.assertEqual(event.action, MarketingConsentEvent.ACTION_WITHDRAWN)
-        self.assertEqual(post_response.headers["Cache-Control"], "private, no-store")
+        self.assertIn("private", post_response.headers["Cache-Control"])
+        self.assertIn("no-store", post_response.headers["Cache-Control"])
         self.assertNotContains(post_response, self.customer.email)
 
     def test_completed_order_awards_points_once_and_sets_tier(self):

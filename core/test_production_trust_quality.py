@@ -82,16 +82,12 @@ class ProductionHealthAndHeadersTests(TestCase):
 
 class PublicBuyingGuideTests(TestCase):
     def test_buying_guide_explains_condition_and_confirmation_steps(self):
-        response = self.client.get(reverse("buying_guide"))
-
+        # The retired buying-guide route now redirects to the maintained
+        # guide centre, not a separate stale second copy.
+        response = self.client.get(reverse("buying_guide"), follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "What the condition labels mean")
-        self.assertContains(response, "New equipment")
-        self.assertContains(response, "Prepared for resale")
-        self.assertContains(response, "Pre-owned equipment")
-        self.assertContains(response, "Request written confirmation")
-        self.assertContains(response, reverse("product_compare"))
-        self.assertNotContains(response, "style=", html=False)
+        self.assertContains(response, "Latest buying and maintenance guides")
+        self.assertContains(response, "Technology guidance grounded in real buying")
 
     def test_buying_guide_is_discoverable_from_navigation_and_sitemap(self):
         home = self.client.get(reverse("home"))
