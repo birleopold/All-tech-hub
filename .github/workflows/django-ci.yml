@@ -69,6 +69,10 @@ jobs:
           marketing.test_automation
           marketing.test_social_manual_confirm
           marketing.test_integrations
+          marketing.test_attribution
+          marketing.test_attribution_metrics
+          automation.test_social_operator_experience
+          automation.test_social_autopilot
           marketing.test_lead_pipeline
           customer_campaigns
           catalog.test_social_marketing

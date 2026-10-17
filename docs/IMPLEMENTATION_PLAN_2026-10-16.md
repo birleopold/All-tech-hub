@@ -21,11 +21,11 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P4 | Customer service hub | Orders, repair status, warranties, invoices, tickets, documents and messaging connected without redundant profiles; ownership tests | **Code implemented — verification deferred** |
 | P5 | Staff command centre and CRM | Universal search, priority queues, actionable KPIs, leads-to-quotes-to-orders, role-specific landing pages | **Code implemented — verification deferred** |
 | P6 | Finance and field operations | Supplier receiving, repair/installation workbench, expense/margin reconciliation, safe refunds, approvals and financial drill-downs | **Code implemented — verification deferred** |
-| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | **Implementation in progress** |
-| P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | Planned |
+| P7 | Marketing and integrations | Channel status, selected-channel posting, manual override, consent and failed-job recovery, merchant data quality and measured conversion | **Code implemented — verification deferred** |
+| P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | **Active — certification pending** |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active coding phase: P7.** P1–P6 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Active phase: P8 (production certification).** P1–P7 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
@@ -161,8 +161,15 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Label the attribution report's placed-order value separately from cash received, and cover it in regression tests.
 - [x] Keep failed external-post outcomes in the manual review queue; prohibit blind worker replay while making confirmed manual status consistent with channel delivery records.
 - [x] Test the manual override end-to-end, including permission checks, multi-channel rejection and duplicate prevention.
-- [ ] Complete conversion and consent handoff with documentation and full Phase 7 regression suite.
-- [ ] Add regression coverage and stage Phase 7 code handoff.
+- [x] Complete Phase 7 conversion and consent code handoff; test coverage staged in the focused CI suite.
+- [x] Mark Phase 7 coding complete; external API behavior, live conversion telemetry and browser consent remain pending certification.
+
+## P8 production certification
+- [ ] Run migration drift and upgrade rehearsal against a production-like database snapshot.
+- [ ] Run the complete Django test suite and browser/mobile/keyboard accessibility smoke journeys.
+- [ ] Check payment, email, social-provider and Merchant Center sandbox/external-service outcomes.
+- [ ] Validate backups, restore rehearsal, release rollback, monitoring and VPS readiness before production certification.
+- [x] Add Phase 7 focused regression modules to the existing CI test gate.
 
 ## P6 coding handoff
 The existing purchasing, stock, billing and operations subsystems remain the source of truth. Received purchase costs and suppliers are protected from historical edits. Job expenses are documented separately from invoice costs; job-to-invoice comparison refuses speculative allocation for shared invoices and cross-customer records. Refund adjustment references and reconciliation are protected against duplicates, and finance approvals and sensitive reports require existing permissions. Supplier returns and recorded refunds do not falsely imply a supplier payout or money movement. New migrations and regression modules are staged, **not deployed or integration-tested**. Final verification must cover database migrations, transactional concurrency, accounting reconciliation, account permissions and responsive screens.
