@@ -15,10 +15,16 @@ bash scripts/phase8_release_gate.sh
 ```
 
 This always forces development-mode settings, a temporary SQLite database,
-temporary media paths and in-memory email backend. It does **not** read the
+temporary media/backup paths and in-memory email backend. It checks the
+effective Django paths before running anything, creates an isolated checksummed
+backup, verifies the archive and SQLite database contents, restores that backup
+into another temporary SQLite file and checks the restored migration state.
+It does **not** read the
 VPS `.env`, modify its PostgreSQL database, publish social content,
 charge customers or send email. Passing verifies basic syntax, Django checks,
-migration drift, fresh-database migrations and the Django test suite.
+migration drift, fresh-database migrations, isolated backup/restore,
+and the Django test suite. The SQLite restore is NOT a PostgreSQL production
+backup/restore drill.
 
 Use specific test module paths only for diagnosis, not sign-off:
 
