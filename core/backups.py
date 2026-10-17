@@ -141,5 +141,5 @@ def latest_backup_status(root: Path | None = None) -> BackupStatus:
         latest,
         created_at,
         age_hours,
-        "Latest backup manifest and file sizes are valid",
+        "Backup manifest and file sizes present; checksum and restore not verified",
     )

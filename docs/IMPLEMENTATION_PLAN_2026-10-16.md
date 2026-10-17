@@ -177,6 +177,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Correct the public-media storage override in shared settings and enforce temporary database, media and backup locations inside the isolated Phase 8 gate.
 - [x] Add isolated checksummed SQLite backup and restore verification to the offline candidate gate, separate from the required production-like PostgreSQL restore drill.
 - [x] Verify archive readability and SQLite database integrity (not only hashes), reject unsafe manifest entries, and stage backup verifier tests in both CI jobs.
+- [x] Record actual failing-to-start GitHub Actions run IDs; no runner, zero steps and no unsupported claim of a code test failure.
+- [x] Clarify backup-health labels: manifest/file-size checks are monitoring signals, not verified restores.
 
 ## P6 coding handoff
 The existing purchasing, stock, billing and operations subsystems remain the source of truth. Received purchase costs and suppliers are protected from historical edits. Job expenses are documented separately from invoice costs; job-to-invoice comparison refuses speculative allocation for shared invoices and cross-customer records. Refund adjustment references and reconciliation are protected against duplicates, and finance approvals and sensitive reports require existing permissions. Supplier returns and recorded refunds do not falsely imply a supplier payout or money movement. New migrations and regression modules are staged, **not deployed or integration-tested**. Final verification must cover database migrations, transactional concurrency, accounting reconciliation, account permissions and responsive screens.

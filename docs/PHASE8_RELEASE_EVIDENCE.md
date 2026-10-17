@@ -47,10 +47,21 @@ bash scripts/phase8_release_gate.sh marketing.test_attribution automation.test_s
 | Accessibility/responsive | PENDING | 320px phone, tablet, laptop, desktop and keyboard/touch inspection |
 | Production smoke and rollback | PENDING | Release SHA, readiness endpoint, systemd timers, monitoring and rollback rehearsal |
 
-**GitHub Actions blocker seen before this work:** workflows complete as failed
-with no job steps. Investigate runner availability, organisation policy,
-GitHub Actions account/billing settings or other workflow-start restrictions.
-No claim about the underlying cause can be made without a completed job log.
+**GitHub Actions blocker — confirmed on 2026-10-17:** workflows finish as failed
+before a runner is assigned, with runner_id=0 and no steps:
+- [Django CI run 39068599170](https://github.com/birleopold/All-tech-hub/actions/runs/39068599170) — both jobs unstarted.
+- [CI run 39068599212](https://github.com/birleopold/All-tech-hub/actions/runs/39068599212) — test job unstarted.
+
+This is **not** a failing Django assertion or proof the application is green.
+Investigate GitHub Actions runner availability, repository/organisation policies,
+and account billing/usage in GitHub. Never weaken CI checks to clear an
+allocation blocker. Its underlying cause cannot be diagnosed from job logs
+because no steps were executed.
+
+The Phase 8 offline script now checks its effective Django settings so all
+test databases, public/private media and backups are isolated. It also verifies
+an isolated SQLite backup and restores it into a separate disposable file.
+That is **not** a production-like PostgreSQL recovery or external-provider test.
 
 ## Controlled production path
 
