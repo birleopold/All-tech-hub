@@ -183,9 +183,23 @@ class SEOProductListView(RefinedPublicProductListView):
     def _pagination_parameters(self, context: dict, page_number: int | None = None):
         parameters = self.request.GET.copy()
         parameters.pop("view", None)
-        primary_key = self._canonical_primary_key(context)
-        if primary_key:
-            parameters.pop(primary_key, None)
+        # A query-string filter must survive pagination on /catalog/.
+        # Remove the primary parameter only when it is already encoded in
+        # a routed landing URL, such as /catalog/category/laptops/.
+        routed_primary = {
+            "product_category",
+            "product_collection",
+            "product_brand",
+            "physical_product_list",
+            "service_list",
+        }
+        route_name = (
+            getattr(self.request.resolver_match, "url_name", "") or ""
+        )
+        if route_name in routed_primary:
+            primary_key = self._canonical_primary_key(context)
+            if primary_key:
+                parameters.pop(primary_key, None)
         if page_number is None or page_number <= 1:
             parameters.pop("page", None)
         else:
@@ -278,6 +292,11 @@ class SEOProductListView(RefinedPublicProductListView):
             )
 
         pagination_parameters = self._pagination_parameters(context)
+        if context.get("rotation_seed"):
+            # Keep randomized discovery deterministic when a customer opens
+            # the next page in a new tab or shares its URL. This seed is not
+            # part of canonical/prev/next SEO URLs.
+            pagination_parameters["view"] = context["rotation_seed"]
         page_options = [
             {"number": number, "gap": not isinstance(number, int)}
             for number in context["paginator"].get_elided_page_range(

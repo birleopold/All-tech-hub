@@ -33,7 +33,7 @@
         <p class="public-eyebrow">{{ catalog_eyebrow }}</p>
         <h1 id="catalog-heading">{{ catalog_heading }}</h1>
         <p>{{ catalog_intro }}</p>
-        <form method="get" action="{{ request.path }}" class="public-catalog-search market-search-shell" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
+        <form method="get" action="{% url 'product_list' %}" class="public-catalog-search market-search-shell" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
           <i class="bi bi-search public-catalog-search__icon" aria-hidden="true"></i>
           <label class="visually-hidden" for="catalog-hero-search">Search the catalogue</label>
           <input id="catalog-hero-search" class="form-control" type="search" name="q" value="{{ search_q }}" placeholder="Search brand, model, processor, RAM, storage, SKU or service" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="catalog-hero-search-results" data-market-search-input>

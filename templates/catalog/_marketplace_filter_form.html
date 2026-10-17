@@ -1,4 +1,4 @@
-<form method="get" class="market-filter-form">
+<form method="get" action="{% url 'product_list' %}" class="market-filter-form">
   {% if search_q %}<input type="hidden" name="q" value="{{ search_q }}">{% endif %}
   {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
   <div><label for="{{ id_prefix }}-kind">Product type</label><select class="form-select" id="{{ id_prefix }}-kind" name="kind"><option value="">Products and services</option><option value="physical" {% if current_kind == 'physical' %}selected{% endif %}>Physical products</option><option value="service" {% if current_kind == 'service' %}selected{% endif %}>Professional services</option></select></div>

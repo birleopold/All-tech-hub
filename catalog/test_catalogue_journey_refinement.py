@@ -1,5 +1,8 @@
 """End-to-end screen checks for staff catalogue triage and public pagination."""
 from decimal import Decimal
+from urllib.parse import parse_qs, urlsplit
+
+from django.test import Client
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -81,6 +84,69 @@ class CataloguePaginationAndAvailabilityTests(TestCase):
             slug="paging-test-unavailable", price=Decimal("24000.00"),
             stock_quantity=0, is_published=True
         )
+
+    def test_generic_category_filters_survive_numbered_pagination(self):
+        response = self.client.get(
+            reverse("product_list"), {"category": "paginated-accessories"}
+        )
+        self.assertEqual(response.status_code, 200)
+        suffix = parse_qs(response.context["catalog_pagination_suffix"])
+        self.assertEqual(suffix["category"], ["paginated-accessories"])
+        seed = response.context["rotation_seed"]
+        self.assertEqual(suffix["view"], [seed])
+        self.assertNotIn("view=", response.context["catalog_canonical_url"])
+
+        # A customer opening page two in a fresh browser sees the same
+        # deterministic product ordering as the original page one.
+        next_page = Client().get(
+            reverse("product_list"),
+            {"category": "paginated-accessories", "view": seed, "page": 2},
+        )
+        self.assertEqual(next_page.status_code, 200)
+        self.assertEqual(next_page.context["rotation_seed"], seed)
+        first_ids = {p.pk for p in response.context["products"]}
+        second_ids = {p.pk for p in next_page.context["products"]}
+        self.assertFalse(first_ids.intersection(second_ids))
+
+    def test_routed_landing_filters_switch_to_generic_catalogue(self):
+        category = Category.objects.create(
+            name="Office", slug="paginated-office"
+        )
+        office = Product.objects.create(
+            category=category, name="Office scanner",
+            slug="paginated-office-scanner", price=Decimal("200000"),
+            is_published=True, stock_quantity=2,
+        )
+        response = self.client.get(
+            reverse("product_category", args=["paginated-accessories"])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, f'action="{reverse("product_list")}"'
+        )
+        # Changing the dropdown must not be overwritten by the category URL.
+        new_category = self.client.get(
+            reverse("product_list"),
+            {"category": "paginated-office"},
+        )
+        self.assertEqual(new_category.status_code, 200)
+        self.assertEqual(new_category.context["paginator"].count, 1)
+        self.assertEqual(new_category.context["products"][0].pk, office.pk)
+
+    def test_active_filter_removal_reaches_generic_catalogue(self):
+        response = self.client.get(
+            reverse("product_category", args=["paginated-accessories"]),
+            {"sort": "name", "q": "Paging"},
+        )
+        self.assertEqual(response.status_code, 200)
+        category_filter = next(
+            item for item in response.context["active_filter_items"]
+            if item["label"] == "Accessories"
+        )
+        remove_url = urlsplit(category_filter["remove_url"])
+        self.assertEqual(remove_url.path, reverse("product_list"))
+        self.assertNotIn("category", parse_qs(remove_url.query))
+        self.assertEqual(parse_qs(remove_url.query)["q"], ["Paging"])
 
     def test_numbered_pagination_keeps_search_and_sort(self):
         params = {"q": "Paging Test", "sort": "name"}
