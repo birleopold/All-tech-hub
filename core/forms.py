@@ -155,6 +155,9 @@ class PortalSupportTicketForm(forms.ModelForm):
         ]
         self.fields["related_order"].required = False
         self.fields["related_order"].empty_label = "— optional —"
+        self.fields["related_order"].queryset = self.fields[
+            "related_order"
+        ].queryset.none()
         for relation in ("related_job", "related_document"):
             self.fields[relation].required = False
             self.fields[relation].empty_label = "— optional —"

@@ -98,7 +98,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Add linked support shortcuts to repair pages and customer documents, and prefill the original record safely.
 - [x] Show related repair/document links on customer and staff ticket details and associate repair support replies with the job.
 - [x] Display recent customer-visible order, repair, invoice and support activity on the account overview, with privacy-safe links, clear dates and an empty state.
-- [ ] Add permission, privacy and regression test cases and complete remaining P4 code; final integrated testing deferred.
+- [x] Add regression tests covering job/invoice contextual help, account isolation, forged IDs, staff form ownership, and filtering internal customer messages.
+- [ ] Final code-stage review of portal navigation, support workflow and cross-page access; integrated Django/browser tests deferred.
 
 ## P3 coding handoff
 Coding coverage is in `commerce/views.py`, `commerce/forms.py`,
