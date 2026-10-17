@@ -664,7 +664,14 @@ def stocktake_post(request, pk: int):
     if not take.is_open:
         messages.error(request, "Stock take is already finalised.")
         return redirect("staff_stocktake_detail", pk=take.pk)
-    count = take.post(actor=request.user)
+    try:
+        count = take.post(actor=request.user)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect("staff_stocktake_detail", pk=take.pk)
+    if take.status != StockTake.STATUS_POSTED:
+        messages.info(request, "This stock take was already finalised.")
+        return redirect("staff_stocktake_detail", pk=take.pk)
     log_audit_event(
         actor=request.user,
         verb="inventory.stocktake_posted",
