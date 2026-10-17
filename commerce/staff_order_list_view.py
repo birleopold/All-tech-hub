@@ -18,6 +18,7 @@ class StaffOrderListView(StaffRequiredMixin, ListView):
         status = (self.request.GET.get("status") or "").strip()
         queue = (self.request.GET.get("queue") or "").strip()
         query = (self.request.GET.get("q") or "").strip()
+        fulfillment = (self.request.GET.get("fulfillment") or "").strip()
         terminal_statuses = [
             Order.STATUS_CANCELLED,
             Order.STATUS_DELIVERED,
@@ -32,6 +33,8 @@ class StaffOrderListView(StaffRequiredMixin, ListView):
             queryset = queryset.filter(
                 status__in=[Order.STATUS_DELIVERED, Order.STATUS_FULFILLED]
             )
+        if fulfillment in {Order.FULFILLMENT_DELIVERY, Order.FULFILLMENT_PICKUP}:
+            queryset = queryset.filter(fulfillment_type=fulfillment)
         if query:
             queryset = queryset.filter(
                 Q(reference__icontains=query)
@@ -67,6 +70,9 @@ class StaffOrderListView(StaffRequiredMixin, ListView):
                 "order_status_choices": Order.STATUS_CHOICES,
                 "selected_status": (self.request.GET.get("status") or "").strip(),
                 "selected_queue": (self.request.GET.get("queue") or "").strip(),
+                "selected_fulfillment": (
+                    (self.request.GET.get("fulfillment") or "").strip()
+                ),
                 "q": (self.request.GET.get("q") or "").strip(),
                 "order_stats": stats,
                 "querystring": query_params.urlencode(),
