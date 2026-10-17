@@ -70,11 +70,17 @@ def merchant_rows(request):
     )
     currency = company.currency_code
     for product in products:
+        # Merchant-ready offerings need a real image and a positive quoted
+        # price; omit incomplete records rather than advertising a free item.
+        if not product.primary_display_image:
+            continue
         base = _base_product_data(request, product, config)
         active_variants = [v for v in product.variants.all() if v.is_active]
         if active_variants:
             group_id = product.sku or f"product-{product.pk}"
             for variant in active_variants:
+                if variant.price is None or variant.price <= 0:
+                    continue
                 current = variant.price
                 regular = (
                     variant.compare_at_price
@@ -95,6 +101,8 @@ def merchant_rows(request):
                     ),
                 }
         else:
+            if product.price is None or product.price <= 0:
+                continue
             current = product.price
             regular = (
                 product.compare_at_price

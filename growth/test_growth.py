@@ -1,5 +1,9 @@
 from datetime import timedelta
 from decimal import Decimal
+from io import BytesIO
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -107,6 +111,15 @@ class GrowthMarketingTests(TestCase):
         self.assertContains(checkout_response, "begin_checkout")
 
     def test_merchant_feed_excludes_services_and_contains_product_metadata(self):
+        out = BytesIO()
+        Image.new("RGB", (600, 600), "white").save(out, format="JPEG")
+        self.product.image.save(
+            "merchant-ready-test.jpg",
+            SimpleUploadedFile(
+                "merchant-ready-test.jpg", out.getvalue(), content_type="image/jpeg"
+            ),
+            save=True,
+        )
         ProductGrowthData.objects.create(
             product=self.product,
             brand="Lenovo",
@@ -130,6 +143,40 @@ class GrowthMarketingTests(TestCase):
         self.assertContains(xml_response, "Lenovo")
         self.assertContains(xml_response, "1234567890123")
         self.assertNotContains(xml_response, self.service.name)
+
+    def test_merchant_feed_omits_missing_images_and_unpriced_items(self):
+        category = Category.objects.create(
+            name="Unready listings", slug="merchant-unready"
+        )
+        missing_image = Product.objects.create(
+            category=category, name="No product picture",
+            slug="merchant-no-picture", price=Decimal("1200"),
+            is_published=True, kind=Product.KIND_PHYSICAL,
+        )
+        unpriced = Product.objects.create(
+            category=category, name="Zero price",
+            slug="merchant-zero-price", price=Decimal("0"),
+            is_published=True, kind=Product.KIND_PHYSICAL,
+        )
+        picture = BytesIO()
+        Image.new("RGB", (600, 600), "white").save(picture, format="JPEG")
+        unpriced.image.save(
+            "unpriced-product.jpg",
+            SimpleUploadedFile(
+                "unpriced-product.jpg", picture.getvalue(),
+                content_type="image/jpeg",
+            ),
+            save=True,
+        )
+        rows = self.client.get(reverse("marketing_product_feed_json")).json()[
+            "products"
+        ]
+        titles = {row["title"] for row in rows}
+        self.assertNotIn(missing_image.name, titles)
+        self.assertNotIn(unpriced.name, titles)
+        xml = self.client.get(reverse("google_merchant_feed"))
+        self.assertEqual(xml.status_code, 200)
+        self.assertNotContains(xml, "Zero price")
 
     def test_customer_can_save_and_restore_cart_with_explicit_consent(self):
         self.add_product_to_cart()

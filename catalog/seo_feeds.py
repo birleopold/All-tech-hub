@@ -282,6 +282,8 @@ def google_merchant_feed(request):
         active_variants = [variant for variant in product.variants.all() if variant.is_active]
         if active_variants:
             for variant in active_variants:
+                if variant.price is None or variant.price <= 0:
+                    continue
                 item_id = variant.sku or f"LEOSOFT-{product.pk}-{variant.pk}"
                 _append_merchant_item(
                     channel,
@@ -296,7 +298,7 @@ def google_merchant_feed(request):
                     available=variant.available_to_sell,
                     variant=variant,
                 )
-        else:
+        elif product.price is not None and product.price > 0:
             _append_merchant_item(
                 channel,
                 product=product,

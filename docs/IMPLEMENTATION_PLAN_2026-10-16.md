@@ -153,7 +153,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Show recent failed/manual channel deliveries with the original error and review links; keep uncertain external posts blocked from automatic replay.
 - [x] Make Publish Now feedback truthful: worker queued, not a guaranteed platform publication time.
 - [ ] Strengthen manual override controls without duplicating delivery jobs or silently enabling unselected channels.
-- [ ] Improve consent, merchant feed data quality, and attribution to actual customer journeys.
+- [x] Align canonical Merchant Center and multi-format feeds: omit physical listings lacking real images or positive prices; preserve the existing variant-specific price and availability rules.
+- [ ] Improve consent and attribution to actual customer journeys.
 - [ ] Add regression coverage and stage Phase 7 code handoff.
 
 ## P6 coding handoff
