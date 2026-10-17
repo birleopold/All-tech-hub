@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 
 from billing.models import CommercialDocument, CommercialLine, allocate_document_number
-from commerce.fulfillment import transition_order
+from commerce.fulfillment import allowed_order_transitions, transition_order
 from commerce.fulfillment_forms import OrderStatusForm, ShipmentForm
 from commerce.models import CustomerReturn, Order, Shipment
 from commerce.return_forms import CustomerReturnForm
@@ -59,7 +59,8 @@ class StaffOrderDetailView(StaffRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["order_status_choices"] = Order.STATUS_CHOICES
-        ctx["status_form"] = OrderStatusForm(initial={"status": self.object.status})
+        ctx["status_form"] = OrderStatusForm(order=self.object)
+        ctx["available_transitions"] = allowed_order_transitions(self.object)
         shipment = getattr(self.object, "shipment", None)
         ctx["shipment_form"] = ShipmentForm(instance=shipment)
         ctx["return_form"] = CustomerReturnForm(order=self.object)
@@ -192,7 +193,7 @@ def staff_order_transition(request, pk: int):
     if not request.user.is_staff:
         raise Http404
     order = get_object_or_404(Order, pk=pk)
-    form = OrderStatusForm(request.POST)
+    form = OrderStatusForm(request.POST, order=order)
     if not form.is_valid():
         messages.error(request, "Choose a valid order status.")
         return redirect("staff_order_detail", pk=pk)
@@ -221,6 +222,10 @@ def staff_order_shipment(request, pk: int):
     try:
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=pk)
+            if order.fulfillment_type != Order.FULFILLMENT_DELIVERY:
+                raise ValidationError("Pickup orders do not have shipment tracking.")
+            if order.status == Order.STATUS_CANCELLED:
+                raise ValidationError("Cancelled orders cannot be shipped.")
             current_shipment = (
                 Shipment.objects.select_for_update().filter(order=order).first()
             )
