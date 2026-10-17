@@ -210,11 +210,21 @@ def _contact_initial(request):
                 initial["request_type"], "Product enquiry"
             )
             initial["subject"] = f"{product.name} — {request_label.lower()}"
-            initial["message"] = (
-                f"I am interested in {product.name}.\n\n"
-                "Please advise on availability, final price, options, delivery or collection, "
-                "and any setup or warranty information that applies."
-            )
+            if product.kind == Product.KIND_SERVICE:
+                initial["message"] = (
+                    f"I would like a quotation for {product.name}.\n\n"
+                    "Location or site: \n"
+                    "Work required or problem to solve: \n"
+                    "Preferred date or timeframe: \n\n"
+                    "Please confirm the scope, estimated cost, assessment charges "
+                    "(if any), and availability before booking."
+                )
+            else:
+                initial["message"] = (
+                    f"I am interested in {product.name}.\n\n"
+                    "Please advise on availability, final price, options, delivery or collection, "
+                    "and any setup or warranty information that applies."
+                )
 
     initial.setdefault("request_type", ContactForm.REQUEST_PRODUCT)
     return initial, product

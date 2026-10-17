@@ -39,6 +39,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 
 ## P3 first customer-to-staff order protection
 - [x] Quote-only services go to the linked quotation request form rather than free checkout.
+- [x] Product detail, sticky mobile action and service enquiry prefill reflect the quotation-required state.
 - [x] Reject direct attempts to add zero-priced services or service options through the cart endpoint.
 - [x] Remove old quote-only service entries from customer sessions before showing cart or processing checkout.
 - [ ] Run service/checkout regression tests and validate the quotation-to-lead handoff in staging.

@@ -49,7 +49,7 @@
       </div>
       <div class="col-lg-4">
         <div class="detail-hero-actions justify-content-lg-end">
-          <a class="btn btn-light" href="#product-buy-panel"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% else %}bi-cart3{% endif %} me-2" aria-hidden="true"></i>{% if product.kind == 'service' %}Book service{% else %}Buy or enquire{% endif %}</a>
+          <a class="btn btn-light" href="#product-buy-panel"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% else %}bi-cart3{% endif %} me-2" aria-hidden="true"></i>{% if product.kind == 'service' and not product.public_price %}Request quote{% elif product.kind == 'service' %}Book service{% else %}Buy or enquire{% endif %}</a>
           <a class="btn btn-outline-light" href="{% url 'contact' %}?type=quote&amp;product={{ product.slug|urlencode }}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Formal quote</a>
         </div>
       </div>
@@ -92,14 +92,14 @@
 
     <div class="col-lg-5">
       <aside class="product-buy-card" id="product-buy-panel" aria-labelledby="buy-heading">
-        <div class="product-buy-card__header"><p class="product-category-label">{{ product.category.name }}</p><h2 class="product-buy-heading" id="buy-heading">{% if product.kind == 'service' %}Book this service{% else %}Purchase options{% endif %}</h2></div>
+        <div class="product-buy-card__header"><p class="product-category-label">{{ product.category.name }}</p><h2 class="product-buy-heading" id="buy-heading">{% if product.kind == 'service' and not product.public_price %}Request a service quotation{% elif product.kind == 'service' %}Book this service{% else %}Purchase options{% endif %}</h2></div>
         <div class="product-buy-card__body">
           {% if review_summary.count %}<div class="product-rating-row"><span class="product-rating-stars" aria-label="{{ review_summary.avg }} out of 5 stars">{% for s in rating_stars %}{% if s <= rounded_review_rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span><a href="#reviews">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a></div>{% endif %}
           <p class="product-price" id="pd-price-label">{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</p>
           {% if product.kind == 'service' and not product.public_price %}<p class="product-price-note">Tell us the scope and location so the team can confirm an estimate.</p>{% elif product.public_compare_at_price %}<p class="product-price-note"><span class="text-decoration-line-through">{{ company.currency_code }} {{ product.public_compare_at_price|floatformat:0|intcomma }}</span> previous comparison price{% if product.savings_percent %} · Save {{ product.savings_percent }}%{% endif %}</p>{% elif product.public_has_variants %}<p class="product-price-note">Select an option to confirm its exact price and stock.</p>{% else %}<p class="product-price-note">Price shown before any delivery or optional setup charges.</p>{% endif %}
 
           <div class="product-status-stack">
-            <div class="product-status-line {% if product.public_available %}is-available{% endif %}"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% elif product.public_available %}bi-check-circle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>{% if product.kind == 'service' %}Available for booking{% elif product.public_available %}Available to order{% else %}Contact the team to confirm availability{% endif %}</div>
+            <div class="product-status-line {% if product.public_available %}is-available{% endif %}"><i class="bi {% if product.kind == 'service' %}bi-calendar-check{% elif product.public_available %}bi-check-circle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>{% if product.kind == 'service' and not product.public_price %}Quotation required before booking{% elif product.kind == 'service' %}Available for booking{% elif product.public_available %}Available to order{% else %}Contact the team to confirm availability{% endif %}</div>
             {% if product.public_low_stock %}<div class="product-status-line is-low"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>Low stock — confirm before travelling or paying</div>{% endif %}
             {% if product.kind == 'physical' and not product.public_has_variants and product.track_inventory and product.public_available %}<div class="product-status-line"><i class="bi bi-box-seam" aria-hidden="true"></i>{{ product.stock_quantity }} unit{{ product.stock_quantity|pluralize }} recorded on hand</div>{% endif %}
           </div>
@@ -227,6 +227,6 @@
   {% endif %}
 </div>
 
-<div class="product-mobile-action" aria-label="Quick buying action"><div class="product-mobile-action__price"><small>{% if product.kind == 'service' %}Service{% else %}Price{% endif %}</small>{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</div><a class="btn btn-light" href="#product-buy-panel">{% if product.kind == 'service' %}Book{% else %}Buy / enquire{% endif %}</a></div>
+<div class="product-mobile-action" aria-label="Quick buying action"><div class="product-mobile-action__price"><small>{% if product.kind == 'service' %}Service{% else %}Price{% endif %}</small>{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</div><a class="btn btn-light" href="#product-buy-panel">{% if product.kind == 'service' and not product.public_price %}Request quote{% elif product.kind == 'service' %}Book{% else %}Buy / enquire{% endif %}</a></div>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'js/social_share.js' %}" defer></script><script src="{% static 'js/public_detail_contact.js' %}" defer></script>{% endblock %}

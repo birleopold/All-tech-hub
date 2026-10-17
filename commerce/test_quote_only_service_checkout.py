@@ -41,7 +41,23 @@ class QuoteOnlyServiceCheckoutTests(TestCase):
         response = self.client.get(self.unpriced.get_absolute_url())
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Request service quotation")
+        self.assertContains(response, "Quotation required before booking")
+        self.assertContains(response, "Request quote")
         self.assertContains(response, "type=quote&amp;product=unquoted-installation")
+        enquiry = self.client.get(
+            reverse("contact"),
+            {"type": "quote", "product": self.unpriced.slug},
+        )
+        self.assertEqual(enquiry.status_code, 200)
+        self.assertEqual(
+            enquiry.context["form"].initial["request_type"], "quote"
+        )
+        self.assertIn(
+            "Location or site:", enquiry.context["form"].initial["message"]
+        )
+        self.assertEqual(
+            enquiry.context["contact_product"].pk, self.unpriced.pk
+        )
         self.assertNotContains(
             response,
             f'action="{reverse("cart_add", args=[self.unpriced.pk])}"',
