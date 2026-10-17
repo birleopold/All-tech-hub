@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DetailView, ListView
 
 from billing.models import CommercialDocument, CommercialLine, allocate_document_number
+from catalog.models import Product
 from commerce.fulfillment import allowed_order_transitions, transition_order
 from commerce.fulfillment_forms import OrderStatusForm, ShipmentForm
 from commerce.models import CustomerReturn, Order, Shipment

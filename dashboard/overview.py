@@ -93,7 +93,7 @@ def dashboard_overview(user, counts):
               "Resolve overdue customer requests", counts["overdue_tickets"])
     if access["orders"]:
         focus("Active orders", reverse("staff_orders") + "?queue=active",
-              "Prepare, dispatch or collect orders", counts["orders_in_transit"])
+              "Prepare, dispatch or collect orders", counts.get("orders_in_transit", 0))
     if access["payments"]:
         focus("Verify payments", reverse("staff_payment_reconciliation"),
               "Check customer payment evidence", counts["pending_payment_count"])

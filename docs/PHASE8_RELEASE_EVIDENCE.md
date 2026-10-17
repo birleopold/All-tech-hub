@@ -66,6 +66,26 @@ stderr logs; never use interactive `set -e` to launch a prolonged certification
 session over an unreliable SSH connection. No production deployment was
 confirmed by this interrupted run.
 
+## VPS integrated suite and deploy safety finding (2026-10-18)
+
+The captured complete Django run for commit `7bfcfea` ran 752 cases and
+reported **40 failures, 9 errors**. Genuine production-affecting defects
+included a missing `Product` import in the staff order detail (HTTP 500)
+and a dashboard quick-action crash on absent `orders_in_transit` count;
+these are now guarded. Other failures affect checkout, mail delivery,
+marketing campaigns, customer enrollment, catalogue discovery, SEO and
+legacy layout expectations; not all are necessarily independent defects.
+
+**Critical:** despite the failed isolated suite, the next interactive shell
+command executed `bash scripts/update_vps.sh`. The VPS then migrated,
+restarted Gunicorn and reported a healthy release `7bfcfea`. Deployment
+success is **not** a green test report. Run certification in a script with
+`set -Eeuo pipefail` and an explicit failing-result guard; do not paste a
+series of shell commands whose next line deploys after a failed test.
+
+A second detached run was started, but the uploaded tail shows migration
+rehearsal only and no completion status. No claim of passing tests is made.
+
 ## Evidence register
 
 | Gate | Current status | Required real-world evidence |
