@@ -32,6 +32,18 @@ Use specific test module paths only for diagnosis, not sign-off:
 bash scripts/phase8_release_gate.sh marketing.test_attribution automation.test_social_operator_experience
 ```
 
+## Deployment migration drift resolved
+
+The guarded VPS release rehearsal for source revision `29fea04` stopped
+before production deployment at `makemigrations --check --dry-run`.
+Django proposed `operations/migrations/0009_alter_jobexpense_reference.py`.
+The missing migration state was only the `help_text` metadata on the
+existing `JobExpense.reference` field. Migration `0009` now records
+that field metadata without changing the reference column or existing
+expense records. Re-run the isolated release gate and require its success
+before applying any production database migrations. This entry documents
+the code fix; no successful VPS rerun is claimed.
+
 ## Evidence register
 
 | Gate | Current status | Required real-world evidence |
