@@ -40,13 +40,13 @@
 
     <section class="border rounded p-3 p-md-4 mb-3" aria-labelledby="connect-heading">
       <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-        <div><h3 class="h5 mb-1" id="connect-heading"><span class="badge bg-primary rounded-pill me-2">1</span>Connect publishing accounts</h3><p class="small text-muted mb-0">A channel must say Connected before it can publish.</p></div>
+        <div><h3 class="h5 mb-1" id="connect-heading"><span class="badge bg-primary rounded-pill me-2">1</span>Connect publishing accounts</h3><p class="small text-muted mb-0">Credentials must be present before a channel can be tested. Use “Test selected connections” to verify live access.</p></div>
         {% if can_change_automation %}<form method="post" action="{% url 'staff_social_autopilot_test_connections' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Test selected connections</button></form>{% endif %}
       </div>
       <div class="row g-2">
         {% for item in social_channel_statuses %}
         <div class="col-md-4"><div class="border rounded p-3 h-100">
-          <div class="d-flex justify-content-between gap-2"><strong>{{ item.label }}</strong><span class="badge {% if item.connected %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if item.connected %}Connected{% else %}Setup needed{% endif %}</span></div>
+          <div class="d-flex justify-content-between gap-2"><strong>{{ item.label }}</strong><span class="badge {% if item.connected %}bg-success{% else %}bg-warning text-dark{% endif %}">{% if item.connected %}Credentials set{% else %}Setup needed{% endif %}</span></div>
           <small class="d-block text-muted mt-2">{% if item.selected %}Currently selected{% else %}Not selected{% endif %}</small>
         </div></div>
         {% endfor %}
@@ -117,12 +117,30 @@
     </div></div>
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-      <div><h3 class="h5 mb-1">Upcoming posts</h3><p class="small text-muted mb-0">Review what will happen next. Remove any item you do not want published.</p></div>
+      <div><h3 class="h5 mb-1">Upcoming posts</h3><p class="small text-muted mb-0">Only Autopilot and priority-product posts appear here. You can remove individual queued items without affecting other schedules.</p></div>
       {% if can_change_automation and autopilot.enabled %}<form method="post" action="{% url 'staff_social_autopilot_rebuild' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Rebuild upcoming schedule</button></form>{% endif %}
     </div>
     <div class="table-responsive mb-4"><table class="table table-sm align-middle mb-0"><thead><tr><th>Publish time</th><th>Product</th><th>Channel</th><th>Preview</th><th>Status</th>{% if can_change_automation %}<th><span class="visually-hidden">Actions</span></th>{% endif %}</tr></thead><tbody>
       {% for post in upcoming_social_posts %}<tr><td>{{ post.scheduled_for|date:"Y-m-d H:i"|default:"Waiting for review" }}</td><td>{{ post.product.name|default:post.title }}</td><td>{{ post.channels|join:", "|title }}</td><td class="small">{{ post.caption|truncatechars:120 }}</td><td>{{ post.get_status_display }}</td>{% if can_change_automation %}<td class="text-end"><div class="d-flex justify-content-end gap-2">{% if post.status == 'scheduled' and autopilot.mode == 'full' %}<form method="post" action="{% url 'staff_social_autopilot_publish_now' post.pk %}" onsubmit="return confirm('Publish this post now? The remaining schedule will not change.');">{% csrf_token %}<button class="btn btn-sm btn-primary" type="submit">Publish now</button></form>{% endif %}<form method="post" action="{% url 'staff_social_autopilot_cancel_post' post.pk %}" onsubmit="return confirm('Remove this post from the social queue?');">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">Remove</button></form></div></td>{% endif %}</tr>{% empty %}<tr><td colspan="{% if can_change_automation %}6{% else %}5{% endif %}" class="text-muted p-3">No upcoming posts yet. Complete the four setup steps above.</td></tr>{% endfor %}
     </tbody></table></div>
+
+    <section class="border rounded p-3 mb-4" aria-labelledby="social-failed-heading">
+      <div class="d-flex justify-content-between flex-wrap gap-2 align-items-start mb-2">
+        <div><h3 class="h6 mb-1" id="social-failed-heading">Social deliveries needing review</h3>
+        <p class="small text-muted mb-0">Failed or manual deliveries are not automatically replayed. Check the destination platform for an existing post before attempting a replacement.</p></div>
+        <span class="badge text-bg-light border">{{ failed_social_posts|length }} recent</span>
+      </div>
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Post</th><th>Channel</th><th>Status</th><th>Last problem</th><th>Review</th></tr></thead>
+        <tbody>{% for item in failed_social_posts %}
+          <tr><td>{{ item.delivery.post.title }}</td><td>{{ item.delivery.channel|title }}</td>
+            <td>{{ item.delivery.get_status_display }}</td>
+            <td class="small">{{ item.delivery.last_error|default:"Manual publishing or operator review needed."|truncatechars:170 }}</td>
+            <td>{% if item.job_id %}<a href="{% url 'staff_automation_job_detail' item.job_id %}" class="btn btn-sm btn-outline-primary">Review job</a>{% else %}<a href="{% url 'staff_marketing_post_edit' item.delivery.post_id %}" class="btn btn-sm btn-outline-secondary">Review post</a>{% endif %}</td>
+          </tr>
+        {% empty %}<tr><td class="small text-muted" colspan="5">No failed or manual social deliveries require review.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
 
     <details>
       <summary class="fw-semibold mb-3">View 30-day performance</summary>

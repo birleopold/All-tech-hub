@@ -148,7 +148,10 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
 
 ## P7 marketing and integrations implementation
-- [ ] Make channel readiness, publish-now, scheduled posts and failed-delivery recovery accurate and accessible across the staff UI.
+- [x] Separate configured credentials from verified connections, and test only selected channels with an explicit empty-selection message.
+- [x] Restrict Autopilot queue controls to Autopilot and priority posts, rather than unrelated marketing content.
+- [x] Show recent failed/manual channel deliveries with the original error and review links; keep uncertain external posts blocked from automatic replay.
+- [x] Make Publish Now feedback truthful: worker queued, not a guaranteed platform publication time.
 - [ ] Strengthen manual override controls without duplicating delivery jobs or silently enabling unselected channels.
 - [ ] Improve consent, merchant feed data quality, and attribution to actual customer journeys.
 - [ ] Add regression coverage and stage Phase 7 code handoff.

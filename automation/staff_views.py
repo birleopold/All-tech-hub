@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -21,7 +22,9 @@ from automation.forms import (
     AutomationResumeForm,
     SocialAutopilotForm,
 )
-from automation.models import AutomationJob, SocialAutopilotSettings
+from automation.models import (
+    AutomationJob, PostChannelDelivery, SocialAutopilotSettings,
+)
 from automation.reporting import (
     automation_control_summary,
     automation_integrity_findings,
@@ -44,7 +47,7 @@ CHANNEL_LABELS = {
 
 
 def _social_autopilot_context(autopilot, *, form=None):
-    from automation.autopilot import autopilot_readiness
+    from automation.autopilot import AUTOPILOT_MARKER, autopilot_readiness
 
     selected = list(autopilot.channels or [])
     connections = {
@@ -53,15 +56,39 @@ def _social_autopilot_context(autopilot, *, form=None):
     }
     upcoming = (
         ScheduledPost.objects.filter(
+            Q(notes__startswith=AUTOPILOT_MARKER)
+            | Q(notes__startswith="[social-priority]"),
             status__in=[
                 ScheduledPost.STATUS_DRAFT,
                 ScheduledPost.STATUS_SCHEDULED,
                 ScheduledPost.STATUS_READY,
-            ]
+            ],
         )
-        .select_related("product")
+        .select_related("product", "automation_plan")
         .order_by("scheduled_for", "pk")[:20]
     )
+    failed_deliveries = list(
+        PostChannelDelivery.objects.filter(
+            status__in=[
+                PostChannelDelivery.STATUS_FAILED,
+                PostChannelDelivery.STATUS_MANUAL,
+            ],
+        )
+        .select_related("post")
+        .order_by("-updated_at", "-pk")[:12]
+    )
+    delivery_ids = [delivery.pk for delivery in failed_deliveries]
+    jobs_by_delivery = {
+        job.delivery_id: job.pk
+        for job in AutomationJob.objects.filter(
+            delivery_id__in=delivery_ids,
+            job_type=AutomationJob.TYPE_SOCIAL_POST,
+        )
+    }
+    failed_social_posts = [
+        {"delivery": delivery, "job_id": jobs_by_delivery.get(delivery.pk)}
+        for delivery in failed_deliveries
+    ]
     selected_labels = [
         CHANNEL_LABELS[channel] for channel in selected if channel in CHANNEL_LABELS
     ]
@@ -87,6 +114,7 @@ def _social_autopilot_context(autopilot, *, form=None):
             len(selected) * len(autopilot.posting_hours or [9]) * autopilot.queue_days
         ),
         "upcoming_social_posts": upcoming,
+        "failed_social_posts": failed_social_posts,
     }
 
 
@@ -306,7 +334,15 @@ def social_autopilot_rebuild(request):
 def social_autopilot_test_connections(request):
     _require_automation_staff(request, change=True)
     autopilot = SocialAutopilotSettings.load()
-    channels = autopilot.channels or ["facebook", "instagram", "telegram"]
+    channels = [
+        channel for channel in (autopilot.channels or [])
+        if channel in CHANNEL_LABELS
+    ]
+    if not channels:
+        messages.warning(
+            request, "No social channels are selected. Select and save a channel before testing."
+        )
+        return redirect("staff_automation_control")
     for channel in channels:
         result = diagnose_channel(channel)
         text = f"{channel.title()}: {result['message']}"
@@ -332,8 +368,9 @@ def social_autopilot_publish_now(request, post_id: int):
             request,
             (
                 f"Publish now requested. {queued} channel delivery"
-                f"{'' if queued == 1 else 'ies'} queued and expected within one minute. "
-                "The remaining schedule is unchanged."
+                f"{'' if queued == 1 else 'ies'} queued for the worker. "
+                "Check the delivery status for confirmation; posting time depends "
+                "on worker health and channel availability. Later posts are unchanged."
             ),
         )
     return redirect("staff_automation_control")
