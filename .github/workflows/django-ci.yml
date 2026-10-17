@@ -93,6 +93,7 @@ jobs:
           purchasing.tests
           inventory.tests
           operations.test_job_expense_ledger
+          billing.test_finance_controls
           reports.test_conversion
           reports.test_retention
           portal.test_warranties
