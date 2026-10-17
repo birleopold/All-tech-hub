@@ -165,6 +165,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Mark Phase 7 coding complete; external API behavior, live conversion telemetry and browser consent remain pending certification.
 
 ## P8 production certification
+- [x] Stage an isolated Phase 8 release-candidate gate that migrates a throwaway SQLite database and runs Django tests without accessing production.
+- [x] Connect the candidate gate to the existing full CI workflow; include the strict Merchant Center fail-closed regression in focused CI.
+- [ ] Confirm the GitHub Actions runner/workflow-start issue is resolved and **all checks pass** for the final commit.
 - [ ] Run migration drift and upgrade rehearsal against a production-like database snapshot.
 - [ ] Run the complete Django test suite and browser/mobile/keyboard accessibility smoke journeys.
 - [ ] Check payment, email, social-provider and Merchant Center sandbox/external-service outcomes.

@@ -25,10 +25,15 @@ jobs:
       - run: ruff check .
       - run: python manage.py makemigrations --check --dry-run
       - run: python manage.py check
-      - run: python manage.py test
+      - name: Isolated migration and full regression rehearsal
+        run: bash scripts/phase8_release_gate.sh
       - name: Production deployment check
         env:
           ALLTECH_ENV: production
           ALLTECH_SECRET_KEY: ci-only-secret-key-that-is-longer-than-fifty-characters-123456
+          ALLTECH_FIELD_ENCRYPTION_KEY: ci-only-field-encryption-key-not-used-in-production-123456789
+          ALLTECH_DB_ENGINE: django.db.backends.sqlite3
+          ALLTECH_DB_NAME: /tmp/leosoft-phase8-production-settings.sqlite3
           ALLTECH_ALLOWED_HOSTS: example.com
+          ALLTECH_CSRF_TRUSTED_ORIGINS: https://example.com
         run: python manage.py check --deploy

@@ -36,6 +36,7 @@ jobs:
           node --check static/js/alltech_ui.js
           node --check static/js/pwa.js
           node --check static/js/marketing_analytics.js
+          bash -n scripts/phase8_release_gate.sh
           node --check static/js/marketplace_experience.js
           node --check static/js/mobile_commerce_pro.js
 
@@ -68,6 +69,7 @@ jobs:
           growth.test_ambassador_payouts
           marketing.test_automation
           marketing.test_social_manual_confirm
+          merchandising.test_merchant_feed_safety
           marketing.test_integrations
           marketing.test_attribution
           marketing.test_attribution_metrics
