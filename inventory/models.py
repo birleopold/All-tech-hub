@@ -214,9 +214,7 @@ class StockTake(models.Model):
         if not take.is_open:
             return 0
         lines = list(
-            take.lines.select_for_update().select_related(
-                "product", "product_variant"
-            ).order_by("product_id", "product_variant_id", "pk")
+            take.lines.select_for_update().select_related("product").order_by("product_id", "product_variant_id", "pk")
         )
         seen = set()
         for line in lines:
