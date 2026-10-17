@@ -105,7 +105,7 @@ def _search_tokens(value: str) -> tuple[str, ...]:
     tokens: list[str] = []
     for token in _SEARCH_SPLIT.split((value or "").strip()):
         cleaned = token.strip()
-        if len(cleaned) < 2 or cleaned.lower() in {item.lower() for item in tokens}:
+        if not cleaned or cleaned.lower() in {item.lower() for item in tokens}:
             continue
         tokens.append(cleaned)
         if len(tokens) == 8:
@@ -114,6 +114,16 @@ def _search_tokens(value: str) -> tuple[str, ...]:
 
 
 def _search_token_query(token: str) -> Q:
+    # One-letter searches should be meaningful rather than matching nearly
+    # every product description (e.g. the letter "h" in "the").
+    # Prefix-match product identity for such short queries instead.
+    if len(token) == 1:
+        return (
+            Q(name__istartswith=token)
+            | Q(sku__istartswith=token)
+            | Q(variants__sku__istartswith=token)
+            | Q(growth_data__brand__istartswith=token)
+        )
     return (
         Q(name__icontains=token)
         | Q(short_description__icontains=token)

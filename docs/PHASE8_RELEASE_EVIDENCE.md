@@ -86,6 +86,16 @@ series of shell commands whose next line deploys after a failed test.
 A second detached run was started, but the uploaded tail shows migration
 rehearsal only and no completion status. No claim of passing tests is made.
 
+## Release gate safety wrapper
+
+Use `bash scripts/phase8_verified_deploy.sh` only when ready for an actual
+release attempt. It runs the isolated tests first, saves the entire output
+to `~/leosoft-release-logs/`, and **will not** invoke the existing
+`scripts/update_vps.sh` after test failures. The guard uses
+`set -Eeuo pipefail` so that `tee` cannot mask a failing test command.
+It also refuses to deploy from a checkout containing tracked local edits.
+Do not use the raw `update_vps.sh` while Phase 8 is blocked.
+
 ## Evidence register
 
 | Gate | Current status | Required real-world evidence |
