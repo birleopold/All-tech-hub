@@ -315,6 +315,26 @@ class CommercialDocumentForm(forms.ModelForm):
 
 
 class CommercialLineForm(forms.ModelForm):
+    def has_changed(self):
+        # Extra line rows carry client-side sort_order metadata even when the
+        # employee did not enter an actual item. A changed hidden sort_order
+        # alone must not turn the blank row into a required item or block saving
+        # a legitimate receipt. Any actual item field remains validated.
+        changed = set(self.changed_data)
+        metadata_only = {"sort_order", "source_type", "discount_type"}
+        if changed and changed <= metadata_only and self.is_bound:
+            prefix = self.prefix or ""
+            data = self.data
+            meaningful = (
+                "description", "product", "product_variant", "quantity",
+                "unit_price", "unit_cost", "sku", "serial_number",
+                "warranty", "line_note", "section", "supplier_name",
+                "source_reference", "discount_value", "tax_rate",
+            )
+            if not any(str(data.get(f"{prefix}-{name}", "")).strip() for name in meaningful):
+                return False
+        return bool(changed)
+
     class Meta:
         model = CommercialLine
         fields = (

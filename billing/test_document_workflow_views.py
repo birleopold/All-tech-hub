@@ -97,6 +97,11 @@ class CommercialDocumentWorkflowTests(TestCase):
             self._receipt_payload(save_action="pdf"),
         )
 
+        self.assertEqual(
+            response.status_code, 302,
+            getattr(getattr(response, "context", None), "errors", None)
+            or response.content.decode("utf-8", errors="replace")[:800],
+        )
         document = CommercialDocument.objects.get()
         self.assertEqual(document.customer_name, "Walk-in customer")
         self.assertEqual(document.doc_type, CommercialDocument.TYPE_RECEIPT)

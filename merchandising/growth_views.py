@@ -53,7 +53,10 @@ def catalogue_for_growth_page(page: CommercialLandingPage):
     search_terms = [
         item.strip() for item in page.search_terms.split(",") if item.strip()
     ]
-    if search_terms and not page.brand and not page.condition:
+    # Category terms identify the hub's merchandise. Treat extra search
+    # terms as a fallback for hubs without category selectors; requiring both
+    # can empty otherwise valid categories (e.g. 'laptops' + 'notebook').
+    if search_terms and not page.brand and not page.condition and not category_terms:
         search_query = Q()
         for term in search_terms:
             search_query |= _term_query(term)
