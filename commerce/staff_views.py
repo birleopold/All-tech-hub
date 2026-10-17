@@ -229,6 +229,9 @@ def staff_order_shipment(request, pk: int):
             current_shipment = (
                 Shipment.objects.select_for_update().filter(order=order).first()
             )
+            # ModelForm.save(commit=False) mutates its existing instance.
+            # Preserve the prior status before binding/saving for comparisons.
+            previous_status = current_shipment.status if current_shipment else None
             form = ShipmentForm(request.POST, instance=current_shipment)
             if not form.is_valid():
                 errors = [
@@ -242,14 +245,14 @@ def staff_order_shipment(request, pk: int):
             shipment.order = order
             if order.is_terminal and (
                 current_shipment is None or
-                shipment.status != current_shipment.status
+                shipment.status != previous_status
             ):
                 raise ValidationError(
                     "Completed orders cannot change shipment progress. "
                     "You may correct carrier or tracking details without "
                     "changing the delivered status."
                 )
-            if current_shipment is not None:
+            if previous_status is not None:
                 progression = {
                     Shipment.STATUS_PENDING: 0,
                     Shipment.STATUS_IN_TRANSIT: 1,
@@ -257,7 +260,7 @@ def staff_order_shipment(request, pk: int):
                     Shipment.STATUS_DELIVERED: 2,
                 }
                 if progression.get(shipment.status, -1) < progression.get(
-                    current_shipment.status, -1
+                    previous_status, -1
                 ):
                     raise ValidationError(
                         "Shipment progress cannot move backward. "
