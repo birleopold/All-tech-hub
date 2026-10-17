@@ -90,6 +90,9 @@ jobs:
           loyalty.test_loyalty
           loyalty.test_redemption
           purchasing.test_replenishment_policy
+          purchasing.tests
+          inventory.tests
+          operations.test_job_expense_ledger
           reports.test_conversion
           reports.test_retention
           portal.test_warranties
