@@ -60,6 +60,11 @@ class SafePurchaseLineFormSet(BaseInlineFormSet):
                 form.add_error(
                     "unit_cost", "Received goods keep their original unit cost."
                 )
+            quantity = data.get("quantity")
+            if quantity is not None and quantity < before["received_quantity"]:
+                form.add_error(
+                    "quantity", "Ordered quantity cannot be below goods received."
+                )
 
 
 PurchaseLineFormSet = inlineformset_factory(
@@ -128,7 +133,8 @@ class PurchaseOrderUpdateView(StaffRequiredMixin, UpdateView):
                     )
             if not fs.is_valid() or form.errors:
                 return self.render_to_response(ctx)
-            form.instance = self.object
+            # Keep the already validated/bound form instance; replacing it
+            # with a freshly locked object would discard submitted values.
             self.object = form.save()
             fs.instance = self.object
             fs.save()
