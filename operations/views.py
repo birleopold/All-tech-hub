@@ -96,6 +96,16 @@ class JobCardCreateView(StaffRequiredMixin, CreateView):
     template_name = "operations/job_form.html"
     success_url = reverse_lazy("staff_jobs")
 
+    def get_initial(self):
+        initial = super().get_initial()
+        customer_id = (self.request.GET.get("customer") or "").strip()
+        if customer_id.isdigit():
+            from crm.models import Customer
+
+            if Customer.objects.filter(pk=int(customer_id)).exists():
+                initial["customer"] = int(customer_id)
+        return initial
+
     def form_valid(self, form):
         response = super().form_valid(form)
         messages.success(self.request, f"Job {self.object.number} created.")

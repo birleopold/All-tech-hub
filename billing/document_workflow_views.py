@@ -7,6 +7,7 @@ from django.utils import timezone
 from billing import views
 from billing.forms import CommercialDocumentForm
 from billing.models import CommercialDocument
+from crm.models import Customer
 
 
 class WalkInCommercialDocumentForm(CommercialDocumentForm):
@@ -69,6 +70,23 @@ class CommercialDocumentListView(views.CommercialDocumentListView):
 
 class CommercialDocumentCreateView(DocumentValidationMessageMixin, views.CommercialDocumentCreateView):
     form_class = WalkInCommercialDocumentForm
+
+    def get_initial(self):
+        initial = super().get_initial()
+        customer_id = (self.request.GET.get("customer") or "").strip()
+        if customer_id.isdigit():
+            customer = Customer.objects.filter(pk=int(customer_id)).first()
+            if customer is not None:
+                initial.update({
+                    "customer": customer.pk,
+                    "customer_name": customer.name,
+                    "customer_company": customer.company_name,
+                    "customer_email": customer.email,
+                    "customer_phone": customer.phone,
+                    "customer_tax_reference": customer.tax_reference,
+                })
+                initial.setdefault("doc_type", CommercialDocument.TYPE_QUOTE)
+        return initial
 
     def form_valid(self, form):
         response = super().form_valid(form)

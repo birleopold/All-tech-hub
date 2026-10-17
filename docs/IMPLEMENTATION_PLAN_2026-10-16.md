@@ -107,7 +107,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 ## P5 staff command centre and CRM implementation
 - [x] Extend permission-aware global search to leads, incoming enquiries, invoices and linked order references.
 - [x] Include repair and support activity alongside orders, quotes, leads and enquiries in existing CRM timeline.
-- [ ] Wire prefilled customer actions through the existing quote, repair and support creation forms.
+- [x] Wire verified customer prefill into existing quote/invoice, job-card and support-ticket creation forms; invalid IDs cannot select a customer.
 - [ ] Add personal priority queues, actionable KPI destinations and role-relevant dashboard actions.
 - [ ] Complete Phase 5 regression coverage and code handoff; integrated testing deferred.
 
