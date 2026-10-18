@@ -67,6 +67,8 @@ if settings.DEBUG is not True:
     raise SystemExit("Offline release rehearsal must run development settings.")
 if "locmem" not in settings.EMAIL_BACKEND:
     raise SystemExit(f"Offline release rehearsal must use in-memory email; effective backend={settings.EMAIL_BACKEND!r}.")
+if settings.REQUIRE_STAFF_2FA:
+    raise SystemExit("Offline rehearsal inherited staff MFA enforcement; check environment isolation.")
 PY
 
 printf 'Checking source and browser script syntax...\n'
