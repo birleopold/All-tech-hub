@@ -53,7 +53,7 @@ class DesktopCommerceProTests(TestCase):
         self.assertContains(response, "Desktop Commerce Test Laptop")
         self.assertContains(
             response,
-            f'<a class="btn btn-primary" href="{self.product.get_absolute_url()}">View details</a>',
+            f'<a class="btn btn-primary storefront-card-primary" href="{self.product.get_absolute_url()}">View details</a>',
             html=True,
         )
         self.assertContains(response, '<span class="desktop-action-label">Add</span>', html=False)
