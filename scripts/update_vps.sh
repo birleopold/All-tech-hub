@@ -47,8 +47,11 @@ printf '\nInstalling locked dependencies for %s...\n' "$EXPECTED_RELEASE"
 printf '\nUpdating the tracked durable automation units...\n'
 sudo install -m 644 deployment/leosoft-marketing-posts.service /etc/systemd/system/leosoft-marketing-posts.service
 sudo install -m 644 deployment/leosoft-marketing-posts.timer /etc/systemd/system/leosoft-marketing-posts.timer
+sudo install -m 644 deployment/leosoft-google-growth-report.service /etc/systemd/system/leosoft-google-growth-report.service
+sudo install -m 644 deployment/leosoft-google-growth-report.timer /etc/systemd/system/leosoft-google-growth-report.timer
 sudo systemctl daemon-reload
 sudo systemctl enable leosoft-marketing-posts.timer
+sudo systemctl enable --now leosoft-google-growth-report.timer
 
 export ALLTECH_APP_DIR="$APP_DIR" ALLTECH_VENV_DIR="$VENV_DIR" ALLTECH_ENV_FILE="$ENV_FILE"
 bash scripts/deploy_production.sh
