@@ -77,3 +77,19 @@ bash /home/admin/All-tech-hub/scripts/update_vps.sh
 
 The marketing timer continues to run growth automation. The wrapper does not
 install a Git deployment watcher or change the separate hotspot watcher.
+
+## 2026-10-18 — Short, shopping-first homepage
+
+The homepage now consists of only **welcome/search → featured products →
+deals (when available) → featured services → four brief trust links**.
+Educational sections, buyer journeys, repeated purpose/brand/budget
+collections, refurbished/new-arrival repeats and the long expandable guidance
+story have been removed from the homepage. Their existing catalogue, filters,
+collections and buying-guide destinations remain available elsewhere.
+The mobile navigation now uses one collapsible category list instead of
+immediately repeating each category in the top-level menu.
+
+No product was hidden from the catalogue and no SEO buying-guide URL was
+deleted. Product pages, dedicated buying guides and sitemap content remain
+distinct from the lean homepage. Actual mobile/desktop acceptance and VPS
+release-gate verification remain pending.

@@ -122,8 +122,16 @@
           </form>
 
           <ul class="navbar-nav market-navbar__actions ms-xl-auto">
-            <li class="nav-item d-xl-none"><a class="nav-link" href="{% url 'product_list' %}"><i class="bi bi-grid me-2" aria-hidden="true"></i>Browse all products</a></li>
-            {% for category in public_nav_categories|slice:':6' %}<li class="nav-item d-xl-none"><a class="nav-link ps-3" href="{% url 'product_category' category.slug %}">{{ category.name }}</a></li>{% endfor %}
+            <li class="nav-item d-xl-none">
+              <details class="market-mobile-categories">
+                <summary class="nav-link" style="cursor:pointer"><i class="bi bi-grid me-2" aria-hidden="true"></i>Shop categories <i class="bi bi-chevron-down ms-1" aria-hidden="true"></i></summary>
+                <nav aria-label="Mobile shopping categories" class="ps-3 pb-2">
+                  <a class="nav-link" href="{% url 'physical_product_list' %}">All products</a>
+                  {% for category in public_nav_categories|slice:':6' %}<a class="nav-link" href="{% url 'product_category' category.slug %}">{{ category.name }}</a>{% endfor %}
+                  <a class="nav-link" href="{% url 'product_list' %}">More categories and filters</a>
+                </nav>
+              </details>
+            </li>
             <li class="nav-item"><a class="market-nav-action {% if u == 'service_list' %}is-active{% endif %}" href="{% url 'service_list' %}" {% if u == 'service_list' %}aria-current="page"{% endif %}><i class="bi bi-tools" aria-hidden="true"></i><span><small>Technical</small>Services</span></a></li>
             <li class="nav-item"><a class="market-nav-action {% if 'portal_' in u %}is-active{% endif %}" href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}" {% if 'portal_' in u %}aria-current="page"{% endif %}><i class="bi bi-person-circle" aria-hidden="true"></i><span><small>{% if user.is_authenticated %}Welcome{% else %}Sign in{% endif %}</small>Account</span></a></li>
             <li class="nav-item"><a class="market-nav-action market-cart-action {% if u == 'cart' or u == 'checkout' %}is-active{% endif %}" href="{% url 'cart' %}" {% if u == 'cart' or u == 'checkout' %}aria-current="page"{% endif %} {% if cart_item_count %}aria-label="Shopping cart, {{ cart_item_count }} items"{% else %}aria-label="Shopping cart"{% endif %}><i class="bi bi-cart3" aria-hidden="true"></i><span><small>Your</small>Cart</span>{% if cart_item_count %}<b>{{ cart_item_count }}</b>{% endif %}</a></li>
