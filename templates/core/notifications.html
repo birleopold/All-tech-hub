@@ -14,6 +14,11 @@
     <div class="staff-summary-card staff-summary-card--green"><span class="staff-summary-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></span><span><small>Read</small><strong>{{ notification_stats.read }}</strong></span></div>
   </div>
 
+  <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Notification filters">
+    <a class="btn btn-sm {% if not notification_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'staff_notifications' %}">All</a>
+    <a class="btn btn-sm {% if notification_filter == 'unread' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'staff_notifications' %}?show=unread">Unread</a>
+    <a class="btn btn-sm {% if notification_filter == 'read' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'staff_notifications' %}?show=read">Read</a>
+  </nav>
   <div class="staff-notification-list">
     {% for notification in notifications %}
     <article class="staff-notification-card{% if not notification.is_read %} staff-notification-card--unread{% endif %}">
@@ -26,6 +31,6 @@
     {% empty %}<div class="staff-empty-state"><i class="bi bi-bell-slash" aria-hidden="true"></i><strong>No notifications yet</strong><span>Assignments and important updates will appear here.</span></div>{% endfor %}
   </div>
 
-  {% if is_paginated %}<nav class="staff-pagination" aria-label="Notification pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
+  {% if is_paginated %}<nav class="staff-pagination" aria-label="Notification pages"><span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span><div>{% if page_obj.has_previous %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}{% if notification_filter %}&amp;show={{ notification_filter|urlencode }}{% endif %}">Previous</a>{% endif %}{% if page_obj.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.next_page_number }}{% if notification_filter %}&amp;show={{ notification_filter|urlencode }}{% endif %}">Next</a>{% endif %}</div></nav>{% endif %}
 </section>
 {% endblock %}
