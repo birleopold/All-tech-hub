@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import StaffNotification, SupportTicket
 
@@ -31,6 +32,16 @@ def staff_notify(user, message: str, link: str = "") -> StaffNotification | None
     prefs = _prefs_for(user)
     if prefs and not prefs.inapp_enabled:
         return None
+    # Prevent a rapidly retried background job from flooding the inbox
+    # with the same unread event. A later event or a read event remains visible.
+    recent_duplicate = StaffNotification.objects.filter(
+        recipient=user,
+        message=message[:500],
+        is_read=False,
+        created_at__gte=timezone.now() - timezone.timedelta(seconds=90),
+    ).order_by("-created_at").first()
+    if recent_duplicate:
+        return recent_duplicate
     n = StaffNotification.objects.create(
         recipient=user, message=message[:500], link=""
     )
