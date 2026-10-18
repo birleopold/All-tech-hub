@@ -7,6 +7,7 @@ from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.test import TestCase
+from django.utils import timezone
 
 from catalog.models import Category, Product
 from merchandising.management.commands.export_google_review_queue import spreadsheet_safe
@@ -35,6 +36,7 @@ class GoogleReviewQueueTests(TestCase):
             self.assertEqual(len(rows), 2)
             self.assertEqual(rows[0]["product_id"], str(in_stock.pk))
             self.assertEqual(rows[0]["merchant_approved"], "no")
+            self.assertEqual(rows[0]["feed_eligible_now"], "no")
             self.assertEqual(rows[1]["stock_quantity"], "0")
             self.assertIn("commercial profile", rows[0]["missing_checks"])
             self.assertTrue(rows[0]["review_path"].startswith("/staff/"))
@@ -131,3 +133,25 @@ class GoogleReviewQueueTests(TestCase):
         self.assertEqual(self.client.post(url, {"action": "disable"}).status_code, 302)
         profile.refresh_from_db()
         self.assertFalse(profile.merchant_enabled)
+
+    def test_approved_but_expired_stock_is_not_claimed_as_feed_eligible(self):
+        from merchandising.models import ProductCommerceProfile
+        category = Category.objects.create(name="Stale stock", slug="stale-stock-queue-test")
+        product = Product.objects.create(
+            category=category, name="Approved but stale",
+            slug="approved-stale-queue", price="100000.00",
+            track_inventory=True, stock_quantity=5, is_published=True,
+        )
+        ProductCommerceProfile.objects.create(
+            product=product, merchant_enabled=True,
+            stock_confirmed_at=timezone.now() - timezone.timedelta(days=31),
+        )
+        with TemporaryDirectory() as folder:
+            dest = Path(folder) / "stale.csv"
+            call_command("export_google_review_queue", output=str(dest))
+            with dest.open(encoding="utf-8-sig", newline="") as source:
+                row = next(r for r in csv.DictReader(source)
+                           if r["product_id"] == str(product.pk))
+        self.assertEqual(row["merchant_approved"], "yes")
+        self.assertEqual(row["feed_eligible_now"], "no")
+        self.assertIn("renew stock inspection", row["missing_checks"])
