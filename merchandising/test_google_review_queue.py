@@ -4,6 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.core.management import call_command
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 from django.test import TestCase
 
 from catalog.models import Category, Product
@@ -38,3 +40,17 @@ class GoogleReviewQueueTests(TestCase):
             self.assertTrue(rows[0]["review_path"].startswith("/staff/"))
             self.assertFalse(destination.with_name("unknown.csv").exists())
         self.assertFalse(hasattr(in_stock, "commerce_profile"))
+
+    def test_staff_download_is_protected_and_contains_review_links(self):
+        url = reverse("staff_google_review_queue")
+        anonymous = self.client.get(url)
+        self.assertNotEqual(anonymous.status_code, 200)
+        staff = get_user_model().objects.create_user(
+            username="merchant-review-staff", password="test-only", is_staff=True,
+        )
+        self.client.force_login(staff)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response["Content-Type"])
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertIn("merchant_approved", response.content.decode("utf-8-sig"))
