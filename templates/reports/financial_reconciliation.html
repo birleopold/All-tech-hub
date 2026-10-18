@@ -1,0 +1,43 @@
+{% extends "staff_base.html" %}
+{% block title %}Financial reconciliation{% endblock %}
+{% block staff_page_name %}Financial reconciliation{% endblock %}
+{% block staff_content %}
+<section class="staff-page">
+  <header class="staff-page-header">
+    <div><p class="staff-page-eyebrow">Financial diagnostics</p><h1>Orders and documents, side by side</h1>
+    <p>Compare recorded sources without double counting them. Website orders and commercial documents can represent the same sale and must not be summed together.</p></div>
+    <div class="staff-page-actions"><a href="{% url 'staff_reports' %}" class="btn btn-outline-secondary">Back to reports</a></div>
+  </header>
+  <form class="d-flex flex-wrap gap-2 align-items-center mb-4" method="get">
+    <label for="reconcile-days">Reporting window</label>
+    <select id="reconcile-days" name="days" class="form-select" style="max-width:170px">
+      <option value="7"{% if days == 7 %} selected{% endif %}>Last 7 days</option>
+      <option value="30"{% if days == 30 %} selected{% endif %}>Last 30 days</option>
+      <option value="90"{% if days == 90 %} selected{% endif %}>Last 90 days</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Update</button>
+  </form>
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-6"><div class="card h-100"><div class="card-body">
+      <h2 class="h5">Website orders</h2><p class="display-6">{{ online_orders }}</p>
+      <p class="mb-1">Order lines: {{ online_lines }}</p>
+      <p class="mb-0">Line subtotal before discounts, tax and refunds: {{ company.currency_code }} {{ online_line_total|floatformat:2 }}</p>
+    </div></div></div>
+    <div class="col-12 col-md-6"><div class="card h-100"><div class="card-body">
+      <h2 class="h5">Staff-issued documents</h2><p class="display-6">{{ document_count }}</p>
+      <p class="mb-1">Document lines: {{ document_lines }} · Empty documents: {{ documents_without_lines }}</p>
+      <p class="mb-0">Document customer-facing totals: {{ company.currency_code }} {{ document_gross|floatformat:2 }}</p>
+    </div></div></div>
+  </div>
+  <div class="alert alert-info" role="note">Totals above cover different record types and recognition rules. Neither is equivalent to cash received or recognized profit. Reconcile payments, discounts, owner payouts and refunds before drawing accounting conclusions.</div>
+  <div class="card"><div class="card-body">
+    <h2 class="h5">Largest issued documents in the period</h2>
+    <div class="table-responsive"><table class="table table-sm align-middle">
+      <thead><tr><th>Reference</th><th>Date</th><th>Type</th><th>Status</th><th class="text-end">Customer total</th></tr></thead>
+      <tbody>{% for doc in largest_documents %}
+        <tr><td>{{ doc.number }}</td><td>{{ doc.issue_date }}</td><td>{{ doc.get_doc_type_display }}</td><td>{{ doc.get_status_display }}</td><td class="text-end">{{ company.currency_code }} {{ doc.total|floatformat:2 }}</td></tr>
+      {% empty %}<tr><td colspan="5">No issued documents in this reporting window.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div></div>
+</section>
+{% endblock %}
