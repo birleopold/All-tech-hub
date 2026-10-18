@@ -12,10 +12,14 @@ Evidence: authenticated TinyFish walkthrough of /staff/, /staff/seo/, /staff/cat
 - [x] P0: Investigate release log and identify source-race abort. **Confirmed**; no deployment of 39b674b occurred in that log.
 - [x] P1a: Make Google review queue variant-stock-aware. **Committed** at 42f1451; pending guarded VPS verification.
 - [ ] P1b: Review real stocked products: matching physical inventory, condition, identification, shipping, photos, price and variants; selectively approve only verified records. Human inspection required; cannot be performed by metadata guessing.
-- [ ] P2: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
-- [ ] P3: Product editor: improve field-level guidance for warranties, condition, GTIN/MPN, actual photos, variant-specific price and stock; add direct review navigation where missing.
-- [ ] P4: SEO: clarify live Windsor queries vs manual CSV imports; tie opportunity guidance to real search records; improve consistency between source-specific metrics.
-- [ ] P5: Sales & reporting: document online-order revenue vs document profit basis; inspect extraordinary profit lines and number gaps; add reconciliation drilldowns and safeguards, not arbitrary accounting changes.
+- [x] P2a: Immediate identical unread notification retry suppression with regression tests. Historical inbox cleanup and priority triage remain open.
+- [ ] P2b: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
+- [x] P3a: Add explicit product verification guidance to staff editor.
+- [ ] P3b: Product editor: improve field-level guidance for warranties, condition, GTIN/MPN, actual photos, variant-specific price and stock; add direct review navigation where missing.
+- [x] P4a: Label manual CSV opportunity counters separately from daily Windsor account metrics.
+- [ ] P4b: SEO: clarify live Windsor queries vs manual CSV imports; tie opportunity guidance to real search records; improve consistency between source-specific metrics.
+- [x] P5a: Explain differences between online order sales and document finance metrics in the staff reporting UI.
+- [ ] P5b: Sales & reporting: document online-order revenue vs document profit basis; inspect extraordinary profit lines and number gaps; add reconciliation drilldowns and safeguards, not arbitrary accounting changes.
 - [ ] P6: Leads: review 49 overdue leads and attribution; improve assign/claim, bulk actions, priority and tracking while preserving audit history.
 - [ ] P7: Accessibility and mobile browser review: staff navigation, touch actions, forms, responsive tables and multi-device save flows.
 - [ ] P8: Release verification: isolated tests, guarded deploy, public health, Google timer, permission checks and authenticated TinyFish regression.
