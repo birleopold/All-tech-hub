@@ -34,10 +34,12 @@ def staff_notify(user, message: str, link: str = "") -> StaffNotification | None
         return None
     # Prevent a rapidly retried background job from flooding the inbox
     # with the same unread event. A later event or a read event remains visible.
+    dest = link or reverse("staff_notifications")
     recent_duplicate = StaffNotification.objects.filter(
         recipient=user,
         message=message[:500],
         is_read=False,
+        link__endswith="?next=" + quote(dest, safe="/:?=&"),
         created_at__gte=timezone.now() - timezone.timedelta(seconds=90),
     ).order_by("-created_at").first()
     if recent_duplicate:
@@ -45,7 +47,6 @@ def staff_notify(user, message: str, link: str = "") -> StaffNotification | None
     n = StaffNotification.objects.create(
         recipient=user, message=message[:500], link=""
     )
-    dest = link or reverse("staff_notifications")
     n.link = (
         reverse("staff_notification_go", kwargs={"pk": n.pk})
         + "?next="
