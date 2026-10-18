@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
+from django.urls import reverse
 
 from catalog.models import Product
 from merchandising.models import ProductCommerceProfile
@@ -59,7 +60,7 @@ class Command(BaseCommand):
                 "merchant_approved": "yes" if profile and profile.merchant_enabled else "no",
                 "merchant_score": profile.merchant_readiness_score if profile else 0,
                 "missing_checks": "; ".join(missing),
-                "review_path": f"/staff/catalogue/products/{product.pk}/commercial-review/",
+                "review_path": reverse("staff_product_commercial_review", args=[product.pk]),
             })
         # Work on verifiably available products first; among those, resolve
         # near-ready records before records with multiple unresolved claims.
