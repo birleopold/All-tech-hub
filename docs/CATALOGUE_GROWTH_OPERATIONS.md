@@ -162,3 +162,16 @@ python manage.py audit_merchant
 
 Also open one commercial page with more than one page of products and confirm that
 prices, availability, pagination and related guidance match the live catalogue.
+
+## Staff-only Merchant readiness
+
+The Merchant-readiness percentage, approval status, missing feed attributes and
+verification checklist are **internal catalogue work**, not customer-facing
+selling facts. Keep these details on **Staff → Catalogue quality → Commercial
+review** (or **Staff → Inventory → Product → Commercial review**), where staff
+can correct the source facts and record actual inspections. The publicly
+available product detail must never include the readiness card, even when a
+staff member happens to browse the public shop while signed in. Customers
+should see only honest product specifications, actual availability, prices,
+condition and warranty terms; Merchant feed eligibility must not affect
+their ability to view public products.

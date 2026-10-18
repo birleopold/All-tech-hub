@@ -86,6 +86,4 @@ class MerchandisedProductDetailView(StrictSEOProductDetailView):
             )
         else:
             context["commerce_details_json"] = ""
-        if self.request.user.is_staff and profile:
-            context["merchant_missing_fields"] = profile.merchant_missing_fields()
         return context
