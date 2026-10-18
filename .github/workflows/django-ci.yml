@@ -77,6 +77,7 @@ jobs:
           marketing.test_automation
           marketing.test_social_manual_confirm
           merchandising.test_merchant_feed_safety
+          merchandising.test_google_approved_feed
           marketing.test_integrations
           marketing.test_attribution
           marketing.test_attribution_metrics

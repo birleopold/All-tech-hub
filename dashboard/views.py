@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import redirect
+from django.urls import reverse
+from core.seo import public_url
 from django.views.generic import TemplateView
 
 from dashboard.overview import dashboard_overview
@@ -157,6 +159,9 @@ class SEOControlCenterView(StaffRequiredMixin, TemplateView):
         ]
 
         context["merchant"] = merchant_readiness_snapshot(row_limit=10)
+        context["approved_merchant_feed_url"] = public_url(
+            reverse("google_approved_merchant_feed")
+        )
         context["search_opportunities"] = search_opportunity_rows(limit=20)
         context["search_console_form"] = kwargs.get(
             "search_console_form", SearchConsoleCSVImportForm()

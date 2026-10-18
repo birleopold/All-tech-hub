@@ -148,3 +148,22 @@ than adding more text to the homepage:
 
 No automatic stock assertion, artificial countdown, fake deal, injected
 Google rating or marketing-consent bypass is introduced.
+
+## Google Merchant Center — existing website automatic product feed
+
+Staff now have a separate, always-strict data source URL:
+`https://leosoftug.com/feeds/google-approved.xml`. Google can fetch
+this regularly without extra manual exports once an account owner links
+this URL in Merchant Center. Existing `/feeds/google-merchant.xml` remains
+for backward compatibility. The new source exports only expressly enabled,
+fully merchant-ready listings; an empty source is expected until genuine
+photos, brand/identifiers, stock/price, condition and shipping are approved.
+The SEO control center shows the feed and available controls. The read-only
+`audit_google_feed` command checks the exact generated feed contents.
+Full details and the owner-only Google linking steps:
+[Google Merchant existing-site setup](GOOGLE_MERCHANT_EXISTING_SITE_SETUP.md).
+
+**Account connection was not performed:** login/ownership confirmation
+requires explicit access and verification in Google, and site code cannot
+claim that these steps have already succeeded. Deployment and feed checks
+are pending the full production release gate.

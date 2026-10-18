@@ -11,7 +11,7 @@ from core import auth_views as core_auth
 from core import health as core_health
 from core import seo_views as core_seo
 from merchandising import seo_views as merchandising_seo
-from merchandising.merchant import strict_google_merchant_feed
+from merchandising.merchant import strict_google_merchant_feed, approved_google_merchant_feed
 
 handler400 = "core.error_views.bad_request"
 handler403 = "core.error_views.permission_denied"
@@ -42,6 +42,11 @@ urlpatterns = [
         "feeds/google-merchant.xml",
         strict_google_merchant_feed,
         name="google_merchant_feed",
+    ),
+    path(
+        "feeds/google-approved.xml",
+        approved_google_merchant_feed,
+        name="google_approved_merchant_feed",
     ),
     path("indexnow-key.txt", core_seo.indexnow_key, name="indexnow_key"),
     path("health/live/", core_health.live, name="health_live"),

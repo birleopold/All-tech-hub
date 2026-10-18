@@ -71,6 +71,20 @@
         <div class="col-md-6">
           <h3 class="h6">Free Merchant Center listings</h3>
           <p class="small text-muted mb-2">Confirm manufacturer IDs, correct condition, images, actual price, stock and shipping/returns before enabling individual products. Free listings are not guaranteed.</p>
+          <label for="google-merchant-source" class="form-label fw-semibold small">Approved-products XML feed URL</label>
+          <input id="google-merchant-source" class="form-control form-control-sm mb-2" type="text" value="{{ approved_merchant_feed_url }}" readonly aria-describedby="merchant-feed-hint">
+          <p class="small text-muted" id="merchant-feed-hint">
+            Use this URL in Google Merchant Center &rarr; Settings &rarr; Data sources &rarr; Add products from a file.
+            Schedule fetching daily. This feed includes <strong>only staff-approved, fully verified products</strong>,
+            regardless of the legacy feed's audit-only setting.
+          </p>
+          {% if merchant.ready == 0 %}
+          <p class="alert alert-warning py-2 small">No eligible products yet. Complete commercial verification before expecting any products to be imported.</p>
+          {% else %}
+          <p class="small text-muted">Merchant-ready products: {{ merchant.ready }}. Google receives only explicitly enabled and approved items.</p>
+          {% endif %}
+          <a class="d-inline-block small mb-2" href="{{ approved_merchant_feed_url }}" target="_blank" rel="noopener noreferrer">Open approved feed XML <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>
+
           <div class="d-flex flex-wrap gap-2">
             <a href="https://merchants.google.com/" target="_blank" rel="noopener noreferrer">Open Merchant Center</a>
             <a href="{% url 'staff_catalogue_quality' %}">Resolve catalogue gaps</a>

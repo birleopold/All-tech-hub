@@ -13,12 +13,11 @@ from core.models import CompanySettings
 from merchandising.models import ProductCommerceProfile
 
 
-@require_GET
-def strict_google_merchant_feed(request):
-    """Optionally remove products that have not passed an explicit data review."""
+def _build_google_merchant_feed(request, *, require_approval=False):
+    """Use the existing RSS exporter but never export unapproved items when requested."""
 
     response = base_strict_feed(request)
-    if not getattr(settings, "MERCHANT_STRICT_READINESS", False):
+    if not require_approval and not getattr(settings, "MERCHANT_STRICT_READINESS", False):
         response["X-Merchant-Readiness"] = "audit-only"
         return response
 
@@ -86,3 +85,20 @@ def strict_google_merchant_feed(request):
     corrected["X-Merchant-Eligible-Items"] = str(kept)
     corrected["X-Merchant-Excluded-Items"] = str(removed)
     return corrected
+
+
+@require_GET
+def strict_google_merchant_feed(request):
+    """Legacy URL: retain configured readiness behavior for existing consumers."""
+    return _build_google_merchant_feed(request)
+
+
+@require_GET
+def approved_google_merchant_feed(request):
+    """Google scheduled-fetch source; always requires verified staff approval.
+
+    This safe endpoint is intentionally independent of the legacy
+    MERCHANT_STRICT_READINESS environment flag. Empty is preferable to
+    advertising unverified prices, stock, shipping, or condition.
+    """
+    return _build_google_merchant_feed(request, require_approval=True)
