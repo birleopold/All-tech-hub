@@ -41,6 +41,20 @@ class GoogleReviewQueueTests(TestCase):
             self.assertFalse(destination.with_name("unknown.csv").exists())
         self.assertFalse(hasattr(in_stock, "commerce_profile"))
 
+    def test_variant_stock_is_prioritized_even_when_base_quantity_zero(self):
+        from catalog.models import ProductVariant
+        category = Category.objects.create(name="Variant category", slug="variant-google-review")
+        product = Product.objects.create(category=category, name="Variant laptop",
+            slug="variant-google-laptop", price="250000.00",
+            track_inventory=True, stock_quantity=0, is_published=True)
+        ProductVariant.objects.create(product=product, name="8GB RAM", sku="VAR-LAPTOP-8",
+            price="250000.00", is_active=True, track_inventory=True, stock_quantity=4)
+        from merchandising.management.commands.export_google_review_queue import build_google_review_rows
+        rows = build_google_review_rows(available_only=True)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["product_id"], product.pk)
+        self.assertEqual(rows[0]["stock_quantity"], 4)
+
     def test_staff_download_is_protected_and_contains_review_links(self):
         url = reverse("staff_google_review_queue")
         anonymous = self.client.get(url)
