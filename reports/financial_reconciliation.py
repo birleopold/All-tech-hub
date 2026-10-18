@@ -1,7 +1,8 @@
 """Read-only, source-separated online orders and document reconciliation."""
 from datetime import timedelta
 
-from django.db.models import Count, Sum
+from django.db.models import Count
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils import timezone
 from django.views.generic import TemplateView
 
@@ -10,7 +11,9 @@ from commerce.models import Order, OrderLine
 from core.mixins import StaffRequiredMixin
 
 
-class FinancialReconciliationView(StaffRequiredMixin, TemplateView):
+class FinancialReconciliationView(PermissionRequiredMixin, StaffRequiredMixin, TemplateView):
+    permission_required = 'billing.view_document_margin'
+    raise_exception = True
     template_name = "reports/financial_reconciliation.html"
 
     def get_context_data(self, **kwargs):
