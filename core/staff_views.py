@@ -414,6 +414,21 @@ class MarkNotificationsReadView(StaffRequiredMixin, View):
         return redirect(nxt)
 
 
+class MarkVisibleNotificationsReadView(StaffRequiredMixin, View):
+    """Mark only the user's selected notification state as read."""
+
+    def post(self, request):
+        mode = request.POST.get("scope")
+        qs = StaffNotification.objects.filter(recipient=request.user, is_read=False)
+        if mode == "older_30_days":
+            qs = qs.filter(created_at__lt=timezone.now() - timezone.timedelta(days=30))
+        elif mode != "all_unread":
+            return HttpResponseForbidden("Invalid notification scope.")
+        count = qs.update(is_read=True)
+        messages.success(request, f"{count} notification(s) marked as read.")
+        return redirect("staff_notifications")
+
+
 class SaveStaffSearchView(StaffRequiredMixin, View):
     def post(self, request):
         form = StaffSavedSearchForm(request.POST)
