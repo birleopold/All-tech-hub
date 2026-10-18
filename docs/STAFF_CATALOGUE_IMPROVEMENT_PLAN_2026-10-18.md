@@ -43,3 +43,10 @@ These were not fully visible during the automated browser walkthrough and should
 - Google live status is explicitly labelled and missing or stale data cannot appear current.
 - Staff can find core workflows without Django admin where a first-party editor exists.
 - Test gate on exact origin/main SHA succeeds; deploy and health check match that SHA.
+
+## Evidence required before closing all phases
+- Physical product checks: photograph model labels, verify stock per variant, confirm warranty/price/condition from actual inventory; record checked-by and dates in staff forms. Never bulk-approve unknown details.
+- Reports: compare online order lines against independently issued invoice documents using the same date basis; investigate unsupported gross profit and document sequence gaps before adjusting accounting logic.
+- Notification noise: inventory alert producers and group repeat messages by recipient, message and destination; preserve actionable distinct alerts and original history.
+- Attribution: inspect captured campaign links/UTM evidence; retain `direct` when referral provenance is missing rather than guessing.
+- Release: full tests and live external integration checks are still pending on the VPS; code commit alone does not prove a deployed feature.
