@@ -82,6 +82,13 @@ class ProductCommercialReviewView(StaffRequiredMixin, View):
             "merchant_missing_fields": missing,
             "merchant_readiness_score": profile.merchant_readiness_score,
             "merchant_ready": not missing,
+            "stock_check_expired": bool(
+                not profile.stock_confirmed_at
+                or not (
+                    timezone.now() - timezone.timedelta(days=30)
+                    <= profile.stock_confirmed_at <= timezone.now()
+                )
+            ),
         }
         user = self.request.user
         context["product_access"] = {
