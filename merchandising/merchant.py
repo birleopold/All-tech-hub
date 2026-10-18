@@ -35,9 +35,14 @@ def _build_google_merchant_feed(request, *, require_approval=False):
             variants = [variant for variant in product.variants.all() if variant.is_active]
             if variants:
                 for variant in variants:
+                    # Approval of a parent must not publish a sold-out SKU.
+                    # Untracked variants require separate stock verification;
+                    # this feed cannot infer availability for them.
+                    if not variant.track_inventory or variant.stock_quantity <= 0:
+                        continue
                     item_id = variant.sku or f"LEOSOFT-{product.pk}-{variant.pk}"
                     eligible[item_id] = profile
-            else:
+            elif product.track_inventory and product.stock_quantity > 0:
                 item_id = product.sku or f"LEOSOFT-{product.pk}"
                 eligible[item_id] = profile
     except (OperationalError, ProgrammingError):
