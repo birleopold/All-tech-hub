@@ -78,3 +78,21 @@ Software workflow implementation and deployed page smoke inspection may be consi
 5. A successful guarded release and browser check for any commits later than c91010b.
 
 No background tasks or automatic product approvals have been initiated by this document.
+
+## Follow-on delivery — 2026-10-18 evening
+- [x] Staff media audit now accepts `--product-id` and identifies missing media records with their product IDs. Product media is not deleted or replaced, and the 404 `/static/images/products/149/small.jpg` still needs provenance and original assets.
+- [x] Finance-only reconciliation now highlights issued lines with non-positive recorded unit costs and documents worth at least UGX 100 million. These are review flags, not recalculated profit or evidence that any given record is wrong.
+- [x] Lead triage explains why first-response overdue totals can exceed the unassigned-overdue claim count.
+- [x] Tests added for new financial review metrics and non-destructive media targeting.
+- [ ] Physical SKU-level inspection, precise product descriptions from confirmed model facts, and original-photo restoration remain dependent on source evidence.
+- [ ] Live mobile device verification, Google Merchant external approval, and current-commit VPS deployment/release gate remain external verification items.
+
+### Suggested verification after pushing these changes
+```bash
+cd /home/admin/All-tech-hub
+.venv/bin/python manage.py audit_catalog_media --product-id 149 --skip-hashes
+.venv/bin/python manage.py test merchandising.test_media_audit_targeting reports.test_financial_reconciliation
+bash scripts/final_release_closeout.sh
+curl -fsS https://leosoftug.com/health/ready/
+```
+Do not push new commits to main while the guarded release is running.
