@@ -24,7 +24,7 @@
       <div class="alert alert-success border-0 shadow-sm"><strong>Thanks for your feedback —</strong> you rated this job {{ feedback.rating }}/5.</div>
       {% endif %}
 
-      {% if job.handover %}<div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5 mb-2">Collection or delivery confirmed</h2><p class="mb-1">{{ job.handover.get_method_display }} for {{ job.handover.recipient_name }}.</p><p class="small text-muted mb-0">Recorded {{ job.handover.recorded_at|date:"M j, Y H:i" }}. If this is incorrect, contact support.</p></div></div>{% endif %}
+      {% if job.handover %}<div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h2 class="h5 mb-2">Collection or delivery confirmed</h2><p class="mb-1">{{ job.handover.get_method_display }} for {{ job.handover.recipient_name }}.</p><p class="small text-muted mb-0">Recorded {{ job.handover.recorded_at|date:"M j, Y H:i" }}. If this is incorrect, contact support.</p>{% if job.handover.signature %}<a class="btn btn-sm btn-outline-primary mt-2" href="{% url 'portal_job_handover_signature' job.pk %}" target="_blank" rel="noopener noreferrer">View signed handover acknowledgement</a>{% else %}<p class="small text-muted mb-0 mt-2">This handover was recorded before recipient signatures were available.</p>{% endif %}</div></div>{% endif %}
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-4">
           <h2 class="h5 mb-3">Status history</h2>

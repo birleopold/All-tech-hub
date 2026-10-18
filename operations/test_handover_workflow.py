@@ -1,5 +1,10 @@
 """Role-safe, idempotent job handover and customer account visibility."""
+import base64
+from io import BytesIO
+from tempfile import TemporaryDirectory
+
 from django.contrib.auth import get_user_model
+from PIL import Image, ImageDraw
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -33,6 +38,22 @@ class JobHandoverWorkflowTests(TestCase):
             customer=cls.customer, title="Laptop repair", status=JobCard.STATUS_INTAKE
         )
 
+    def setUp(self):
+        self.media = TemporaryDirectory(prefix="handover-tests-")
+        self.addCleanup(self.media.cleanup)
+        override = override_settings(MEDIA_ROOT=self.media.name)
+        override.enable()
+        self.addCleanup(override.disable)
+
+    @staticmethod
+    def _drawn_signature():
+        image = Image.new("RGB", (400, 130), "white")
+        draw = ImageDraw.Draw(image)
+        draw.line([(30, 75), (90, 45), (175, 85), (290, 60)], fill="black", width=3)
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
     def _ready(self):
         job = JobCard.objects.get(pk=self.job.pk)
         for status in (
@@ -49,6 +70,8 @@ class JobHandoverWorkflowTests(TestCase):
             "method": JobHandover.METHOD_COLLECTION,
             "note": "Verified with collection slip",
             "confirmed": "on",
+            "recipient_consent": "on",
+            "signature_data": self._drawn_signature(),
         }
         payload.update(values)
         return self.client.post(
@@ -98,7 +121,7 @@ class JobHandoverWorkflowTests(TestCase):
         self.assertFalse(JobHandover.objects.filter(job=self.job).exists())
         self.client.force_login(self.staff)
         detail = self.client.get(reverse("staff_job_detail", args=[self.job.pk]))
-        self.assertContains(detail, "Confirm handover")
+        self.assertContains(detail, "Save signed handover")
         self._submit()
         self.client.force_login(self.customer_user)
         owned = self.client.get(reverse("portal_job_detail", args=[self.job.pk]))

@@ -118,9 +118,12 @@ customer's database, file names, credentials or archive into a public issue.
   number, reason, snapshot, actor and time; a staff document revision workflow
   exists. Real role-specific revision/approval and PDF acceptance remain open.
 - **Field-work handover:** `operations.JobCard.customer_signature` captures an
-  optional *intake* signature; `operations.JobHandover` captures confirmed
-  recipient/method. Neither proves a final signed handover; that request remains
-  open until the final signature workflow and legal/process acceptance exist.
+  optional *intake* signature. New `operations.JobHandover.signature`
+  provides a separate completed-work recipient acknowledgement via staff
+  touch/mouse drawing or safe image upload. Consent, role checks and customer
+  ownership protect access, and old handovers remain explicitly unsigned.
+  **Not yet certified:** VPS migration/test gate, actual device signing,
+  recipient identification checks, or any legal e-signature requirement.
 - **Typo-tolerant search:** customer suggestions were code-staged in the
   catalogue, with same-filter result confirmation. Real navigation and the
   current branch's regression gate have not yet been verified on the VPS.

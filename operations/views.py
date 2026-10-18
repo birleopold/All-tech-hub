@@ -255,12 +255,16 @@ def job_record_handover(request, pk: int):
         messages.error(request, "Finish quality assurance and mark the job ready before handover.")
         return redirect(destination)
 
-    form = JobHandoverForm(request.POST)
+    form = JobHandoverForm(request.POST, request.FILES)
     if not form.is_valid():
-        messages.error(request, "Handover not recorded. Enter the recipient, method and confirmation.")
+        detail = "; ".join(form.non_field_errors()) or (
+            "Check recipient, signature, consent and confirmation."
+        )
+        messages.error(request, f"Handover not recorded. {detail}")
         return redirect(destination)
 
     handover = form.save(commit=False)
+    handover.signature = form.cleaned_data["validated_signature"]
     handover.job = job
     handover.recorded_by = request.user
     handover.full_clean()

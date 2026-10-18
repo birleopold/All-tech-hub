@@ -63,7 +63,8 @@ for source in \
     static/js/pwa.js \
     static/js/marketing_analytics.js \
     static/js/marketplace_experience.js \
-    static/js/mobile_commerce_pro.js; do
+    static/js/mobile_commerce_pro.js \
+    static/js/job_handover_signature.js; do
     node --check "$source"
 done
 

@@ -75,7 +75,7 @@ class JobHandoverAdmin(admin.ModelAdmin):
     list_filter = ("method", "recorded_at")
     search_fields = ("job__number", "recipient_name")
     raw_id_fields = ("job", "recorded_by")
-    readonly_fields = ("job", "method", "recipient_name", "note", "recorded_by", "recorded_at")
+    readonly_fields = ("job", "method", "recipient_name", "note", "signature", "recorded_by", "recorded_at")
 
     def has_add_permission(self, request):
         return False

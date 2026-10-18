@@ -452,6 +452,11 @@ class JobHandover(models.Model):
     recipient_name = models.CharField(max_length=160)
     method = models.CharField(max_length=16, choices=METHOD_CHOICES)
     note = models.CharField(max_length=300, blank=True)
+    signature = models.ImageField(
+        upload_to="job_signatures/handover/%Y/%m/",
+        blank=True,
+        help_text="Protected recipient signature captured at completed-work handover.",
+    )
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, related_name="job_handovers_recorded",

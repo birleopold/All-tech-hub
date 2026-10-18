@@ -16,6 +16,7 @@ urlpatterns = [
     path("jobs/<int:pk>/edit/", views.JobCardUpdateView.as_view(), name="staff_job_edit"),
     path("jobs/<int:pk>/note/", views.job_add_note, name="staff_job_note"),
     path("jobs/<int:pk>/handover/", views.job_record_handover, name="staff_job_handover"),
+    path("jobs/<int:pk>/handover/signature/", private_views.staff_job_handover_signature, name="staff_job_handover_signature"),
     path("jobs/<int:pk>/expense/", views.job_add_expense, name="staff_job_expense"),
     path("jobs/<int:pk>/pdf/", views.job_pdf_view, name="staff_job_pdf"),
     path("jobs/<int:pk>/labels/", views.job_label_sheet, name="staff_job_labels"),

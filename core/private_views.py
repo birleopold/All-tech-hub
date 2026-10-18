@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect
 
 from core.models import TicketComment
 from core.private_files import protected_file_response
-from operations.models import JobAttachment, JobCard
+from operations.models import JobAttachment, JobCard, JobHandover
 
 
 def _portal_customer(request):
@@ -59,3 +59,21 @@ def staff_job_signature(request, pk: int):
         raise Http404
     job = get_object_or_404(JobCard, pk=pk)
     return protected_file_response(job.customer_signature, inline=True)
+
+
+def staff_job_handover_signature(request, pk: int):
+    if not request.user.is_authenticated or not request.user.is_staff:
+        raise Http404
+    handover = get_object_or_404(JobHandover, job_id=pk)
+    return protected_file_response(handover.signature, inline=True)
+
+
+def portal_job_handover_signature(request, pk: int):
+    customer = _portal_customer(request)
+    if customer is None:
+        return redirect("portal_login")
+    handover = get_object_or_404(
+        JobHandover.objects.select_related("job"), job_id=pk,
+        job__customer=customer,
+    )
+    return protected_file_response(handover.signature, inline=True)

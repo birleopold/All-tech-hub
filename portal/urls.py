@@ -58,6 +58,7 @@ urlpatterns = [
     path("repair-request/", views.PortalRepairIntakeView.as_view(), name="portal_repair_intake"),
     path("jobs/<int:pk>/", views.my_job_detail, name="portal_job_detail"),
     path("jobs/<int:pk>/feedback/", views.job_feedback_view, name="portal_job_feedback"),
+    path("jobs/<int:pk>/handover/signature/", private_views.portal_job_handover_signature, name="portal_job_handover_signature"),
     path(
         "jobs/attachments/<int:pk>/file/",
         private_views.portal_job_attachment,

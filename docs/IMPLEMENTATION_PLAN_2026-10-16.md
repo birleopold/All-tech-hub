@@ -184,7 +184,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Add an isolated local-only PostgreSQL restore rehearsal which independently checks SHA-256, restores a custom PostgreSQL dump into a disposable server, extracts normal public/private media and rejects unsafe archive paths and links; include focused tests in CI.
 - [ ] Execute the isolated PostgreSQL + media restore rehearsal on the VPS or separate staging host against a real checksummed backup. Record the command's successful output, migration count, table count and restored media count. The code alone does not certify an actual restore.
 - [ ] Verify staff quotation revision history and approved-quote conversion from the relevant forms, with mobile/role tests (DocumentRevision code is present).
-- [ ] Verify actual repair handover signature capture beyond the existing intake-signature upload and staff-confirmed recipient record; signed final handover is not yet demonstrated.
+- [x] Implement signed recipient handover capture using touch/mouse pad or image upload, server-side image rewrite, explicit recipient consent, protected staff/customer file access, duplicate protection and clear handling of legacy unsigned handovers.
+- [ ] Verify signed handover on actual phones/tablets and exercise migration and focused/full tests on the VPS; signed handover is code-implemented but not device-certified.
 - [ ] Verify offline field work with queued edits, conflict handling and reconnection replay. An offline page alone is not offline workflow capability.
 - [ ] Verify the order-bound verified-purchase review route, order ownership, moderation and rendering across user devices (code exists, live acceptance missing).
 

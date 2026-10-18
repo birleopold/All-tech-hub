@@ -1,5 +1,5 @@
 {% extends "staff_base.html" %}
-{% load dashboard_ui %}
+{% load dashboard_ui static %}
 {% block title %}{{ job.number }}{% endblock %}
 {% block staff_page_name %}Job details{% endblock %}
 {% block staff_content %}
@@ -29,14 +29,26 @@
         <p class="mb-1"><strong>{{ job.handover.get_method_display }}</strong> — {{ job.handover.recipient_name }}</p>
         <p class="small text-muted mb-1">Recorded {{ job.handover.recorded_at|date:"M j, Y H:i" }}{% if job.handover.recorded_by %} by {{ job.handover.recorded_by.get_username }}{% endif %}</p>
         {% if job.handover.note %}<p class="mb-0">{{ job.handover.note }}</p>{% endif %}
+        {% if job.handover.signature %}<a class="btn btn-sm btn-outline-secondary mt-2" href="{% url 'staff_job_handover_signature' job.pk %}" target="_blank" rel="noopener noreferrer">View protected recipient signature</a>{% else %}<p class="text-muted small mb-0">Legacy handover: recipient signature was not captured.</p>{% endif %}
       {% elif can_record_job_handover %}
-        <form method="post" action="{% url 'staff_job_handover' job.pk %}" class="row g-3">
+        <form method="post" enctype="multipart/form-data" action="{% url 'staff_job_handover' job.pk %}" class="row g-3" data-job-handover-form>
           {% csrf_token %}
           <div class="col-md-6"><label for="{{ handover_form.recipient_name.id_for_label }}" class="form-label">Recipient name</label>{{ handover_form.recipient_name }}</div>
           <div class="col-md-6"><label for="{{ handover_form.method.id_for_label }}" class="form-label">Handover method</label>{{ handover_form.method }}</div>
           <div class="col-12"><label for="{{ handover_form.note.id_for_label }}" class="form-label">Reference or note (optional)</label>{{ handover_form.note }}</div>
+          <div class="col-12">
+            <label for="job-handover-pad" class="form-label fw-semibold">Recipient signature</label>
+            <p class="small text-muted mb-2">Ask the recipient to sign using a finger, mouse or stylus. Alternatively, upload a photograph of their signature. Do not sign on their behalf.</p>
+            <canvas id="job-handover-pad" data-job-handover-pad width="700" height="180" style="display:block;width:100%;max-width:700px;height:180px;border:1px solid #adb5bd;border-radius:8px;background:#fff;touch-action:none" aria-label="Recipient signature pad; alternatively use the signature image upload below"></canvas>
+            <button class="btn btn-sm btn-outline-secondary mt-2" type="button" data-job-handover-clear>Clear signature</button>
+            {{ handover_form.signature_data }}
+          </div>
+          <div class="col-12"><label for="{{ handover_form.signature_upload.id_for_label }}" class="form-label">Or upload a signature image (PNG/JPEG, up to 512 KB)</label>{{ handover_form.signature_upload }}</div>
+          <div class="col-12"><div class="form-check">{{ handover_form.recipient_consent }}<label for="{{ handover_form.recipient_consent.id_for_label }}" class="form-check-label">{{ handover_form.recipient_consent.label }}</label></div></div>
           <div class="col-12"><div class="form-check">{{ handover_form.confirmed }}<label for="{{ handover_form.confirmed.id_for_label }}" class="form-check-label">{{ handover_form.confirmed.label }}</label></div></div>
-          <div class="col-12"><button type="submit" class="btn btn-primary">Confirm handover</button></div>
+          <p class="small text-muted mb-0">The signed image is protected and visible only to authorised staff and the customer who owns this job. This records a handover acknowledgement, not payment or identity verification.</p>
+          <p class="small text-danger d-none" data-job-handover-warning role="alert"></p>
+          <div class="col-12"><button type="submit" class="btn btn-primary">Save signed handover</button></div>
         </form>
       {% elif job.status == 'ready_pickup' or job.status == 'completed' %}
         <p class="text-muted mb-0">An authorised staff member can record the handover.</p>
@@ -45,6 +57,8 @@
       {% endif %}
     </div>
   </article>
+
+  {% if handover_form %}<script src="{% static 'js/job_handover_signature.js' %}" defer></script>{% endif %}
 
   {% if feedback %}<div class="alert alert-success d-flex align-items-start gap-2"><i class="bi bi-star-fill fs-5" aria-hidden="true"></i><div><strong>Customer feedback: {{ feedback.rating }}/5</strong><span class="text-warning ms-2" aria-label="{{ feedback.rating }} out of 5 stars">{% for i in "12345" %}{% if forloop.counter <= feedback.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span>{% if feedback.comment %}<p class="mb-0 mt-1">{{ feedback.comment }}</p>{% endif %}<small class="text-muted">Submitted {{ feedback.submitted_at|date:"M j, Y H:i" }}</small></div></div>{% endif %}
 

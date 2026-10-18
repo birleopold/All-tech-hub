@@ -1,4 +1,12 @@
+import base64
+import binascii
+from io import BytesIO
+from uuid import uuid4
+
 from django import forms
+from django.core.files.base import ContentFile
+from PIL import Image, UnidentifiedImageError
+
 
 from operations.models import JobAttachment, JobCard, JobExpense, JobHandover, JobNote, TimeEntry
 
@@ -91,11 +99,31 @@ class JobCardForm(forms.ModelForm):
         return obj
 
 
+MAX_HANDOVER_SIGNATURE_BYTES = 512 * 1024
+
+
 class JobHandoverForm(forms.ModelForm):
     confirmed = forms.BooleanField(
         required=True,
         label="I confirm the device or completed work was handed over",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    recipient_consent = forms.BooleanField(
+        required=True,
+        label="The recipient agrees to this signature being saved as handover evidence",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    signature_upload = forms.ImageField(
+        required=False,
+        label="Upload recipient signature image instead",
+        widget=forms.ClearableFileInput(attrs={
+            "class": "form-control",
+            "accept": "image/png,image/jpeg",
+        }),
+    )
+    signature_data = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
     )
 
     class Meta:
@@ -112,6 +140,60 @@ class JobHandoverForm(forms.ModelForm):
                 "placeholder": "Optional collection or delivery reference",
             }),
         }
+
+    @staticmethod
+    def _normalise_signature(raw: bytes) -> ContentFile:
+        if len(raw) > MAX_HANDOVER_SIGNATURE_BYTES:
+            raise forms.ValidationError("Signature is too large. Use an image under 512 KB.")
+        if not raw:
+            raise forms.ValidationError("The signature image is empty.")
+        try:
+            with Image.open(BytesIO(raw), formats=("PNG", "JPEG")) as source:
+                source.load()
+                if not 100 <= source.width <= 2500 or not 40 <= source.height <= 1500:
+                    raise forms.ValidationError(
+                        "Signature dimensions must be between 100×40 and 2500×1500 pixels."
+                    )
+                # Strip metadata and rewrite the image to a plain PNG, so
+                # uploaded content cannot retain appended HTML or EXIF data.
+                foreground = source.convert("RGBA")
+                canvas = Image.new("RGBA", foreground.size, (255, 255, 255, 255))
+                canvas.alpha_composite(foreground)
+                output = BytesIO()
+                canvas.convert("RGB").save(output, format="PNG", optimize=True)
+                encoded = output.getvalue()
+        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+            raise forms.ValidationError("Upload a valid PNG or JPEG signature image.") from exc
+        if len(encoded) > MAX_HANDOVER_SIGNATURE_BYTES:
+            raise forms.ValidationError("Signature is too large after processing.")
+        return ContentFile(encoded, name=f"handover-{uuid4().hex}.png")
+
+    def clean(self):
+        values = super().clean()
+        upload = values.get("signature_upload")
+        data = (values.get("signature_data") or "").strip()
+        if upload and data:
+            raise forms.ValidationError("Use either the signature pad or an uploaded image.")
+        if not upload and not data:
+            raise forms.ValidationError(
+                "Ask the recipient to sign in the signature pad, or upload their signature image."
+            )
+        if upload:
+            if upload.size > MAX_HANDOVER_SIGNATURE_BYTES:
+                raise forms.ValidationError("Signature is too large. Use an image under 512 KB.")
+            values["validated_signature"] = self._normalise_signature(
+                upload.read(MAX_HANDOVER_SIGNATURE_BYTES + 1)
+            )
+        else:
+            prefix = "data:image/png;base64,"
+            if not data.startswith(prefix):
+                raise forms.ValidationError("Draw a signature or upload a PNG/JPEG image.")
+            try:
+                decoded = base64.b64decode(data[len(prefix):], validate=True)
+            except (ValueError, binascii.Error) as exc:
+                raise forms.ValidationError("The drawn signature could not be read.") from exc
+            values["validated_signature"] = self._normalise_signature(decoded)
+        return values
 
 
 class JobExpenseForm(forms.ModelForm):
