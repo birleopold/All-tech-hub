@@ -16,6 +16,7 @@ from catalog.quality import QUALITY_ISSUES, catalogue_quality_rows, catalogue_qu
 from core.mixins import StaffRequiredMixin
 from core.seo_audit import seo_audit_snapshot
 from merchandising.forms import SearchConsoleCSVImportForm
+from merchandising.models import SearchQueryInsight
 from merchandising.services import (
     import_search_console_csv,
     merchant_readiness_snapshot,
@@ -163,6 +164,8 @@ class SEOControlCenterView(StaffRequiredMixin, TemplateView):
             reverse("google_approved_merchant_feed")
         )
         context["search_opportunities"] = search_opportunity_rows(limit=20)
+        context["search_data_last_import"] = SearchQueryInsight.objects.order_by("-imported_at").values_list("imported_at", flat=True).first()
+        context["search_data_last_day"] = SearchQueryInsight.objects.exclude(date_end__isnull=True).order_by("-date_end").values_list("date_end", flat=True).first()
         context["search_console_form"] = kwargs.get(
             "search_console_form", SearchConsoleCSVImportForm()
         )
