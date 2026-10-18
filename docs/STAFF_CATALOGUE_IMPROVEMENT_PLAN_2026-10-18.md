@@ -13,9 +13,11 @@ Evidence: authenticated TinyFish walkthrough of /staff/, /staff/seo/, /staff/cat
 - [x] P1a: Make Google review queue variant-stock-aware. **Committed** at 42f1451; pending guarded VPS verification.
 - [ ] P1b: Review real stocked products: matching physical inventory, condition, identification, shipping, photos, price and variants; selectively approve only verified records. Human inspection required; cannot be performed by metadata guessing.
 - [x] P2a: Immediate identical unread notification retry suppression with regression tests. Historical inbox cleanup and priority triage remain open.
-- [ ] P2b: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
+- [x] P2b-partial: Add read/unread inbox filters with pagination, while preserving all history. Historical noise triage and producer audit remain open.
+- [ ] P2c: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
 - [x] P3a: Add explicit product verification guidance to staff editor.
-- [ ] P3b: Product editor: improve field-level guidance for warranties, condition, GTIN/MPN, actual photos, variant-specific price and stock; add direct review navigation where missing.
+- [x] P3b-partial: Add one-click commercial review link and explicit variant price/stock guidance on product editor.
+- [ ] P3c: Product editor: improve field-level guidance for warranties, condition, GTIN/MPN, actual photos, variant-specific price and stock; add direct review navigation where missing.
 - [x] P4a: Label manual CSV opportunity counters separately from daily Windsor account metrics.
 - [ ] P4b: SEO: clarify live Windsor queries vs manual CSV imports; tie opportunity guidance to real search records; improve consistency between source-specific metrics.
 - [x] P5a: Explain differences between online order sales and document finance metrics in the staff reporting UI.
