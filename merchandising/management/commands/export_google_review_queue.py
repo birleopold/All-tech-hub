@@ -12,6 +12,12 @@ from catalog.models import Product
 from merchandising.models import ProductCommerceProfile
 
 
+def spreadsheet_safe(value):
+    """Prevent spreadsheet programs from executing catalogue text as formulas."""
+    text = str(value)
+    return "\u0027" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
+
+
 class Command(BaseCommand):
     help = "Create a staff review CSV prioritizing products for free Google listings. Read-only."
 
@@ -53,8 +59,8 @@ class Command(BaseCommand):
             counts.update(missing)
             rows.append({
                 "product_id": product.pk,
-                "product_name": product.name,
-                "category": product.category.name if product.category_id else "",
+                "product_name": spreadsheet_safe(product.name),
+                "category": spreadsheet_safe(product.category.name) if product.category_id else "",
                 "stock_quantity": product.stock_quantity if product.track_inventory else "",
                 "stock_tracked": "yes" if product.track_inventory else "no",
                 "merchant_approved": "yes" if profile and profile.merchant_enabled else "no",
