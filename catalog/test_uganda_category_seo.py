@@ -53,7 +53,7 @@ class UgandaCategorySEOTests(TestCase):
                     f'<meta name="description" content="{meta_description(copy.description)}">',
                     html=False,
                 )
-                self.assertContains(response, copy.heading)
+                self.assertContains(response, f"<h1 id=\"catalog-heading\">{escape(copy.heading)}</h1>", html=False)
                 self.assertContains(
                     response,
                     f'<link rel="canonical" href="https://leosoftug.com{path}">',
