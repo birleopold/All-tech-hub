@@ -29,6 +29,7 @@
       <p class="mb-0">Document customer-facing totals: {{ company.currency_code }} {{ document_gross|floatformat:2 }}</p>
     </div></div></div>
   </div>
+  <div class="alert alert-warning" role="status"><strong>Data-quality review:</strong> {{ cost_missing_lines }} issued document line(s) have zero or missing recorded unit cost, and {{ large_value_documents }} document(s) total at least UGX 100 million. A zero cost is not proof that the goods were free. Examine supporting invoices, payments and ownership before recognizing profit.</div>
   <div class="alert alert-info" role="note">Totals above cover different record types and recognition rules. Neither is equivalent to cash received or recognized profit. Reconcile payments, discounts, owner payouts and refunds before drawing accounting conclusions.</div>
   <div class="card"><div class="card-body">
     <h2 class="h5">Largest issued documents in the period</h2>
