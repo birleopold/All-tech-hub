@@ -81,6 +81,10 @@ class HomepageCampaignTests(TestCase):
         self.assertContains(response, "Shop with confidence")
         self.assertContains(response, "storefront_campaigns.css")
         self.assertContains(response, "storefront_product_cards.css")
+        self.assertContains(response, 'data-promotion-slot="hero"')
+        self.assertContains(response, 'data-promotion-slot="side_top"')
+        self.assertContains(response, 'data-promotion-slot="side_bottom"')
+        self.assertContains(response, 'data-storefront-category="home-campaign-networking"')
         self.assertNotContains(response, "In stock — guaranteed")
 
     def test_product_card_and_details_surface_short_recorded_specifications(self):
@@ -91,6 +95,14 @@ class HomepageCampaignTests(TestCase):
         self.assertEqual(detail.status_code, 200)
         self.assertContains(detail, "storefront-detail-highlights")
         self.assertContains(detail, "6-month warranty")
+
+    def test_campaign_measurement_respects_existing_analytics_consent(self):
+        from pathlib import Path
+        source = Path("static/js/marketing_analytics.js").read_text(encoding="utf-8")
+        self.assertIn('name: "select_promotion"', source)
+        self.assertIn('name: "select_content"', source)
+        self.assertIn('promotion && integrationsLoaded', source)
+        self.assertNotIn('window.localStorage.setItem("storefront', source)
 
     def test_active_scheduled_campaign_is_displayed_and_older_one_excluded(self):
         now = timezone.now()

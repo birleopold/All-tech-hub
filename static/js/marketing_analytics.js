@@ -238,6 +238,31 @@
       return;
     }
 
+    // Campaign clicks use the existing consent-aware GA4 integration.
+    // Do not queue these before analytics is enabled and never include email,
+    // phone, customer identity, form values or page search terms.
+    const promotion = event.target.closest("[data-storefront-promotion]");
+    if (promotion && integrationsLoaded && typeof window.gtag === "function") {
+      sendEvent({
+        name: "select_promotion",
+        params: {
+          promotion_id: promotion.dataset.promotionId || "storefront",
+          promotion_name: promotion.dataset.promotionName || "LEOSOFT campaign",
+          creative_slot: promotion.dataset.promotionSlot || "home",
+        },
+      });
+    }
+    const category = event.target.closest("[data-storefront-category]");
+    if (category && integrationsLoaded && typeof window.gtag === "function") {
+      sendEvent({
+        name: "select_content",
+        params: {
+          content_type: "shop_category",
+          item_id: category.dataset.storefrontCategory || "",
+        },
+      });
+    }
+
     const productLink = event.target.closest("[data-analytics-product-link]");
     if (productLink && typeof window.gtag === "function") {
       const card = productLink.closest("[data-analytics-product-card]");

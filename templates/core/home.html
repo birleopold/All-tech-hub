@@ -30,7 +30,7 @@
         <h1 class="market-home-hero__title">{% if hero_promotion %}{{ hero_promotion.headline }}{% else %}Technology that works for you.{% endif %}</h1>
         <p class="market-home-hero__lead">{% if hero_promotion %}{{ hero_promotion.supporting_text|default:"Computers and practical IT support in Uganda." }}{% else %}Computers, accessories and expert IT support in Uganda.{% endif %}</p>
         <div class="home-welcome-actions">
-          <a class="btn btn-light" href="{% if hero_promotion %}{{ hero_promotion.destination }}{% else %}#homepage-products{% endif %}">{% if hero_promotion %}{{ hero_promotion.button_label }}{% else %}Shop products{% endif %} <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+          <a class="btn btn-light" data-storefront-promotion data-promotion-id="{% if hero_promotion %}hero-{{ hero_promotion.pk }}{% else %}hero-fallback{% endif %}" data-promotion-name="{% if hero_promotion %}{{ hero_promotion.headline }}{% else %}Technology that works for you{% endif %}" data-promotion-slot="hero" href="{% if hero_promotion %}{{ hero_promotion.destination }}{% else %}#homepage-products{% endif %}">{% if hero_promotion %}{{ hero_promotion.button_label }}{% else %}Shop products{% endif %} <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
           <a class="btn btn-outline-light" href="{% url 'service_list' %}">Repairs &amp; services</a>
         </div>
         <form class="market-hero-search market-search-shell storefront-hero-search" action="{% url 'product_list' %}" method="get" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
@@ -54,7 +54,7 @@
       <a class="storefront-hero__search-link" href="#homepage-products"><i class="bi bi-grid me-1" aria-hidden="true"></i>Explore the catalogue</a>
     </div>
     <div class="storefront-hero__side" aria-label="Featured offers and services">
-      <a class="storefront-promo-tile storefront-promo-tile--deals" href="{% if upper_promotion %}{{ upper_promotion.destination }}{% else %}{% url 'product_collection' 'deals' %}{% endif %}">
+      <a class="storefront-promo-tile storefront-promo-tile--deals" data-storefront-promotion data-promotion-id="{% if upper_promotion %}upper-{{ upper_promotion.pk }}{% else %}upper-fallback{% endif %}" data-promotion-name="{% if upper_promotion %}{{ upper_promotion.headline }}{% else %}Explore deals{% endif %}" data-promotion-slot="side_top" href="{% if upper_promotion %}{{ upper_promotion.destination }}{% else %}{% url 'product_collection' 'deals' %}{% endif %}">
         <span class="storefront-promo-tile__text">
           <small>{% if upper_promotion %}{{ upper_promotion.eyebrow|default:"Featured pick" }}{% else %}Handpicked value{% endif %}</small>
           <strong>{% if upper_promotion %}{{ upper_promotion.headline }}{% else %}Explore today's deals{% endif %}</strong>
@@ -64,7 +64,7 @@
         {% elif upper_promotion.product.primary_display_image %}<img src="{{ upper_promotion.product.primary_display_image.url }}" alt="{{ upper_promotion.product.name }}" loading="lazy" decoding="async">
         {% else %}<i class="bi bi-tags storefront-promo-tile__icon" aria-hidden="true"></i>{% endif %}
       </a>
-      <a class="storefront-promo-tile storefront-promo-tile--services" href="{% if lower_promotion %}{{ lower_promotion.destination }}{% else %}{% url 'service_list' %}{% endif %}">
+      <a class="storefront-promo-tile storefront-promo-tile--services" data-storefront-promotion data-promotion-id="{% if lower_promotion %}lower-{{ lower_promotion.pk }}{% else %}lower-fallback{% endif %}" data-promotion-name="{% if lower_promotion %}{{ lower_promotion.headline }}{% else %}IT services{% endif %}" data-promotion-slot="side_bottom" href="{% if lower_promotion %}{{ lower_promotion.destination }}{% else %}{% url 'service_list' %}{% endif %}">
         <span class="storefront-promo-tile__text">
           <small>{% if lower_promotion %}{{ lower_promotion.eyebrow|default:"Expert assistance" }}{% else %}IT support{% endif %}</small>
           <strong>{% if lower_promotion %}{{ lower_promotion.headline }}{% else %}Repairs &amp; installations{% endif %}</strong>
@@ -83,7 +83,7 @@
     <div class="storefront-departments__head"><h2>Find your next upgrade</h2><a href="{% url 'physical_product_list' %}">All categories <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
     <div class="storefront-departments__rail">
       {% for tile in home_category_tiles %}
-      <a class="storefront-department" href="{% url 'product_category' tile.category.slug %}">
+      <a class="storefront-department" data-storefront-category="{{ tile.category.slug }}" href="{% url 'product_category' tile.category.slug %}">
         <span class="storefront-department__image">
           {% if tile.cover.primary_display_image %}
             {% responsive_image tile.cover.primary_display_image tile.category.name "" "(max-width: 575px) 35vw, 14vw" "lazy" "low" %}
