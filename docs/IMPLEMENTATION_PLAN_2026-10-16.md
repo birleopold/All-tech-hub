@@ -174,7 +174,8 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Connect the candidate gate to the existing full CI workflow; include the strict Merchant Center fail-closed regression in focused CI.
 - [ ] Confirm the GitHub Actions runner/workflow-start issue is resolved and **all checks pass** for the final commit.
 - [ ] Run migration drift and upgrade rehearsal against a production-like database snapshot.
-- [ ] Run the complete Django test suite and browser/mobile/keyboard accessibility smoke journeys.
+- [x] Add an optional read-only Playwright browser smoke script for Chromium/Firefox/WebKit at 320–1440px, covering public navigation, catalogue filters, product-page Merchant confidentiality, keyboard focus and horizontal overflow. Keep Playwright out of production Python dependencies.
+- [ ] Execute complete Django suite, browser smoke on the final staging/production SHA, and manual real-device/mobile/keyboard checks; no passing browser results are claimed yet.
 - [ ] Check payment, email, social-provider and Merchant Center sandbox/external-service outcomes.
 - [ ] Validate backups, restore rehearsal, release rollback, monitoring and VPS readiness before production certification.
 - [x] Add Phase 7 focused regression modules to the existing CI test gate.

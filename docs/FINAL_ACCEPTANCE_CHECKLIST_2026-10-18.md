@@ -49,8 +49,11 @@ the existing guarded release gate; they must not bypass it.
   eligibility requires actual product inspections and external approval.
 - [ ] **P8 Release certification:** Confirm green *executed* CI steps (the
   latest GitHub-hosted jobs have no recorded steps), full VPS release gate for
-  the final SHA, visual and keyboard tests, recovery exercise, HTTPS/CSP
-  review, uptime checks and monitored provider health.
+  the final SHA, browser and real-device keyboard tests, recovery exercise,
+  HTTPS/CSP review, uptime checks and monitored provider health. An optional
+  read-only Playwright smoke script now exists at
+  `scripts/phase8_browser_smoke.py`; it has **not yet been executed** or
+  certified. See `docs/PHASE8_BROWSER_ACCEPTANCE.md`.
 
 ## Real production data blockers (previous deployed audit)
 
