@@ -282,8 +282,59 @@
       }
     }
 
+    // The sticky mobile price and primary purchase panel must always show
+    // the same *selected* configuration. Never submit an unselected variant.
+    const productPriceLabel = document.getElementById("pd-price-label");
+    const mobilePriceLabel = document.querySelector("[data-mobile-product-price]");
+    const mobileVariantAction = document.querySelector("[data-mobile-variant-action]");
+    const defaultProductPrice = productPriceLabel?.textContent || "";
+    const defaultMobilePrice = mobilePriceLabel?.textContent || "";
+    const productForm = document.getElementById("product-cart-form");
+    const variantCurrency =
+      variantSelect?.querySelector("option[data-currency]")?.dataset.currency || "UGX";
+    const isService = document.body.classList.contains("public-service-detail");
+
+    const syncSelectedVariant = () => {
+      if (!variantSelect) return;
+      const option = variantSelect.selectedOptions?.[0];
+      const selected = Boolean(option?.value && !option.disabled);
+      const amount = selected ? Number(option.dataset.price) : NaN;
+      const priced = selected && Number.isFinite(amount) && amount > 0;
+      const value = priced ? `${variantCurrency} ${moneyFormatter.format(amount)}` : "";
+
+      if (productPriceLabel) {
+        productPriceLabel.textContent = value || defaultProductPrice;
+      }
+      if (mobilePriceLabel) {
+        mobilePriceLabel.textContent = value || defaultMobilePrice;
+      }
+      if (mobileVariantAction) {
+        mobileVariantAction.textContent = selected
+          ? (isService ? "Add service" : "Add to cart")
+          : (isService ? "Choose service" : "Choose option");
+      }
+    };
+
     variantSelect?.addEventListener("change", () => {
+      syncSelectedVariant();
       window.requestAnimationFrame(formatVisibleProductPrices);
+    });
+    syncSelectedVariant();
+
+    mobileVariantAction?.addEventListener("click", (event) => {
+      const option = variantSelect?.selectedOptions?.[0];
+      if (!option?.value || option.disabled || !productForm) {
+        // Leave the native #variant_id link usable even without JavaScript.
+        variantSelect?.focus({ preventScroll: true });
+        return;
+      }
+      event.preventDefault();
+      const submitButton = productForm.querySelector('button[type="submit"]');
+      if (typeof productForm.requestSubmit === "function") {
+        productForm.requestSubmit(submitButton || undefined);
+      } else {
+        submitButton?.click();
+      }
     });
 
     const contactType = document.getElementById("id_request_type");

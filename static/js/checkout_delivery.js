@@ -19,6 +19,7 @@
   const deliveryAmount = document.querySelector("[data-checkout-delivery-amount]");
   const taxAmount = document.querySelector("[data-checkout-tax]");
   const totals = document.querySelectorAll("[data-checkout-total]");
+  const totalNote = document.querySelector("[data-checkout-total-note]");
   const baseTotal = Number(form.dataset.baseTotal || 0);
   const baseTax = Number(form.dataset.baseTax || 0);
   const taxRate = Number(form.dataset.taxRate || 0) / 100;
@@ -43,9 +44,23 @@
       deliveryAmount.textContent = hasZone ? money(fee) : "Choose your delivery area";
     }
     if (taxAmount) taxAmount.textContent = money(baseTax + deliveryTax);
+    // Before delivery area is known, the base merchandise total is not
+    // presented as a final payable amount. The backend still validates and
+    // recalculates the order; this is only a customer-friendly preview.
+    const needsDeliveryChoice = delivery && !hasZone;
+    const totalText = needsDeliveryChoice
+      ? "Select delivery area"
+      : money(baseTotal + fee + deliveryTax);
     totals.forEach((total) => {
-      total.textContent = money(baseTotal + fee + deliveryTax);
+      total.textContent = totalText;
     });
+    if (totalNote) {
+      totalNote.textContent = needsDeliveryChoice
+        ? "Choose a delivery area to see your estimated total."
+        : delivery
+          ? "Estimated total includes delivery for the selected area."
+          : "Pickup selected: no delivery fee.";
+    }
   }
 
   form.addEventListener("change", refresh);

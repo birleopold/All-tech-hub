@@ -95,7 +95,8 @@
           <div class="d-flex justify-content-between small mb-2"><span class="text-muted">Tax</span><strong data-checkout-tax>{{ company.currency_code }} {{ tax_amount|floatformat:0|intcomma }}</strong></div>
           {% if delivery_zones_available %}<div class="d-flex justify-content-between small mb-2" data-checkout-delivery><span class="text-muted">Delivery</span><strong class="small" data-checkout-delivery-amount>{% if delivery_fee %}{{ company.currency_code }} {{ delivery_fee|floatformat:0|intcomma }}{% else %}Choose your delivery area{% endif %}</strong></div>{% endif %}
           <hr>
-          <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Total</span><strong class="fs-4" data-checkout-total>{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div>
+          <div class="d-flex justify-content-between align-items-center"><span class="fs-5">Estimated total</span><strong class="fs-4" data-checkout-total aria-live="polite" aria-atomic="true">{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div>
+          <p class="small text-muted mt-2 mb-0" data-checkout-total-note>{% if delivery_zones_available %}Choose your pickup or delivery option to confirm the total.{% else %}Pickup total shown. Delivery requires a quotation.{% endif %}</p>
           <ul class="desktop-order-confidence"><li><i class="bi bi-check-circle-fill" aria-hidden="true"></i><span>Order submission starts verification; it does not force immediate payment.</span></li><li><i class="bi bi-lock-fill" aria-hidden="true"></i><span>Your private tracking link is sent to the email address entered here.</span></li></ul>
         </div>
       </aside>
@@ -115,7 +116,7 @@
       </div>
     </div>
   </div>
-  <div class="mobile-commerce-sticky-cta d-lg-none" role="region" aria-label="Order total and place order"><div class="mobile-commerce-sticky-cta__copy"><small>Order total</small><strong data-checkout-total>{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div><button class="btn btn-primary" type="submit" form="checkout-form">Place order</button></div>
+  <div class="mobile-commerce-sticky-cta d-lg-none" role="region" aria-label="Order total and place order"><div class="mobile-commerce-sticky-cta__copy"><small>Order total</small><strong data-checkout-total aria-live="polite" aria-atomic="true">{{ company.currency_code }} {{ total|floatformat:0|intcomma }}</strong></div><button class="btn btn-primary" type="submit" form="checkout-form">Place order</button></div>
   {{ delivery_zone_rates|json_script:"checkout-delivery-rates" }}
 </div>
 {% endblock %}

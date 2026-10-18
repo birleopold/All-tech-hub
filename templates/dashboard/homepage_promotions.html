@@ -31,7 +31,7 @@
   <div class="col-xl-5">
     <section class="card border-0 shadow-sm mb-3"><div class="card-body">
       <div class="d-flex justify-content-between gap-2 align-items-center flex-wrap mb-3">
-        <div><h2 class="h6 mb-0">Campaign preview</h2><small class="text-muted">Text updates as you type. Save first to preview a changed image.</small></div>
+        <div><h2 class="h6 mb-0">Campaign preview</h2><small class="text-muted">Text and newly selected images preview here before you save.</small></div>
         <div class="btn-group btn-group-sm" role="group" aria-label="Preview layout">
           <button type="button" class="btn btn-outline-primary active" data-campaign-preview-mode="desktop" aria-pressed="true">Desktop</button>
           <button type="button" class="btn btn-outline-primary" data-campaign-preview-mode="mobile" aria-pressed="false">Phone</button>
@@ -44,7 +44,7 @@
           <p data-campaign-preview-field="supporting_text">{{ promotion.supporting_text|default:"One short benefit for shoppers." }}</p>
           <span data-campaign-preview-field="button_label">{{ promotion.button_label|default:"Explore products" }} <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
         </div>
-        <div class="staff-campaign-preview__image">
+        <div class="staff-campaign-preview__image" data-campaign-preview-image>
           {% if promotion.creative_image %}<img src="{{ promotion.creative_image.url }}" alt="{{ promotion.image_alt }}">
           {% elif promotion.product.primary_display_image %}<img src="{{ promotion.product.primary_display_image.url }}" alt="{{ promotion.product.name }}">
           {% else %}<i class="bi bi-laptop" aria-hidden="true"></i>{% endif %}

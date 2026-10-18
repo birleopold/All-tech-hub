@@ -1231,3 +1231,13 @@
     transform: none !important;
   }
 }
+
+/* Product pages: clear gallery discovery and accurate mobile purchase state. */
+.product-gallery-hint{display:flex;align-items:center;gap:.45rem;margin:.8rem 0 .2rem;padding:0 .5rem;color:#577084;font-size:.78rem;line-height:1.35}
+.product-gallery-hint i{font-size:1rem;color:#21669b}
+.product-mobile-action__price [data-mobile-product-price]{display:block;font-variant-numeric:tabular-nums;line-height:1.35}
+.product-mobile-action .btn{min-height:44px;min-width:100px;display:inline-flex;align-items:center;justify-content:center;max-width:55%;text-align:center}
+.product-mobile-action .btn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(min-width:992px){.product-gallery-hint{display:none}}
+@media(max-width:575.98px){.product-mobile-action{padding-inline:.8rem}.product-mobile-action__price{flex:1 1 auto;overflow-wrap:anywhere}.product-mobile-action .btn{font-size:.84rem;padding:.48rem .65rem}}
+@media(prefers-reduced-motion:reduce){.product-gallery-hint,.product-mobile-action{scroll-behavior:auto}}

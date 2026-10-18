@@ -96,6 +96,33 @@ class CheckoutDeliveryAndIdentityTests(TestCase):
         self.assertEqual(customer.name, "Verified original")
         self.assertEqual(customer.phone, "original")
 
+    def test_checkout_preview_does_not_present_missing_delivery_as_final_price(self):
+        from pathlib import Path
+
+        category = Category.objects.create(
+            name="Checkout hardware", slug="checkout-hardware-clarity",
+        )
+        product = Product.objects.create(
+            category=category,
+            name="Network adapter",
+            slug="checkout-network-adapter",
+            price=Decimal("95000.00"),
+            stock_quantity=4,
+        )
+        self.client.post(reverse("cart_add", args=[product.pk]), {"quantity": "1"})
+        checkout = self.client.get(reverse("checkout"))
+        self.assertEqual(checkout.status_code, 200)
+        self.assertContains(checkout, "Estimated total")
+        self.assertContains(checkout, "data-checkout-total-note")
+        self.assertContains(checkout, 'data-checkout-total aria-live="polite"', count=2)
+        self.assertContains(checkout, 'data-checkout-delivery-amount')
+        self.assertContains(checkout, "checkout_delivery.js")
+
+        script = Path("static/js/checkout_delivery.js").read_text(encoding="utf-8")
+        self.assertIn("const needsDeliveryChoice = delivery && !hasZone", script)
+        self.assertIn('"Select delivery area"', script)
+        self.assertIn("Pickup selected: no delivery fee.", script)
+
     def test_checkout_and_invoice_keep_delivery_and_tax_in_sync(self):
         company = CompanySettings.load()
         company.default_tax_rate = Decimal("18.00")

@@ -198,6 +198,23 @@ class HomepageCampaignTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(HomepagePromotion.objects.filter(headline="Fake offer").exists())
 
+    def test_campaign_editor_can_preview_unsaved_images_before_publishing(self):
+        from pathlib import Path
+
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("staff_homepage_promotions"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "data-campaign-preview-image")
+        self.assertContains(response, "preview here before you save")
+        self.assertContains(response, "staff_homepage_campaigns.js")
+        source = Path("static/js/staff_homepage_campaigns.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("URL.createObjectURL(file)", source)
+        self.assertIn("URL.revokeObjectURL(pendingObjectURL)", source)
+        self.assertIn('file.type.startsWith("image/")', source)
+        self.assertIn('media.replaceChildren(img)', source)
+
     def test_editor_requires_csrf(self):
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.manager)

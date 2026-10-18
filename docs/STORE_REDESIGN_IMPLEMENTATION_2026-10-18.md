@@ -23,9 +23,9 @@ Started: 2026-10-18 · Repository: birleopold/All-tech-hub
 | P0 | Baseline, cache and release SHA | Existing release gate and SHA health checks; roadmap established | Must confirm newest HTML and static assets in uncached mobile/desktop browser |
 | P1 | Product-first homepage, one authentic visual hero, two promo tiles, visual category shortcuts and compact trust section | **Code staged on main:** campaign template, category tile rail, CSS, graceful default if no campaigns, no auto-rotating carousel | Django tests, mobile screenshots, staging visual and performance verification pending |
 | P2 | Truthful price/stock, product card hierarchy, laptop decision specs, discounts and fast enquiry/cart CTAs | **Code staged:** recently stock-confirmed available products first; recorded processor/RAM/SSD summaries; savings badges; one dominant card CTA; product-detail highlights | Test exact-stock validity with actual inventory; no false availability or manufacturer IDs |
-| P3 | Product details: gallery, mobile sticky cart/contact, visual condition/warranty, comparison and related products; full long specs below main decisions | Existing gallery, sticky actions and filters; new price/stock/product highlight polish staged | Full gallery/variant/cart/enquiry journey and accessible specs/mobile browser pass pending |
-| P4 | Mobile catalogue: tappable category shortcuts, focused search/filter, simpler checkout, guest purchase, delivery and total clarity | Existing search/category navigation and delivery-aware guest checkout; explicit guest/no-account copy, folded optional marketing controls and concise order instructions now code-staged | End-to-end checkout/pickup/delivery/WhatsApp/mobile keyboard checks pending |
-| P5 | Staff campaign controls: create/edit/disable, image upload or real product, priority, dates, internal link validation, audit record and navigation | **Code staged:** `HomepagePromotion`, database migration, staff workspace, admin and permissioned edits; editor includes text-live desktop/phone creative preview | Execute Django and device tests; saved image selection appears after save, full-page staging preview remains pending |
+| P3 | Product details: gallery, mobile sticky cart/contact, verified condition/warranty, comparison and related products; longer details below buying decisions | **Code staged:** compact specs, gallery swipe hint, variant-aware mobile sticky purchase button, live selected-variant price synchronization, honest availability text; underlying cart logic preserved | Full gallery/variant/cart/enquiry journey and accessible specs on iPhone/Android/browser pending |
+| P4 | Mobile catalogue: tappable category shortcuts, focused search/filter, simpler guest checkout, delivery and total clarity | **Code staged:** guest checkout explanations, optional consent controls, responsive purchase CTA and live delivery-dependent total; unselected delivery area no longer falsely appears to have final zero shipping | End-to-end checkout/pickup/delivery/WhatsApp/mobile keyboard checks pending |
+| P5 | Staff campaign controls: create/edit/disable, media and real product, priority, dates, safe destinations, audit log and navigation | **Code staged:** `HomepagePromotion`, migration, staff workspace, permissions, desktop/phone text preview and newly uploaded image preview before saving | Run Django/device tests and inspect visual fidelity; full-page staging preview remains pending |
 | P6 | Trust/marketing: verified reviews, genuine savings, delivery/warranty facts, promotion/category clicks, GA4/Clarity consent, campaign effectiveness | **Code staged:** event metadata for the 3 campaign placements and category shortcuts, wired to existing opt-in GA4; product reviews/consent code already present | Verify attribution, GA4 debug events, conversion follow-through and real consent on Android/iPhone; controlled A/B experiments remain pending |
 | P7 | Accessibility, speed, real devices, external providers, merchant data and release certification | Existing guarded Phase 8 suite, browser smoke and restore rehearsal | Execute final full VPS suite and restore; fix GitHub runner; test iOS/Android; verify provider settlement and truthful SKU/stock |
 | P8 | Uganda/local SEO: category metadata, compact headings, clean canonicals, staff controls, GBP/Merchant eligibility checks | **Code staged:** six department presets, staff SEO preview/overrides, home defaults, tests and provider checklist in [Uganda SEO handover](UGANDA_CATEGORY_LOCAL_SEO_2026-10-18.md) | Deploy, inspect live category HTML, verify true business address in GBP, Merchant readiness, Search Console crawl/indexing |
@@ -121,3 +121,30 @@ only send when the existing integration has loaded under the site's consent
 rules. This does **not** enable tracking on decline, create a new cookie,
 or replace first-party checkout/order evidence. Analytics conversion
 dashboards should be validated on real mobile visits before claiming gains.
+
+## Competitor-inspired customer journey — latest continuation
+
+The latest source changes prioritize the mobile product decision flow rather
+than adding more text to the homepage:
+
+1. An available, single-configuration product uses its **existing cart form**
+   from the mobile sticky bar. Unavailable items use **Enquire**, not a
+   misleading cart action. Unpriced services use **Request quote**.
+2. Variant-based products show **Choose option** until a valid option is
+   selected. Selecting one updates the visible purchase-panel and sticky
+   price, while the existing server-side cart rules still validate choice,
+   quantity and inventory. The URL query `?variant=<id>` remains supported.
+3. A short gallery swipe hint appears for multi-image products. Existing zoom,
+   arrow navigation, reduced-motion handling and responsive loading remain.
+4. Delivery checkout no longer presents a merchandise-only number as the
+   final delivery total: the preview explicitly asks for a delivery area,
+   calculates the corresponding fee when chosen and identifies pickup.
+5. Staff campaign editing now previews newly selected local creative before
+   uploading or publishing, with blob URLs revoked when replaced or leaving.
+6. New regression tests cover shopping states, gallery, campaign previews,
+   mobile checkout pricing text and client-side synchronization. JS syntax
+   has been checked independently; full Django/VPS/device certification has
+   **not** been observed.
+
+No automatic stock assertion, artificial countdown, fake deal, injected
+Google rating or marketing-consent bypass is introduced.

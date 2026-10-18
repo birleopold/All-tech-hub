@@ -44,6 +44,8 @@ jobs:
           node --check static/js/job_handover_signature.js
           node --check static/js/field_notes_offline.js
           node --check static/js/staff_homepage_campaigns.js
+          node --check static/js/public_detail_contact.js
+          node --check static/js/checkout_delivery.js
 
       - name: Check migration drift
         run: python manage.py makemigrations --check --dry-run
@@ -97,6 +99,7 @@ jobs:
           core.test_home_tech_ambient
           core.test_product_contact_experience
           core.test_storefront_polish
+          core.test_mobile_product_purchase
           commerce.test_progress
           commerce.test_customer_messages
           commerce.test_recommendations

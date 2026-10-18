@@ -44,7 +44,7 @@
           <span class="detail-hero-pill"><i class="bi bi-grid" aria-hidden="true"></i>{{ product.category.name }}</span>
           {% if product.public_brand %}<span class="detail-hero-pill"><i class="bi bi-patch-check" aria-hidden="true"></i>{{ product.public_brand }}</span>{% endif %}
           {% if product.public_condition %}<span class="detail-hero-pill"><i class="bi bi-box-seam" aria-hidden="true"></i>{{ product.public_condition }}</span>{% endif %}
-          {% if product.public_available %}<span class="detail-hero-pill"><i class="bi bi-check-circle" aria-hidden="true"></i>{% if product.kind == 'service' %}Booking available{% else %}Available now{% endif %}</span>{% endif %}
+          {% if product.public_available %}<span class="detail-hero-pill"><i class="bi bi-check-circle" aria-hidden="true"></i>{% if product.kind == 'service' %}Booking available{% else %}Available to order{% endif %}</span>{% endif %}
         </div>
       </div>
       <div class="col-lg-4">
@@ -71,6 +71,7 @@
           {% endif %}
         </div>
         {% if gallery_count > 1 %}
+        <p class="product-gallery-hint"><i class="bi bi-hand-index-thumb" aria-hidden="true"></i>Tap a photo or swipe the main image to see other views.</p>
         <div class="product-gallery-thumbs" aria-label="Choose a product image">
           {% for gi in product.gallery_images.all %}{% if gi.image %}<button type="button" class="pd-thumb" data-src="{{ gi.image.url }}" data-alt="{% if gi.alt_text %}{{ gi.alt_text }}{% else %}{{ product.name }} image {{ forloop.counter }}{% endif %}" aria-label="Show {% if gi.alt_text %}{{ gi.alt_text }}{% else %}image {{ forloop.counter }} of {{ product.name }}{% endif %}"><img src="{{ gi.image.url }}" alt="" loading="lazy" decoding="async"></button>{% endif %}{% endfor %}
           {% if product.image %}<button type="button" class="pd-thumb" data-src="{{ product.image.url }}" data-alt="{{ product.name }}" aria-label="Show another image of {{ product.name }}"><img src="{{ product.image.url }}" alt="" loading="lazy" decoding="async"></button>{% endif %}
@@ -103,7 +104,7 @@
           </div>
           {% endif %}
           {% if review_summary.count %}<div class="product-rating-row"><span class="product-rating-stars" aria-label="{{ review_summary.avg }} out of 5 stars">{% for s in rating_stars %}{% if s <= rounded_review_rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span><a href="#reviews">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a></div>{% endif %}
-          <p class="product-price" id="pd-price-label">{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</p>
+          <p class="product-price" id="pd-price-label" aria-live="polite" aria-atomic="true">{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</p>
           {% if product.kind == 'service' and not product.public_price %}<p class="product-price-note">Tell us the scope and location so the team can confirm an estimate.</p>{% elif product.public_compare_at_price %}<p class="product-price-note"><span class="text-decoration-line-through">{{ company.currency_code }} {{ product.public_compare_at_price|floatformat:0|intcomma }}</span> previous comparison price{% if product.savings_percent %} · Save {{ product.savings_percent }}%{% endif %}</p>{% elif product.public_has_variants %}<p class="product-price-note">Select an option to confirm its exact price and stock.</p>{% else %}<p class="product-price-note">Price shown before any delivery or optional setup charges.</p>{% endif %}
 
           <div class="product-status-stack">
@@ -116,7 +117,7 @@
           <a class="btn btn-primary product-primary-action w-100" href="{% url 'contact' %}?type=quote&amp;product={{ product.slug|urlencode }}"><i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>Request service quotation</a>
           <p class="small text-muted mt-2 mb-0">Tell us your requirements. The team will confirm the cost before scheduling work.</p>
           {% elif product.public_available %}
-          <form method="post" action="{% url 'cart_add' product.id %}" class="vstack gap-3">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+          <form id="product-cart-form" method="post" action="{% url 'cart_add' product.id %}" class="vstack gap-3">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
             {% if product.public_has_variants %}<div><label class="form-label fw-semibold" for="variant_id">Choose an option</label><select name="variant_id" id="variant_id" class="form-select" required><option value="" disabled selected>Select configuration…</option>{% for v in product.variants.all %}{% if v.is_active %}<option value="{{ v.id }}" data-price="{{ v.price }}" data-currency="{{ company.currency_code }}" data-stock="{{ v.stock_quantity }}" data-track="{% if v.track_inventory %}1{% else %}0{% endif %}" {% if product.kind == 'service' and not v.price %}disabled{% elif product.kind == 'physical' and v.track_inventory and not v.stock_quantity %}disabled{% endif %}>{{ v.name }} — {% if product.kind == 'service' and not v.price %}Quotation required{% else %}{{ company.currency_code }} {{ v.price }}{% if product.kind == 'physical' and v.track_inventory %} ({{ v.stock_quantity }} in stock){% endif %}{% endif %}</option>{% endif %}{% endfor %}</select></div>{% endif %}
             {% if product.kind == 'service' %}<input type="hidden" name="quantity" value="1"><button type="submit" class="btn btn-primary product-primary-action w-100"><i class="bi bi-calendar-check me-2" aria-hidden="true"></i>Add priced service to request</button>{% if product.public_has_variants %}<p class="small text-muted mb-0">For a configuration marked “Quotation required”, <a href="{% url 'contact' %}?type=quote&amp;product={{ product.slug|urlencode }}">request a tailored estimate</a>.</p>{% endif %}{% else %}<div class="row g-2 align-items-end"><div class="col-4"><label class="form-label fw-semibold" for="quantity">Quantity</label><input id="quantity" type="number" name="quantity" value="1" min="1" class="form-control"></div><div class="col-8 d-grid"><button type="submit" class="btn btn-primary product-primary-action"><i class="bi bi-cart-plus me-2" aria-hidden="true"></i>Add to cart</button></div></div>{% endif %}
           </form>
@@ -235,6 +236,20 @@
   {% endif %}
 </div>
 
-<div class="product-mobile-action" aria-label="Quick buying action"><div class="product-mobile-action__price"><small>{% if product.kind == 'service' %}Service{% else %}Price{% endif %}</small>{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</div><a class="btn btn-light" href="#product-buy-panel">{% if product.kind == 'service' and not product.public_price %}Request quote{% elif product.kind == 'service' %}Book{% else %}Buy / enquire{% endif %}</a></div>
+<div class="product-mobile-action" aria-label="Mobile buying action" data-mobile-purchase-bar>
+  <div class="product-mobile-action__price">
+    <small>{% if product.kind == 'service' %}Service{% else %}Price{% endif %}</small>
+    <span data-mobile-product-price aria-live="polite" aria-atomic="true">{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</span>
+  </div>
+  {% if product.kind == 'service' and not product.public_price %}
+  <a class="btn btn-light" href="{% url 'contact' %}?type=quote&amp;product={{ product.slug|urlencode }}">Request quote</a>
+  {% elif not product.public_available %}
+  <a class="btn btn-light" href="{% url 'contact' %}?type=product&amp;product={{ product.slug|urlencode }}">Enquire</a>
+  {% elif product.public_has_variants %}
+  <a class="btn btn-light" href="#variant_id" data-mobile-variant-action>{% if product.kind == 'service' %}Choose service{% else %}Choose option{% endif %}</a>
+  {% else %}
+  <button class="btn btn-light" type="submit" form="product-cart-form">{% if product.kind == 'service' %}Add service{% else %}Add to cart{% endif %}</button>
+  {% endif %}
+</div>
 {% endblock %}
 {% block extra_js %}<script src="{% static 'js/social_share.js' %}" defer></script><script src="{% static 'js/public_detail_contact.js' %}" defer></script>{% endblock %}
