@@ -1,6 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
+from billing.revision_comparison import customer_quote_revision_compare
 from core import private_views
 from loyalty import views as loyalty_views
 from portal import views, warranty_views
@@ -74,6 +75,7 @@ urlpatterns = [
         name="portal_marketing_preferences",
     ),
     path("documents/", views.MyDocumentsView.as_view(), name="portal_documents"),
+    path("documents/<int:pk>/revisions/<int:revision_number>/", customer_quote_revision_compare, name="portal_quote_revision_compare"),
     path("documents/<int:pk>/pdf/", views.my_document_pdf, name="portal_document_pdf"),
     path("documents/<int:pk>/pay/", views.my_document_payment, name="portal_document_payment"),
     path("tickets/", views.MyTicketsView.as_view(), name="portal_tickets"),

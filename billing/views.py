@@ -768,6 +768,19 @@ class CommercialDocumentDetailView(StaffRequiredMixin, DetailView):
         ctx["quote_customer_pending"] = doc.customer_quote_pending
         ctx["quote_customer_accepted"] = doc.quote_customer_accepted is True
         ctx["quote_customer_declined"] = doc.quote_customer_accepted is False
+        ctx["can_enable_quote_customer_link"] = (
+            doc.doc_type == CommercialDocument.TYPE_QUOTE
+            and doc.status == CommercialDocument.STATUS_ISSUED
+            and doc.is_locked
+            and (
+                not doc.quote_requires_internal_approval
+                or doc.quote_internally_approved
+            )
+            and (not doc.due_date or doc.due_date >= timezone.localdate())
+            and doc.quote_customer_accepted is not False
+        )
+        if not ctx["can_enable_quote_customer_link"]:
+            ctx.pop("quote_customer_url", None)
         ctx["revisions"] = doc.revisions.select_related("created_by")
         ctx["customer_credits"] = doc.customer_credits.all()
         ctx["available_credits"] = (
@@ -1783,12 +1796,26 @@ def quote_internal_approve(request, pk: int):
 
 
 @require_POST
+@transaction.atomic
 def quote_enable_customer_acceptance(request, pk: int):
     if not request.user.is_staff:
         raise Http404
-    doc = get_object_or_404(CommercialDocument, pk=pk)
+    doc = get_object_or_404(
+        CommercialDocument.objects.select_for_update(), pk=pk
+    )
     if doc.doc_type != CommercialDocument.TYPE_QUOTE:
         messages.error(request, "Only quotations support customer acceptance.")
+        return redirect("staff_document_view", pk=pk)
+    if (
+        doc.status != CommercialDocument.STATUS_ISSUED
+        or not doc.is_locked
+        or (doc.quote_requires_internal_approval and not doc.quote_internally_approved)
+        or (doc.due_date and doc.due_date < timezone.localdate())
+    ):
+        messages.error(request, "Issue and internally approve the current quotation before sharing a customer link.")
+        return redirect("staff_document_view", pk=pk)
+    if doc.quote_customer_accepted is False:
+        messages.error(request, "The customer declined this quotation. Create and issue a revised version before requesting acceptance again.")
         return redirect("staff_document_view", pk=pk)
     doc.quote_requires_customer_acceptance = True
     doc.ensure_customer_quote_token()
@@ -1838,12 +1865,25 @@ def payment_request_enable(request, pk: int):
     return redirect("staff_document_view", pk=pk)
 
 
+@transaction.atomic
 def quote_customer_portal(request, token):
     doc = get_object_or_404(
-        CommercialDocument.objects.select_related("customer").prefetch_related("lines"),
+        CommercialDocument.objects.select_for_update().select_related("customer").prefetch_related("lines"),
         quote_customer_token=token,
         doc_type=CommercialDocument.TYPE_QUOTE,
     )
+    if (
+        doc.status != CommercialDocument.STATUS_ISSUED
+        or not doc.is_locked
+        or not doc.quote_requires_customer_acceptance
+        or (doc.quote_requires_internal_approval and not doc.quote_internally_approved)
+        or (
+            doc.due_date
+            and doc.due_date < timezone.localdate()
+            and doc.quote_customer_accepted is None
+        )
+    ):
+        raise Http404
     company = CompanySettings.load()
     if request.method == "POST" and doc.quote_customer_accepted is None:
         action = request.POST.get("action")

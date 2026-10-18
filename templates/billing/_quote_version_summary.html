@@ -1,0 +1,24 @@
+<div class="card h-100 border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h5 mb-3">{{ heading }}</h2>
+    <dl class="row small">
+      <dt class="col-5">Document status</dt><dd class="col-7">{{ version.status|title }}</dd>
+      <dt class="col-5">Issue date</dt><dd class="col-7">{{ version.issue_date|default:"—" }}</dd>
+      <dt class="col-5">Valid until</dt><dd class="col-7">{{ version.due_date|default:"—" }}</dd>
+      {% if version.customer_response %}<dt class="col-5">Customer response</dt><dd class="col-7">{{ version.customer_response }}</dd>{% endif %}
+      <dt class="col-5">Subtotal</dt><dd class="col-7">{{ company.currency_code }} {{ version.subtotal }}</dd>
+      <dt class="col-5">Discount</dt><dd class="col-7">{{ company.currency_code }} {{ version.discount_amount }}</dd>
+      <dt class="col-5">Tax</dt><dd class="col-7">{{ company.currency_code }} {{ version.tax_amount }}</dd>
+      <dt class="col-5">Delivery / shipping</dt><dd class="col-7">{{ company.currency_code }} {{ version.shipping_amount }}</dd>
+      <dt class="col-5 fw-bold">Total</dt><dd class="col-7 fw-bold">{{ company.currency_code }} {{ version.total }}</dd>
+    </dl>
+    <h3 class="h6 mt-4">Items and services</h3>
+    <div class="table-responsive"><table class="table table-sm align-middle">
+      <thead><tr><th>Item</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Total</th></tr></thead>
+      <tbody>{% for item in version.lines %}
+        <tr><td class="text-break">{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ company.currency_code }} {{ item.unit_price }}</td><td class="text-end">{{ company.currency_code }} {{ item.total }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-muted">No lines recorded.</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if version.terms %}<h3 class="h6 mt-3">Terms</h3><p class="small text-muted text-break">{{ version.terms|linebreaksbr }}</p>{% endif %}
+  </div>
+</div>

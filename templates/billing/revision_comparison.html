@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Document {{ document.number }} — revision {{ revision.revision_number }}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">{% endblock %}
+{% block content %}
+<div class="container py-4 pb-5">
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+    <div>
+      <p class="text-uppercase small text-muted mb-1">Document version comparison</p>
+      <h1 class="h3 mb-2">{{ document.number }} — revision {{ revision.revision_number }}</h1>
+      <p class="text-muted mb-0">Previous version recorded {{ revision.created_at|date:"j M Y H:i" }}. The current issued version, when available, must be reviewed separately.</p>
+    </div>
+    {% if is_staff_revision %}<a class="btn btn-outline-primary" href="{% url 'staff_document_view' document.pk %}">Back to staff document</a>
+    {% else %}<a class="btn btn-outline-primary" href="{% url 'portal_documents' %}">Back to my documents</a>{% endif %}
+  </div>
+  {% if not is_staff_revision %}<p class="alert alert-info" role="status">This page is read-only history. The current issued quotation remains authoritative; this comparison does not approve an old version.</p>{% endif %}
+  {% if has_differences %}<p class="alert alert-warning" role="status">The document has changed since the preserved revision below.</p>{% else %}<p class="alert alert-secondary" role="status">The buyer-facing totals, item descriptions and terms match between these versions.</p>{% endif %}
+  <div class="row g-4">
+    <div class="col-lg-6">
+      {% include "billing/_quote_version_summary.html" with version=previous_version heading="Preserved version" %}
+    </div>
+    <div class="col-lg-6">
+      {% include "billing/_quote_version_summary.html" with version=current_version heading="Current version" %}
+    </div>
+  </div>
+  {% if is_staff_revision %}
+  <div class="card mt-4"><div class="card-body">
+    <h2 class="h5">Internal revision record</h2>
+    <p class="mb-1"><strong>Reason:</strong> {{ revision.reason|default:"Not specified" }}</p>
+    <p class="mb-0 small text-muted">Saved by {% if revision.created_by %}{{ revision.created_by.get_username }}{% else %}System{% endif %} on {{ revision.created_at|date:"j M Y H:i" }}. Original snapshots are not editable here.</p>
+  </div></div>
+  {% endif %}
+</div>
+{% endblock %}

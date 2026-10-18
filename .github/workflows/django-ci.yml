@@ -106,6 +106,7 @@ jobs:
           operations.test_job_expense_ledger
           billing.test_finance_controls
           billing.test_quote_revision_safety
+          billing.test_quote_revision_experience
           operations.test_financial_reconciliation
           reports.test_field_finance_access
           reports.test_conversion
@@ -281,6 +282,7 @@ jobs:
           growth.test_growth
           billing.test_finance_controls
           billing.test_quote_revision_safety
+          billing.test_quote_revision_experience
           operations.test_financial_reconciliation
           operations.test_job_expense_ledger
           purchasing.tests

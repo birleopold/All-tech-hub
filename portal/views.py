@@ -342,7 +342,7 @@ class MyDocumentsView(ListView):
         customer = _customer_for_request(self.request)
         if customer is None:
             return CommercialDocument.objects.none()
-        return CommercialDocument.objects.filter(customer=customer).order_by("-issue_date", "-id")
+        return CommercialDocument.objects.filter(customer=customer).prefetch_related("revisions").order_by("-issue_date", "-id")
 
     def dispatch(self, request, *args, **kwargs):
         if _customer_for_request(request) is None:

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from billing import document_pdf_views, document_workflow_views, views
+from billing.revision_comparison import staff_document_revision_compare
 from billing.document_list_view import StaffCommercialDocumentListView
 
 urlpatterns = [
@@ -50,6 +51,7 @@ urlpatterns = [
         views.document_issue,
         name="staff_document_issue",
     ),
+    path("documents/<int:pk>/revisions/<int:revision_number>/", staff_document_revision_compare, name="staff_document_revision_compare"),
     path(
         "documents/<int:pk>/revise/",
         views.document_start_revision,

@@ -117,9 +117,15 @@ customer's database, file names, credentials or archive into a public issue.
 
 ## Evidence for specific requested features
 
-- **Quotation revision history:** `billing.DocumentRevision` stores revision
-  number, reason, snapshot, actor and time; a staff document revision workflow
-  exists. Real role-specific revision/approval and PDF acceptance remain open.
+- **Quotation revision history:** `billing.DocumentRevision` preserves
+  version number, reason, immutable snapshot, actor and time. A new staff
+  comparison screen and owner-authenticated customer portal history show
+  original versus current quotation quantities, prices, terms and totals
+  without exposing supplier information or unit costs. The customer portal
+  offers its active issued acceptance link when approval prerequisites pass.
+  Draft, unapproved and expired quotations cannot be accepted through a
+  copied link. Still pending: final VPS test/migration gate, real browser
+  acceptance, verified email delivery, and archived historical-PDF output.
 - **Field-work handover:** `operations.JobCard.customer_signature` captures an
   optional *intake* signature. New `operations.JobHandover.signature`
   provides a separate completed-work recipient acknowledgement via staff
