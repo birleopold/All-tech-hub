@@ -89,6 +89,7 @@ jobs:
           catalog.test_experience
           catalog.test_product_ordering
           catalog.test_brand_facet_quality
+          catalog.test_uganda_category_seo
           catalog.test_available_variant_price
           catalog.test_catalogue_journey_refinement
           core.test_homepage_engagement

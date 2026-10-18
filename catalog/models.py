@@ -19,6 +19,18 @@ class Category(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(unique=True, max_length=140)
     description = models.TextField(blank=True)
+    seo_title = models.CharField(
+        max_length=90, blank=True,
+        help_text="Optional Google search title; leave blank for the tailored Uganda category title.",
+    )
+    seo_description = models.CharField(
+        max_length=240, blank=True,
+        help_text="Optional search description. Use verified facts, not unconfirmed stock or delivery promises.",
+    )
+    seo_heading = models.CharField(
+        max_length=120, blank=True,
+        help_text="Optional short on-page heading; keep the category easy to shop.",
+    )
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:

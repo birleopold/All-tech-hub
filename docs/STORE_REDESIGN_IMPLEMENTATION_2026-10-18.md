@@ -28,6 +28,7 @@ Started: 2026-10-18 · Repository: birleopold/All-tech-hub
 | P5 | Staff campaign controls: create/edit/disable, image upload or real product, priority, dates, internal link validation, audit record and navigation | **Code staged:** `HomepagePromotion`, database migration, staff workspace, admin and permissioned edits; editor includes text-live desktop/phone creative preview | Execute Django and device tests; saved image selection appears after save, full-page staging preview remains pending |
 | P6 | Trust/marketing: verified reviews, genuine savings, delivery/warranty facts, product collection clicks, GA4/Clarity consent, A/B reporting | Many existing flows; new promo work avoids fake stock and urgency | Verify attribution and actual commerce analytics, consent, customer reviews, social channel delivery |
 | P7 | Accessibility, speed, real devices, external providers, merchant data and release certification | Existing guarded Phase 8 suite, browser smoke and restore rehearsal | Execute final full VPS suite and restore; fix GitHub runner; test iOS/Android; verify provider settlement and truthful SKU/stock |
+| P8 | Uganda/local SEO: category metadata, compact headings, clean canonicals, staff controls, GBP/Merchant eligibility checks | **Code staged:** six department presets, staff SEO preview/overrides, home defaults, tests and provider checklist in [Uganda SEO handover](UGANDA_CATEGORY_LOCAL_SEO_2026-10-18.md) | Deploy, inspect live category HTML, verify true business address in GBP, Merchant readiness, Search Console crawl/indexing |
 
 ## Phase P1/P2/P5 code included in initial package
 
@@ -101,3 +102,12 @@ with an untested candidate or bypass failing Django tests.
 - Product card and detail regression tests now cover recorded RAM/storage,
   processor and warranty highlights. No claim is generated for an unset fact.
 - Browser and full deployment test evidence are still pending.
+
+## Uganda search visibility, category pages and staff controls
+
+Six high-intent department types now have concise searchable titles, descriptions
+and H1s, with manual staff overrides and no homepage reading walls. Existing
+URLs, filters, `noindex`, structured breadcrumbs and sitemap remain intact.
+See [SEO implementation details](UGANDA_CATEGORY_LOCAL_SEO_2026-10-18.md).
+Google Business Profile verification, truthful product/stock data, Merchant
+approval and ranking improvements remain independent operational steps.

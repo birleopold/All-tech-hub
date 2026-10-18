@@ -25,7 +25,14 @@ class ProductVariantInline(admin.TabularInline):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "parent", "sort_order", "slug")
     list_filter = ("parent",)
-    search_fields = ("name", "description", "slug")
+    search_fields = ("name", "description", "slug", "seo_title", "seo_description")
+    fieldsets = (
+        ("Category", {"fields": ("name", "slug", "parent", "description", "sort_order")}),
+        ("Google Search — optional overrides", {
+            "fields": ("seo_title", "seo_description", "seo_heading"),
+            "description": "Edit the short search preview independently of the public catalogue layout. Don't add unverified claims.",
+        }),
+    )
     ordering = ("sort_order", "name")
     prepopulated_fields = {"slug": ("name",)}
 

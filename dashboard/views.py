@@ -7,7 +7,8 @@ from django.views.generic import TemplateView
 from dashboard.overview import dashboard_overview
 from dashboard.snapshot import dashboard_snapshot
 from catalog.brand_facets import grouped_brand_rows
-from catalog.models import Product
+from catalog.models import Category, Product
+from catalog.local_seo import category_metadata
 from growth.models import ProductGrowthData
 from catalog.quality import QUALITY_ISSUES, catalogue_quality_rows, catalogue_quality_summary
 from core.mixins import StaffRequiredMixin
@@ -132,6 +133,29 @@ class SEOControlCenterView(StaffRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["seo"] = seo_audit_snapshot()
+        categories = (
+            Category.objects.filter(parent__isnull=True)
+            .annotate(
+                published_direct=Count(
+                    "products",
+                    filter=Q(products__is_published=True), distinct=True,
+                ),
+                published_child=Count(
+                    "subcategories__products",
+                    filter=Q(subcategories__products__is_published=True), distinct=True,
+                ),
+            )
+            .order_by("sort_order", "name")[:24]
+        )
+        context["category_seo_rows"] = [
+            {
+                "category": category,
+                "meta": category_metadata(category),
+                "product_count": category.published_direct + category.published_child,
+            }
+            for category in categories
+        ]
+
         context["merchant"] = merchant_readiness_snapshot(row_limit=10)
         context["search_opportunities"] = search_opportunity_rows(limit=20)
         context["search_console_form"] = kwargs.get(

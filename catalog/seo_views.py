@@ -7,6 +7,9 @@ from django.utils.text import slugify
 
 from catalog.brand_facets import grouped_brand_rows
 from catalog.models import Category, Product
+from catalog.local_seo import category_metadata
+from django.utils.text import Truncator
+from core.seo import clean_text
 from catalog.refined_public_views import RefinedPublicProductListView
 from core.models import CompanySettings
 from core.seo import meta_description, meta_title, public_url, script_safe_json
@@ -111,17 +114,19 @@ class SEOProductListView(RefinedPublicProductListView):
         kind = context.get("current_kind")
 
         if selected_category:
-            subject = selected_category.name
-            title = f"{subject} in Uganda | {company.company_name}"
-            description = selected_category.description or (
-                f"Browse {subject.lower()} available from {company.company_name}. "
-                "Compare prices, condition, specifications and availability, then request support or a formal quotation."
+            copy = category_metadata(selected_category)
+            title = copy.title
+            description = copy.description
+            heading = copy.heading
+            # Long editorial copy lives on the dedicated buying guide pages.
+            # The catalogue hero remains one short readable sentence.
+            authored_intro = clean_text(selected_category.description)
+            intro = (
+                Truncator(authored_intro).words(18)
+                if authored_intro
+                else "Browse configurations and prices. Contact us to confirm availability."
             )
-            heading = f"Shop {subject} with clear product details"
-            intro = selected_category.description or (
-                f"Compare available {subject.lower()} by specification, condition, price and stock before making a decision."
-            )
-            eyebrow = "Technology category"
+            eyebrow = "Shop technology in Uganda"
         elif collection:
             title = f"{collection['label']} in Uganda | {company.company_name}"
             description = collection["description"]
