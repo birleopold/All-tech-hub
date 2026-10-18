@@ -1,0 +1,16 @@
+[Unit]
+Description=LEOSOFT Google organic readiness report (local data only)
+After=network.target
+
+[Service]
+Type=oneshot
+User=admin
+Group=admin
+WorkingDirectory=/home/admin/All-tech-hub
+EnvironmentFile=/home/admin/All-tech-hub/.env
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+Environment=ALLTECH_ENV=production
+ExecStart=/home/admin/All-tech-hub/.venv/bin/python manage.py report_google_growth --output=/home/admin/All-tech-hub/google-reports/google-growth-latest.json
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
