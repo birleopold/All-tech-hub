@@ -6,6 +6,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.urls import reverse
+from django.utils import timezone
 
 from catalog.models import Product
 from merchandising.models import ProductCommerceProfile
@@ -38,6 +39,18 @@ def build_google_review_rows(*, available_only=False, limit=0):
             any(v.track_inventory and v.stock_quantity > 0 for v in active_variants)
             if active_variants else product.track_inventory and product.stock_quantity > 0
         ))
+        fresh_stock_check = bool(
+            profile is not None
+            and profile.stock_confirmed_at
+            and timezone.now() - timezone.timedelta(days=30)
+            <= profile.stock_confirmed_at <= timezone.now()
+        )
+        if profile and profile.merchant_enabled and not fresh_stock_check:
+            missing = list(dict.fromkeys([*missing, "renew stock inspection (30 days)"]))
+        feed_eligible = bool(
+            confirmed and fresh_stock_check and profile
+            and profile.merchant_enabled and profile.is_merchant_ready
+        )
         if available_only and not confirmed:
             continue
         if not confirmed:
@@ -53,6 +66,7 @@ def build_google_review_rows(*, available_only=False, limit=0):
             ),
             "stock_tracked": "yes" if confirmed else "no",
             "merchant_approved": "yes" if profile and profile.merchant_enabled else "no",
+            "feed_eligible_now": "yes" if feed_eligible else "no",
             "merchant_score": profile.merchant_readiness_score if profile else 0,
             "missing_checks": "; ".join(missing),
             "review_path": reverse("staff_product_commercial_review", args=[product.pk]),
@@ -90,7 +104,7 @@ class Command(BaseCommand):
         path.parent.mkdir(parents=True, exist_ok=True)
         columns = [
             "product_id", "product_name", "category", "stock_quantity",
-            "stock_tracked", "merchant_approved", "merchant_score",
+            "stock_tracked", "merchant_approved", "feed_eligible_now", "merchant_score",
             "missing_checks", "review_path",
         ]
         with path.open("x", encoding="utf-8-sig", newline="") as output:
