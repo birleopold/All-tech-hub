@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
 
 from operations.models import JobCard, JobExpense, JobFeedback, JobHandover, JobNote, JobStatusEvent, TimeEntry
 
@@ -75,7 +77,19 @@ class JobHandoverAdmin(admin.ModelAdmin):
     list_filter = ("method", "recorded_at")
     search_fields = ("job__number", "recipient_name")
     raw_id_fields = ("job", "recorded_by")
-    readonly_fields = ("job", "method", "recipient_name", "note", "signature", "recorded_by", "recorded_at")
+    readonly_fields = (
+        "job", "method", "recipient_name", "note", "protected_signature",
+        "recorded_by", "recorded_at",
+    )
+
+    @admin.display(description="Recipient signature")
+    def protected_signature(self, obj):
+        if not obj or not obj.pk or not obj.signature:
+            return "Not captured (legacy handover)"
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener noreferrer">View protected signature</a>',
+            reverse("staff_job_handover_signature", args=[obj.job_id]),
+        )
 
     def has_add_permission(self, request):
         return False

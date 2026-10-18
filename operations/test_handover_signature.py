@@ -171,3 +171,18 @@ class SignedJobHandoverTests(TestCase):
         detail = self.client.get(reverse("staff_job_detail", args=[self.job.pk]))
         self.assertContains(detail, "Legacy handover: recipient signature was not captured.")
         self.assertNotContains(detail, "View protected recipient signature")
+
+    def test_admin_links_to_protected_signature_not_public_media(self):
+        self.ready()
+        self.client.force_login(self.staff)
+        self.submit()
+        handover = JobHandover.objects.get(job=self.job)
+        response = self.client.get(
+            reverse("admin:operations_jobhandover_change", args=[handover.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "View protected signature")
+        self.assertContains(
+            response, reverse("staff_job_handover_signature", args=[self.job.pk])
+        )
+        self.assertNotContains(response, "/media/job_signatures/handover/")
