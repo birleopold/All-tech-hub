@@ -10,6 +10,14 @@ WORK="$(mktemp -d -t leosoft-phase8.XXXXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 umask 077
 
+# The operator's shell may still contain ALLTECH_* values exported from
+# production .env. Clear every inherited application override before setting
+# the isolated rehearsal values below. Otherwise MFA, campaign limits and
+# provider switches silently change the behavior of hundreds of tests.
+for inherited_variable in ${!ALLTECH_@}; do
+    unset "$inherited_variable"
+done
+
 # Override all release-target settings; never source .env.
 export DJANGO_SETTINGS_MODULE=config.settings
 export ALLTECH_ENV=development
