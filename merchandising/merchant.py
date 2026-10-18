@@ -5,6 +5,7 @@ from xml.etree import ElementTree as ET
 from django.conf import settings
 from django.db import OperationalError, ProgrammingError
 from django.http import HttpResponse
+from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from catalog.seo_feeds import GOOGLE_NS
@@ -30,6 +31,14 @@ def _build_google_merchant_feed(request, *, require_approval=False):
         eligible: dict[str, ProductCommerceProfile] = {}
         for profile in profiles:
             if not profile.is_merchant_ready:
+                continue
+            # Publication is a continuing eligibility check, not a one-time
+            # approval: stock confirmation cannot remain trusted forever.
+            inspected = profile.stock_confirmed_at
+            now = timezone.now()
+            if not inspected or not (
+                now - timezone.timedelta(days=30) <= inspected <= now
+            ):
                 continue
             product = profile.product
             variants = [variant for variant in product.variants.all() if variant.is_active]
