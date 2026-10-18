@@ -17,7 +17,8 @@ Evidence: authenticated TinyFish walkthrough of /staff/, /staff/seo/, /staff/cat
 - [x] P2a: Immediate identical unread notification retry suppression with regression tests. Historical inbox cleanup and priority triage remain open.
 - [x] P2b-partial: Add read/unread inbox filters with pagination, while preserving all history. Historical noise triage and producer audit remain open.
 - [x] P2c-partial: Non-destructive, staff-owned age-scoped notification acknowledgement with UI and tests.
-- [ ] P2d: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
+- [x] P2d-diagnostics: Add read-only grouped notification noise command and regression test.
+- [ ] P2e: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
 - [x] P3a: Add explicit product verification guidance to staff editor.
 - [x] P3b-partial: Add one-click commercial review link and explicit variant price/stock guidance on product editor.
 - [x] P3c-code: Require product, growth and commerce-profile change permissions for commercial-review saves; test unauthorized edit attempts.
@@ -27,7 +28,8 @@ Evidence: authenticated TinyFish walkthrough of /staff/, /staff/seo/, /staff/cat
 - [x] P5a: Explain differences between online order sales and document finance metrics in the staff reporting UI.
 - [ ] P5b: Sales & reporting: document online-order revenue vs document profit basis; inspect extraordinary profit lines and number gaps; add reconciliation drilldowns and safeguards, not arbitrary accounting changes.
 - [x] P6a: Bounded 25-per-action transaction-safe claim for unassigned overdue leads, exposed on the staff list and covered by tests.
-- [ ] P6b: Leads: review 49 overdue leads and attribution; improve assign/claim, bulk actions, priority and tracking while preserving audit history.
+- [x] P6b-diagnostics: Add factual lead-source, campaign-link, overdue and ownership report and regression test.
+- [ ] P6c: Leads: review 49 overdue leads and attribution; improve assign/claim, bulk actions, priority and tracking while preserving audit history.
 - [ ] P7: Accessibility and mobile browser review: staff navigation, touch actions, forms, responsive tables and multi-device save flows.
 - [ ] P8: Release verification: isolated tests, guarded deploy, public health, Google timer, permission checks and authenticated TinyFish regression.
 
