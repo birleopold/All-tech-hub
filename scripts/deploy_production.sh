@@ -172,6 +172,8 @@ for name in (
     "css/marketplace_experience.css",
     "css/search_conversion_refinement.css",
     "css/catalogue_growth_operations.css",
+    "icons/leosoft-lion.png",
+    "site.webmanifest",
     "css/home_tech_ambient.css",
     "css/home_engagement.css",
     "css/mobile_commerce_pro.css",

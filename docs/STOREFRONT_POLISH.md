@@ -93,3 +93,24 @@ No product was hidden from the catalogue and no SEO buying-guide URL was
 deleted. Product pages, dedicated buying guides and sitemap content remain
 distinct from the lean homepage. Actual mobile/desktop acceptance and VPS
 release-gate verification remain pending.
+
+## 2026-10-18 — Brand favicon and final commerce-only homepage
+
+The LEOSOFT lion emblem from the supplied company logo is stored as
+`static/icons/leosoft-lion.png` (square 128px PNG). Public and staff pages
+declare an explicit PNG favicon and Apple touch icon. The root
+`/favicon.ico` redirects to the same static icon; the web manifest no
+longer points to a generic `L`. The icon is crawlable from the home-page
+hostname; Google may take days to weeks to update Search results.
+
+The homepage keeps a welcome/search, eight featured products, up to four
+deals, up to four services and one short trust area. Long educational and
+SEO panels remain on dedicated catalogue, buying guide and price hub pages.
+The mobile category list is collapsed by default. Desktop navigation now
+shows top-level departments only, and homepage duplicate quick links and
+the large footer link grid are shortened.
+
+The guarded production release must pass Django checks and hashed static
+asset verification before publishing the icon. Browsers may need a hard
+refresh of their icon cache. Google Search display is not guaranteed by
+a source-code change.

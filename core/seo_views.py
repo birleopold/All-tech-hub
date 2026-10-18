@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from django.conf import settings
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.views.decorators.http import require_GET
+from django.templatetags.static import static
 
 from core.seo import public_base_url, public_url
 
@@ -40,4 +41,11 @@ def indexnow_key(request):
     response = HttpResponse(f"{key}\n", content_type="text/plain; charset=utf-8")
     response["Cache-Control"] = "public, max-age=86400"
     response["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    return response
+
+@require_GET
+def site_favicon(request):
+    """Conventional root favicon path; source icon stays in static manifest."""
+    response = HttpResponseRedirect(static("icons/leosoft-lion.png"))
+    response["Cache-Control"] = "public, max-age=86400"
     return response

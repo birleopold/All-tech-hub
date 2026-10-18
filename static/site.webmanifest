@@ -12,16 +12,10 @@
   "categories": ["business", "productivity", "shopping"],
   "icons": [
     {
-      "src": "/static/icons/alltech-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/static/icons/leosoft-lion.png",
+      "sizes": "128x128",
+      "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/static/icons/alltech-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     }
   ],
   "shortcuts": [

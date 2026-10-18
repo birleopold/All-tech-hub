@@ -40,6 +40,9 @@
   <link href="{% static 'css/search_conversion_refinement.css' %}" rel="stylesheet">
   <link href="{% static 'css/mobile_commerce_pro.css' %}" rel="stylesheet">
   <link href="{% static 'css/desktop_commerce_pro.css' %}" rel="stylesheet">
+  <link rel="icon" type="image/png" sizes="128x128" href="{% static 'icons/leosoft-lion.png' %}">
+  <link rel="shortcut icon" href="{% url 'site_favicon' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/leosoft-lion.png' %}">
   <link rel="manifest" href="{% static 'site.webmanifest' %}">
   {% block extra_css %}{% endblock %}
   <link href="{% static 'css/storefront_polish.css' %}" rel="stylesheet">
@@ -85,10 +88,9 @@
             <div class="dropdown-menu market-mega-menu">
               <div class="market-mega-menu__header"><div><small>Shop by department</small><strong>Technology organised around your needs</strong></div><a href="{% url 'product_list' %}">View everything <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
               <div class="market-mega-menu__grid">
-                {% for category in public_nav_categories %}
+                {% for category in public_nav_categories|slice:":8" %}
                 <section class="market-mega-menu__category">
-                  <a class="market-mega-menu__title" href="{% url 'product_category' category.slug %}"><span>{{ category.name }}</span><small>{{ category.public_item_count }} item{{ category.public_item_count|pluralize }}</small></a>
-                  {% if category.public_subcategories %}<nav>{% for subcategory in category.public_subcategories %}<a href="{% url 'product_category' subcategory.slug %}">{{ subcategory.name }}</a>{% endfor %}</nav>{% else %}<p>{{ category.description|default:'Browse products and related solutions.'|truncatewords:12 }}</p>{% endif %}
+                  <a class="market-mega-menu__title" href="{% url 'product_category' category.slug %}"><span>{{ category.name }}</span><small>{{ category.public_item_count }} items</small></a>
                 </section>
                 {% endfor %}
               </div>
@@ -141,6 +143,7 @@
       </div>
     </nav>
 
+    {% if resolve_url_name != 'home' %}
     <nav class="market-quick-nav d-none d-xl-block" aria-label="Popular shopping destinations">
       <div class="container market-quick-nav__inner">
         <a class="is-emphasis" href="{% url 'product_collection' 'deals' %}"><i class="bi bi-tags" aria-hidden="true"></i>Deals</a>
@@ -151,6 +154,7 @@
         <a href="{% url 'contact' %}?type=quote">Request a formal quote</a>
       </div>
     </nav>
+    {% endif %}
     {% else %}
     <nav class="navbar navbar-expand-lg navbar-dark site-navbar shadow-sm sticky-top" aria-label="Staff navigation"><div class="container"><a class="navbar-brand site-brand fw-semibold" href="{% url 'home' %}"><span class="site-brand__mark"><i class="bi bi-cpu"></i></span><span>{{ company.company_name }}</span></a><button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#staffBaseNav"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="staffBaseNav"><ul class="navbar-nav ms-auto"><li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Public site</a></li><li class="nav-item"><a class="nav-link" href="{% url 'staff_dashboard' %}">Staff workspace</a></li><li class="nav-item"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nav-link bg-transparent border-0" type="submit">Log out</button></form></li></ul></div></div></nav>
     {% endif %}
@@ -165,12 +169,24 @@
 
   {% if public_navigation_enabled %}
   <footer class="market-footer mt-auto">
+    {% if resolve_url_name == 'home' %}
+    <div class="container py-4 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+      <a class="text-decoration-none text-white fw-semibold" href="{% url 'home' %}">{{ company.company_name }}</a>
+      <p class="mb-0 small">Computers, repairs and IT support in Uganda.</p>
+      <nav class="d-flex flex-wrap gap-3" aria-label="Essential links">
+        <a href="{% url 'product_list' %}">Shop</a>
+        <a href="{% url 'service_list' %}">Services</a>
+        <a href="{% url 'contact' %}">Contact</a>
+      </nav>
+    </div>
+    {% else %}
     <div class="container market-footer__grid">
       <section><a class="market-footer__brand" href="{% url 'home' %}"><span class="site-brand__mark"><i class="bi bi-cpu"></i></span><span><strong>{{ company.company_name }}</strong><small>{{ company.tagline|default:'Technology that works for you.' }}</small></span></a><p>Dependable technology products, repairs, installations and business IT support with clear documentation and human follow-up.</p>{% if company.phone %}<a href="tel:{{ company.phone|cut:' ' }}"><i class="bi bi-telephone" aria-hidden="true"></i>{{ company.phone }}</a>{% endif %}{% if company.email %}<a href="mailto:{{ company.email }}"><i class="bi bi-envelope" aria-hidden="true"></i>{{ company.email }}</a>{% endif %}</section>
       <section><h2>Shop</h2><a href="{% url 'product_list' %}">All products</a><a href="{% url 'product_collection' 'new' %}">New arrivals</a><a href="{% url 'product_collection' 'deals' %}">Current deals</a><a href="{% url 'product_collection' 'refurbished' %}">Refurbished technology</a><a href="{% url 'product_compare' %}">Compare products</a></section>
       <section><h2>Solutions</h2><a href="{% url 'product_collection' 'student' %}">For students</a><a href="{% url 'product_collection' 'business' %}">For business</a><a href="{% url 'product_collection' 'creative' %}">Creative &amp; technical work</a><a href="{% url 'service_list' %}">Repairs &amp; services</a><a href="{% url 'contact' %}?type=quote">Formal quotations</a></section>
       <section><h2>Customer help</h2><a href="{% url 'buying_guide' %}">Technology buying guide</a><a href="{% url 'contact' %}">Contact the team</a><a href="{% url 'portal_repair_intake' %}">Submit a repair request</a><a href="{% if user.is_authenticated %}{% url 'portal_home' %}{% else %}{% url 'portal_login' %}{% endif %}">Customer account</a><a href="{% url 'about' %}">About LEOSOFT</a>{% if growth_settings.privacy_policy_url %}<a href="{{ growth_settings.privacy_policy_url }}">Privacy</a>{% endif %}</section>
     </div>
+    {% endif %}
     <div class="container market-footer__bottom"><span>&copy; {% now 'Y' %} {{ company.company_name }}</span><nav aria-label="Social profiles">{% if social_profiles.facebook_url %}<a href="{{ social_profiles.facebook_url }}" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}{% if social_profiles.instagram_url %}<a href="{{ social_profiles.instagram_url }}" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}{% if social_profiles.tiktok_url %}<a href="{{ social_profiles.tiktok_url }}" target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>{% endif %}{% if social_profiles.whatsapp_url %}<a href="{{ social_profiles.whatsapp_url }}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>{% endif %}</nav></div>
   </footer>
 

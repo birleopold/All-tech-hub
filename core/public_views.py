@@ -1,20 +1,16 @@
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, F, Q
+from django.db.models import F, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils.text import slugify
 
-from catalog.brand_facets import grouped_brand_rows
 from catalog.discovery import new_rotation_seed, order_for_discovery
-from catalog.experience import recent_products
 from catalog.models import Product
 from catalog.presentation import prepare_public_products
 from core.forms import ContactForm
 from core.models import hours_summary, is_open_now
 from core.seo import public_url
 from core.views import HomeView
-from growth.models import ProductGrowthData
 
 
 class PublicHomeView(HomeView):
@@ -113,10 +109,7 @@ class PublicHomeView(HomeView):
             order_for_discovery(featured_products, new_rotation_seed())[:8]
         )
         context["featured_services"] = prepare_public_products(
-            order_for_discovery(featured_services, new_rotation_seed())[:6]
-        )
-        context["new_arrivals"] = prepare_public_products(
-            published.filter(kind=Product.KIND_PHYSICAL).order_by("-created_at", "-pk")[:8]
+            order_for_discovery(featured_services, new_rotation_seed())[:4]
         )
         context["deal_products"] = prepare_public_products(
             published.filter(kind=Product.KIND_PHYSICAL)
@@ -125,49 +118,8 @@ class PublicHomeView(HomeView):
                 | Q(variants__compare_at_price__gt=F("variants__price"))
             )
             .distinct()
-            .order_by("-updated_at", "name")[:8]
+            .order_by("-updated_at", "name")[:4]
         )
-        context["refurbished_products"] = prepare_public_products(
-            published.filter(
-                kind=Product.KIND_PHYSICAL,
-                growth_data__condition=ProductGrowthData.CONDITION_REFURBISHED,
-            ).order_by("-is_featured", "-updated_at")[:8]
-        )
-        context["recently_viewed_products"] = prepare_public_products(
-            recent_products(self.request, limit=8)
-        )
-        brand_rows = grouped_brand_rows(
-            ProductGrowthData.objects.filter(
-                product__is_published=True,
-                product__kind=Product.KIND_PHYSICAL,
-                brand__gt="",
-            )
-            .values("brand")
-            .annotate(product_count=Count("product_id", distinct=True)),
-            limit=10,
-        )
-        for brand in brand_rows:
-            brand["slug"] = slugify(brand["brand"])
-        context["brand_collections"] = brand_rows
-        context["purpose_collections"] = self.PURPOSE_COLLECTIONS
-        context["budget_collections"] = self.BUDGET_COLLECTIONS
-        context["condition_guide"] = [
-            {
-                "name": "New",
-                "code": ProductGrowthData.CONDITION_NEW,
-                "copy": "New equipment presented as supplied by the manufacturer or distributor.",
-            },
-            {
-                "name": "Refurbished",
-                "code": ProductGrowthData.CONDITION_REFURBISHED,
-                "copy": "Previously owned equipment prepared for resale and clearly identified.",
-            },
-            {
-                "name": "Used",
-                "code": ProductGrowthData.CONDITION_USED,
-                "copy": "Pre-owned equipment whose condition should be confirmed before purchase.",
-            },
-        ]
         return context
 
 

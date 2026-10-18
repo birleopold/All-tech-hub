@@ -19,6 +19,7 @@ handler404 = "core.error_views.page_not_found"
 handler500 = "core.error_views.server_error"
 
 urlpatterns = [
+    path("favicon.ico", core_seo.site_favicon, name="site_favicon"),
     path("robots.txt", core_seo.robots_txt, name="robots_txt"),
     path("sitemap.xml", merchandising_seo.sitemap_index, name="sitemap_index"),
     path(

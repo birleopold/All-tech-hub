@@ -125,6 +125,7 @@ jobs:
           operations.test_handover_signature
           operations.test_offline_field_notes
           core.test_homepage_commerce_priority
+          core.test_favicon_branding
           merchandising.test_merchant_readiness_visibility
           reliability
 

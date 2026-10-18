@@ -36,8 +36,8 @@ class HomepageCommercePriorityTests(TestCase):
     def test_homepage_has_only_primary_shopping_and_short_trust_content(self):
         response = self.client.get(reverse("home"))
         html = response.content.decode().split('<main id="main-content"', 1)[1].split("</main>", 1)[0]
-        self.assertLess(html.index('id="homepage-products"'), html.index("Technology support beyond the sale"))
-        self.assertLess(html.index("Technology support beyond the sale"), html.index("Shop with confidence"))
+        self.assertLess(html.index('id="homepage-products"'), html.index("Repairs and IT services"))
+        self.assertLess(html.index("Repairs and IT services"), html.index("Shop with confidence"))
         self.assertContains(response, "Shop our products")
         self.assertContains(response, "Shop with confidence")
         self.assertContains(response, reverse("buying_guide_list"))
