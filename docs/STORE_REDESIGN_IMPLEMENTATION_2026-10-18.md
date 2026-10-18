@@ -89,3 +89,15 @@ with an untested candidate or bypass failing Django tests.
   the preview JavaScript syntax before running full tests.
 - **Pending:** true full-page staging campaign preview, real device journey
   acceptance, live payment, delivery provider and client-approved creatives.
+
+## Next product and service refinement package
+
+- Service tiles use authentic product/service photography when present; clear
+  pictograms remain the fallback. The homepage stays compact, with no extra
+  long educational sections.
+- Supplementary buying hubs on product detail pages remain crawlable and
+  accessible through a keyboard-operable disclosure rather than dominating
+  the purchasing screen.
+- Product card and detail regression tests now cover recorded RAM/storage,
+  processor and warranty highlights. No claim is generated for an unset fact.
+- Browser and full deployment test evidence are still pending.

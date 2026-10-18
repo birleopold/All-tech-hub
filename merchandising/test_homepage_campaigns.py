@@ -40,7 +40,10 @@ class HomepageCampaignTests(TestCase):
             stock_quantity=4,
         )
         ProductCommerceProfile.objects.create(
-            product=cls.checked, stock_confirmed_at=timezone.now()
+            product=cls.checked, stock_confirmed_at=timezone.now(),
+            processor_family="Dual-core processor",
+            ram_capacity="8GB", storage_capacity="256GB",
+            storage_type="SSD", warranty_months=6,
         )
         cls.unpublished = Product.objects.create(
             category=cls.computers,
@@ -78,6 +81,15 @@ class HomepageCampaignTests(TestCase):
         self.assertContains(response, "storefront_campaigns.css")
         self.assertContains(response, "storefront_product_cards.css")
         self.assertNotContains(response, "In stock — guaranteed")
+
+    def test_product_card_and_details_surface_short_recorded_specifications(self):
+        homepage = self.client.get(reverse("home"))
+        self.assertContains(homepage, "storefront-card-specs")
+        self.assertContains(homepage, "8GB / 256GB SSD")
+        detail = self.client.get(self.checked.get_absolute_url())
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "storefront-detail-highlights")
+        self.assertContains(detail, "6-month warranty")
 
     def test_active_scheduled_campaign_is_displayed_and_older_one_excluded(self):
         now = timezone.now()

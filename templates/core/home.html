@@ -112,10 +112,16 @@
     </div>
     <div class="market-purpose-grid">
       {% for p in featured_services %}
-      <a class="market-purpose-card" href="{{ p.get_absolute_url }}">
-        <i class="bi {% if forloop.counter == 1 %}bi-tools{% elif forloop.counter == 2 %}bi-router{% elif forloop.counter == 3 %}bi-shield-check{% else %}bi-gear{% endif %}" aria-hidden="true"></i>
-        <h3>{{ p.name }}</h3>
-        <p>{% if p.public_price > 0 %}From {{ company.currency_code }} {{ p.public_price|floatformat:0 }}{% else %}Request a quotation{% endif %}</p>
+      <a class="market-purpose-card storefront-service-card" href="{{ p.get_absolute_url }}">
+        <span class="storefront-service-card__media">
+          {% if p.primary_display_image %}
+            {% responsive_image p.primary_display_image p.name "" "(max-width: 767px) 42vw, 25vw" "lazy" "low" %}
+          {% else %}
+            <i class="bi {% if forloop.counter == 1 %}bi-tools{% elif forloop.counter == 2 %}bi-router{% elif forloop.counter == 3 %}bi-shield-check{% else %}bi-gear{% endif %}" aria-hidden="true"></i>
+          {% endif %}
+        </span>
+        <span class="storefront-service-card__title">{{ p.name }}</span>
+        <span class="storefront-service-card__action">{% if p.public_price > 0 %}From {{ company.currency_code }} {{ p.public_price|floatformat:0 }}{% else %}Request a quotation{% endif %} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
       </a>
       {% endfor %}
     </div>

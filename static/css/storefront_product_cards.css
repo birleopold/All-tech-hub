@@ -20,3 +20,11 @@
 .storefront-detail-highlights span{display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;line-height:1.3;color:#214564;font-weight:700;border:1px solid #dae7f1;background:#f1f7fb;border-radius:.5rem;padding:.4rem .6rem}
 .storefront-detail-highlights i{color:#0874b4}
 @media(max-width:575.98px){.storefront-detail-highlights span{font-size:.75rem;padding:.35rem .48rem}}
+
+/* Keep supplementary SEO guides discoverable without creating a reading wall. */
+.storefront-product-education{padding-block:1.3rem}
+.storefront-product-education__details{border:1px solid #dce5ed;border-radius:1rem;background:#fff;padding:1.1rem 1.3rem}
+.storefront-product-education__details>summary{cursor:pointer;list-style:none;font-weight:800;color:#17466c;font-size:.98rem;display:flex;align-items:center}
+.storefront-product-education__details>summary::-webkit-details-marker{display:none}
+.storefront-product-education__details>summary:focus-visible{outline:3px solid #1479bb;outline-offset:4px}
+.storefront-product-education__details .commercial-section__head h2{font-size:1.45rem}
