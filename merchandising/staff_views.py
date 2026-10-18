@@ -144,6 +144,12 @@ class ProductCommercialReviewView(StaffRequiredMixin, View):
         return render(request, self.template_name, self.context(product, forms))
 
     def post(self, request, pk: int):
+        if not (
+            request.user.has_perm("catalog.change_product")
+            and request.user.has_perm("growth.change_productgrowthdata")
+            and request.user.has_perm("merchandising.change_productcommerceprofile")
+        ):
+            return HttpResponseForbidden("Product review editing permission required.")
         product = self.get_product(pk)
         forms = self.build_forms(product, data=request.POST)
         core_form, growth_form, commerce_form = forms
@@ -213,9 +219,10 @@ class ProductMerchantApprovalView(StaffRequiredMixin, View):
                 ]
                 if not (managed and available):
                     blockers.append("verified tracked stock is not available")
-                if not profile.stock_confirmed_at or (
-                    timezone.now() - profile.stock_confirmed_at
-                ).days > 30:
+                if not profile.stock_confirmed_at or not (
+                    timezone.now() - timezone.timedelta(days=30)
+                    <= profile.stock_confirmed_at <= timezone.now()
+                ):
                     blockers.append("recent stock inspection (last 30 days)")
                 if blockers:
                     messages.error(
