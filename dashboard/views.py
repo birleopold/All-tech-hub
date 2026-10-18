@@ -17,6 +17,7 @@ from core.mixins import StaffRequiredMixin
 from core.seo_audit import seo_audit_snapshot
 from merchandising.forms import SearchConsoleCSVImportForm
 from merchandising.models import SearchQueryInsight
+from merchandising.management.commands.export_google_review_queue import build_google_review_rows
 from merchandising.services import (
     import_search_console_csv,
     merchant_readiness_snapshot,
@@ -160,6 +161,9 @@ class SEOControlCenterView(StaffRequiredMixin, TemplateView):
         ]
 
         context["merchant"] = merchant_readiness_snapshot(row_limit=10)
+        # Read-only, live-database priorities; never infer stock or auto-approve.
+        context["google_review_priority"] = build_google_review_rows(available_only=True, limit=8)
+        context["google_review_in_stock_count"] = len(build_google_review_rows(available_only=True))
         context["approved_merchant_feed_url"] = public_url(
             reverse("google_approved_merchant_feed")
         )
