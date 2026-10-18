@@ -17,6 +17,7 @@ urlpatterns = [
         name="staff_product_commercial_review",
     ),
     path("seo/", views.SEOControlCenterView.as_view(), name="staff_seo"),
+    path("seo/google-review-queue.csv", merchandising_staff_views.GoogleReviewQueueDownloadView.as_view(), name="staff_google_review_queue"),
     path("homepage-campaigns/", staff_homepage_promotions, name="staff_homepage_promotions"),
     path("homepage-campaigns/<int:pk>/", staff_homepage_promotions, name="staff_homepage_promotion_edit"),
 ]
