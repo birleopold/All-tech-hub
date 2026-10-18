@@ -17,6 +17,11 @@ export ALLTECH_DB_ENGINE=django.db.backends.sqlite3
 export ALLTECH_DB_NAME="$WORK/rehearsal.sqlite3"
 export ALLTECH_ALLOWED_HOSTS=localhost,127.0.0.1,testserver
 export ALLTECH_EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend
+# settings_base selects SMTP whenever a host exists, even with an explicit
+# email backend. Clear inherited production mail configuration in rehearsals.
+export ALLTECH_EMAIL_HOST=""
+export ALLTECH_EMAIL_USER=""
+export ALLTECH_EMAIL_PASSWORD=""
 export ALLTECH_MEDIA_ROOT="$WORK/media"
 export ALLTECH_PRIVATE_MEDIA_ROOT="$WORK/private"
 export ALLTECH_BACKUP_ROOT="$WORK/backups"
@@ -53,7 +58,7 @@ for label, (variable, effective) in expected.items():
 if settings.DEBUG is not True:
     raise SystemExit("Offline release rehearsal must run development settings.")
 if "locmem" not in settings.EMAIL_BACKEND:
-    raise SystemExit("Offline release rehearsal must use in-memory email.")
+    raise SystemExit(f"Offline release rehearsal must use in-memory email; effective backend={settings.EMAIL_BACKEND!r}.")
 PY
 
 printf 'Checking source and browser script syntax...\n'
