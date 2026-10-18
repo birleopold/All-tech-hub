@@ -52,6 +52,22 @@
   <div class="alert alert-success"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>All strict-readiness fields are complete. Inspect the public page and Merchant feed before enabling publication.</div>
   {% endif %}
 
+  <section class="card staff-panel-card mb-4" aria-label="Merchant publication approval"><div class="card-body">
+    <h2 class="h5">Final Google Merchant publication review</h2>
+    <p class="text-muted small">Save the verified product details below first. This separate action never invents information or sends data directly to Google; it controls eligibility for your existing approved feed. Approval requires all strict fields, tracked sellable stock and a stock inspection within the last 30 days.</p>
+    {% if perms.merchandising.change_productcommerceprofile %}
+      <form method="post" action="{% url 'staff_product_merchant_approval' product.pk %}" class="d-flex flex-wrap gap-2">{% csrf_token %}
+        {% if product.commerce_profile.merchant_enabled %}
+          <button class="btn btn-outline-danger" name="action" value="disable" type="submit">Remove from approved feed</button>
+        {% else %}
+          <button class="btn btn-success" name="action" value="approve" type="submit">Approve verified product for feed</button>
+        {% endif %}
+      </form>
+    {% else %}
+      <p class="small mb-0">Ask a manager with Merchant approval permission to complete the final review.</p>
+    {% endif %}
+  </div></section>
+
   <form method="post" class="staff-form-shell" novalidate>
     {% csrf_token %}
 
