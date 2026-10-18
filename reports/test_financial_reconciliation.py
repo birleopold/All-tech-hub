@@ -26,6 +26,8 @@ class FinancialReconciliationTests(TestCase):
         self.assertContains(response, "Orders and documents, side by side")
         self.assertEqual(response.context["online_orders"], 0)
         self.assertEqual(response.context["document_count"], 0)
+        self.assertEqual(response.context["cost_missing_lines"], 0)
+        self.assertEqual(response.context["large_value_documents"], 0)
 
     def test_non_staff_user_cannot_see_financial_report(self):
         visitor = get_user_model().objects.create_user(
