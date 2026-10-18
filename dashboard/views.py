@@ -8,6 +8,7 @@ from django.views.generic import TemplateView
 
 from dashboard.overview import dashboard_overview
 from dashboard.snapshot import dashboard_snapshot
+from dashboard.google_report import google_dashboard_metrics
 from catalog.brand_facets import grouped_brand_rows
 from catalog.models import Category, Product
 from catalog.local_seo import category_metadata
@@ -161,6 +162,7 @@ class SEOControlCenterView(StaffRequiredMixin, TemplateView):
         ]
 
         context["merchant"] = merchant_readiness_snapshot(row_limit=10)
+        context["google_live"] = google_dashboard_metrics()
         # Read-only, live-database priorities; never infer stock or auto-approve.
         context["google_review_priority"] = build_google_review_rows(available_only=True, limit=8)
         context["google_review_in_stock_count"] = len(build_google_review_rows(available_only=True))
