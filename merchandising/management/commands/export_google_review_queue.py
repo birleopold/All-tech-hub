@@ -9,6 +9,7 @@ from django.urls import reverse
 
 from catalog.models import Product
 from merchandising.models import ProductCommerceProfile
+from merchandising.enrichment import product_inventory_state
 
 
 def spreadsheet_safe(value):
@@ -24,8 +25,6 @@ def build_google_review_rows(*, available_only=False, limit=0):
         .select_related("category", "commerce_profile", "growth_data")
         .prefetch_related("gallery_images", "variants")
     )
-    if available_only:
-        products = products.filter(track_inventory=True, stock_quantity__gt=0)
     rows = []
     for product in products.iterator(chunk_size=100):
         try:
@@ -33,16 +32,26 @@ def build_google_review_rows(*, available_only=False, limit=0):
         except ProductCommerceProfile.DoesNotExist:
             profile = None
         missing = profile.merchant_missing_fields() if profile else ["commercial profile"]
-        available = bool(product.track_inventory and product.stock_quantity > 0)
-        if not available:
+        managed, sellable = product_inventory_state(product)
+        active_variants = [v for v in product.variants.all() if v.is_active]
+        confirmed = bool(managed and sellable and (
+            any(v.track_inventory and v.stock_quantity > 0 for v in active_variants)
+            if active_variants else product.track_inventory and product.stock_quantity > 0
+        ))
+        if available_only and not confirmed:
+            continue
+        if not confirmed:
             # A non-stock-tracked product needs manual stock verification.
             missing = list(dict.fromkeys([*missing, "confirm saleable stock"]))
         rows.append({
             "product_id": product.pk,
             "product_name": spreadsheet_safe(product.name),
             "category": spreadsheet_safe(product.category.name) if product.category_id else "",
-            "stock_quantity": product.stock_quantity if product.track_inventory else "",
-            "stock_tracked": "yes" if product.track_inventory else "no",
+            "stock_quantity": (
+                sum(v.stock_quantity for v in active_variants if v.track_inventory and v.stock_quantity > 0)
+                if active_variants else product.stock_quantity if product.track_inventory else ""
+            ),
+            "stock_tracked": "yes" if confirmed else "no",
             "merchant_approved": "yes" if profile and profile.merchant_enabled else "no",
             "merchant_score": profile.merchant_readiness_score if profile else 0,
             "missing_checks": "; ".join(missing),
