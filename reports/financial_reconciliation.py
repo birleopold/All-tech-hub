@@ -48,6 +48,8 @@ class FinancialReconciliationView(PermissionRequiredMixin, StaffRequiredMixin, T
             "documents_without_lines": docs.annotate(
                 line_count=Count("lines")
             ).filter(line_count=0).count(),
+            "cost_missing_lines": document_lines.filter(unit_cost__lte=0).count(),
+            "large_value_documents": docs.filter(total__gte=100000000).count(),
             "largest_documents": docs.order_by("-total", "-pk")[:15],
         })
         return ctx
