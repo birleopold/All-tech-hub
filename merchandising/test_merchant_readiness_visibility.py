@@ -86,3 +86,28 @@ class MerchantReadinessVisibilityTests(TestCase):
             response.context["merchant_readiness_score"],
             self.profile.merchant_readiness_score,
         )
+
+    def test_unverified_staff_tasks_do_not_leak_to_product_detail(self):
+        response = self.client.get(self.product.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Product details")
+        for task in (
+            "Inspected product information",
+            "Confirm actual photos", "Confirm warranty", "Confirm charger",
+            "Delivery or collection confirmed before payment",
+        ):
+            self.assertNotContains(response, task)
+
+    def test_customer_can_see_only_recorded_product_assurances(self):
+        profile = ProductCommerceProfile.objects.get(product=self.product)
+        profile.actual_photos = True
+        profile.warranty_months = 6
+        profile.charger_included = False
+        profile.delivery_note = "Collection by arrangement"
+        profile.save()
+        response = self.client.get(self.product.get_absolute_url())
+        self.assertContains(response, "Actual product photos")
+        self.assertContains(response, "6-month warranty")
+        self.assertContains(response, "Charger not included")
+        self.assertContains(response, "Collection by arrangement")
+        self.assertNotContains(response, "Confirm charger")

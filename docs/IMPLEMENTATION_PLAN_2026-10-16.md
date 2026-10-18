@@ -71,6 +71,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Browser-verify routed category/brand changes, cross-tab discovery pagination, and search filters.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
 - [x] Add conservative typo-recovery suggestions only when a corrected search produces results under the same filters, with customer navigation regression tests.
+- [x] Remove customer-visible internal assurance tasks such as 'Confirm charger/warranty/actual photos' from product details. Show only recorded warranty, charger inclusion, actual-unit image confirmation and delivery notes without implying an unverified inspection; retain staff-only Merchant review with regression coverage.
 
 ## P3 first customer-to-staff order protection
 - [x] Disable delivery at checkout when no priced delivery area exists, instead of silently charging zero; pickup remains usable.
