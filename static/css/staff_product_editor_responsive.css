@@ -1,0 +1,21 @@
+/* Small-screen safeguards for the dense staff product editor. */
+@media (max-width: 767.98px) {
+  .staff-form-shell { min-width: 0; }
+  .staff-form-shell .table-responsive {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .staff-form-shell .table-responsive table { min-width: 820px; }
+  .staff-form-shell .staff-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .staff-form-shell .staff-form-field { min-width: 0; }
+  .staff-form-shell .staff-form-field input,
+  .staff-form-shell .staff-form-field select,
+  .staff-form-shell .staff-form-field textarea { max-width: 100%; }
+  .staff-form-footer { flex-wrap: wrap; gap: 12px; }
+  .staff-form-footer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .staff-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+}
