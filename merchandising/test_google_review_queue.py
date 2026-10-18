@@ -54,3 +54,19 @@ class GoogleReviewQueueTests(TestCase):
         self.assertIn("text/csv", response["Content-Type"])
         self.assertEqual(response["Cache-Control"], "private, no-store")
         self.assertIn("merchant_approved", response.content.decode("utf-8-sig"))
+
+    def test_seo_page_provides_in_stock_priorities(self):
+        category = Category.objects.create(name="Ready queue", slug="ready-queue-extra")
+        product = Product.objects.create(
+            category=category, name="Ready Stock Unit", slug="ready-stock-extra",
+            price="120000.00", track_inventory=True, stock_quantity=3,
+            is_published=True,
+        )
+        staff = get_user_model().objects.create_user(
+            username="seo-priority-staff", password="test-only", is_staff=True,
+        )
+        self.client.force_login(staff)
+        response = self.client.get(reverse("staff_seo"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, product.name)
+        self.assertContains(response, "Google review: products with recorded stock")
