@@ -54,6 +54,7 @@
 
   <section class="card staff-panel-card mb-4" aria-label="Merchant publication approval"><div class="card-body">
     <h2 class="h5">Final Google Merchant publication review</h2>
+    {% if stock_check_expired %}<div class="alert alert-warning" role="status"><strong>Stock verification required:</strong> the previous inventory check is missing, older than 30 days, or dated in the future. The approved feed excludes this product until a fresh physical stock check is recorded, even if it was approved earlier.</div>{% endif %}
     <p class="text-muted small">Save the verified product details below first. This separate action never invents information or sends data directly to Google; it controls eligibility for your existing approved feed. Approval requires all strict fields, tracked sellable stock and a stock inspection within the last 30 days.</p>
     {% if perms.merchandising.change_productcommerceprofile %}
       <form method="post" action="{% url 'staff_product_merchant_approval' product.pk %}" class="d-flex flex-wrap gap-2">{% csrf_token %}
