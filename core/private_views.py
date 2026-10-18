@@ -81,6 +81,8 @@ def staff_job_handover_signature(request, pk: int):
 def portal_job_handover_signature(request, pk: int):
     customer = _portal_customer(request)
     if customer is None:
+        if request.user.is_authenticated:
+            raise Http404
         return redirect("portal_login")
     handover = get_object_or_404(
         JobHandover.objects.select_related("job"), job_id=pk,

@@ -240,3 +240,26 @@ until a genuine VPS run provides a passing log and SHA-matched readiness.
 The script records its own full output and does not certify browser/device,
 provider or real PostgreSQL restore results. The final signature endpoint
 also now requires job view/change permission rather than a generic staff login.
+
+## 2026-10-18: VPS release blocked, corrective patch prepared
+
+User-supplied release log `closeout-20261018T080556Z-1419503.log`
+reported **817 tests, 38 errors and 5 failures**, and closed with exit code 1.
+**That attempt did not deploy.** The 38 errors shared two template causes:
+a missing `{% endif %}` in the homepage at the tested older commit and a
+missing `{% load static %}` inside the separately compiled technician-note
+partial. The current `main` homepage template had already gained the
+`endif` in the subsequent lion-favicon commit `294692e`.
+
+Additional corrections in the next patch: use an issued/locked quotation in
+positive acceptance tests; hide underlying signature file input from Django
+admin by explicitly selecting protected fields; return 404 for authenticated
+noncustomer users requesting someone else's signature; test same-size dump
+tampering separately from truncated dumps; update historical tests that
+required the intentionally removed long homepage sections; and compile
+high-traffic templates **before** the time-consuming full test run.
+
+The warnings for forbidden/unavailable routes and deliberate corrupt-image
+tests are not themselves proof of production breakage. **Do not mark this
+patch tested, deployed or production-certified until its newer gate log
+shows every Django test passing and matching release readiness.**

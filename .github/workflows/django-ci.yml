@@ -91,6 +91,7 @@ jobs:
           catalog.test_available_variant_price
           catalog.test_catalogue_journey_refinement
           core.test_homepage_engagement
+          core.test_critical_template_compilation
           core.test_home_tech_ambient
           core.test_product_contact_experience
           core.test_storefront_polish

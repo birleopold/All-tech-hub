@@ -242,7 +242,7 @@ class SearchConversionRefinementTests(TestCase):
         self.assertContains(response, "BreadcrumbList")
         self.assertContains(response, "Save 20%")
 
-    def test_recently_viewed_products_continue_on_homepage(self):
+    def test_recently_viewed_state_is_preserved_without_extra_homepage_section(self):
         self.client.get(self.hp.get_absolute_url())
         response = self.client.get(reverse("home"))
 
@@ -250,8 +250,8 @@ class SearchConversionRefinementTests(TestCase):
             response.context["recently_viewed_products"][0].pk,
             self.hp.pk,
         )
-        self.assertContains(response, "Recently viewed")
         self.assertContains(response, self.hp.name)
+        self.assertNotContains(response, "Recently viewed")
 
     def test_simple_available_cards_offer_quick_add(self):
         response = self.client.get(reverse("product_list"), {"brand": "HP"})

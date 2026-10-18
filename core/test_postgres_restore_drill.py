@@ -88,8 +88,15 @@ class RestoreDrillArchiveTests(SimpleTestCase):
             verify_manifest(self.manifest)
 
     def test_rejects_corrupt_dump_even_with_valid_manifest_format(self):
-        self.database.write_bytes(b"tampered-dump")
+        # Preserve original size so this specifically tests the checksum.
+        # A changed length should be rejected even earlier by size validation.
+        self.database.write_bytes(b"corrupt-dump" + b"x" * (len(b"test-dump-placeholder") - len(b"corrupt-dump")))
         with self.assertRaisesMessage(RestoreDrillError, "checksum mismatch"):
+            verify_manifest(self.manifest)
+
+    def test_rejects_dump_size_mismatch_before_checksum_verification(self):
+        self.database.write_bytes(b"truncated")
+        with self.assertRaisesMessage(RestoreDrillError, "size mismatch"):
             verify_manifest(self.manifest)
 
     def test_rejects_archive_path_traversal(self):

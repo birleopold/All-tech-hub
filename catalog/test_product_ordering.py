@@ -96,8 +96,9 @@ class ProductOrderingJourneyTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'href="#homepage-products"')
-        self.assertLess(html.index('id="homepage-products"'), html.index('id="homepage-discovery"'))
-        self.assertLess(html.index(self.product.name), html.index('id="homepage-discovery"'))
+        self.assertLess(html.index('id="homepage-products"'), html.index("Shop with confidence"))
+        self.assertLess(html.index(self.product.name), html.index("Shop with confidence"))
+        self.assertNotIn('id="homepage-discovery"', html)
         self.assertNotContains(response, "What are you looking for today?")
         self.assertEqual([p.pk for p in response.context["featured_products"]], [self.product.pk])
 

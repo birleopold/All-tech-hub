@@ -73,6 +73,28 @@ printf 'Checking Django and migration drift...\n'
 python manage.py check
 python manage.py makemigrations --check --dry-run
 
+printf 'Compiling high-traffic Django templates before expensive test suite...\n'
+python - <<'PY'
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+import django
+django.setup()
+from django.template.loader import get_template
+for template in (
+    "core/home.html",
+    "catalog/_marketplace_product_card.html",
+    "operations/_offline_field_notes.html",
+    "operations/job_bench.html",
+    "operations/job_detail.html",
+    "billing/document_detail.html",
+    "billing/quote_customer.html",
+    "billing/revision_comparison.html",
+    "portal/documents.html",
+):
+    get_template(template)
+    print(f"Template syntax OK: {template}")
+PY
+
 printf 'Rehearsing migrations on an empty temporary database...\n'
 python manage.py migrate --noinput
 

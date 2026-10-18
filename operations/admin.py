@@ -77,10 +77,13 @@ class JobHandoverAdmin(admin.ModelAdmin):
     list_filter = ("method", "recorded_at")
     search_fields = ("job__number", "recipient_name")
     raw_id_fields = ("job", "recorded_by")
-    readonly_fields = (
+    # Explicit fields prevent Django admin from generating an unprotected
+    # FieldFile widget/link for the underlying signature ImageField.
+    fields = (
         "job", "method", "recipient_name", "note", "protected_signature",
         "recorded_by", "recorded_at",
     )
+    readonly_fields = fields
 
     @admin.display(description="Recipient signature")
     def protected_signature(self, obj):

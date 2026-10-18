@@ -396,6 +396,8 @@ class QuoteCustomerAcceptanceTests(TestCase):
             doc_type=CommercialDocument.TYPE_QUOTE,
             number=num,
             customer=self.customer,
+            status=CommercialDocument.STATUS_ISSUED,
+            locked_at=timezone.now(),
             quote_requires_customer_acceptance=True,
         )
         self.doc.ensure_customer_quote_token()

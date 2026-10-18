@@ -80,14 +80,19 @@ class CatalogBrandConsistencyTests(TestCase):
         self.assertEqual(filtered.context["paginator"].count, 3)
         self.assertEqual(filtered.context["current_brand"], "Samsung")
 
-    def test_homepage_brand_links_also_group_case_variants(self):
-        response = self.client.get(reverse("home"))
+    def test_brand_links_stay_on_catalogue_after_homepage_simplification(self):
+        # Branding remains available in catalogue filters rather than filling
+        # the streamlined homepage with repetitive brand sections.
+        response = self.client.get(reverse("product_list"))
         samsung = [
-            brand for brand in response.context["brand_collections"]
-            if brand["slug"] == "samsung"
+            brand for brand in response.context["catalog_brands"]
+            if brand["brand"] == "Samsung"
         ]
         self.assertEqual(len(samsung), 1)
         self.assertEqual(samsung[0]["product_count"], 3)
+        home = self.client.get(reverse("home"))
+        self.assertEqual(home.status_code, 200)
+        self.assertNotContains(home, "Shop by brand")
 
     def test_canonical_brand_route_and_search_suggestions(self):
         response = self.client.get(reverse("product_brand", args=["samsung"]))
