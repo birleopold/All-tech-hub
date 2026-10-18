@@ -26,11 +26,13 @@ Evidence: authenticated TinyFish walkthrough of /staff/, /staff/seo/, /staff/cat
 - [x] P4a: Label manual CSV opportunity counters separately from daily Windsor account metrics.
 - [ ] P4b: SEO: clarify live Windsor queries vs manual CSV imports; tie opportunity guidance to real search records; improve consistency between source-specific metrics.
 - [x] P5a: Explain differences between online order sales and document finance metrics in the staff reporting UI.
-- [ ] P5b: Sales & reporting: document online-order revenue vs document profit basis; inspect extraordinary profit lines and number gaps; add reconciliation drilldowns and safeguards, not arbitrary accounting changes.
+- [x] P5b-code: Add staff finance-only, source-separated online order versus issued document reconciliation page, largest-document review and permission tests.
+- [ ] P5c: Sales & reporting: document online-order revenue vs document profit basis; inspect extraordinary profit lines and number gaps; add reconciliation drilldowns and safeguards, not arbitrary accounting changes.
 - [x] P6a: Bounded 25-per-action transaction-safe claim for unassigned overdue leads, exposed on the staff list and covered by tests.
 - [x] P6b-diagnostics: Add factual lead-source, campaign-link, overdue and ownership report and regression test.
 - [ ] P6c: Leads: review 49 overdue leads and attribution; improve assign/claim, bulk actions, priority and tracking while preserving audit history.
-- [ ] P7: Accessibility and mobile browser review: staff navigation, touch actions, forms, responsive tables and multi-device save flows.
+- [x] P7a-code: Add narrow-screen constraints for the product editor, horizontally scrollable variant table, explicit table headers and unsaved-change warning. TinyFish inspected desktop only; mobile viewport resizing unsupported.
+- [ ] P7b: Accessibility and mobile browser review: staff navigation, touch actions, forms, responsive tables and multi-device save flows.
 - [ ] P8: Release verification: isolated tests, guarded deploy, public health, Google timer, permission checks and authenticated TinyFish regression.
 
 ## Already available; do not duplicate
@@ -52,3 +54,9 @@ These were not fully visible during the automated browser walkthrough and should
 - Notification noise: inventory alert producers and group repeat messages by recipient, message and destination; preserve actionable distinct alerts and original history.
 - Attribution: inspect captured campaign links/UTM evidence; retain `direct` when referral provenance is missing rather than guessing.
 - Release: full tests and live external integration checks are still pending on the VPS; code commit alone does not prove a deployed feature.
+
+## Final four-item status (do not conflate code with real-world verification)
+- Financial reconciliation: code-backed comparison page and permission tests committed; extraordinary accounting numbers still require comparing actual posted documents, payments and source costs.
+- Product enrichment: existing staff verification fields, review queue and guarded approval are implemented; physical SKU/variant/condition/price verification is not possible from website images alone and no unverified product data was applied.
+- Responsive workflows: desktop staff editor inspected with TinyFish; improved narrow-width CSS and unsaved-form protection committed. The browser could not resize to 390px; live mobile validation remains.
+- Production: requires the user's guarded VPS deployment and successful current-revision release log; not certified by GitHub commits or public read-only inspection.
