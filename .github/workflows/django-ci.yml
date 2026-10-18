@@ -104,6 +104,7 @@ jobs:
           inventory.tests
           operations.test_job_expense_ledger
           billing.test_finance_controls
+          billing.test_quote_revision_safety
           operations.test_financial_reconciliation
           reports.test_field_finance_access
           reports.test_conversion
@@ -277,6 +278,7 @@ jobs:
           marketing.test_attribution_metrics
           growth.test_growth
           billing.test_finance_controls
+          billing.test_quote_revision_safety
           operations.test_financial_reconciliation
           operations.test_job_expense_ledger
           purchasing.tests

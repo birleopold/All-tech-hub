@@ -87,6 +87,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Product detail, sticky mobile action and service enquiry prefill reflect the quotation-required state.
 - [x] Reject direct attempts to add zero-priced services or service options through the cart endpoint.
 - [x] Remove old quote-only service entries from customer sessions before showing cart or processing checkout.
+- [x] Protect issued quotation revision history so accepted or internally approved quotation terms must be approved again after a revision; revoke the earlier private acceptance token, snapshot former acceptance evidence, and stop revisions of paid, cancelled, posted-inventory or receipt documents. Regression tests added.
+- [x] Harden completed-order verified-purchase reviews against accidental unpublication on duplicate submissions, concurrent duplicate submissions for one customer, and silent review truncation; published reviews cannot be overwritten from the private link.
+- [ ] Run the new quote/review regression tests on the VPS and exercise revision acceptance links and review moderation in desktop/mobile browsers.
 - [ ] Run service/checkout regression tests and validate the quotation-to-lead handoff in staging.
 - [x] Code-stage the checkout-to-fulfillment journey: guest/customer checkout, priced delivery or pickup, tax totals, reserved stock, idempotent submissions, customer tracking, staff status/shipments, cancellation/refund checks and return restrictions. Reuse existing payment and outbound-message integrations rather than creating duplicate gateways.
 - [x] Add focused exception-path coverage for unpriced delivery, shipment regression, cancellation and invalid inventory returns.

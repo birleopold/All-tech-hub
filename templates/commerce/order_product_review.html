@@ -13,6 +13,13 @@
   <div class="row justify-content-center">
     <div class="col-lg-8">
       <div class="alert alert-info border-0 shadow-sm"><strong>Verified purchase.</strong> This private form is connected to your completed LEOSOFT order. Do not forward its address.</div>
+      {% if existing_review.is_published %}
+      <div class="card border-0 shadow-sm"><div class="card-body p-4">
+        <h2 class="h5">Your verified review is published</h2>
+        <p class="text-muted">Thank you for reviewing this purchase. Published reviews are locked against changes through this private link. Contact support if you need to request a correction.</p>
+        <a class="btn btn-outline-primary" href="{{ order.get_absolute_url }}">Back to order</a>
+      </div></div>
+      {% else %}
       <form method="post" class="card border-0 shadow-sm">
         {% csrf_token %}
         <div class="card-body p-4 p-lg-5">
@@ -31,12 +38,13 @@
             <textarea class="form-control" id="body" name="body" rows="6" maxlength="1000" required placeholder="What worked well? What should another customer know?">{% if existing_review %}{{ existing_review.body }}{% endif %}</textarea>
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-primary" type="submit">Submit verified review</button>
+            <button class="btn btn-primary" type="submit">{% if existing_review %}Update review awaiting moderation{% else %}Submit verified review{% endif %}</button>
             <a class="btn btn-outline-secondary" href="{{ order.get_absolute_url }}">Back to order</a>
           </div>
           <p class="small text-muted mt-3 mb-0">Do not include passwords, transaction PINs, full serial numbers or private contact details.</p>
         </div>
       </form>
+      {% endif %}
     </div>
   </div>
 </div>

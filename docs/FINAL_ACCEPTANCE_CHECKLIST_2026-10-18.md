@@ -139,3 +139,24 @@ customer's database, file names, credentials or archive into a public issue.
   open. Offline inventory, expenses, payment, time entries, signatures and
   status transitions are deliberately not queued because they require live
   conflict/reconciliation checks.
+
+## Follow-up hardening candidate — final acceptance still open
+
+- Offline technician notes: the browser queue now deletes expired device drafts
+  when it is opened; it never sends a note without an explicit sync action.
+- Verified-purchase reviews: server service now serialises review creation per
+  customer, treats repeat identical content as idempotent, prevents published
+  review rewrites from the private URL and rejects overlong text explicitly.
+  Public review screen provides a clear published/locked state. This requires
+  normal Django and browser test execution on the target candidate release.
+- Quotation revisions: paid, cancelled, inventory-posted and receipt documents
+  cannot be unlocked by the ordinary revision action. Issued quote revisions
+  preserve the prior accepted/approved terms in the snapshot, clear finance
+  and customer acceptance and rotate the earlier private customer link.
+  Re-approval and new customer acceptance are necessary before a revised
+  quotation can be treated as approved. Execute the focused regression module
+  and customer link test in the release gate.
+- The latest source code cannot attest to external payment settlement, real
+  SMTP delivery, provider webhooks, social publication, Merchant Center
+  approvals, physical inventory counts or the availability of GitHub-hosted
+  runners. Keep these items open with operational owners.

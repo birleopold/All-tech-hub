@@ -474,6 +474,15 @@ class CommercialDocument(models.Model):
             "number": self.number,
             "doc_type": self.doc_type,
             "status": self.status,
+            "revision_number": self.revision_number,
+            "quote_acceptance": {
+                "internal_approved": self.quote_internally_approved,
+                "internal_approved_at": self.quote_approved_at.isoformat() if self.quote_approved_at else None,
+                "customer_accepted": self.quote_customer_accepted,
+                "customer_responded_at": self.quote_customer_responded_at.isoformat() if self.quote_customer_responded_at else None,
+                "customer_signature_name": self.quote_customer_signature_name,
+                "customer_decline_reason": self.quote_customer_decline_reason,
+            } if self.doc_type == self.TYPE_QUOTE else None,
             "customer": {
                 "name": self.display_customer_name,
                 "company": self.display_customer_company,

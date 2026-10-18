@@ -4,6 +4,7 @@ import os
 from urllib.parse import urljoin
 
 from django.conf import settings
+from django.db import transaction
 from django.urls import reverse
 
 from catalog.models import Product, ProductReview
@@ -11,6 +12,7 @@ from commerce import cart as cart_mod
 from commerce.customer_messages import _deliver
 from commerce.models import Order
 from core.models import CompanySettings
+from crm.models import Customer
 from growth.models import GrowthSettings
 
 
@@ -126,6 +128,7 @@ def send_order_review_request_by_id(order_id: int):
     return send_order_review_request(order)
 
 
+@transaction.atomic
 def verified_review_for_order(
     *,
     order: Order,
@@ -138,11 +141,24 @@ def verified_review_for_order(
         raise ValueError("Reviews are available after the order is delivered or fulfilled.")
     if not order.lines.filter(product=product).exists():
         raise ValueError("This product is not part of the order.")
-    if rating < 1 or rating > 5 or not body.strip():
-        raise ValueError("Enter a rating from 1 to 5 and a short review.")
+    normalized_title = title.strip()
+    normalized_body = body.strip()
+    if (
+        not isinstance(rating, int)
+        or rating < 1 or rating > 5
+        or not normalized_body
+        or len(normalized_body) > 1000
+        or len(normalized_title) > 200
+    ):
+        raise ValueError("Enter 1–5 stars and a review of 1–1,000 characters (title up to 200).")
+    if product.kind != Product.KIND_PHYSICAL or not product.is_published:
+        raise ValueError("Verified purchase reviews are for published physical products.")
 
+    # Lock the customer's row: reviews from separate completed orders for
+    # this customer and product cannot insert competing reviews concurrently.
+    Customer.objects.select_for_update().get(pk=order.customer_id)
     existing = (
-        ProductReview.objects.filter(
+        ProductReview.objects.select_for_update().filter(
             product=product,
             customer=order.customer,
             is_verified_purchase=True,
@@ -151,10 +167,18 @@ def verified_review_for_order(
         .first()
     )
     if existing:
+        if (
+            existing.rating == rating
+            and existing.title == normalized_title
+            and existing.body == normalized_body
+        ):
+            return existing  # Idempotent; do not unpublish an approved review.
+        if existing.is_published:
+            raise ValueError("This review is already published. Contact support to request an edit.")
         existing.author_name = order.contact_name[:120]
         existing.rating = rating
-        existing.title = title.strip()[:200]
-        existing.body = body.strip()[:1000]
+        existing.title = normalized_title
+        existing.body = normalized_body
         existing.is_published = False
         existing.moderated_at = None
         existing.moderated_by = None
@@ -166,8 +190,8 @@ def verified_review_for_order(
         customer=order.customer,
         author_name=order.contact_name[:120],
         rating=rating,
-        title=title.strip()[:200],
-        body=body.strip()[:1000],
+        title=normalized_title,
+        body=normalized_body,
         is_published=False,
         is_verified_purchase=True,
     )

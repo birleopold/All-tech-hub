@@ -1,4 +1,5 @@
 from decimal import Decimal
+import uuid
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -781,8 +782,14 @@ class CommercialDocumentDetailView(StaffRequiredMixin, DetailView):
         ctx["can_view_margin"] = self.request.user.has_perm(
             "billing.view_document_margin"
         )
-        ctx["can_revise"] = self.request.user.has_perm(
-            "billing.revise_issued_document"
+        ctx["can_revise"] = (
+            self.request.user.has_perm("billing.revise_issued_document")
+            and doc.is_locked
+            and doc.status not in (CommercialDocument.STATUS_CANCELLED, CommercialDocument.STATUS_PAID)
+            and doc.doc_type != CommercialDocument.TYPE_RECEIPT
+            and not doc.inventory_posted_at
+            and not doc.payments.exists()
+            and doc.amount_paid <= 0
         )
         ctx["can_void"] = self.request.user.has_perm(
             "billing.void_commercial_document"
@@ -1017,6 +1024,20 @@ def document_start_revision(request, pk: int):
         CommercialDocument.objects.select_for_update().prefetch_related("lines"),
         pk=pk,
     )
+    if (
+        not doc.is_locked
+        or doc.status in (CommercialDocument.STATUS_CANCELLED, CommercialDocument.STATUS_PAID)
+        or doc.doc_type == CommercialDocument.TYPE_RECEIPT
+        or doc.inventory_posted_at
+        or doc.payments.exists()
+        or doc.amount_paid > 0
+    ):
+        messages.error(
+            request,
+            "This document cannot be revised here. Paid, posted, cancelled and "
+            "already editable documents must use the appropriate correction workflow.",
+        )
+        return redirect("staff_document_view", pk=pk)
     form = DocumentActionForm(request.POST)
     if not form.is_valid():
         messages.error(request, "A revision reason is required.")
@@ -1024,12 +1045,27 @@ def document_start_revision(request, pk: int):
     _create_revision(doc, request.user, form.cleaned_data["reason"])
     doc.locked_at = None
     doc.locked_by = None
-    if doc.status not in (
-        CommercialDocument.STATUS_CANCELLED,
-        CommercialDocument.STATUS_PAID,
-    ):
-        doc.status = CommercialDocument.STATUS_DRAFT
-    doc.save(update_fields=["locked_at", "locked_by", "status", "updated_at"])
+    doc.status = CommercialDocument.STATUS_DRAFT
+    updated = ["locked_at", "locked_by", "status", "updated_at"]
+    if doc.doc_type == CommercialDocument.TYPE_QUOTE:
+        # The previous customer's signature and finance approval apply to
+        # the old quotation version, not the revised terms.
+        doc.quote_internally_approved = False
+        doc.quote_approved_by = None
+        doc.quote_approved_at = None
+        doc.quote_customer_accepted = None
+        doc.quote_customer_responded_at = None
+        doc.quote_customer_signature_name = ""
+        doc.quote_customer_decline_reason = ""
+        if doc.quote_customer_token:
+            doc.quote_customer_token = uuid.uuid4()
+        updated += [
+            "quote_internally_approved", "quote_approved_by", "quote_approved_at",
+            "quote_customer_accepted", "quote_customer_responded_at",
+            "quote_customer_signature_name", "quote_customer_decline_reason",
+            "quote_customer_token",
+        ]
+    doc.save(update_fields=updated)
     log_audit_event(
         actor=request.user,
         verb="billing.document_revision_started",
