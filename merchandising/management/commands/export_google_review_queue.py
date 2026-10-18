@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import csv
-from collections import Counter
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -17,6 +16,47 @@ def spreadsheet_safe(value):
     text = str(value)
     return "\u0027" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
+
+
+def build_google_review_rows(*, available_only=False, limit=0):
+    products = (
+        Product.objects.filter(kind=Product.KIND_PHYSICAL, is_published=True)
+        .select_related("category", "commerce_profile", "growth_data")
+        .prefetch_related("gallery_images", "variants")
+    )
+    if available_only:
+        products = products.filter(track_inventory=True, stock_quantity__gt=0)
+    rows = []
+    for product in products.iterator(chunk_size=100):
+        try:
+            profile = product.commerce_profile
+        except ProductCommerceProfile.DoesNotExist:
+            profile = None
+        missing = profile.merchant_missing_fields() if profile else ["commercial profile"]
+        available = bool(product.track_inventory and product.stock_quantity > 0)
+        if not available:
+            # A non-stock-tracked product needs manual stock verification.
+            missing = list(dict.fromkeys([*missing, "confirm saleable stock"]))
+        rows.append({
+            "product_id": product.pk,
+            "product_name": spreadsheet_safe(product.name),
+            "category": spreadsheet_safe(product.category.name) if product.category_id else "",
+            "stock_quantity": product.stock_quantity if product.track_inventory else "",
+            "stock_tracked": "yes" if product.track_inventory else "no",
+            "merchant_approved": "yes" if profile and profile.merchant_enabled else "no",
+            "merchant_score": profile.merchant_readiness_score if profile else 0,
+            "missing_checks": "; ".join(missing),
+            "review_path": reverse("staff_product_commercial_review", args=[product.pk]),
+        })
+    # Work on verifiably available products first; among those, resolve
+    # near-ready records before records with multiple unresolved claims.
+    rows.sort(key=lambda row: (
+        row["stock_tracked"] != "yes" or row["stock_quantity"] <= 0,
+        -row["merchant_score"], str(row["product_name"]).casefold(), row["product_id"],
+    ))
+    if limit:
+        rows = rows[:limit]
+    return rows
 
 class Command(BaseCommand):
     help = "Create a staff review CSV prioritizing products for free Google listings. Read-only."
@@ -37,45 +77,7 @@ class Command(BaseCommand):
             raise CommandError("--output must be a CSV file")
         if path.exists():
             raise CommandError("Output already exists; choose a new filename to preserve earlier evidence")
-        products = (
-            Product.objects.filter(kind=Product.KIND_PHYSICAL, is_published=True)
-            .select_related("category", "commerce_profile", "growth_data")
-            .prefetch_related("gallery_images", "variants")
-        )
-        if options["available_only"]:
-            products = products.filter(track_inventory=True, stock_quantity__gt=0)
-        rows = []
-        counts = Counter()
-        for product in products.iterator(chunk_size=100):
-            try:
-                profile = product.commerce_profile
-            except ProductCommerceProfile.DoesNotExist:
-                profile = None
-            missing = profile.merchant_missing_fields() if profile else ["commercial profile"]
-            available = bool(product.track_inventory and product.stock_quantity > 0)
-            if not available:
-                # A non-stock-tracked product needs manual stock verification.
-                missing = list(dict.fromkeys([*missing, "confirm saleable stock"]))
-            counts.update(missing)
-            rows.append({
-                "product_id": product.pk,
-                "product_name": spreadsheet_safe(product.name),
-                "category": spreadsheet_safe(product.category.name) if product.category_id else "",
-                "stock_quantity": product.stock_quantity if product.track_inventory else "",
-                "stock_tracked": "yes" if product.track_inventory else "no",
-                "merchant_approved": "yes" if profile and profile.merchant_enabled else "no",
-                "merchant_score": profile.merchant_readiness_score if profile else 0,
-                "missing_checks": "; ".join(missing),
-                "review_path": reverse("staff_product_commercial_review", args=[product.pk]),
-            })
-        # Work on verifiably available products first; among those, resolve
-        # near-ready records before records with multiple unresolved claims.
-        rows.sort(key=lambda row: (
-            row["stock_tracked"] != "yes" or row["stock_quantity"] <= 0,
-            -row["merchant_score"], str(row["product_name"]).casefold(), row["product_id"],
-        ))
-        if options["limit"]:
-            rows = rows[:options["limit"]]
+        rows = build_google_review_rows(available_only=options["available_only"], limit=options["limit"])
         path.parent.mkdir(parents=True, exist_ok=True)
         columns = [
             "product_id", "product_name", "category", "stock_quantity",
