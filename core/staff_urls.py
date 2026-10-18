@@ -43,6 +43,7 @@ urlpatterns = [
         staff_views.MarkNotificationsReadView.as_view(),
         name="staff_notifications_read_all",
     ),
+    path("notifications/acknowledge/", staff_views.MarkVisibleNotificationsReadView.as_view(), name="staff_notifications_acknowledge"),
     path("saved-search/save/", staff_views.SaveStaffSearchView.as_view(), name="staff_save_search"),
     path(
         "saved-search/<int:pk>/delete/",
