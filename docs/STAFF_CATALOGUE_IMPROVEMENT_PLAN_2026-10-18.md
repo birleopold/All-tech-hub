@@ -12,14 +12,16 @@ Evidence: authenticated TinyFish walkthrough of /staff/, /staff/seo/, /staff/cat
 - [x] P0: Investigate release log and identify source-race abort. **Confirmed**; no deployment of 39b674b occurred in that log.
 - [x] P1a: Make Google review queue variant-stock-aware. **Committed** at 42f1451; pending guarded VPS verification.
 - [x] P1b-partial: Implement explicit per-product Merchant approval/revocation with staff permission, freshness, tracked stock and completeness guards; regression tests added.
-- [ ] P1c: Review real stocked products: matching physical inventory, condition, identification, shipping, photos, price and variants; selectively approve only verified records. Human inspection required; cannot be performed by metadata guessing.
+- [x] P1c-code: Exclude untracked and sold-out variants from the approved Merchant feed; reject stale or future-dated stock confirmation.
+- [ ] P1d: Review real stocked products: matching physical inventory, condition, identification, shipping, photos, price and variants; selectively approve only verified records. Human inspection required; cannot be performed by metadata guessing.
 - [x] P2a: Immediate identical unread notification retry suppression with regression tests. Historical inbox cleanup and priority triage remain open.
 - [x] P2b-partial: Add read/unread inbox filters with pagination, while preserving all history. Historical noise triage and producer audit remain open.
 - [x] P2c-partial: Non-destructive, staff-owned age-scoped notification acknowledgement with UI and tests.
 - [ ] P2d: Notifications: assess producers and distinguish repeated non-actionable noise, add bounded duplicate protection and safe inbox triage; ensure distinct alerts are retained.
 - [x] P3a: Add explicit product verification guidance to staff editor.
 - [x] P3b-partial: Add one-click commercial review link and explicit variant price/stock guidance on product editor.
-- [ ] P3c: Product editor: improve field-level guidance for warranties, condition, GTIN/MPN, actual photos, variant-specific price and stock; add direct review navigation where missing.
+- [x] P3c-code: Require product, growth and commerce-profile change permissions for commercial-review saves; test unauthorized edit attempts.
+- [ ] P3d: Product editor: improve field-level guidance for warranties, condition, GTIN/MPN, actual photos, variant-specific price and stock; add direct review navigation where missing.
 - [x] P4a: Label manual CSV opportunity counters separately from daily Windsor account metrics.
 - [ ] P4b: SEO: clarify live Windsor queries vs manual CSV imports; tie opportunity guidance to real search records; improve consistency between source-specific metrics.
 - [x] P5a: Explain differences between online order sales and document finance metrics in the staff reporting UI.
