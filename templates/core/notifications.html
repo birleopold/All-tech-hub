@@ -8,6 +8,16 @@
     <div class="staff-page-actions"><form method="post" action="{% url 'staff_notifications_read_all' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button type="submit" class="btn btn-outline-primary"><i class="bi bi-check2-all me-1" aria-hidden="true"></i>Mark all read</button></form></div>
   </header>
 
+  <form method="post" action="{% url 'staff_notifications_acknowledge' %}" class="d-flex flex-wrap gap-2 align-items-center mb-3">{% csrf_token %}
+    <label for="notification-scope" class="form-label mb-0">Inbox cleanup</label>
+    <select name="scope" id="notification-scope" class="form-select form-select-sm" style="max-width:300px">
+      <option value="older_30_days">Mark unread alerts older than 30 days as read</option>
+      <option value="all_unread">Mark all unread alerts as read</option>
+    </select>
+    <button class="btn btn-outline-secondary btn-sm" type="submit">Apply cleanup</button>
+    <small class="text-muted">No notifications are deleted. Only your own inbox changes.</small>
+  </form>
+
   <div class="staff-summary-grid">
     <div class="staff-summary-card"><span class="staff-summary-icon"><i class="bi bi-bell" aria-hidden="true"></i></span><span><small>All notifications</small><strong>{{ notification_stats.total }}</strong></span></div>
     <div class="staff-summary-card staff-summary-card--amber"><span class="staff-summary-icon"><i class="bi bi-bell-fill" aria-hidden="true"></i></span><span><small>Unread</small><strong>{{ notification_stats.unread }}</strong></span></div>
