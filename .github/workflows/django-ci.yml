@@ -97,6 +97,7 @@ jobs:
           commerce.test_customer_messages
           commerce.test_recommendations
           commerce.test_retention
+          commerce.test_verified_order_reviews
           loyalty.test_loyalty
           loyalty.test_redemption
           purchasing.test_replenishment_policy
@@ -165,6 +166,7 @@ jobs:
             commerce/test_customer_messages.py \
             commerce/test_recommendations.py \
             commerce/test_retention.py \
+            commerce/test_verified_order_reviews.py \
             reports/urls.py \
             reports/conversion.py \
             reports/conversion_views.py \

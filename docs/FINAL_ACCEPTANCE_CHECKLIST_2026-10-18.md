@@ -127,9 +127,15 @@ customer's database, file names, credentials or archive into a public issue.
 - **Typo-tolerant search:** customer suggestions were code-staged in the
   catalogue, with same-filter result confirmation. Real navigation and the
   current branch's regression gate have not yet been verified on the VPS.
-- **Verified-purchase review:** order-bound review URL and customer review form
-  exist under the commerce retention workflows. Actual completed-order
-  authorisation, moderation and customer-device acceptance remain open.
+- **Verified-purchase review:** the private review link now binds each
+  review to its **specific completed order**, rather than letting separate
+  purchases by the same CRM customer share or overwrite review drafts.
+  The order/product uniqueness constraint prevents concurrent duplicate
+  reviews, approved reviews remain locked, and existing unbound legacy
+  reviews are preserved without inventing their order. Review-unit tests
+  cover separate orders, permissions, service exclusions and replay.
+  Migration, actual moderation, real customer-device and SMTP delivery
+  acceptance still require evidence.
 - **Offline field operations:** the staff job detail and technician bench now
   offer explicit device-only drafts for internal field notes, using a per-user
   browser queue with seven-day expiry. The staff member manually syncs after

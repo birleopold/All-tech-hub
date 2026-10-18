@@ -12,7 +12,6 @@ from commerce import cart as cart_mod
 from commerce.customer_messages import _deliver
 from commerce.models import Order
 from core.models import CompanySettings
-from crm.models import Customer
 from growth.models import GrowthSettings
 
 
@@ -137,6 +136,7 @@ def verified_review_for_order(
     title: str,
     body: str,
 ) -> ProductReview:
+    order = Order.objects.select_for_update().get(pk=order.pk)
     if order.status not in TERMINAL_REVIEW_STATUSES:
         raise ValueError("Reviews are available after the order is delivered or fulfilled.")
     if not order.lines.filter(product=product).exists():
@@ -154,13 +154,12 @@ def verified_review_for_order(
     if product.kind != Product.KIND_PHYSICAL or not product.is_published:
         raise ValueError("Verified purchase reviews are for published physical products.")
 
-    # Lock the customer's row: reviews from separate completed orders for
-    # this customer and product cannot insert competing reviews concurrently.
-    Customer.objects.select_for_update().get(pk=order.customer_id)
+    # The order, rather than the CRM identity, owns its private draft.
+    # Separate purchases must never open or overwrite each other's reviews.
     existing = (
         ProductReview.objects.select_for_update().filter(
             product=product,
-            customer=order.customer,
+            verified_order=order,
             is_verified_purchase=True,
         )
         .order_by("-created_at", "-id")
@@ -188,6 +187,7 @@ def verified_review_for_order(
     return ProductReview.objects.create(
         product=product,
         customer=order.customer,
+        verified_order=order,
         author_name=order.contact_name[:120],
         rating=rating,
         title=normalized_title,

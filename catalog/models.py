@@ -270,6 +270,14 @@ class ProductReview(models.Model):
         blank=True,
         related_name="product_reviews",
     )
+    verified_order = models.ForeignKey(
+        "commerce.Order",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="verified_product_reviews",
+        help_text="Original completed order proving that this review is from a purchase.",
+    )
     author_name = models.CharField(max_length=120, blank=True)
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, default=5)
     title = models.CharField(max_length=200, blank=True)
@@ -288,6 +296,13 @@ class ProductReview(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["verified_order", "product"],
+                condition=models.Q(verified_order__isnull=False),
+                name="unique_order_verified_product_review",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.product.name} — {self.rating}★"

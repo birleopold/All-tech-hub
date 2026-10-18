@@ -73,7 +73,7 @@ def order_product_review(
 
     existing_review = (
         product.reviews.filter(
-            customer=order.customer,
+            verified_order=order,
             is_verified_purchase=True,
         )
         .order_by("-created_at", "-id")
