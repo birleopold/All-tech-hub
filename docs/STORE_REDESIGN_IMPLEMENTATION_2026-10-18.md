@@ -24,8 +24,8 @@ Started: 2026-10-18 · Repository: birleopold/All-tech-hub
 | P1 | Product-first homepage, one authentic visual hero, two promo tiles, visual category shortcuts and compact trust section | **Code staged on main:** campaign template, category tile rail, CSS, graceful default if no campaigns, no auto-rotating carousel | Django tests, mobile screenshots, staging visual and performance verification pending |
 | P2 | Truthful price/stock, product card hierarchy, laptop decision specs, discounts and fast enquiry/cart CTAs | **Code staged:** recently stock-confirmed available products first; recorded processor/RAM/SSD summaries; savings badges; one dominant card CTA; product-detail highlights | Test exact-stock validity with actual inventory; no false availability or manufacturer IDs |
 | P3 | Product details: gallery, mobile sticky cart/contact, visual condition/warranty, comparison and related products; full long specs below main decisions | Existing gallery, sticky actions and filters; new price/stock/product highlight polish staged | Full gallery/variant/cart/enquiry journey and accessible specs/mobile browser pass pending |
-| P4 | Mobile catalogue: tappable category shortcuts, focused search/filter, simpler checkout, guest purchase, delivery and total clarity | Existing category/search/bottom nav and delivery-aware guest checkout; homepage image rail staged | End-to-end checkout/pickup/delivery/WhatsApp/mobile keyboard checks pending |
-| P5 | Staff campaign controls: create/edit/disable, image upload or real product, priority, dates, internal link validation, audit record and navigation | **Code staged:** `HomepagePromotion`, database migration, staff workspace, admin and permissioned edits | Test and deploy. Extend editor with side-by-side mobile/desktop **draft preview** before marking this phase complete |
+| P4 | Mobile catalogue: tappable category shortcuts, focused search/filter, simpler checkout, guest purchase, delivery and total clarity | Existing search/category navigation and delivery-aware guest checkout; explicit guest/no-account copy, folded optional marketing controls and concise order instructions now code-staged | End-to-end checkout/pickup/delivery/WhatsApp/mobile keyboard checks pending |
+| P5 | Staff campaign controls: create/edit/disable, image upload or real product, priority, dates, internal link validation, audit record and navigation | **Code staged:** `HomepagePromotion`, database migration, staff workspace, admin and permissioned edits; editor includes text-live desktop/phone creative preview | Execute Django and device tests; saved image selection appears after save, full-page staging preview remains pending |
 | P6 | Trust/marketing: verified reviews, genuine savings, delivery/warranty facts, product collection clicks, GA4/Clarity consent, A/B reporting | Many existing flows; new promo work avoids fake stock and urgency | Verify attribution and actual commerce analytics, consent, customer reviews, social channel delivery |
 | P7 | Accessibility, speed, real devices, external providers, merchant data and release certification | Existing guarded Phase 8 suite, browser smoke and restore rehearsal | Execute final full VPS suite and restore; fix GitHub runner; test iOS/Android; verify provider settlement and truthful SKU/stock |
 
@@ -75,3 +75,17 @@ and confirm availability before promoting a product. An inactive campaign
 falls back to the existing LEOSOFT shopping page; campaign end dates should
 automatically remove promotional copy. Never replace a healthy live release
 with an untested candidate or bypass failing Django tests.
+
+## Next implementation package — staff preview and guest checkout
+
+- The marketing editor now includes preview controls for desktop and phone
+  proportions. Campaign headline, eyebrow, supporting text and action label
+  update before save. Product and creative image previews use the last
+  saved media to avoid uploading unsaved customer-facing creative.
+- Guest checkout now clearly states **no account required** and explains
+  email purpose. Optional promotional consent is grouped into a disclosure,
+  while delivery charges and the existing final amount remain server-backed.
+- The early gate compiles checkout and staff campaign templates and checks
+  the preview JavaScript syntax before running full tests.
+- **Pending:** true full-page staging campaign preview, real device journey
+  acceptance, live payment, delivery provider and client-approved creatives.

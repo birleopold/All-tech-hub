@@ -65,7 +65,8 @@ for source in \
     static/js/marketplace_experience.js \
     static/js/mobile_commerce_pro.js \
     static/js/job_handover_signature.js \
-    static/js/field_notes_offline.js; do
+    static/js/field_notes_offline.js \
+    static/js/staff_homepage_campaigns.js; do
     node --check "$source"
 done
 
@@ -83,6 +84,7 @@ from django.template.loader import get_template
 for template in (
     "core/home.html",
     "dashboard/homepage_promotions.html",
+    "commerce/checkout.html",
     "catalog/_marketplace_product_card.html",
     "operations/_offline_field_notes.html",
     "operations/job_bench.html",

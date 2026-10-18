@@ -43,6 +43,7 @@ jobs:
           node --check static/js/mobile_commerce_pro.js
           node --check static/js/job_handover_signature.js
           node --check static/js/field_notes_offline.js
+          node --check static/js/staff_homepage_campaigns.js
 
       - name: Check migration drift
         run: python manage.py makemigrations --check --dry-run

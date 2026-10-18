@@ -1,0 +1,13 @@
+.staff-campaign-preview{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:.5rem;width:100%;max-width:620px;min-height:190px;padding:1.4rem;background:linear-gradient(120deg,#0b2b4e,#1261a3);color:#fff;border-radius:1.1rem;overflow:hidden}
+.staff-campaign-preview__copy{display:flex;flex-direction:column;gap:.65rem;min-width:0}
+.staff-campaign-preview__copy small{text-transform:uppercase;letter-spacing:.11em;color:#b7e5ff;font-size:.65rem;font-weight:800}
+.staff-campaign-preview__copy strong{font-size:1.6rem;line-height:1.1;overflow-wrap:anywhere}
+.staff-campaign-preview__copy p{margin:0;font-size:.86rem;color:#e6f3ff}
+.staff-campaign-preview__copy>span{display:inline-block;font-size:.8rem;font-weight:750}
+.staff-campaign-preview__image{display:flex;align-items:center;justify-content:center;min-width:0}
+.staff-campaign-preview__image img{width:100%;height:160px;object-fit:contain}
+.staff-campaign-preview__image i{font-size:4rem;color:#82bfeb}
+.staff-campaign-preview.is-mobile{grid-template-columns:minmax(0,1fr) minmax(80px,.6fr);max-width:325px;min-height:240px;padding:1rem}
+.staff-campaign-preview.is-mobile .staff-campaign-preview__copy strong{font-size:1.25rem}
+.staff-campaign-preview.is-mobile .staff-campaign-preview__image img{height:135px}
+@media(max-width:575px){.staff-campaign-preview{padding:1rem}.staff-campaign-preview__copy strong{font-size:1.22rem}.staff-campaign-preview__image img{height:140px}}

@@ -9,6 +9,7 @@
       <div>
         <p class="text-uppercase small text-white-50 mb-2">Checkout</p>
         <h1 class="display-6 fw-bold mb-2">Complete your order</h1>
+        <p class="small mb-0 text-white"><i class="bi bi-person-check me-1" aria-hidden="true"></i><strong>Guest checkout</strong> — no account required.</p>
         <p class="text-white-75 mb-0">Confirm your contact details, delivery or pickup preference, and order notes.</p>
       </div>
       <a class="btn btn-light" href="{% url 'cart' %}">Back to cart</a>
@@ -31,6 +32,7 @@
           {% if checkout_token %}<input type="hidden" name="checkout_token" value="{{ checkout_token }}">{% endif %}
           <p class="text-uppercase small fw-semibold text-primary mb-2">Customer details</p>
           <h2 class="h4 mb-3">Where should we reach you?</h2>
+          <p class="small text-muted">Your details are used to confirm this order and send its private tracking link. There is no need to register.</p>
           {% if not delivery_zones_available %}
           <div class="alert alert-info" role="status">
             <strong>Pickup is available.</strong> Online delivery pricing is not
@@ -58,9 +60,9 @@
               </fieldset>
             {% elif field.name == 'delivery_zone' and not delivery_zones_available %}
             {% elif field.name == 'marketing_email_opt_in' or field.name == 'marketing_whatsapp_opt_in' %}
-              {% if field.name == 'marketing_email_opt_in' %}<fieldset class="border rounded p-3 mb-4 desktop-checkout-field--marketing"><legend class="h6 px-1">Optional product updates and offers</legend><p class="small text-muted">These choices are optional and do not affect your order. You can unsubscribe later.</p>{% endif %}
+              {% if field.name == 'marketing_email_opt_in' %}<details class="border rounded p-3 mb-4 desktop-checkout-field--marketing"><summary class="h6 mb-2" style="cursor:pointer">Optional updates and offers</summary><p class="small text-muted">These choices do not affect your order. You can unsubscribe later.</p>{% endif %}
               <div class="form-check mb-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
-              {% if field.name == 'marketing_whatsapp_opt_in' %}</fieldset>{% endif %}
+              {% if field.name == 'marketing_whatsapp_opt_in' %}</details>{% endif %}
             {% else %}
               <div class="mb-3 desktop-checkout-field--{{ field.name }}"{% if field.name == 'delivery_zone' %} data-delivery-zone-field{% endif %}>
                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
