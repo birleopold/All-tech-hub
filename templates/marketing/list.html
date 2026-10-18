@@ -9,7 +9,7 @@
 
   {% if page_kind == 'leads' %}
   <div class="card border-0 shadow-sm mb-3"><div class="card-body d-flex flex-wrap align-items-center gap-3">
-    <div class="flex-grow-1"><strong>Overdue enquiry triage</strong><p class="text-muted small mb-0">Claim up to 25 unassigned overdue enquiries for your own queue. Assigned and closed enquiries are not changed.</p></div>
+    <div class="flex-grow-1"><strong>Overdue enquiry triage</strong><p class="text-muted small mb-0">Claim up to 25 unassigned overdue enquiries for your own queue. The “Response overdue” count also includes enquiries already assigned to other staff, so it may be higher even when zero are claimable. Assigned and closed enquiries are not changed.</p></div>
     <form method="post" action="{% url 'staff_marketing_claim_overdue' %}">{% csrf_token %}<button class="btn btn-outline-primary" type="submit">Claim unassigned overdue</button></form>
     <a class="btn btn-outline-secondary" href="{% url 'staff_marketing_leads' %}?follow_up=needs_attention">View all needing attention</a>
   </div></div>
