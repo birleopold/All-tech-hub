@@ -2,7 +2,7 @@
 Description=Generate LEOSOFT Google organic-readiness report daily
 
 [Timer]
-OnCalendar=*-*-* 05:30:00
+OnCalendar=*-*-* 05:30:00 Africa/Kampala
 Persistent=true
 RandomizedDelaySec=10m
 Unit=leosoft-google-growth-report.service
