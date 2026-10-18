@@ -102,3 +102,10 @@ Do not push new commits to main while the guarded release is running.
 - [x] Add regression test covering expiry and maintain valid-stock variant coverage.
 - [x] Display the stale-stock block on commercial review so staff understand why an approved product is not in the feed.
 - [ ] Verify these latest commits with the guarded VPS test/deploy and Google Merchant feed URL. No live product records were updated.
+
+## Continuation — Merchant review queue consistency
+- [x] Explicitly separate past Merchant approval (`merchant_approved`) from eligibility for the current approved feed (`feed_eligible_now`) in CLI and staff CSV downloads.
+- [x] Flag expired stock verification on already-approved products so staff can renew inspections before expecting Google publication.
+- [x] Add regression coverage for approved-but-stale catalogue entries.
+- [ ] Run the current revision through the guarded VPS release and compare the review CSV with `/feeds/google-approved.xml`.
+- [ ] Recover authentic images and inspect real product units before modifying missing identifiers, conditions or stock.
