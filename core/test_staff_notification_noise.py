@@ -1,6 +1,7 @@
 """Regression tests for repeated staff notification delivery."""
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 from core.models import StaffNotification
 from core.notifications import staff_notify
 
@@ -28,3 +29,18 @@ class StaffNotificationNoiseTests(TestCase):
         first.save(update_fields=["is_read"])
         second = staff_notify(self.user, "Invoice needs review", "/staff/documents/")
         self.assertNotEqual(first.pk, second.pk)
+
+    def test_staff_inbox_filters_read_and_unread(self):
+        unread = staff_notify(self.user, "Urgent new assignment", "/staff/jobs/")
+        read = staff_notify(self.user, "Previously handled", "/staff/jobs/")
+        read.is_read = True
+        read.save(update_fields=["is_read"])
+        self.client.force_login(self.user)
+        url = reverse("staff_notifications")
+        result = self.client.get(url, {"show": "unread"})
+        self.assertEqual(result.status_code, 200)
+        self.assertContains(result, "Urgent new assignment")
+        self.assertNotContains(result, "Previously handled")
+        result = self.client.get(url, {"show": "read"})
+        self.assertContains(result, "Previously handled")
+        self.assertNotContains(result, "Urgent new assignment")
