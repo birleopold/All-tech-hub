@@ -33,6 +33,14 @@
           <a class="btn btn-light" href="{% if hero_promotion %}{{ hero_promotion.destination }}{% else %}#homepage-products{% endif %}">{% if hero_promotion %}{{ hero_promotion.button_label }}{% else %}Shop products{% endif %} <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
           <a class="btn btn-outline-light" href="{% url 'service_list' %}">Repairs &amp; services</a>
         </div>
+        <form class="market-hero-search market-search-shell storefront-hero-search" action="{% url 'product_list' %}" method="get" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <label class="visually-hidden" for="market-hero-search-input">Search LEOSOFT products and brands</label>
+          <input id="market-hero-search-input" name="q" type="search" placeholder="Search laptops, routers, accessories…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-hero-search-results" data-market-search-input>
+          <button type="submit">Search</button>
+          <div id="market-hero-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
+          <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
+        </form>
       </div>
       <div class="storefront-hero__visual">
         {% if hero_promotion.creative_image %}

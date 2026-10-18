@@ -76,6 +76,7 @@ class HomepageCampaignTests(TestCase):
         self.assertEqual(response.context["featured_products"][0].pk, self.checked.pk)
         self.assertContains(response, "Confirmed office router")
         self.assertContains(response, "Shop our products")
+        self.assertContains(response, 'id="market-hero-search-input"')
         self.assertContains(response, "Find your next upgrade")
         self.assertContains(response, "Shop with confidence")
         self.assertContains(response, "storefront_campaigns.css")

@@ -49,3 +49,7 @@
 .storefront-service-card__action{display:block;margin:auto 1rem 0;color:#065ca4;font-size:.81rem;font-weight:750}
 .storefront-service-card:hover,.storefront-service-card:focus-visible{border-color:#83b1d5;color:#17344b;box-shadow:0 12px 28px rgba(12,40,65,.12)}
 @media(max-width:575.98px){.storefront-service-card{min-height:200px}.storefront-service-card__media{height:115px}.storefront-service-card__title{font-size:.88rem}}
+
+.storefront-hero-search{margin-top:1rem;position:relative;z-index:5;max-width:470px}
+.storefront-hero-search input{min-width:0}
+@media(max-width:575.98px){.storefront-hero-search{margin-top:.9rem}.storefront-hero-search input{font-size:.82rem}.storefront-hero-search button{font-size:.8rem}}
