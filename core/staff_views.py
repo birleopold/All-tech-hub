@@ -391,7 +391,17 @@ class StaffNotificationListView(StaffRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        return StaffNotification.objects.filter(recipient=self.request.user)
+        notices = StaffNotification.objects.filter(recipient=self.request.user)
+        if self.request.GET.get("show") == "unread":
+            return notices.filter(is_read=False)
+        if self.request.GET.get("show") == "read":
+            return notices.filter(is_read=True)
+        return notices
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["notification_filter"] = self.request.GET.get("show", "")
+        return context
 
 
 class MarkNotificationsReadView(StaffRequiredMixin, View):
