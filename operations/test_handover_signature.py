@@ -147,6 +147,31 @@ class SignedJobHandoverTests(TestCase):
         self.assertEqual(self.client.get(staff_url).status_code, 404)
         self.assertRedirects(self.client.get(portal_url), reverse("portal_login"))
 
+    def test_unrelated_staff_cannot_view_protected_recipient_signature(self):
+        self.ready()
+        self.client.force_login(self.staff)
+        self.submit()
+        url = reverse("staff_job_handover_signature", args=[self.job.pk])
+        User = get_user_model()
+        unrelated = User.objects.create_user(
+            username="signed-staff-no-job-rights", password="pw", is_staff=True,
+        )
+        self.client.force_login(unrelated)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        detail = self.client.get(reverse("staff_job_detail", args=[self.job.pk]))
+        self.assertContains(detail, "Recipient signature restricted to authorised job staff.")
+        self.assertNotContains(detail, "View protected recipient signature")
+
+        from django.contrib.auth.models import Permission
+        authorised = User.objects.create_user(
+            username="signed-staff-job-reader", password="pw", is_staff=True,
+        )
+        authorised.user_permissions.add(
+            Permission.objects.get(codename="view_jobcard")
+        )
+        self.client.force_login(authorised)
+        self.assertEqual(self.client.get(url).status_code, 200)
+
     def test_duplicate_post_retains_original_signature_and_recipient(self):
         self.ready()
         self.client.force_login(self.staff)

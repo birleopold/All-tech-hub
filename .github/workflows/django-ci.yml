@@ -37,6 +37,7 @@ jobs:
           node --check static/js/pwa.js
           node --check static/js/marketing_analytics.js
           bash -n scripts/phase8_release_gate.sh
+          bash -n scripts/final_release_closeout.sh
           python scripts/phase8_postgres_restore_drill.py --help >/dev/null
           node --check static/js/marketplace_experience.js
           node --check static/js/mobile_commerce_pro.js

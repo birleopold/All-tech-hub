@@ -29,7 +29,7 @@
         <p class="mb-1"><strong>{{ job.handover.get_method_display }}</strong> — {{ job.handover.recipient_name }}</p>
         <p class="small text-muted mb-1">Recorded {{ job.handover.recorded_at|date:"M j, Y H:i" }}{% if job.handover.recorded_by %} by {{ job.handover.recorded_by.get_username }}{% endif %}</p>
         {% if job.handover.note %}<p class="mb-0">{{ job.handover.note }}</p>{% endif %}
-        {% if job.handover.signature %}<a class="btn btn-sm btn-outline-secondary mt-2" href="{% url 'staff_job_handover_signature' job.pk %}" target="_blank" rel="noopener noreferrer">View protected recipient signature</a>{% else %}<p class="text-muted small mb-0">Legacy handover: recipient signature was not captured.</p>{% endif %}
+        {% if job.handover.signature %}{% if perms.operations.view_jobcard or perms.operations.change_jobcard %}<a class="btn btn-sm btn-outline-secondary mt-2" href="{% url 'staff_job_handover_signature' job.pk %}" target="_blank" rel="noopener noreferrer">View protected recipient signature</a>{% else %}<p class="text-muted small mb-0">Recipient signature restricted to authorised job staff.</p>{% endif %}{% else %}<p class="text-muted small mb-0">Legacy handover: recipient signature was not captured.</p>{% endif %}
       {% elif can_record_job_handover %}
         <form method="post" enctype="multipart/form-data" action="{% url 'staff_job_handover' job.pk %}" class="row g-3" data-job-handover-form>
           {% csrf_token %}

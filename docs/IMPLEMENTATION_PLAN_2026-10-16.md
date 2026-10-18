@@ -11,6 +11,15 @@ Scope: customer storefront, staff operations, admin configuration, production re
 - Do not state that tests, production workflows or external accounts are verified unless they have actually been tested.
 - A phase is **complete** only when the acceptance checks below are satisfied; code merged alone is not sufficient.
 
+## Development handoff closure (2026-10-18)
+
+The **feature-development stream is closed for handoff**, not marked
+fully certified in production. See
+[Final project closeout](FINAL_PROJECT_CLOSEOUT_2026-10-18.md).
+The only remaining acceptance gate is evidence from the latest VPS release,
+real database/media recovery, devices, external providers and actual product
+stock/identities. Do not auto-check those boxes by committing source code.
+
 ## Progress board
 
 | Phase | Goal | Acceptance checks | Status |

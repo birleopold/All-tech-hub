@@ -49,3 +49,7 @@ protected-file delivery through production Nginx; PostgreSQL and media backup
 restore; recipient identification policy and legal record retention.
 
 **Do not upload real customer signatures into tests or CI.**
+
+The staff signature endpoint requires `operations.view_jobcard` or
+`operations.change_jobcard`; simply being marked `is_staff` is not enough.
+The staff job page similarly hides that link from unrelated staff roles.

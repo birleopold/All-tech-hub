@@ -62,7 +62,17 @@ def staff_job_signature(request, pk: int):
 
 
 def staff_job_handover_signature(request, pk: int):
-    if not request.user.is_authenticated or not request.user.is_staff:
+    # A generic staff login is insufficient for a stored customer signature.
+    # Technicians, authorised inventory operators and managers have the job
+    # permissions assigned by bootstrap_roles; unrelated staff roles do not.
+    if (
+        not request.user.is_authenticated
+        or not request.user.is_staff
+        or not (
+            request.user.has_perm("operations.view_jobcard")
+            or request.user.has_perm("operations.change_jobcard")
+        )
+    ):
         raise Http404
     handover = get_object_or_404(JobHandover, job_id=pk)
     return protected_file_response(handover.signature, inline=True)

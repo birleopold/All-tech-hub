@@ -230,3 +230,13 @@ successfully against an actual site backup with its summary retained.
 
 GitHub Actions hosted runners were previously observed failing before
 any test steps; no new full-CI or VPS-green claim is made by this commit.
+
+## Final feature-development handoff
+
+A final guarded deployment runner and handover ledger are stored at
+`scripts/final_release_closeout.sh` and
+`docs/FINAL_PROJECT_CLOSEOUT_2026-10-18.md`. This is a **candidate** closeout
+until a genuine VPS run provides a passing log and SHA-matched readiness.
+The script records its own full output and does not certify browser/device,
+provider or real PostgreSQL restore results. The final signature endpoint
+also now requires job view/change permission rather than a generic staff login.
