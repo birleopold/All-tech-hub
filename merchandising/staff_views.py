@@ -8,7 +8,8 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Avg, DecimalField, F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
+from django.utils import timezone
 from django.views import View
 
 from billing.models import CommercialDocument, CommercialLine
@@ -178,6 +179,62 @@ class ProductCommercialReviewView(StaffRequiredMixin, View):
 
         messages.error(request, "Correct the highlighted fields before saving.")
         return render(request, self.template_name, self.context(product, forms))
+
+
+class ProductMerchantApprovalView(StaffRequiredMixin, View):
+    """Explicit, permission-controlled Merchant approval, never a bulk guess."""
+
+    def post(self, request, pk: int):
+        if not request.user.has_perm("merchandising.change_productcommerceprofile"):
+            return HttpResponseForbidden("Merchant approval permission required.")
+        with transaction.atomic():
+            product = get_object_or_404(
+                Product.objects.select_for_update().prefetch_related(
+                    "variants", "gallery_images"
+                ), pk=pk, kind=Product.KIND_PHYSICAL,
+            )
+            profile = get_object_or_404(
+                ProductCommerceProfile.objects.select_for_update(), product=product
+            )
+            if request.POST.get("action") == "disable":
+                if profile.merchant_enabled:
+                    profile.merchant_enabled = False
+                    profile.save(update_fields=["merchant_enabled", "updated_at"])
+                    log_audit_event(actor=request.user,
+                                    verb="catalog.merchant_approval_disabled",
+                                    summary=f"Merchant approval disabled for {product.name}",
+                                    target=product)
+                messages.success(request, "Product removed from approved Merchant feed.")
+            elif request.POST.get("action") == "approve":
+                managed, available = product_inventory_state(product)
+                blockers = [
+                    value for value in profile.merchant_missing_fields()
+                    if value != "merchant approval"
+                ]
+                if not (managed and available):
+                    blockers.append("verified tracked stock is not available")
+                if not profile.stock_confirmed_at or (
+                    timezone.now() - profile.stock_confirmed_at
+                ).days > 30:
+                    blockers.append("recent stock inspection (last 30 days)")
+                if blockers:
+                    messages.error(
+                        request,
+                        "Approval blocked. Complete or recheck: " + ", ".join(blockers)
+                    )
+                elif not profile.merchant_enabled:
+                    profile.merchant_enabled = True
+                    profile.save(update_fields=["merchant_enabled", "updated_at"])
+                    log_audit_event(actor=request.user,
+                                    verb="catalog.merchant_approval_enabled",
+                                    summary=f"Verified Merchant approval for {product.name}",
+                                    target=product)
+                    messages.success(request, "Approved for the existing Merchant feed.")
+                else:
+                    messages.info(request, "This product is already Merchant-approved.")
+            else:
+                return HttpResponseForbidden("Invalid approval action.")
+        return redirect("staff_product_commercial_review", pk=pk)
 
 
 class CatalogueBulkEnrichmentView(StaffRequiredMixin, View):
