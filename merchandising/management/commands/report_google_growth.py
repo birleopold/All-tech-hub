@@ -28,6 +28,7 @@ def get_windsor_snapshot():
     results = {}
     for label, connector, account, fields in (
         ("analytics", "googleanalytics4", "545512966", "account_id,active_users"),
+        ("search", "searchconsole", "https://leosoftug.com/", "account_id,query,page,clicks,impressions,position"),
         ("merchant", "google_merchant", "5836415711",
          "account_id,product_status_country,product_status_reporting_context,product_status_active_count,product_status_pending_count,product_status_disapproved_count"),
     ):
@@ -41,6 +42,9 @@ def get_windsor_snapshot():
             rows = [row for row in rows if isinstance(row, dict) and str(row.get("account_id")) == account]
             if label == "merchant":
                 rows = [row for row in rows if row.get("product_status_country") == "UG"]
+            if label == "search":
+                rows = [row for row in rows if str(row.get("page", "")).startswith("https://leosoftug.com/")]
+                rows.sort(key=lambda row: -(int(row.get("impressions") or 0)))
             results[label] = {"status": "ok", "rows": rows[:25]}
         except Exception:
             # Do not log an exception: its URL may contain a credential.
