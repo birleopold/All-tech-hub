@@ -6,6 +6,7 @@ from inventory.inventory_home_view import StaffInventoryHomeView
 from merchandising.staff_views import (
     CatalogueBulkEnrichmentView,
     ProductCommercialReviewView,
+    ProductMerchantApprovalView,
 )
 
 urlpatterns = [
@@ -47,6 +48,7 @@ urlpatterns = [
         ProductCommercialReviewView.as_view(),
         name="staff_product_commercial_review",
     ),
+    path("inventory/products/<int:pk>/merchant-approval/", ProductMerchantApprovalView.as_view(), name="staff_product_merchant_approval"),
     path("inventory/products/<int:pk>/", views.ProductUpdateView.as_view(), name="staff_product_edit"),
     path("inventory/products/<int:pk>/labels/", views.product_label_sheet, name="staff_product_labels"),
     path("inventory/serials/<int:pk>/labels/", views.serial_label_sheet, name="staff_serial_labels"),
