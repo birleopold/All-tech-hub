@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import csv
+
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Avg, DecimalField, F, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponse
 from django.views import View
 
 from billing.models import CommercialDocument, CommercialLine
@@ -29,6 +32,7 @@ from merchandising.enrichment import (
 )
 from merchandising.forms import BulkCatalogueEnrichmentForm
 from merchandising.models import ProductCommerceProfile
+from merchandising.management.commands.export_google_review_queue import build_google_review_rows
 
 
 class ProductCommercialReviewView(StaffRequiredMixin, View):
@@ -341,3 +345,23 @@ class CatalogueBulkEnrichmentView(StaffRequiredMixin, View):
             self.template_name,
             self.context(request, form=form),
         )
+
+
+class GoogleReviewQueueDownloadView(StaffRequiredMixin, View):
+    """Staff-only, read-only spreadsheet of actual outstanding Merchant checks."""
+
+    def get(self, request):
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="leosoft-google-review-queue.csv"'
+        response.write("\ufeff")
+        columns = (
+            "product_id", "product_name", "category", "stock_quantity",
+            "stock_tracked", "merchant_approved", "merchant_score",
+            "missing_checks", "review_path",
+        )
+        writer = csv.DictWriter(response, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(build_google_review_rows())
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
