@@ -3,6 +3,7 @@ from unittest.mock import PropertyMock, patch
 from django.http import HttpResponse
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from catalog.models import Category, Product, ProductVariant
 from merchandising.models import ProductCommerceProfile
@@ -25,7 +26,7 @@ class ApprovedFeedInventoryTests(TestCase):
             product=product, name="Sold out", sku="SOLD-OUT-GUARD",
             price="125000.00", track_inventory=True, stock_quantity=0,
         )
-        ProductCommerceProfile.objects.create(product=product, merchant_enabled=True)
+        ProductCommerceProfile.objects.create(product=product, merchant_enabled=True, stock_confirmed_at=timezone.now())
         feed = (b'<?xml version="1.0" encoding="utf-8"?>'
                 b'<rss xmlns:g="http://base.google.com/ns/1.0"><channel>'
                 b'<item><g:id>IN-STOCK-GUARD</g:id></item>'
@@ -40,3 +41,28 @@ class ApprovedFeedInventoryTests(TestCase):
         self.assertIn(b"IN-STOCK-GUARD", response.content)
         self.assertNotIn(b"SOLD-OUT-GUARD", response.content)
         self.assertEqual(response["X-Merchant-Eligible-Items"], "1")
+
+    def test_expired_stock_confirmation_is_omitted(self):
+        category = Category.objects.create(name="Expired feed", slug="expired-feed-guard")
+        product = Product.objects.create(
+            category=category, name="Expired verification product",
+            slug="expired-verification-item", sku="EXPIRED-STOCK-GUARD",
+            price="125000.00", is_published=True,
+            track_inventory=True, stock_quantity=3,
+        )
+        ProductCommerceProfile.objects.create(
+            product=product, merchant_enabled=True,
+            stock_confirmed_at=timezone.now() - timezone.timedelta(days=31),
+        )
+        feed = (b'<rss xmlns:g="http://base.google.com/ns/1.0"><channel>'
+                b'<item><g:id>EXPIRED-STOCK-GUARD</g:id></item>'
+                b'</channel></rss>')
+        with patch("merchandising.merchant.base_strict_feed",
+                   return_value=HttpResponse(feed, content_type="application/rss+xml")), patch.object(
+                       ProductCommerceProfile, "is_merchant_ready",
+                       new_callable=PropertyMock, return_value=True):
+            response = self.client.get(reverse("google_approved_merchant_feed"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(b"EXPIRED-STOCK-GUARD", response.content)
+        self.assertEqual(response["X-Merchant-Eligible-Items"], "0")
+
