@@ -4,6 +4,7 @@ from xml.etree import ElementTree as ET
 from django.core.management.base import BaseCommand, CommandError
 from django.http import HttpRequest
 from django.db import connection
+from django.conf import settings
 
 from catalog.seo_feeds import GOOGLE_NS
 from merchandising.merchant import approved_google_merchant_feed
@@ -22,14 +23,18 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        # A failed guarded release may leave this checkout ahead of the live DB.
-        # Report the migration requirement clearly rather than crashing with SQL.
+        # The default manage.py settings select development unless ALLTECH_ENV is
+        # set explicitly; never mislabel that database as production.
+        environment = "production" if not settings.DEBUG else "development"
+        database_engine = settings.DATABASES["default"]["ENGINE"].rsplit(".", 1)[-1]
+        self.stdout.write(f"Google feed audit environment: {environment}; database: {database_engine}")
+        # Check the connected schema before accessing any catalogue records.
         with connection.cursor() as cursor:
             if "catalog_category" not in connection.introspection.table_names(cursor):
-                raise CommandError("Catalogue table is missing. Complete the guarded production deployment before running the feed audit.")
+                raise CommandError(f"Catalogue table is missing from the selected {environment} database. Check ALLTECH_ENV and database configuration before running the feed audit.")
             columns = {column.name for column in connection.introspection.get_table_description(cursor, "catalog_category")}
         if "seo_title" not in columns:
-            raise CommandError("Production database has not applied catalog migration 0011 (seo_title missing). Run scripts/final_release_closeout.sh successfully before auditing the Google feed.")
+            raise CommandError(f"Selected {environment} database lacks catalog_category.seo_title (catalog migration 0011). Verify ALLTECH_ENV and run migrations only against the intended database.")
         request = HttpRequest()
         request.method = "GET"
         request.path = "/feeds/google-approved.xml"
