@@ -10,6 +10,7 @@
       <p class="text-primary small fw-semibold text-uppercase mb-1">Search discoverability</p>
       <h1>SEO, Merchant and search opportunities</h1>
       <p class="text-muted mb-0">Track technical eligibility, product-feed readiness and the Google queries closest to stronger positions.</p>
+      <p class="small text-muted mt-2 mb-0">Search Console data: {% if search_data_last_import %}last imported {{ search_data_last_import|date:"j M Y, H:i" }}{% if search_data_last_day %}; search period ending {{ search_data_last_day|date:"j M Y" }}{% endif %}{% else %}no CSV import yet{% endif %}. These are imported reports, not live account statistics.</p>
     </div>
     <div class="staff-dashboard-actions">
       <a class="btn btn-primary" href="{{ seo.endpoints.sitemap_index }}" target="_blank" rel="noopener noreferrer">Open sitemap</a>
