@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -36,6 +36,12 @@ class StaffCommercialReviewTests(TestCase):
             "pw",
             is_staff=True,
         )
+        self.user.user_permissions.add(*Permission.objects.filter(
+            codename__in=[
+                "change_product", "change_productgrowthdata",
+                "change_productcommerceprofile",
+            ]
+        ))
         self.url = reverse("staff_product_commercial_review", args=[self.product.pk])
 
     def test_anonymous_user_is_redirected(self):
@@ -121,3 +127,13 @@ class StaffCommercialReviewTests(TestCase):
                 target_id=self.product.pk,
             ).exists()
         )
+
+    def test_staff_without_catalogue_edit_permissions_cannot_save(self):
+        read_only = User.objects.create_user(
+            "read-only-commercial", "readonly@example.com", "pw", is_staff=True
+        )
+        self.client.force_login(read_only)
+        response = self.client.post(self.url, {"core-name": "Unauthorized change"})
+        self.assertEqual(response.status_code, 403)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.name, "Dell Latitude Review Laptop")
