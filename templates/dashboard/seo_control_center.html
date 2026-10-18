@@ -18,6 +18,36 @@
     </div>
   </div>
 
+  <section class="card staff-panel-card mb-4" aria-labelledby="google-growth-workflow">
+    <div class="card-body">
+      <h2 class="h5 mb-2" id="google-growth-workflow">Google Growth Centre · what to do next</h2>
+      <p class="text-muted small mb-3">Your website is the source of truth. Google accounts may take time to review changes. Enquiries are not confirmed sales.</p>
+      <div class="row g-3">
+        <div class="col-md-6 col-xl-3"><div class="border rounded p-3 h-100">
+          <strong class="d-block mb-1">1. Verify products</strong>
+          <p class="small text-muted">Check actual stock, images, manufacturer details, condition, price and shipping; approve only verified records.</p>
+          <a href="{% url 'staff_catalogue_bulk_enrichment' %}?gap=merchant_not_ready">Open product workspace</a>
+        </div></div>
+        <div class="col-md-6 col-xl-3"><div class="border rounded p-3 h-100">
+          <strong class="d-block mb-1">2. Check free listings</strong>
+          <p class="small text-muted">Keep one primary product source; inspect country-specific problems before paying for ads.</p>
+          <a href="https://merchants.google.com/" target="_blank" rel="noopener noreferrer">Open Merchant Center</a>
+        </div></div>
+        <div class="col-md-6 col-xl-3"><div class="border rounded p-3 h-100">
+          <strong class="d-block mb-1">3. Improve searches</strong>
+          <p class="small text-muted">Inspect indexing, actual queries, sitemap coverage and product results.</p>
+          <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer">Open Search Console</a>
+        </div></div>
+        <div class="col-md-6 col-xl-3"><div class="border rounded p-3 h-100">
+          <strong class="d-block mb-1">4. Track customers</strong>
+          <p class="small text-muted">Review organic visitors, consented call and WhatsApp clicks, and verified orders separately.</p>
+          <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer">Open Analytics</a>
+        </div></div>
+      </div>
+      <p class="small text-muted mt-3 mb-0">Google Business Profile: <a href="https://business.google.com/" target="_blank" rel="noopener noreferrer">review your verified business details, real photos and customer reviews</a>. Never invent product stock or ask for a particular review rating.</p>
+    </div>
+  </section>
+
   <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card catalogue-growth-metric"><div class="card-body"><p class="staff-metric-label">SEO readiness</p><p class="staff-metric-value">{{ seo.score }}%</p><p class="staff-metric-subtext">Technical and content configuration</p></div></div></div>
     <div class="col-sm-6 col-xl-3"><div class="card staff-panel-card catalogue-growth-metric"><div class="card-body"><p class="staff-metric-label">Merchant readiness</p><p class="staff-metric-value">{{ merchant.average_score }}%</p><p class="staff-metric-subtext">Average across physical products</p></div></div></div>
