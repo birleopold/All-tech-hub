@@ -32,3 +32,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local cryptographic material must never be added to the Git repository.
+/private_key.pem
+/public_key.pem
