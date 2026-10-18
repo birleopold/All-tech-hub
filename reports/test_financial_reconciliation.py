@@ -26,3 +26,13 @@ class FinancialReconciliationTests(TestCase):
         self.assertContains(response, "Orders and documents, side by side")
         self.assertEqual(response.context["online_orders"], 0)
         self.assertEqual(response.context["document_count"], 0)
+
+    def test_non_staff_user_cannot_see_financial_report(self):
+        visitor = get_user_model().objects.create_user(
+            username="reconcile-visitor", password="test-only"
+        )
+        visitor.user_permissions.add(
+            Permission.objects.get(codename="view_document_margin")
+        )
+        self.client.force_login(visitor)
+        self.assertNotEqual(self.client.get(self.url).status_code, 200)
