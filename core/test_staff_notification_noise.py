@@ -2,6 +2,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from core.models import StaffNotification
 from core.notifications import staff_notify
 
@@ -44,3 +45,33 @@ class StaffNotificationNoiseTests(TestCase):
         result = self.client.get(url, {"show": "read"})
         self.assertContains(result, "Previously handled")
         self.assertNotContains(result, "Urgent new assignment")
+
+    def test_cleanup_changes_only_old_alerts_for_logged_in_user(self):
+        from datetime import timedelta
+        from core.models import StaffNotification
+        other = get_user_model().objects.create_user(
+            username="another-staff", password="test-only", is_staff=True
+        )
+        old = staff_notify(self.user, "Old action", "/staff/jobs/10/")
+        fresh = staff_notify(self.user, "New action", "/staff/jobs/11/")
+        another = staff_notify(other, "Old action", "/staff/jobs/10/")
+        StaffNotification.objects.filter(pk__in=[old.pk, another.pk]).update(
+            created_at=timezone.now() - timedelta(days=32)
+        )
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("staff_notifications_acknowledge"),
+            {"scope": "older_30_days"},
+        )
+        self.assertEqual(response.status_code, 302)
+        old.refresh_from_db()
+        fresh.refresh_from_db()
+        another.refresh_from_db()
+        self.assertTrue(old.is_read)
+        self.assertFalse(fresh.is_read)
+        self.assertFalse(another.is_read)
+
+    def test_cleanup_rejects_unrecognized_scope(self):
+        self.client.force_login(self.user)
+        response = self.client.post(reverse("staff_notifications_acknowledge"), {"scope": "delete"})
+        self.assertEqual(response.status_code, 403)
