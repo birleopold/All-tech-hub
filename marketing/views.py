@@ -720,6 +720,32 @@ class LeadUpdateView(MarketingFormMixin, UpdateView):
         return response
 
 
+class ClaimOverdueLeadsView(StaffRequiredMixin, View):
+    """Claim a bounded number of overdue, unassigned leads as one action."""
+
+    def post(self, request):
+        now = timezone.now()
+        with transaction.atomic():
+            candidates = list(
+                MarketingLead.objects.select_for_update()
+                .filter(assigned_to__isnull=True)
+                .exclude(status__in=(MarketingLead.STATUS_WON, MarketingLead.STATUS_LOST))
+                .filter(
+                    Q(next_follow_up_at__lte=now)
+                    | Q(status=MarketingLead.STATUS_NEW,
+                        first_contacted_at__isnull=True,
+                        response_due_at__lte=now)
+                )
+                .order_by("created_at", "pk")
+                .values_list("pk", flat=True)[:25]
+            )
+            count = MarketingLead.objects.filter(
+                pk__in=candidates, assigned_to__isnull=True
+            ).update(assigned_to=request.user, updated_at=now)
+        messages.success(request, f"Claimed {count} overdue unassigned enquiries (up to 25 per action).")
+        return redirect("staff_marketing_leads")
+
+
 class LeadClaimView(StaffRequiredMixin, View):
     def post(self, request, pk):
         lead = get_object_or_404(MarketingLead, pk=pk)
