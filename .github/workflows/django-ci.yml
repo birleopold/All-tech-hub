@@ -41,6 +41,7 @@ jobs:
           node --check static/js/marketplace_experience.js
           node --check static/js/mobile_commerce_pro.js
           node --check static/js/job_handover_signature.js
+          node --check static/js/field_notes_offline.js
 
       - name: Check migration drift
         run: python manage.py makemigrations --check --dry-run
@@ -118,6 +119,7 @@ jobs:
           catalog.test_search_recovery
           operations.test_handover_workflow
           operations.test_handover_signature
+          operations.test_offline_field_notes
           core.test_homepage_commerce_priority
           merchandising.test_merchant_readiness_visibility
           reliability

@@ -64,7 +64,8 @@ for source in \
     static/js/marketing_analytics.js \
     static/js/marketplace_experience.js \
     static/js/mobile_commerce_pro.js \
-    static/js/job_handover_signature.js; do
+    static/js/job_handover_signature.js \
+    static/js/field_notes_offline.js; do
     node --check "$source"
 done
 

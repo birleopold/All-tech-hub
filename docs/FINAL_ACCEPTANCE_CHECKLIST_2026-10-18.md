@@ -130,6 +130,12 @@ customer's database, file names, credentials or archive into a public issue.
 - **Verified-purchase review:** order-bound review URL and customer review form
   exist under the commerce retention workflows. Actual completed-order
   authorisation, moderation and customer-device acceptance remain open.
-- **Offline field operation:** an offline fallback page exists, but background
-  queue, durable conflict resolution and safe replay are unproven and remain
-  open. Do not count displaying an offline page as offline job editing.
+- **Offline field operations:** the staff job detail and technician bench now
+  offer explicit device-only drafts for internal field notes, using a per-user
+  browser queue with seven-day expiry. The staff member manually syncs after
+  reconnecting; server checks CSRF, permissions, UUID idempotency, a matching
+  job revision and non-terminal status. Conflicting drafts are retained for
+  human review. Actual device testing and VPS release verification remain
+  open. Offline inventory, expenses, payment, time entries, signatures and
+  status transitions are deliberately not queued because they require live
+  conflict/reconciliation checks.

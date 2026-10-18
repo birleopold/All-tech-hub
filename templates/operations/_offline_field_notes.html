@@ -1,0 +1,26 @@
+{% if can_sync_offline_notes %}
+<section class="card border-0 shadow-sm my-4" aria-labelledby="offline-job-notes-title">
+  <div class="card-body" data-offline-job-notes
+       data-offline-owner="{{ request.user.pk }}"
+       data-offline-job="{{ job.pk }}"
+       data-offline-version="{{ offline_job_version }}"
+       data-offline-endpoint="{% url 'staff_offline_job_note_sync' job.pk %}">
+    <h2 class="h5" id="offline-job-notes-title">Field notes when internet is unreliable</h2>
+    <p class="small text-muted">Save private technician observations while this job page is open, even during a connection drop. Notes remain on this device until you press Sync. Do not enter passwords, financial details or sensitive customer identity information. Do not use a shared device for confidential notes.</p>
+    <form>
+      {% csrf_token %}
+      <label for="field-note-{{ job.pk }}" class="form-label fw-semibold">Internal field observation</label>
+      <textarea id="field-note-{{ job.pk }}" data-offline-text class="form-control" rows="3" maxlength="3000" placeholder="Describe what was checked or repaired. Saved notes are internal only."></textarea>
+      <div class="d-flex gap-2 flex-wrap mt-3">
+        <button type="button" data-offline-save class="btn btn-outline-primary">Save to this device</button>
+        <button type="button" data-offline-sync class="btn btn-primary" disabled>Review and sync (<span data-offline-count>0</span>)</button>
+        <button type="button" data-offline-discard class="btn btn-outline-danger" disabled>Discard queued notes</button>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-warning mt-2" data-offline-review hidden>I've reviewed the latest job and notes</button>
+      <p class="small mt-2 mb-0" data-offline-status role="status" aria-live="polite">Offline device queue loading. Only confirmed synchronisation saves a note to the server.</p>
+    </form>
+    <p class="small text-muted mt-2 mb-0">Offline drafts expire after seven days and are not visible on another device. Job status, inventory, payment, time tracking and handover still require an online connection.</p>
+  </div>
+</section>
+<script src="{% static 'js/field_notes_offline.js' %}" defer></script>
+{% endif %}

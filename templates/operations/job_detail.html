@@ -60,6 +60,7 @@
 
   {% if handover_form %}<script src="{% static 'js/job_handover_signature.js' %}" defer></script>{% endif %}
 
+  {% include "operations/_offline_field_notes.html" %}
   {% if feedback %}<div class="alert alert-success d-flex align-items-start gap-2"><i class="bi bi-star-fill fs-5" aria-hidden="true"></i><div><strong>Customer feedback: {{ feedback.rating }}/5</strong><span class="text-warning ms-2" aria-label="{{ feedback.rating }} out of 5 stars">{% for i in "12345" %}{% if forloop.counter <= feedback.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span>{% if feedback.comment %}<p class="mb-0 mt-1">{{ feedback.comment }}</p>{% endif %}<small class="text-muted">Submitted {{ feedback.submitted_at|date:"M j, Y H:i" }}</small></div></div>{% endif %}
 
   <div class="staff-workflow-columns">

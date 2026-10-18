@@ -381,6 +381,10 @@ class JobNote(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
     )
     body = models.TextField()
+    client_operation_id = models.UUIDField(
+        null=True, blank=True, unique=True, editable=False,
+        help_text="Idempotency key for explicitly synced offline technician notes.",
+    )
     is_internal = models.BooleanField(
         default=True, help_text="Hidden from customer-facing exports."
     )

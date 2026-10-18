@@ -186,7 +186,9 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Verify staff quotation revision history and approved-quote conversion from the relevant forms, with mobile/role tests (DocumentRevision code is present).
 - [x] Implement signed recipient handover capture using touch/mouse pad or image upload, server-side image rewrite, explicit recipient consent, protected staff/customer file access, duplicate protection and clear handling of legacy unsigned handovers.
 - [ ] Verify signed handover on actual phones/tablets and exercise migration and focused/full tests on the VPS; signed handover is code-implemented but not device-certified.
-- [ ] Verify offline field work with queued edits, conflict handling and reconnection replay. An offline page alone is not offline workflow capability.
+- [x] Add manually reviewed offline INTERNAL technician note drafts on the existing staff job and technician bench pages, with per-account IndexedDB queue, 7-day expiry, unique client operation tokens and CSRF-protected server replay. Closed and changed jobs cannot silently receive stale data; no automatic background replay.
+- [ ] Run desktop and mobile device tests for offline notes, logout/login account separation, browser storage permissions and server conflict handling. This is not yet production-certified.
+- [ ] Implement or explicitly defer offline photo, inventory, time, status and payment writes; high-risk writes are intentionally online-only until their independent conflict/reconciliation designs are accepted.
 - [ ] Verify the order-bound verified-purchase review route, order ownership, moderation and rendering across user devices (code exists, live acceptance missing).
 
 ## P6 coding handoff

@@ -2,6 +2,7 @@ from django.urls import path
 
 from core import private_views
 from operations import views
+from operations.offline_sync import offline_job_note_sync
 from operations.job_list_view import StaffJobCardListView
 
 urlpatterns = [
@@ -15,6 +16,7 @@ urlpatterns = [
     path("jobs/<int:pk>/bench/status/", views.job_bench_status, name="staff_job_bench_status"),
     path("jobs/<int:pk>/edit/", views.JobCardUpdateView.as_view(), name="staff_job_edit"),
     path("jobs/<int:pk>/note/", views.job_add_note, name="staff_job_note"),
+    path("jobs/<int:pk>/offline-note/sync/", offline_job_note_sync, name="staff_offline_job_note_sync"),
     path("jobs/<int:pk>/handover/", views.job_record_handover, name="staff_job_handover"),
     path("jobs/<int:pk>/handover/signature/", private_views.staff_job_handover_signature, name="staff_job_handover_signature"),
     path("jobs/<int:pk>/expense/", views.job_add_expense, name="staff_job_expense"),
