@@ -9,6 +9,8 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from tempfile import NamedTemporaryFile
 
 from django.core.management.base import BaseCommand, CommandError
@@ -16,6 +18,34 @@ from django.core.management.base import BaseCommand, CommandError
 from core.seo_audit import seo_audit_snapshot
 from merchandising.models import SearchQueryInsight
 from merchandising.services import merchant_readiness_snapshot, search_opportunity_rows
+
+
+def get_windsor_snapshot():
+    """Fetch aggregated account metrics only when a VPS API key is configured."""
+    key = os.getenv("ALLTECH_WINDSOR_API_KEY", "").strip()
+    if not key:
+        return {"status": "not_configured"}
+    results = {}
+    for label, connector, account, fields in (
+        ("analytics", "googleanalytics4", "545512966", "account_id,active_users"),
+        ("merchant", "google_merchant", "5836415711",
+         "account_id,product_status_country,product_status_reporting_context,product_status_active_count,product_status_pending_count,product_status_disapproved_count"),
+    ):
+        query = urlencode({"api_key": key, "fields": fields, "select_accounts": account, "date_preset": "last_28d"})
+        try:
+            with urlopen(Request("https://connectors.windsor.ai/" + connector + "?" + query), timeout=15) as response:
+                payload = json.load(response)
+            rows = payload.get("data", []) if isinstance(payload, dict) else payload
+            if not isinstance(rows, list):
+                raise ValueError("Invalid provider output")
+            rows = [row for row in rows if isinstance(row, dict) and str(row.get("account_id")) == account]
+            if label == "merchant":
+                rows = [row for row in rows if row.get("product_status_country") == "UG"]
+            results[label] = {"status": "ok", "rows": rows[:25]}
+        except Exception:
+            # Do not log an exception: its URL may contain a credential.
+            results[label] = {"status": "unavailable"}
+    return {"status": "queried", "period": "last_28d", "accounts": results}
 
 
 def google_growth_report():
@@ -66,6 +96,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         report = google_growth_report()
+        report["windsor"] = get_windsor_snapshot()
         payload = json.dumps(report, indent=2, ensure_ascii=False) + "\n"
         output = options.get("output")
         if not output:
