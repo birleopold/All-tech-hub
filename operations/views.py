@@ -21,11 +21,11 @@ from core.mixins import StaffRequiredMixin
 from core.models import StaffSavedSearch
 from inventory.forms import JobStockUseForm
 from operations.forms import (
-    JobAttachmentForm, JobCardForm, JobExpenseForm, JobNoteForm, TimeEntryForm,
+    JobAttachmentForm, JobCardForm, JobExpenseForm, JobHandoverForm, JobNoteForm, TimeEntryForm,
 )
 from operations.job_financials import job_financial_reconciliation
 from operations.job_status import allowed_next_statuses
-from operations.models import JobCard, JobExpense
+from operations.models import JobCard, JobExpense, JobHandover
 from operations.pdf import pdf_response
 
 
@@ -159,6 +159,12 @@ class JobCardDetailView(StaffRequiredMixin, DetailView):
             self.object.status_events.select_related("actor").order_by("created_at", "id")
         )
         ctx["feedback"] = getattr(self.object, "feedback", None)
+        ctx["can_record_job_handover"] = (
+            self.object.status in {JobCard.STATUS_READY, JobCard.STATUS_COMPLETED}
+            and not hasattr(self.object, "handover")
+            and self.request.user.has_perm("operations.change_jobcard")
+        )
+        ctx["handover_form"] = JobHandoverForm() if ctx["can_record_job_handover"] else None
         can_view_expenses = self.request.user.has_perm(
             "operations.view_jobexpense"
         )
@@ -230,6 +236,50 @@ def job_bench_status(request, pk: int):
     )
     messages.success(request, f"Moved {job.number} to {valid_statuses[new_status]}.")
     return redirect("staff_job_bench_detail", pk=job.pk)
+
+
+@require_POST
+@transaction.atomic
+def job_record_handover(request, pk: int):
+    if not request.user.is_staff or not request.user.has_perm(
+        "operations.change_jobcard"
+    ):
+        raise Http404
+
+    job = get_object_or_404(JobCard.objects.select_for_update(), pk=pk)
+    destination = reverse_lazy("staff_job_detail", kwargs={"pk": job.pk})
+    if JobHandover.objects.filter(job=job).exists():
+        messages.info(request, "Handover was already recorded; the original record is retained.")
+        return redirect(destination)
+    if job.status not in {JobCard.STATUS_READY, JobCard.STATUS_COMPLETED}:
+        messages.error(request, "Finish quality assurance and mark the job ready before handover.")
+        return redirect(destination)
+
+    form = JobHandoverForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Handover not recorded. Enter the recipient, method and confirmation.")
+        return redirect(destination)
+
+    handover = form.save(commit=False)
+    handover.job = job
+    handover.recorded_by = request.user
+    handover.full_clean()
+    handover.save()
+    if job.status == JobCard.STATUS_READY:
+        job.status = JobCard.STATUS_COMPLETED
+        job._status_actor = request.user
+        job._status_note = "Staff-confirmed handover"
+        job.full_clean()
+        job.save()
+
+    log_audit_event(
+        actor=request.user,
+        verb="job.handover_recorded",
+        summary=f"{job.number}: {handover.get_method_display()}",
+        target=job,
+    )
+    messages.success(request, "Handover recorded. The customer can see the handover date.")
+    return redirect(destination)
 
 
 @require_POST

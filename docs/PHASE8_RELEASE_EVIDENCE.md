@@ -198,3 +198,21 @@ bypass the release gate.
 These changes still require a full, successful isolated VPS verification on the
 new commit. A successful deploy or HTTP 200 readiness result alone is not
 sufficient evidence of Phase 8 certification.
+
+## Verified production release c0737f0 (2026-10-18)
+
+The uploaded VPS output reports `Ran 754 tests ... OK`, successful isolated
+migrations and SQLite backup/restore, a pre-migration PostgreSQL dump, no pending
+production migrations, running Gunicorn, enabled marketing timer, and healthy
+local/public readiness at release `c0737f0`. This supersedes older candidate
+notes **for that SHA only**; external providers, PostgreSQL restoration,
+mobile/keyboard browser workflows, rollback rehearsal and CI runners remain
+uncertified.
+
+## New catalogue and handover features (candidate)
+
+Add spelling recovery for otherwise empty filtered catalogue searches, and an
+audited one-time repair handover with staff permission checks, confirmation,
+automated ready-to-complete transition and customer portal status. These changes
+require the next isolated VPS gate, migration rehearsal and browser acceptance
+before they can be marked deployed or verified.

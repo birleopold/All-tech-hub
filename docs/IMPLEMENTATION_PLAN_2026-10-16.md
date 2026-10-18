@@ -70,6 +70,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [ ] Review stock status, results pagination, empty-state recovery and conversion actions together.
 - [ ] Browser-verify routed category/brand changes, cross-tab discovery pagination, and search filters.
 - [ ] Confirm production catalogue has no misleading zero-price representation in external previews.
+- [x] Add conservative typo-recovery suggestions only when a corrected search produces results under the same filters, with customer navigation regression tests.
 
 ## P3 first customer-to-staff order protection
 - [x] Disable delivery at checkout when no priced delivery area exists, instead of silently charging zero; pickup remains usable.
@@ -146,6 +147,7 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Code-stage the full Phase 6 supplier, inventory, field-cost, refund, approval and finance-reporting workflow; integrations and access certification deferred.
 - [x] Stage expense report access and finance CSV confidentiality tests in the focused CI suite.
 - [ ] Run finance, stock-ledger and field-workflow integration tests at final verification.
+- [x] Add immutable, permission-controlled customer pickup/delivery handover records with staff confirmation, READY-to-COMPLETED transition, portal visibility and duplicate protection; VPS migration and acceptance verification pending.
 
 ## P7 marketing and integrations implementation
 - [x] Separate configured credentials from verified connections, and test only selected channels with an explicit empty-selection message.

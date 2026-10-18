@@ -3,11 +3,13 @@ from __future__ import annotations
 import re
 
 from django.db.models import F, Q
+from django.urls import reverse
 from django.db.models.functions import Trim
 from django.utils.safestring import mark_safe
 
 from catalog.discovery import discovery_seed_for_request, order_for_discovery
 from catalog.models import Product
+from catalog.search_recovery import suggested_catalog_query
 from catalog.public_views import (
     PublicProductListView as MarketplaceProductListView,
     _annotate_marketplace_values,
@@ -180,6 +182,28 @@ class RefinedPublicProductListView(MarketplaceProductListView):
         context["catalog_breadcrumb_json"] = _script_safe_json(
             context["catalog_breadcrumb_json"]
         )
+        context["search_correction"] = None
+        original_query = (self.request.GET.get("q") or "").strip()
+        if original_query and context["paginator"].count == 0:
+            suggestion = suggested_catalog_query(original_query)
+            if suggestion:
+                original_params = self.request.GET
+                corrected_params = original_params.copy()
+                corrected_params["q"] = suggestion
+                corrected_params.pop("page", None)
+                corrected_params.pop("view", None)
+                try:
+                    self.request.GET = corrected_params
+                    # Reuse the complete filtered queryset so unavailable or
+                    # unrelated products are not suggested.
+                    exists = self.get_queryset().exists()
+                finally:
+                    self.request.GET = original_params
+                if exists:
+                    context["search_correction"] = {
+                        "query": suggestion,
+                        "url": f'{reverse("product_list")}?{corrected_params.urlencode()}',
+                    }
         return context
 
 

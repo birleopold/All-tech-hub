@@ -436,6 +436,35 @@ class JobStatusEvent(models.Model):
         return f"{self.job.number}: {self.from_status or '∅'} → {self.to_status}"
 
 
+class JobHandover(models.Model):
+    """One-time staff-confirmed collection or delivery; not a payment receipt."""
+
+    METHOD_COLLECTION = "collection"
+    METHOD_DELIVERY = "delivery"
+    METHOD_CHOICES = [
+        (METHOD_COLLECTION, "Collected at LEOSOFT"),
+        (METHOD_DELIVERY, "Delivered to recipient"),
+    ]
+
+    job = models.OneToOneField(
+        JobCard, on_delete=models.PROTECT, related_name="handover"
+    )
+    recipient_name = models.CharField(max_length=160)
+    method = models.CharField(max_length=16, choices=METHOD_CHOICES)
+    note = models.CharField(max_length=300, blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, related_name="job_handovers_recorded",
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-recorded_at", "-id"]
+
+    def __str__(self):
+        return f"{self.job.number}: {self.get_method_display()}"
+
+
 class JobFeedback(models.Model):
     """Customer satisfaction rating after job completion."""
 

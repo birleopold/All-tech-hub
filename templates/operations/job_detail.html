@@ -22,6 +22,30 @@
     <div class="staff-record-stat"><small>Schedule</small><strong>{% if job.scheduled_for %}{{ job.scheduled_for|date:"M j, Y H:i" }}{% else %}Not scheduled{% endif %}</strong>{% if job.scheduled_until %}<span>Until {{ job.scheduled_until|date:"H:i" }}</span>{% elif job.estimated_completion %}<span>Estimated completion {{ job.estimated_completion }}</span>{% endif %}</div>
   </div></div>
 
+  <article class="staff-section-card mb-4" id="job-handover">
+    <header class="staff-section-card-header"><div><h2>Collection or delivery handover</h2><p>Record who received the completed work. A handover is not proof of payment.</p></div><i class="bi bi-box-arrow-up-right text-muted" aria-hidden="true"></i></header>
+    <div class="staff-section-card-body">
+      {% if job.handover %}
+        <p class="mb-1"><strong>{{ job.handover.get_method_display }}</strong> — {{ job.handover.recipient_name }}</p>
+        <p class="small text-muted mb-1">Recorded {{ job.handover.recorded_at|date:"M j, Y H:i" }}{% if job.handover.recorded_by %} by {{ job.handover.recorded_by.get_username }}{% endif %}</p>
+        {% if job.handover.note %}<p class="mb-0">{{ job.handover.note }}</p>{% endif %}
+      {% elif can_record_job_handover %}
+        <form method="post" action="{% url 'staff_job_handover' job.pk %}" class="row g-3">
+          {% csrf_token %}
+          <div class="col-md-6"><label for="{{ handover_form.recipient_name.id_for_label }}" class="form-label">Recipient name</label>{{ handover_form.recipient_name }}</div>
+          <div class="col-md-6"><label for="{{ handover_form.method.id_for_label }}" class="form-label">Handover method</label>{{ handover_form.method }}</div>
+          <div class="col-12"><label for="{{ handover_form.note.id_for_label }}" class="form-label">Reference or note (optional)</label>{{ handover_form.note }}</div>
+          <div class="col-12"><div class="form-check">{{ handover_form.confirmed }}<label for="{{ handover_form.confirmed.id_for_label }}" class="form-check-label">{{ handover_form.confirmed.label }}</label></div></div>
+          <div class="col-12"><button type="submit" class="btn btn-primary">Confirm handover</button></div>
+        </form>
+      {% elif job.status == 'ready_pickup' or job.status == 'completed' %}
+        <p class="text-muted mb-0">An authorised staff member can record the handover.</p>
+      {% else %}
+        <p class="text-muted mb-0">Record handover after quality assurance, when the job is ready for collection or delivery.</p>
+      {% endif %}
+    </div>
+  </article>
+
   {% if feedback %}<div class="alert alert-success d-flex align-items-start gap-2"><i class="bi bi-star-fill fs-5" aria-hidden="true"></i><div><strong>Customer feedback: {{ feedback.rating }}/5</strong><span class="text-warning ms-2" aria-label="{{ feedback.rating }} out of 5 stars">{% for i in "12345" %}{% if forloop.counter <= feedback.rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span>{% if feedback.comment %}<p class="mb-0 mt-1">{{ feedback.comment }}</p>{% endif %}<small class="text-muted">Submitted {{ feedback.submitted_at|date:"M j, Y H:i" }}</small></div></div>{% endif %}
 
   <div class="staff-workflow-columns">

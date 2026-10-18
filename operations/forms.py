@@ -1,6 +1,6 @@
 from django import forms
 
-from operations.models import JobAttachment, JobCard, JobExpense, JobNote, TimeEntry
+from operations.models import JobAttachment, JobCard, JobExpense, JobHandover, JobNote, TimeEntry
 
 
 class JobCardForm(forms.ModelForm):
@@ -89,6 +89,29 @@ class JobCardForm(forms.ModelForm):
                 target=obj,
             )
         return obj
+
+
+class JobHandoverForm(forms.ModelForm):
+    confirmed = forms.BooleanField(
+        required=True,
+        label="I confirm the device or completed work was handed over",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+    class Meta:
+        model = JobHandover
+        fields = ("recipient_name", "method", "note")
+        widgets = {
+            "recipient_name": forms.TextInput(attrs={
+                "class": "form-control", "maxlength": "160",
+                "placeholder": "Person receiving the device or service",
+            }),
+            "method": forms.Select(attrs={"class": "form-select"}),
+            "note": forms.TextInput(attrs={
+                "class": "form-control", "maxlength": "300",
+                "placeholder": "Optional collection or delivery reference",
+            }),
+        }
 
 
 class JobExpenseForm(forms.ModelForm):

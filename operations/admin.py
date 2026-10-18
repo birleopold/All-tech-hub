@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from operations.models import JobCard, JobExpense, JobFeedback, JobNote, JobStatusEvent, TimeEntry
+from operations.models import JobCard, JobExpense, JobFeedback, JobHandover, JobNote, JobStatusEvent, TimeEntry
 
 
 class JobNoteInline(admin.TabularInline):
@@ -58,6 +58,24 @@ class JobExpenseAdmin(admin.ModelAdmin):
         "job", "category", "description", "reference",
         "amount", "recorded_by", "recorded_at",
     )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(JobHandover)
+class JobHandoverAdmin(admin.ModelAdmin):
+    list_display = ("job", "method", "recipient_name", "recorded_by", "recorded_at")
+    list_filter = ("method", "recorded_at")
+    search_fields = ("job__number", "recipient_name")
+    raw_id_fields = ("job", "recorded_by")
+    readonly_fields = ("job", "method", "recipient_name", "note", "recorded_by", "recorded_at")
 
     def has_add_permission(self, request):
         return False
