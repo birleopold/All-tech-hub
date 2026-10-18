@@ -20,6 +20,29 @@
     </div>
   </div>
 
+  <section class="card staff-panel-card mb-4" aria-labelledby="google-account-metrics">
+    <div class="card-body">
+      <h2 class="h5 mb-1" id="google-account-metrics">Google account performance · Windsor.ai</h2>
+      <p class="small text-muted">Saved daily snapshot · last 28 days{% if google_live.updated %} · synchronized {{ google_live.updated|date:"j M Y, H:i" }}{% endif %}{% if google_live.stale %} · report older than 36 hours{% endif %}. This is Google account data, not product approval from our local database.</p>
+      {% if google_live.state == "ready" %}
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-xl-4"><div class="border rounded p-3 h-100"><span class="text-muted small d-block">GA4 active users</span><strong class="fs-4">{% if google_live.analytics != None %}{{ google_live.analytics }}{% else %}Unavailable{% endif %}</strong><div class="small text-muted">Visitors, not confirmed orders</div></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="border rounded p-3 h-100"><span class="text-muted small d-block">Uganda free listings · active</span><strong class="fs-4">{% if google_live.merchant != None %}{{ google_live.merchant.active }}{% else %}Unavailable{% endif %}</strong><div class="small text-muted">Google-reported status, not local readiness</div></div></div>
+        <div class="col-sm-6 col-xl-4"><div class="border rounded p-3 h-100"><span class="text-muted small d-block">Uganda free listings · pending / disapproved</span><strong class="fs-4">{% if google_live.merchant != None %}{{ google_live.merchant.pending }} / {{ google_live.merchant.disapproved }}{% else %}Unavailable{% endif %}</strong><div class="small text-muted">Counts from reported country status</div></div></div>
+      </div>
+      <h3 class="h6">Search Console queries in recent report</h3>
+      <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>Avg position</th><th>Landing page</th></tr></thead><tbody>
+      {% for item in google_live.queries %}
+        <tr><td>{{ item.query }}</td><td>{{ item.clicks }}</td><td>{{ item.impressions }}</td><td>{{ item.position }}</td><td><a href="{{ item.page }}" target="_blank" rel="noopener noreferrer">Open</a></td></tr>
+      {% empty %}<tr><td colspan="5" class="text-muted">No query rows returned for this reporting period.</td></tr>{% endfor %}
+      </tbody></table></div>
+      {% else %}
+        <p class="text-muted mb-0">Live account metrics are not available in the saved report yet. Status: {{ google_live.state }}. Check the daily Google reporting service or its Windsor API configuration.</p>
+      {% endif %}
+      <p class="small text-muted mt-2 mb-0">The dashboard reads the saved private report; it does not contact Windsor.ai on every page load.</p>
+    </div>
+  </section>
+
   <section class="card staff-panel-card mb-4" aria-labelledby="google-growth-workflow">
     <div class="card-body">
       <h2 class="h5 mb-2" id="google-growth-workflow">Google Growth Centre · what to do next</h2>
