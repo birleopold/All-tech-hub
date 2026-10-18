@@ -13,6 +13,7 @@
     </div>
     <div class="staff-dashboard-actions">
       <a class="btn btn-primary" href="{{ seo.endpoints.sitemap_index }}" target="_blank" rel="noopener noreferrer">Open sitemap</a>
+      <a class="btn btn-outline-primary" href="{% url 'staff_google_review_queue' %}">Download Google review queue</a>
       <a class="btn btn-outline-primary" href="{% url 'staff_catalogue_bulk_enrichment' %}">Bulk enrichment</a>
       <a class="btn btn-outline-secondary" href="{% url 'staff_catalogue_quality' %}">Catalogue quality</a>
     </div>
