@@ -142,3 +142,20 @@ class OfflineFieldNoteTests(TestCase):
         })
         self.assertEqual(blocked.status_code, 403)
         self.assertFalse(JobNote.objects.filter(client_operation_id=self.key).exists())
+
+    def test_closed_job_shows_discard_ui_without_active_sync(self):
+        self.job.status = JobCard.STATUS_CANCELLED
+        self.job.save()
+        self.client.force_login(self.technician)
+        response = self.client.get(reverse("staff_job_detail", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-offline-open="no"')
+        self.assertContains(response, "This job is closed.")
+        self.assertContains(response, "Discard queued notes")
+
+    def test_active_job_shows_private_queue_preview(self):
+        self.client.force_login(self.technician)
+        response = self.client.get(reverse("staff_job_detail", args=[self.job.pk]))
+        self.assertContains(response, 'data-offline-open="yes"')
+        self.assertContains(response, "Device-only unsynced notes")
+        self.assertContains(response, "field_notes_offline.js")

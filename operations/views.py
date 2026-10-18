@@ -153,7 +153,8 @@ class JobCardDetailView(StaffRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         ctx["note_form"] = JobNoteForm()
         ctx["offline_job_version"] = self.object.updated_at.isoformat()
-        ctx["can_sync_offline_notes"] = self.request.user.has_perm("operations.add_jobnote") and self.object.is_open
+        ctx["can_sync_offline_notes"] = self.request.user.has_perm("operations.add_jobnote")
+        ctx["offline_job_is_open"] = self.object.is_open
         ctx["time_form"] = TimeEntryForm(initial={"technician": self.request.user.pk, "minutes": 30})
         ctx["attachment_form"] = JobAttachmentForm()
         ctx["job_stock_form"] = JobStockUseForm()
