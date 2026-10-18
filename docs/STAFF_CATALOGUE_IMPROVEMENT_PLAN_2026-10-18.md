@@ -60,3 +60,21 @@ These were not fully visible during the automated browser walkthrough and should
 - Product enrichment: existing staff verification fields, review queue and guarded approval are implemented; physical SKU/variant/condition/price verification is not possible from website images alone and no unverified product data was applied.
 - Responsive workflows: desktop staff editor inspected with TinyFish; improved narrow-width CSS and unsaved-form protection committed. The browser could not resize to 390px; live mobile validation remains.
 - Production: requires the user's guarded VPS deployment and successful current-revision release log; not certified by GitHub commits or public read-only inspection.
+
+## Production inspection closeout evidence — 2026-10-18
+- The public readiness endpoint `/health/ready/` responded `status=ok`, `database=ok`, `migrations=ok`, `pending_migrations=[]`, deployed revision `c91010b`. This confirms the last reported deployment revision, not any commits made afterward.
+- Authenticated TinyFish revisited `/staff/reports/reconciliation/`, `/staff/seo/`, and `/staff/inventory/products/1/commercial/`; all rendered successfully, including financial source comparison, saved Windsor metrics, and Merchant approval controls. Those actions were read-only.
+- Authenticated TinyFish separately inspected `/staff/marketing/leads/`: overdue triage action and six filters are visible. It reported 49 overdue first responses but zero currently eligible unassigned-overdue records when it used the batch claim. The two counts measure different subsets.
+- `/static/images/products/149/small.jpg` returned HTTP 404. Do not invent or replace the image with a different product. Inspect media provenance, asset references and originals; use the existing `python manage.py audit_catalog_media --skip-hashes` to inspect storage-backed product photos. The audit alone does not validate every static legacy URL.
+- Saved Windsor snapshot reported 13 GA4 active users, 27 Uganda pending free listings, and 0 Uganda active free listings. Account data and local catalogue quality are not Google approval.
+- TinyFish could not resize its browser to 390px, so mobile layout is still not empirically verified. It did inspect the desktop form and variants.
+
+## TinyFish chapter closeout boundary
+Software workflow implementation and deployed page smoke inspection may be considered complete for the features listed above **at revision c91010b**, but the following must not be marked completed without further evidence:
+1. In-person product/variant stock, condition, warranty and model verification; do not enable Merchant publication for unverified products.
+2. Investigating accounting figures against real commercial documents, payments, posted costs and customer credits; the aggregate total is not itself proof of profit.
+3. Mobile-device editing and save/validation checks across actual screen widths.
+4. Repairing the confirmed broken image URL from the authentic source.
+5. A successful guarded release and browser check for any commits later than c91010b.
+
+No background tasks or automatic product approvals have been initiated by this document.
