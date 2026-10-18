@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}{% if object %}Edit {{ object.name }}{% else %}New product{% endif %}{% endblock %}
 {% block staff_page_name %}{% if object %}Edit product{% else %}New product{% endif %}{% endblock %}
+{% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/staff_product_editor_responsive.css' %}">{% endblock %}
 {% block staff_content %}
 <section class="staff-page">
   <header class="staff-detail-header">
