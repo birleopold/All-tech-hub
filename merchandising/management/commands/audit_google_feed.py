@@ -1,4 +1,5 @@
 """Validate the exact staff-approved Google RSS source without touching Google."""
+import os
 from xml.etree import ElementTree as ET
 
 from django.core.management.base import BaseCommand, CommandError
@@ -25,7 +26,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # The default manage.py settings select development unless ALLTECH_ENV is
         # set explicitly; never mislabel that database as production.
-        environment = "production" if not settings.DEBUG else "development"
+        environment = "production" if os.getenv("ALLTECH_ENV", "development").lower() == "production" else "development"
         database_engine = settings.DATABASES["default"]["ENGINE"].rsplit(".", 1)[-1]
         self.stdout.write(f"Google feed audit environment: {environment}; database: {database_engine}")
         # Check the connected schema before accessing any catalogue records.
