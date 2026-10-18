@@ -96,3 +96,9 @@ bash scripts/final_release_closeout.sh
 curl -fsS https://leosoftug.com/health/ready/
 ```
 Do not push new commits to main while the guarded release is running.
+
+## Continuation: ongoing feed eligibility (2026-10-18)
+- [x] Change approved Merchant feed eligibility so even previously approved SKUs are omitted when stock confirmation is absent, older than 30 days, or dated in the future; continue omitting zero-stock/untracked variants.
+- [x] Add regression test covering expiry and maintain valid-stock variant coverage.
+- [x] Display the stale-stock block on commercial review so staff understand why an approved product is not in the feed.
+- [ ] Verify these latest commits with the guarded VPS test/deploy and Google Merchant feed URL. No live product records were updated.
