@@ -14,6 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=0)
+        parser.add_argument("--product-id", type=int, default=0, help="Inspect one product without changing its images.")
         parser.add_argument(
             "--skip-hashes",
             action="store_true",
@@ -22,6 +23,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         products = Product.objects.prefetch_related("gallery_images").order_by("pk")
+        if options["product_id"] > 0:
+            products = products.filter(pk=options["product_id"])
         if options["limit"] > 0:
             products = products[: options["limit"]]
 
@@ -41,7 +44,7 @@ class Command(BaseCommand):
             if basename.startswith(("wm_wm_", "wm-wm-")) or basename.count("wm_") > 1:
                 repeated.append((product.name, role, name))
             if not default_storage.exists(name):
-                missing.append((product.name, role, name))
+                missing.append((f"{product.pk}: {product.name}", role, name))
                 continue
             if options["skip_hashes"]:
                 continue
@@ -52,7 +55,7 @@ class Command(BaseCommand):
                         digest.update(chunk)
                 hashes[digest.hexdigest()].append((product.name, role, name))
             except OSError as exc:
-                missing.append((product.name, role, f"{name} ({exc})"))
+                missing.append((f"{product.pk}: {product.name}", role, f"{name} ({exc})"))
 
         duplicates = [items for items in hashes.values() if len(items) > 1]
         self.stdout.write(
