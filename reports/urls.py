@@ -4,9 +4,11 @@ from automation import staff_views as automation_staff_views
 from customer_campaigns import views as campaign_views
 from loyalty import staff_views as loyalty_staff_views
 from reports import commission_views, conversion_views, retention_views, views
+from reports.financial_reconciliation import FinancialReconciliationView
 
 urlpatterns = [
     path("reports/", commission_views.ReportsHomeView.as_view(), name="staff_reports"),
+    path("reports/reconciliation/", FinancialReconciliationView.as_view(), name="staff_financial_reconciliation"),
     path(
         "reports/conversion/",
         conversion_views.ConversionLifecycleView.as_view(),
