@@ -1,5 +1,6 @@
 """Uganda category SEO: exact titles, short customer copy and safe overrides."""
 from django.test import TestCase, override_settings
+from django.utils.html import escape
 from django.urls import reverse
 
 from catalog.local_seo import CATEGORY_SEARCH_COPY, category_metadata
@@ -46,7 +47,7 @@ class UgandaCategorySEOTests(TestCase):
                 path = reverse("product_category", args=[category.slug])
                 response = self.client.get(path)
                 self.assertEqual(response.status_code, 200)
-                self.assertContains(response, f"<title>{copy.title}</title>", html=False)
+                self.assertContains(response, f"<title>{escape(copy.title)}</title>", html=False)
                 self.assertContains(
                     response,
                     f'<meta name="description" content="{meta_description(copy.description)}">',
