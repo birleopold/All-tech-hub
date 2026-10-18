@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 ("eyebrow", models.CharField(blank=True, max_length=48)),
                 ("supporting_text", models.CharField(blank=True, max_length=135)),
                 ("button_label", models.CharField(default="Explore products", max_length=32)),
-                ("link_path", models.CharField(default="/catalog/", help_text="Internal path only (for example /catalog/ or /services/).", max_length=250)),
+                ("link_path", models.CharField(default="/catalog/", help_text="Internal path only (for example /catalog/ or /catalog/services/).", max_length=250)),
                 ("creative_image", models.ImageField(blank=True, upload_to="homepage_campaigns/%Y/%m/")),
                 ("image_alt", models.CharField(blank=True, max_length=140)),
                 ("start_at", models.DateTimeField(blank=True, null=True)),

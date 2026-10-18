@@ -154,7 +154,7 @@ class HomepageCampaignTests(TestCase):
             "headline": "Talk to our technicians",
             "supporting_text": "IT support when needed.",
             "button_label": "Explore services",
-            "link_path": "/services/",
+            "link_path": "/catalog/services/",
             "product": "",
             "priority": "2",
             "is_active": "on",

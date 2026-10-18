@@ -191,7 +191,7 @@ class HomepagePromotion(models.Model):
     button_label = models.CharField(max_length=32, default="Explore products")
     link_path = models.CharField(
         max_length=250, default="/catalog/",
-        help_text="Internal path only (for example /catalog/ or /services/).",
+        help_text="Internal path only (for example /catalog/ or /catalog/services/).",
     )
     product = models.ForeignKey(
         "catalog.Product", on_delete=models.SET_NULL,
