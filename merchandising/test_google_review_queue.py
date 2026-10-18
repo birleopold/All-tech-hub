@@ -84,3 +84,50 @@ class GoogleReviewQueueTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, product.name)
         self.assertContains(response, "Google review: products with recorded stock")
+
+    def test_merchant_approval_requires_permission_and_saved_facts(self):
+        from django.contrib.auth.models import Permission
+        from merchandising.models import ProductCommerceProfile
+        category = Category.objects.create(name="Merchant gate", slug="merchant-gate-test")
+        product = Product.objects.create(
+            category=category, name="Unverified stock", slug="merchant-gate-unit",
+            price="100000.00", is_published=True, track_inventory=True,
+            stock_quantity=2,
+        )
+        profile = ProductCommerceProfile.objects.create(product=product)
+        staff = get_user_model().objects.create_user(
+            username="merchant-gate-staff", password="test-only", is_staff=True
+        )
+        url = reverse("staff_product_merchant_approval", args=[product.pk])
+        self.client.force_login(staff)
+        response = self.client.post(url, {"action": "approve"})
+        self.assertEqual(response.status_code, 403)
+        staff.user_permissions.add(
+            Permission.objects.get(codename="change_productcommerceprofile")
+        )
+        response = self.client.post(url, {"action": "approve"})
+        self.assertEqual(response.status_code, 302)
+        profile.refresh_from_db()
+        self.assertFalse(profile.merchant_enabled)
+
+    def test_merchant_approval_revoke_is_idempotent(self):
+        from django.contrib.auth.models import Permission
+        from merchandising.models import ProductCommerceProfile
+        category = Category.objects.create(name="Revocation", slug="merchant-revoke-test")
+        product = Product.objects.create(
+            category=category, name="Previously approved", slug="merchant-revoke-unit",
+            price="100000.00", is_published=True,
+        )
+        profile = ProductCommerceProfile.objects.create(product=product, merchant_enabled=True)
+        staff = get_user_model().objects.create_user(
+            username="merchant-revoke-staff", password="test-only", is_staff=True
+        )
+        staff.user_permissions.add(
+            Permission.objects.get(codename="change_productcommerceprofile")
+        )
+        self.client.force_login(staff)
+        url = reverse("staff_product_merchant_approval", args=[product.pk])
+        self.assertEqual(self.client.post(url, {"action": "disable"}).status_code, 302)
+        self.assertEqual(self.client.post(url, {"action": "disable"}).status_code, 302)
+        profile.refresh_from_db()
+        self.assertFalse(profile.merchant_enabled)
