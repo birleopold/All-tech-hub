@@ -25,7 +25,7 @@ Scope: customer storefront, staff operations, admin configuration, production re
 | P8 | Production certification | Automated test gates, accessibility and responsive smoke runs, release rollback, backup restore drill, security and integration checks | **Active — certification pending** |
 
 ## Strict sequential phase policy (2026-10-17)
-**Active phase: P8 (production certification).** P1–P7 implementation is staged and integrated testing is postponed until all phases are coded, at the owner's request. No phase is certified in production yet.
+**Active phase: P8 (production certification).** P1–P7 code is staged. A full 754-test isolated Django suite passed on the VPS for release `c0737f0` on 2026-10-18, with PostgreSQL backup, migrations and public readiness successful. This proves the automated release check for that SHA, **not** the pending browser, external-provider or production PostgreSQL restore acceptance. The subsequently committed catalogue search, repair handover and homepage work has **not yet passed** a VPS gate.
 Code already merged in later-phase areas is early work only and does not imply
 those phases have started or passed acceptance.
 
