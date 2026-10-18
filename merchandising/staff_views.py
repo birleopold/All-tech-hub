@@ -427,7 +427,7 @@ class GoogleReviewQueueDownloadView(StaffRequiredMixin, View):
         response.write("\ufeff")
         columns = (
             "product_id", "product_name", "category", "stock_quantity",
-            "stock_tracked", "merchant_approved", "merchant_score",
+            "stock_tracked", "merchant_approved", "feed_eligible_now", "merchant_score",
             "missing_checks", "review_path",
         )
         writer = csv.DictWriter(response, fieldnames=columns)
