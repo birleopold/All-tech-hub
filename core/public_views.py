@@ -1,16 +1,20 @@
 from django.contrib import messages
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import F, Q
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.urls import reverse
 
 from catalog.discovery import new_rotation_seed, order_for_discovery
-from catalog.models import Product
+from catalog.models import Category, Product
 from catalog.presentation import prepare_public_products
 from core.forms import ContactForm
 from core.models import hours_summary, is_open_now
 from core.seo import public_url
 from core.views import HomeView
+from merchandising.models import HomepagePromotion
 
 
 class PublicHomeView(HomeView):
@@ -91,26 +95,89 @@ class PublicHomeView(HomeView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         published = self._published_products()
+        now = timezone.now()
+        recently_checked = now - timedelta(days=30)
 
-        featured_products = published.filter(
-            kind=Product.KIND_PHYSICAL,
-            is_featured=True,
+        # Read a bounded pool, then show credible, sellable listings first.
+        # Randomization happens only inside each availability tier. Never
+        # assert stock verification just because quantity is nonzero.
+        candidates = prepare_public_products(
+            order_for_discovery(
+                published.filter(kind=Product.KIND_PHYSICAL),
+                new_rotation_seed(),
+            )[:120]
         )
-        if not featured_products.exists():
-            featured_products = published.filter(kind=Product.KIND_PHYSICAL)
-        featured_services = published.filter(
-            kind=Product.KIND_SERVICE,
-            is_featured=True,
-        )
-        if not featured_services.exists():
-            featured_services = published.filter(kind=Product.KIND_SERVICE)
+        def listing_order(card):
+            confirmed = bool(
+                card.public_available and card.public_stock_confirmed_at
+                and card.public_stock_confirmed_at >= recently_checked
+            )
+            return (
+                not confirmed,
+                not card.public_available,
+                not card.is_featured,
+                not bool(card.primary_display_image),
+            )
 
-        context["featured_products"] = prepare_public_products(
-            order_for_discovery(featured_products, new_rotation_seed())[:8]
-        )
+        candidates.sort(key=listing_order)
+        featured = candidates[:8]
+        context["featured_products"] = featured
+        services = published.filter(kind=Product.KIND_SERVICE)
+        selected_services = services.filter(is_featured=True)
+        if not selected_services.exists():
+            selected_services = services
         context["featured_services"] = prepare_public_products(
-            order_for_discovery(featured_services, new_rotation_seed())[:4]
+            order_for_discovery(selected_services, new_rotation_seed())[:3]
         )
+
+        # Campaigns are managed from staff. Scheduled/expired campaigns are
+        # never rendered, nor are promotions for unpublished products.
+        active = (
+            HomepagePromotion.objects.filter(is_active=True)
+            .filter(Q(start_at__isnull=True) | Q(start_at__lte=now))
+            .filter(Q(end_at__isnull=True) | Q(end_at__gt=now))
+            .filter(Q(product__isnull=True) | Q(product__is_published=True))
+            .select_related("product")
+            .order_by("-priority", "-updated_at", "-pk")
+        )
+        promotions = {}
+        for item in active:
+            promotions.setdefault(item.slot, item)
+            if len(promotions) == 3:
+                break
+        context["hero_promotion"] = promotions.get(HomepagePromotion.HERO)
+        context["upper_promotion"] = promotions.get(HomepagePromotion.SIDE_TOP)
+        context["lower_promotion"] = promotions.get(HomepagePromotion.SIDE_BOTTOM)
+        context["hero_product"] = next(
+            (item for item in featured if item.primary_display_image), None
+        )
+
+        # Show authentic product photos as visual category tiles; fill missing
+        # departments without inventing category imagery or stock.
+        tiles = []
+        used_ids = set()
+        for product in candidates:
+            category = product.category
+            if category.pk not in used_ids:
+                used_ids.add(category.pk)
+                tiles.append({"category": category, "cover": product})
+            if len(tiles) >= 6:
+                break
+        if len(tiles) < 6:
+            categories = (
+                Category.objects.filter(
+                    products__is_published=True,
+                    products__kind=Product.KIND_PHYSICAL,
+                ).distinct().order_by("sort_order", "name")[:12]
+            )
+            for category in categories:
+                if category.pk not in used_ids:
+                    used_ids.add(category.pk)
+                    tiles.append({"category": category, "cover": None})
+                if len(tiles) >= 6:
+                    break
+        context["home_category_tiles"] = tiles
+
         context["deal_products"] = prepare_public_products(
             published.filter(kind=Product.KIND_PHYSICAL)
             .filter(

@@ -9,7 +9,7 @@ class HomepageEngagementJourneyTests(TestCase):
     def test_homepage_keeps_products_services_and_trust_visible(self):
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Explore below")
+        self.assertContains(response, "Explore the catalogue")
         self.assertContains(response, "Shop our products")
         self.assertContains(response, "Shop with confidence")
         self.assertContains(response, reverse("physical_product_list"))

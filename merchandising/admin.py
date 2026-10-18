@@ -4,6 +4,7 @@ from django.utils.html import format_html, format_html_join
 
 from merchandising.models import (
     BuyingGuide,
+    HomepagePromotion,
     CommercialLandingFAQ,
     CommercialLandingPage,
     DeliveryZone,
@@ -160,3 +161,17 @@ class SearchQueryInsightAdmin(admin.ModelAdmin):
     list_filter = ("date_end", "imported_at")
     search_fields = ("query", "page")
     readonly_fields = ("imported_at",)
+
+
+@admin.register(HomepagePromotion)
+class HomepagePromotionAdmin(admin.ModelAdmin):
+    list_display = ("headline", "slot", "is_active", "priority", "start_at", "end_at", "updated_at")
+    list_filter = ("slot", "is_active")
+    search_fields = ("headline", "eyebrow", "supporting_text")
+    autocomplete_fields = ("product",)
+    list_editable = ("is_active", "priority")
+    fieldsets = (
+        ("Placement", {"fields": ("slot", "priority", "is_active", "start_at", "end_at")}),
+        ("Campaign message", {"fields": ("eyebrow", "headline", "supporting_text", "button_label", "link_path")}),
+        ("Visual", {"fields": ("product", "creative_image", "image_alt")}),
+    )

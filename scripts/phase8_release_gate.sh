@@ -82,6 +82,7 @@ django.setup()
 from django.template.loader import get_template
 for template in (
     "core/home.html",
+    "dashboard/homepage_promotions.html",
     "catalog/_marketplace_product_card.html",
     "operations/_offline_field_notes.html",
     "operations/job_bench.html",

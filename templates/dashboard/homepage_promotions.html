@@ -1,0 +1,52 @@
+{% extends "staff_base.html" %}
+{% block title %}Homepage campaigns — LEOSOFT staff{% endblock %}
+{% block staff_page_name %}Homepage campaigns{% endblock %}
+{% block staff_content %}
+<div class="staff-page-intro d-flex flex-wrap gap-3 justify-content-between align-items-start mb-4">
+  <div><h1 class="h3 mb-1">Homepage promotions</h1><p class="text-muted mb-0">Choose real product imagery and short campaign messages. No code changes needed.</p></div>
+  <a href="{{ public_preview_url }}" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">Preview public homepage <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+</div>
+<div class="alert alert-info" role="note">Campaigns are displayed only when active and within their schedule. Keep prices, expiry and stock claims inside the verified product listing. Hero images should be clean, relevant photographs.</div>
+<div class="row g-4">
+  <div class="col-xl-7">
+    <section class="card border-0 shadow-sm mb-3"><div class="card-body">
+      <h2 class="h5 mb-3">Current campaigns</h2>
+      {% for entry in campaigns %}
+      <div class="d-flex align-items-center flex-wrap gap-2 py-3 {% if not forloop.last %}border-bottom{% endif %}">
+        <div class="flex-grow-1">
+          <strong>{{ entry.get_slot_display }} — {{ entry.headline }}</strong>
+          <p class="small text-muted mb-1">{{ entry.supporting_text|default:"No supporting text" }}</p>
+          <small>{% if entry.is_live %}<span class="badge text-bg-success">Live</span>{% elif entry.is_active %}<span class="badge text-bg-warning">Scheduled / unavailable</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}
+            {% if entry.product %}· {{ entry.product.name }}{% endif %}
+            {% if entry.end_at %}· Ends {{ entry.end_at|date:"M j, Y H:i" }}{% endif %}
+          </small>
+        </div>
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'staff_homepage_promotion_edit' entry.pk %}">Edit</a>
+      </div>
+      {% empty %}<p class="text-muted">No campaigns yet. Your public homepage continues to use the existing product-led fallback until you publish one.</p>{% endfor %}
+    </div></section>
+  </div>
+  <div class="col-xl-5">
+    <section class="card border-0 shadow-sm"><div class="card-body">
+      <h2 class="h5">{{ form_heading }}</h2>
+      <form method="post" enctype="multipart/form-data" class="row g-3">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="col-12 alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+        <div class="col-12">
+          {% if field.field.widget.input_type == 'checkbox' %}
+            <div class="form-check">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+          {% else %}
+            <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>{{ field }}
+          {% endif %}
+          {% if field.help_text %}<div class="small text-muted">{{ field.help_text }}</div>{% endif %}
+          {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+        <div class="col-12 d-grid"><button class="btn btn-primary" type="submit">Save campaign</button></div>
+        {% if promotion %}<div class="col-12"><a href="{% url 'staff_homepage_promotions' %}">Create another campaign</a></div>{% endif %}
+      </form>
+    </div></section>
+  </div>
+</div>
+{% endblock %}

@@ -94,6 +94,14 @@
       <aside class="product-buy-card" id="product-buy-panel" aria-labelledby="buy-heading">
         <div class="product-buy-card__header"><p class="product-category-label">{{ product.category.name }}</p><h2 class="product-buy-heading" id="buy-heading">{% if product.kind == 'service' and not product.public_price %}Request a service quotation{% elif product.kind == 'service' %}Book this service{% else %}Purchase options{% endif %}</h2></div>
         <div class="product-buy-card__body">
+          {% if commerce_profile and product.kind == 'physical' %}
+          <div class="storefront-detail-highlights" aria-label="Key specifications">
+            {% if commerce_profile.processor_family %}<span><i class="bi bi-cpu" aria-hidden="true"></i>{{ commerce_profile.processor_family }}{% if commerce_profile.processor_generation %} {{ commerce_profile.processor_generation }}{% endif %}</span>{% endif %}
+            {% if commerce_profile.ram_capacity %}<span><i class="bi bi-memory" aria-hidden="true"></i>{{ commerce_profile.ram_capacity }} RAM</span>{% endif %}
+            {% if commerce_profile.storage_capacity %}<span><i class="bi bi-device-ssd" aria-hidden="true"></i>{{ commerce_profile.storage_capacity }} {{ commerce_profile.storage_type }}</span>{% endif %}
+            {% if commerce_profile.warranty_months %}<span><i class="bi bi-shield-check" aria-hidden="true"></i>{{ commerce_profile.warranty_months }}-month warranty</span>{% endif %}
+          </div>
+          {% endif %}
           {% if review_summary.count %}<div class="product-rating-row"><span class="product-rating-stars" aria-label="{{ review_summary.avg }} out of 5 stars">{% for s in rating_stars %}{% if s <= rounded_review_rating %}★{% else %}<span class="text-muted">★</span>{% endif %}{% endfor %}</span><a href="#reviews">{{ review_summary.avg }} from {{ review_summary.count }} review{{ review_summary.count|pluralize }}</a></div>{% endif %}
           <p class="product-price" id="pd-price-label">{% if product.kind == 'service' and not product.public_price %}Request an estimate{% else %}{% if product.public_has_variants %}From {% endif %}{{ company.currency_code }} {{ product.public_price|floatformat:0|intcomma }}{% endif %}</p>
           {% if product.kind == 'service' and not product.public_price %}<p class="product-price-note">Tell us the scope and location so the team can confirm an estimate.</p>{% elif product.public_compare_at_price %}<p class="product-price-note"><span class="text-decoration-line-through">{{ company.currency_code }} {{ product.public_compare_at_price|floatformat:0|intcomma }}</span> previous comparison price{% if product.savings_percent %} · Save {{ product.savings_percent }}%{% endif %}</p>{% elif product.public_has_variants %}<p class="product-price-note">Select an option to confirm its exact price and stock.</p>{% else %}<p class="product-price-note">Price shown before any delivery or optional setup charges.</p>{% endif %}
@@ -156,7 +164,7 @@
           {% if product.sku %}<div class="product-spec-item"><dt>SKU</dt><dd>{{ product.sku }}</dd></div>{% endif %}
           {% if product.public_has_variants %}<div class="product-spec-item"><dt>Options</dt><dd>{{ product.public_variant_count }} available</dd></div>{% endif %}
           {% if product.service_duration_hours %}<div class="product-spec-item"><dt>Estimated duration</dt><dd>{{ product.service_duration_hours }} hour{{ product.service_duration_hours|pluralize }}</dd></div>{% endif %}
-          <div class="product-spec-item"><dt>Availability</dt><dd>{% if product.kind == 'service' %}By booking{% elif product.public_available %}In stock{% else %}Confirm with team{% endif %}</dd></div>
+          <div class="product-spec-item"><dt>Availability</dt><dd>{% if product.kind == 'service' %}By booking{% elif product.public_available %}Available to order{% else %}Confirm with team{% endif %}</dd></div>
         </dl>
       </section>
 

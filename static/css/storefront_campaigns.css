@@ -1,0 +1,41 @@
+/* LEOSOFT product-first campaign system. Scoped to storefront components. */
+.storefront-hero{position:relative;isolation:isolate;padding:clamp(1rem,2vw,1.5rem) 0 1.5rem;background:#0b2037;color:#fff}
+.storefront-hero__layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(250px,.82fr);gap:1rem;position:relative;z-index:1}
+.storefront-hero__main{position:relative;overflow:hidden;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.85fr);align-items:center;min-height:clamp(330px,34vw,470px);border-radius:1.3rem;background:linear-gradient(120deg,#07294b 0%,#0a477f 60%,#073964 100%);border:1px solid rgba(255,255,255,.14)}
+.storefront-hero__copy{padding:clamp(1.25rem,3vw,2.7rem);position:relative;z-index:2}
+.storefront-eyebrow{font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#a6e4fe;margin:0 0 .85rem}
+.storefront-hero .market-home-hero__title{font-size:clamp(2rem,3.45vw,3.6rem);max-width:15ch;letter-spacing:-.045em;line-height:1.08;margin:0 0 1rem;color:#fff}
+.storefront-hero .market-home-hero__lead{font-size:clamp(.96rem,1.4vw,1.13rem);max-width:38ch;line-height:1.48;margin:0 0 1.5rem;color:#d7e8f5}
+.storefront-hero__visual{display:flex;align-items:center;justify-content:center;position:relative;z-index:1;min-width:0;height:100%;max-height:460px;padding:.7rem}
+.storefront-hero__visual img,.storefront-hero__visual picture{width:100%;height:100%;max-height:430px;object-fit:contain;filter:drop-shadow(0 18px 25px rgba(0,0,0,.35))}
+.storefront-hero__visual i{font-size:clamp(5rem,11vw,11rem);color:rgba(255,255,255,.5)}
+.storefront-hero__search-link{position:absolute;bottom:.65rem;left:clamp(1.25rem,3vw,2.7rem);z-index:3;color:#d8e8f7;text-decoration:none;font-size:.77rem}
+.storefront-hero__search-link:hover{color:#fff;text-decoration:underline}
+.storefront-hero__side{display:grid;grid-template-rows:1fr 1fr;gap:1rem;min-width:0}
+.storefront-promo-tile{display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;isolation:isolate;min-height:175px;padding:1.5rem;border-radius:1.25rem;text-decoration:none;color:#102942;border:1px solid #dce6ed;transition:transform .2s ease,box-shadow .2s ease}
+.storefront-promo-tile--deals{background:linear-gradient(135deg,#edf5fd,#d6e9fc)}
+.storefront-promo-tile--services{background:linear-gradient(135deg,#f1f5f7,#dfe9ef)}
+.storefront-promo-tile__text{display:flex;flex-direction:column;position:relative;z-index:2;gap:.48rem;max-width:75%}
+.storefront-promo-tile__text small{font-size:.69rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#315879}
+.storefront-promo-tile__text strong{font-size:clamp(1.12rem,1.8vw,1.6rem);line-height:1.14;letter-spacing:-.025em}
+.storefront-promo-tile__text>span{font-size:.85rem;font-weight:750;color:#0757a1}
+.storefront-promo-tile img{position:absolute;right:-.5rem;bottom:-.3rem;width:48%;height:105%;object-fit:contain;object-position:center bottom}
+.storefront-promo-tile__icon{font-size:clamp(3.5rem,7vw,6rem);color:#85b2d6;position:absolute;right:.6rem;bottom:.2rem;opacity:.85}
+.storefront-promo-tile:hover,.storefront-promo-tile:focus-visible{transform:translateY(-2px);box-shadow:0 12px 30px rgba(12,42,70,.17);color:#102942}
+.storefront-departments{padding:1.25rem 0 .1rem;background:#f8fafc}
+.storefront-departments__head{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.9rem}
+.storefront-departments__head h2{font-size:1.1rem;font-weight:850;letter-spacing:-.02em;margin:0}
+.storefront-departments__head a{font-size:.85rem;color:#075aab;text-decoration:none;font-weight:700}
+.storefront-departments__rail{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.65rem}
+.storefront-department{min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.45rem;background:white;border:1px solid #e1e8ef;border-radius:1rem;padding:.65rem .45rem;text-decoration:none;color:#233d52;font-size:.78rem;font-weight:750;line-height:1.25;transition:border-color .2s,transform .2s}
+.storefront-department:hover,.storefront-department:focus-visible{border-color:#378acb;color:#075aab;transform:translateY(-2px)}
+.storefront-department__image{height:74px;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.storefront-department__image picture,.storefront-department__image img{max-width:100%;width:100%;height:100%;object-fit:contain}
+.storefront-department__image i{font-size:2.5rem;color:#8ba6bb}
+.storefront-hero .home-tech-ambient{pointer-events:none;opacity:.17}
+.storefront-hero .home-welcome-actions{display:flex;flex-wrap:wrap;gap:.65rem}
+.storefront-hero .home-welcome-actions .btn{min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:1080px){.storefront-hero__layout{grid-template-columns:minmax(0,1.7fr) minmax(205px,.75fr)}.storefront-hero__main{grid-template-columns:1fr .75fr}.storefront-promo-tile{padding:1rem}.storefront-promo-tile__text{max-width:80%}}
+@media(max-width:767.98px){.storefront-hero{padding:.75rem 0 1rem}.storefront-hero__layout{grid-template-columns:minmax(0,1fr);gap:.6rem}.storefront-hero__main{min-height:275px;grid-template-columns:minmax(0,1fr) minmax(100px,.5fr)}.storefront-hero__copy{padding:1.35rem}.storefront-hero .market-home-hero__title{font-size:clamp(1.7rem,6vw,2.5rem)}.storefront-hero .market-home-hero__lead{font-size:.84rem}.storefront-hero__visual{padding:.3rem}.storefront-hero__search-link{display:none}.storefront-hero__side{grid-template-columns:1fr 1fr;grid-template-rows:auto;gap:.6rem}.storefront-promo-tile{min-height:130px;padding:.8rem}.storefront-promo-tile__text{max-width:100%}.storefront-promo-tile__text strong{font-size:1rem;max-width:13ch}.storefront-promo-tile img{opacity:.22;width:60%}.storefront-departments__rail{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:.5rem}.storefront-department{flex:0 0 116px;scroll-snap-align:start}.storefront-department__image{height:65px}}
+@media(max-width:419px){.storefront-hero__main{grid-template-columns:minmax(0,1.3fr) minmax(80px,.7fr);min-height:270px}.storefront-hero__copy{padding:1.1rem}.storefront-hero .market-home-hero__title{font-size:1.75rem}.storefront-hero .market-home-hero__lead{font-size:.78rem;margin-bottom:.95rem}.storefront-hero .home-welcome-actions .btn{font-size:.8rem;padding:.48rem .6rem}.storefront-promo-tile__text strong{font-size:.91rem}}
+@media(prefers-reduced-motion:reduce){.storefront-department,.storefront-promo-tile{transition:none}.storefront-department:hover,.storefront-promo-tile:hover{transform:none}}

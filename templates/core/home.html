@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static catalog_images %}
 {% block title %}{{ seo_default_title }}{% endblock %}
 {% block body_class %}d-flex flex-column min-vh-100 site-body public-home-page marketplace-home-page{% endblock %}
 {% block meta %}
@@ -19,31 +19,75 @@
 {% if seo_default_image_url %}<meta name="twitter:image" content="{{ seo_default_image_url }}"><meta name="twitter:image:alt" content="{{ company.company_name }} technology products and IT support">{% endif %}
 {% if seo_twitter_site %}<meta name="twitter:site" content="{{ seo_twitter_site }}">{% endif %}
 {% endblock %}
-{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet"><link href="{% static 'css/home_tech_ambient.css' %}" rel="stylesheet">{% endblock %}
+{% block extra_css %}<link href="{% static 'css/merchandising.css' %}" rel="stylesheet"><link href="{% static 'css/home_tech_ambient.css' %}" rel="stylesheet"><link href="{% static 'css/storefront_campaigns.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
-<section class="market-home-hero">
+<section class="market-home-hero storefront-hero" aria-label="LEOSOFT featured technology">
   {% include "core/_home_tech_ambient.html" %}
-  <div class="container market-home-hero__inner">
-      <div class="home-welcome-copy" data-reveal>
-        <p class="public-eyebrow">Welcome to {{ company.company_name }}</p>
-        <h1 class="market-home-hero__title">Technology that works for you.</h1>
-        <p class="market-home-hero__lead">Computers, accessories and expert IT support in Uganda.</p>
+  <div class="container storefront-hero__layout">
+    <div class="storefront-hero__main">
+      <div class="storefront-hero__copy">
+        <p class="storefront-eyebrow">{% if hero_promotion %}{{ hero_promotion.eyebrow|default:"Featured at LEOSOFT" }}{% else %}Welcome to {{ company.company_name }}{% endif %}</p>
+        <h1 class="market-home-hero__title">{% if hero_promotion %}{{ hero_promotion.headline }}{% else %}Technology that works for you.{% endif %}</h1>
+        <p class="market-home-hero__lead">{% if hero_promotion %}{{ hero_promotion.supporting_text|default:"Computers and practical IT support in Uganda." }}{% else %}Computers, accessories and expert IT support in Uganda.{% endif %}</p>
         <div class="home-welcome-actions">
-          <a class="btn btn-light" href="#homepage-products">Shop products <i class="bi bi-arrow-down ms-2" aria-hidden="true"></i></a>
+          <a class="btn btn-light" href="{% if hero_promotion %}{{ hero_promotion.destination }}{% else %}#homepage-products{% endif %}">{% if hero_promotion %}{{ hero_promotion.button_label }}{% else %}Shop products{% endif %} <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
           <a class="btn btn-outline-light" href="{% url 'service_list' %}">Repairs &amp; services</a>
         </div>
-        <form class="market-hero-search market-search-shell" action="{% url 'product_list' %}" method="get" role="search" data-market-search-form data-suggestions-url="{% url 'catalog_suggestions' %}">
-          <i class="bi bi-search" aria-hidden="true"></i>
-          <label class="visually-hidden" for="market-hero-search-input">Search the LEOSOFT catalogue</label>
-          <input id="market-hero-search-input" name="q" type="search" placeholder="Search products or brands" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="market-hero-search-results" data-market-search-input>
-          <button type="submit">Search</button>
-          <div id="market-hero-search-results" class="market-search-results" role="listbox" data-market-search-results hidden></div>
-          <span class="visually-hidden" aria-live="polite" data-market-search-status></span>
-        </form>
       </div>
-    <a class="home-scroll-invitation" href="#homepage-products" aria-label="Browse products below"><span class="home-scroll-invitation__mouse" aria-hidden="true"></span><span>Explore below</span></a>
+      <div class="storefront-hero__visual">
+        {% if hero_promotion.creative_image %}
+          <img src="{{ hero_promotion.creative_image.url }}" alt="{{ hero_promotion.image_alt }}" loading="eager" decoding="async" fetchpriority="high" width="580" height="430">
+        {% elif hero_promotion.product.primary_display_image %}
+          {% responsive_image hero_promotion.product.primary_display_image hero_promotion.product.name "" "(max-width: 767px) 90vw, 42vw" "eager" "high" %}
+        {% elif hero_product %}
+          {% responsive_image hero_product.primary_display_image hero_product.name "" "(max-width: 767px) 90vw, 42vw" "eager" "high" %}
+        {% else %}<i class="bi bi-laptop" aria-hidden="true"></i>{% endif %}
+      </div>
+      <a class="storefront-hero__search-link" href="#homepage-products"><i class="bi bi-grid me-1" aria-hidden="true"></i>Explore the catalogue</a>
+    </div>
+    <div class="storefront-hero__side" aria-label="Featured offers and services">
+      <a class="storefront-promo-tile storefront-promo-tile--deals" href="{% if upper_promotion %}{{ upper_promotion.destination }}{% else %}{% url 'product_collection' 'deals' %}{% endif %}">
+        <span class="storefront-promo-tile__text">
+          <small>{% if upper_promotion %}{{ upper_promotion.eyebrow|default:"Featured pick" }}{% else %}Handpicked value{% endif %}</small>
+          <strong>{% if upper_promotion %}{{ upper_promotion.headline }}{% else %}Explore today's deals{% endif %}</strong>
+          <span>{% if upper_promotion %}{{ upper_promotion.button_label }}{% else %}Browse offers{% endif %} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+        </span>
+        {% if upper_promotion.creative_image %}<img src="{{ upper_promotion.creative_image.url }}" alt="{{ upper_promotion.image_alt }}" loading="lazy" decoding="async">
+        {% elif upper_promotion.product.primary_display_image %}<img src="{{ upper_promotion.product.primary_display_image.url }}" alt="{{ upper_promotion.product.name }}" loading="lazy" decoding="async">
+        {% else %}<i class="bi bi-tags storefront-promo-tile__icon" aria-hidden="true"></i>{% endif %}
+      </a>
+      <a class="storefront-promo-tile storefront-promo-tile--services" href="{% if lower_promotion %}{{ lower_promotion.destination }}{% else %}{% url 'service_list' %}{% endif %}">
+        <span class="storefront-promo-tile__text">
+          <small>{% if lower_promotion %}{{ lower_promotion.eyebrow|default:"Expert assistance" }}{% else %}IT support{% endif %}</small>
+          <strong>{% if lower_promotion %}{{ lower_promotion.headline }}{% else %}Repairs &amp; installations{% endif %}</strong>
+          <span>{% if lower_promotion %}{{ lower_promotion.button_label }}{% else %}Find a service{% endif %} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span>
+        </span>
+        {% if lower_promotion.creative_image %}<img src="{{ lower_promotion.creative_image.url }}" alt="{{ lower_promotion.image_alt }}" loading="lazy" decoding="async">
+        {% elif lower_promotion.product.primary_display_image %}<img src="{{ lower_promotion.product.primary_display_image.url }}" alt="{{ lower_promotion.product.name }}" loading="lazy" decoding="async">
+        {% else %}<i class="bi bi-tools storefront-promo-tile__icon" aria-hidden="true"></i>{% endif %}
+      </a>
+    </div>
   </div>
 </section>
+{% if home_category_tiles %}
+<section class="storefront-departments" aria-label="Shop by category">
+  <div class="container">
+    <div class="storefront-departments__head"><h2>Find your next upgrade</h2><a href="{% url 'physical_product_list' %}">All categories <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+    <div class="storefront-departments__rail">
+      {% for tile in home_category_tiles %}
+      <a class="storefront-department" href="{% url 'product_category' tile.category.slug %}">
+        <span class="storefront-department__image">
+          {% if tile.cover.primary_display_image %}
+            {% responsive_image tile.cover.primary_display_image tile.category.name "" "(max-width: 575px) 35vw, 14vw" "lazy" "low" %}
+          {% else %}<i class="bi bi-laptop" aria-hidden="true"></i>{% endif %}
+        </span>
+        <span>{{ tile.category.name }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 
 <section class="market-section home-products-first" id="homepage-products" aria-labelledby="homepage-products-title" tabindex="-1">
   <div class="container">
@@ -58,7 +102,7 @@
   </div>
 </section>
 
-{% if deal_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Current value</p><h2 class="market-section-title">Deals worth checking</h2><p class="market-section-intro">Products showing a genuine previous comparison price above the current public price.</p></div><a class="market-section-link" href="{% url 'product_collection' 'deals' %}">View all deals <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in deal_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div></div></section>{% endif %}
+{% if deal_products %}<section class="market-section"><div class="container"><div class="market-section-heading" data-reveal><div class="market-section-heading__copy"><p class="market-kicker">Current value</p><h2 class="market-section-title">Deals worth checking</h2></div><a class="market-section-link" href="{% url 'product_collection' 'deals' %}">View all deals <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div><div class="market-product-grid">{% for p in deal_products %}{% include "catalog/_marketplace_product_card.html" with p=p eager=forloop.first show_compare=False %}{% endfor %}</div></div></section>{% endif %}
 {% if featured_services %}
 <section class="market-section market-section--soft" aria-labelledby="home-services-title">
   <div class="container">

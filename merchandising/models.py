@@ -172,6 +172,85 @@ class ProductCommerceProfile(models.Model):
         self.price_verified_at = now
 
 
+
+class HomepagePromotion(models.Model):
+    """Staff-owned, scheduled storefront creative; never fabricates price or stock."""
+
+    HERO = "hero"
+    SIDE_TOP = "side_top"
+    SIDE_BOTTOM = "side_bottom"
+    SLOT_CHOICES = (
+        (HERO, "Main hero"),
+        (SIDE_TOP, "Upper promotion"),
+        (SIDE_BOTTOM, "Lower promotion"),
+    )
+    slot = models.CharField(max_length=16, choices=SLOT_CHOICES, db_index=True)
+    headline = models.CharField(max_length=90)
+    eyebrow = models.CharField(max_length=48, blank=True)
+    supporting_text = models.CharField(max_length=135, blank=True)
+    button_label = models.CharField(max_length=32, default="Explore products")
+    link_path = models.CharField(
+        max_length=250, default="/catalog/",
+        help_text="Internal path only (for example /catalog/ or /services/).",
+    )
+    product = models.ForeignKey(
+        "catalog.Product", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="homepage_promotions",
+        help_text="Optional real product to illustrate the campaign.",
+    )
+    creative_image = models.ImageField(
+        upload_to="homepage_campaigns/%Y/%m/", blank=True,
+        help_text="Optional brand-approved creative. If empty, show the selected product's real photo.",
+    )
+    image_alt = models.CharField(max_length=140, blank=True)
+    start_at = models.DateTimeField(null=True, blank=True)
+    end_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=False)
+    priority = models.PositiveSmallIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["slot", "-priority", "-updated_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.get_slot_display()}: {self.headline}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        path = self.link_path.strip()
+        if (
+            not path.startswith("/")
+            or path.startswith("//")
+            or "\\" in path
+            or any(ord(char) < 32 for char in path)
+        ):
+            raise ValidationError({"link_path": "Use a local site path beginning with one slash."})
+        if self.start_at and self.end_at and self.start_at >= self.end_at:
+            raise ValidationError({"end_at": "End time must be after start time."})
+        if self.is_active and self.product_id and not self.product.is_published:
+            raise ValidationError({"product": "An active promotion needs a published product."})
+        if self.creative_image and not self.image_alt.strip():
+            raise ValidationError({"image_alt": "Describe the campaign image for screen readers."})
+
+    @property
+    def is_live(self):
+        now = timezone.now()
+        return (
+            self.is_active
+            and (not self.start_at or self.start_at <= now)
+            and (not self.end_at or self.end_at > now)
+            and (not self.product_id or self.product.is_published)
+        )
+
+    @property
+    def destination(self):
+        if self.product_id and self.product.is_published:
+            return self.product.get_absolute_url()
+        return self.link_path
+
+
+
 class CommercialLandingPage(models.Model):
     slug = models.SlugField(unique=True, max_length=180)
     title = models.CharField(max_length=220)
