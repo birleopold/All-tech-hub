@@ -37,6 +37,7 @@ jobs:
           node --check static/js/pwa.js
           node --check static/js/marketing_analytics.js
           bash -n scripts/phase8_release_gate.sh
+          python scripts/phase8_postgres_restore_drill.py --help >/dev/null
           node --check static/js/marketplace_experience.js
           node --check static/js/mobile_commerce_pro.js
 
@@ -112,7 +113,11 @@ jobs:
           core.test_api_experience
           core.test_phase1_security
           core.test_phase8_backups
-          core.test_phase8_backups
+          core.test_postgres_restore_drill
+          catalog.test_search_recovery
+          operations.test_handover_workflow
+          core.test_homepage_commerce_priority
+          merchandising.test_merchant_readiness_visibility
           reliability
 
       - name: Run Ruff on maintained Python scope

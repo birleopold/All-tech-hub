@@ -83,3 +83,50 @@ The new root-level ignore rule helps prevent accidental Git addition but
 **does not secure existing files**. Identify their current consumers, then
 move private material to a restricted path outside web and repository roots;
 do not remove or relocate a key before confirming which service uses it.
+
+## PostgreSQL and media recovery rehearsal (new candidate implementation)
+
+Run **only after** the guarded release candidate passes. The new script never reads
+`.env`, does not attach to the running PostgreSQL cluster, cannot connect to
+the production socket or host, and refuses root execution. It starts its own
+PostgreSQL cluster under a private temporary directory (using installed
+`initdb` and `pg_ctl`), restores one checksummed custom-format dump into its
+own throwaway database, checks Django migration records and restored public
+tables, extracts public/private media under the same private directory, and
+stops the throwaway cluster at the end. Any failure means recovery is **not**
+certified. Ensure enough disk capacity for a second DB copy and media archive.
+
+The backups created by `backup_project --include-media` have a manifest at
+`<backup directory>/manifest.json`. Example:
+
+```bash
+cd /home/admin/All-tech-hub
+manifest="$(find backups -mindepth 2 -maxdepth 2 -name manifest.json -type f -printf '%T@ %p\n' | sort -nr | head -1 | cut -d' ' -f2-)"
+test -n "$manifest" || { echo "No managed backup manifest found"; exit 1; }
+.venv/bin/python scripts/phase8_postgres_restore_drill.py "$manifest"
+```
+
+The output is one JSON object reporting `status=passed`, migration count,
+public-table count, recovered media-file count and source release label. A
+successful source-code CI check does not substitute for executing this command.
+The original backup and live database are left untouched. Do not paste a
+customer's database, file names, credentials or archive into a public issue.
+
+## Evidence for specific requested features
+
+- **Quotation revision history:** `billing.DocumentRevision` stores revision
+  number, reason, snapshot, actor and time; a staff document revision workflow
+  exists. Real role-specific revision/approval and PDF acceptance remain open.
+- **Field-work handover:** `operations.JobCard.customer_signature` captures an
+  optional *intake* signature; `operations.JobHandover` captures confirmed
+  recipient/method. Neither proves a final signed handover; that request remains
+  open until the final signature workflow and legal/process acceptance exist.
+- **Typo-tolerant search:** customer suggestions were code-staged in the
+  catalogue, with same-filter result confirmation. Real navigation and the
+  current branch's regression gate have not yet been verified on the VPS.
+- **Verified-purchase review:** order-bound review URL and customer review form
+  exist under the commerce retention workflows. Actual completed-order
+  authorisation, moderation and customer-device acceptance remain open.
+- **Offline field operation:** an offline fallback page exists, but background
+  queue, durable conflict resolution and safe replay are unproven and remain
+  open. Do not count displaying an offline page as offline job editing.

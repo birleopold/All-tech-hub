@@ -216,3 +216,17 @@ audited one-time repair handover with staff permission checks, confirmation,
 automated ready-to-complete transition and customer portal status. These changes
 require the next isolated VPS gate, migration rehearsal and browser acceptance
 before they can be marked deployed or verified.
+
+## Isolated PostgreSQL restore tooling added — awaiting execution
+
+A new `scripts/phase8_postgres_restore_drill.py` validates PostgreSQL
+backup and media checksums, rejects dangerous paths/links and duplicate
+manifest records, starts a disposable local-only PostgreSQL instance
+without production credentials, restores the dump, checks Django migration
+and table counts, and securely restores public/private media. Unit tests
+exercise the archive verifier and production-connection isolation. The
+restore is not a production recovery certification until it has been run
+successfully against an actual site backup with its summary retained.
+
+GitHub Actions hosted runners were previously observed failing before
+any test steps; no new full-CI or VPS-green claim is made by this commit.

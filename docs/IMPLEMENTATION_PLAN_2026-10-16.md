@@ -181,6 +181,12 @@ Never deploy these changes on a live sales site as a substitute for testing.
 - [x] Verify archive readability and SQLite database integrity (not only hashes), reject unsafe manifest entries, and stage backup verifier tests in both CI jobs.
 - [x] Record actual failing-to-start GitHub Actions run IDs; no runner, zero steps and no unsupported claim of a code test failure.
 - [x] Clarify backup-health labels: manifest/file-size checks are monitoring signals, not verified restores.
+- [x] Add an isolated local-only PostgreSQL restore rehearsal which independently checks SHA-256, restores a custom PostgreSQL dump into a disposable server, extracts normal public/private media and rejects unsafe archive paths and links; include focused tests in CI.
+- [ ] Execute the isolated PostgreSQL + media restore rehearsal on the VPS or separate staging host against a real checksummed backup. Record the command's successful output, migration count, table count and restored media count. The code alone does not certify an actual restore.
+- [ ] Verify staff quotation revision history and approved-quote conversion from the relevant forms, with mobile/role tests (DocumentRevision code is present).
+- [ ] Verify actual repair handover signature capture beyond the existing intake-signature upload and staff-confirmed recipient record; signed final handover is not yet demonstrated.
+- [ ] Verify offline field work with queued edits, conflict handling and reconnection replay. An offline page alone is not offline workflow capability.
+- [ ] Verify the order-bound verified-purchase review route, order ownership, moderation and rendering across user devices (code exists, live acceptance missing).
 
 ## P6 coding handoff
 The existing purchasing, stock, billing and operations subsystems remain the source of truth. Received purchase costs and suppliers are protected from historical edits. Job expenses are documented separately from invoice costs; job-to-invoice comparison refuses speculative allocation for shared invoices and cross-customer records. Refund adjustment references and reconciliation are protected against duplicates, and finance approvals and sensitive reports require existing permissions. Supplier returns and recorded refunds do not falsely imply a supplier payout or money movement. New migrations and regression modules are staged, **not deployed or integration-tested**. Final verification must cover database migrations, transactional concurrency, accounting reconciliation, account permissions and responsive screens.
