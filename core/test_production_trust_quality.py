@@ -93,7 +93,9 @@ class PublicBuyingGuideTests(TestCase):
         home = self.client.get(reverse("home"))
         sitemap = self.client.get(reverse("seo_sitemap", args=["static"]))
 
-        self.assertContains(home, reverse("buying_guide"))
+        # The simplified homepage links directly to the maintained guide centre.
+        # Keep the legacy /buying-guide/ redirect discoverable in the sitemap.
+        self.assertContains(home, reverse("buying_guide_list"))
         self.assertEqual(sitemap.status_code, 200)
         self.assertContains(sitemap, reverse("buying_guide"))
 
