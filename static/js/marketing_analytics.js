@@ -6,6 +6,9 @@
 
   const ga4Id = (body.dataset.ga4Id || "").trim();
   const clarityId = (body.dataset.clarityId || "").trim();
+  // Never send internal staff/admin navigation to customer acquisition reports.
+  const internalPath = /^\/(staff|admin)(\/|$)/.test(window.location.pathname);
+  if (internalPath) return;
   const requireConsent = body.dataset.analyticsConsentRequired === "1";
   const consentKey = "leosoft_analytics_consent";
   // Browsers and privacy modes may block storage. Keep consent opt-in even
@@ -261,6 +264,20 @@
           item_id: category.dataset.storefrontCategory || "",
         },
       });
+    }
+
+    // Measure genuine contact intent without sending telephone numbers,
+    // WhatsApp message text, query strings or other personal information.
+    const contactLink = event.target.closest("a[href]");
+    if (contactLink && integrationsLoaded && typeof window.gtag === "function") {
+      const href = (contactLink.getAttribute("href") || "").trim();
+      let channel = "";
+      if (/^tel:/i.test(href)) channel = "phone";
+      else if (/^(https?:)?\/\/(wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)(\/|$)/i.test(href)) channel = "whatsapp";
+      if (channel) sendEvent({name: "contact_click", params: {
+        contact_channel: channel,
+        page_path: window.location.pathname,
+      }});
     }
 
     const productLink = event.target.closest("[data-analytics-product-link]");
