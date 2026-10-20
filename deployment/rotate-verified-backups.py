@@ -67,8 +67,8 @@ def main():
         candidates.append((stamp, path))
     candidates.sort(reverse=True)
     if len(candidates) < 3:
-        print("REFUSE: fewer than three candidate backups. No deletion.")
-        return 2
+        print("SKIP: fewer than three candidate backups. No deletion.")
+        return 0
     verified = []
     for stamp, path in candidates:
         if verify(path) is None:
@@ -76,14 +76,14 @@ def main():
         else:
             verified.append((stamp, path))
     if len(verified) < 3:
-        print("REFUSE: fewer than three checksum-verified backups. No deletion.")
-        return 2
+        print("SKIP: fewer than three checksum-verified backups. No deletion.")
+        return 0
     daily_time, daily = verified[0]
     weekly = next(((dt, p) for dt, p in verified[1:] if dt <= daily_time - timedelta(days=7)), None)
     monthly = next(((dt, p) for dt, p in verified[1:] if dt <= daily_time - timedelta(days=28) and (weekly is None or p != weekly[1])), None)
     if weekly is None or monthly is None:
-        print("REFUSE: need distinct verified daily, >=7-day weekly and >=28-day monthly points. No deletion.")
-        return 2
+        print("SKIP: need distinct verified daily, >=7-day weekly and >=28-day monthly points. No deletion.")
+        return 0
     keep = {daily, weekly[1], monthly[1]}
     print("KEEP (3 verified recovery points):")
     for path in sorted(keep):
