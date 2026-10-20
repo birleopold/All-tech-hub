@@ -79,10 +79,24 @@ def main():
         print("SKIP: fewer than three checksum-verified backups. No deletion.")
         return 0
     daily_time, daily = verified[0]
-    weekly = next(((dt, p) for dt, p in verified[1:] if dt <= daily_time - timedelta(days=7)), None)
-    monthly = next(((dt, p) for dt, p in verified[1:] if dt <= daily_time - timedelta(days=28) and (weekly is None or p != weekly[1])), None)
+    # The previous calendar month and previous ISO week promote recent daily
+    # snapshots into longer-lived slots when those periods roll over.
+    current_week = daily_time.isocalendar()[:2]
+    current_month = (daily_time.year, daily_time.month)
+    monthly = next(((dt, p) for dt, p in verified[1:]
+                    if (dt.year, dt.month) < current_month), None)
+    weekly = next(((dt, p) for dt, p in verified[1:]
+                   if dt.isocalendar()[:2] < current_week
+                   and (monthly is None or p != monthly[1])), None)
+    # At calendar boundaries one snapshot may qualify for both buckets.
+    # Preserve the older existing fallback until independent points exist.
+    if weekly is None:
+        weekly = next(((dt, p) for dt, p in verified[1:]
+                       if dt <= daily_time - timedelta(days=7)
+                       and (monthly is None or p != monthly[1])), None)
+
     if weekly is None or monthly is None:
-        print("SKIP: need distinct verified daily, >=7-day weekly and >=28-day monthly points. No deletion.")
+        print("SKIP: need distinct verified daily, prior-week and prior-month recovery points. No deletion.")
         return 0
     keep = {daily, weekly[1], monthly[1]}
     print("KEEP (3 verified recovery points):")
