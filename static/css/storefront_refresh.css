@@ -1,0 +1,461 @@
+/* Public storefront refresh: storefront_refresh.css
+ *
+ * Loaded LAST in templates/base.html (after storefront_polish.css and
+ * storefront_product_cards.css) and only on public pages.
+ *
+ * Why this file exists
+ *  - The product card's action row was defined four different ways
+ *    (2-column grid, 3-column grid, 4-column grid, flex-wrap) across
+ *    marketplace_experience, search_conversion_refinement,
+ *    mobile_commerce_pro and desktop_commerce_pro. With five possible
+ *    controls the buttons wrapped unpredictably. This file sets one layout.
+ *  - The product page buy panel was made sticky in one file and turned
+ *    off in another, so the price and "add to cart" scrolled away from
+ *    shoppers reading the specifications.
+ *  - Small contrast and landmark fixes.
+ *
+ * Selectors are scoped with .site-body (plus the page classes
+ * .public-catalog-page / .public-product-page where a rule is page-specific)
+ * so they outrank the older rules by specificity without !important, and
+ * avoid :is() so older Android browsers still receive every rule.
+ */
+
+.site-body {
+  --sf-ink: var(--public-ink, #102235);
+  --sf-muted: var(--public-muted, #607083);
+  --sf-line: #dce5ed;
+  --sf-line-strong: #b8c6d4;
+  --sf-blue: var(--public-blue, #1267e8);
+  --sf-blue-dark: var(--public-blue-dark, #0b4fb9);
+  --sf-green-text: #146d3e;          /* 5.7:1 on the pale green badge */
+  --sf-surface: #fff;
+  --sf-radius-card: 0.9rem;
+  --sf-radius-control: 0.65rem;
+  --sf-focus: 0 0 0 3px rgba(18, 103, 232, 0.28);
+}
+
+/* ============================================================
+   1. Product card (home, catalogue, related products)
+   ============================================================ */
+
+.site-body .market-product-card--compact {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-radius-card);
+  box-shadow: 0 1px 2px rgba(16, 34, 53, 0.05);
+  transform: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.site-body .market-product-card--compact:hover,
+.site-body .market-product-card--compact:focus-within {
+  border-color: var(--sf-line-strong);
+  box-shadow: 0 6px 18px rgba(16, 34, 53, 0.09);
+  transform: none;
+}
+
+/* Image: one predictable frame, so every card in a row lines up. */
+.site-body .market-product-card--compact .market-product-card__media {
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  background: #fff;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.site-body .market-product-card--compact .market-product-card__image-link,
+.site-body .market-product-card--compact .market-product-card__image-link picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.site-body .market-product-card--compact .market-product-card__image-link img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0.75rem;
+  object-fit: contain;
+}
+
+.site-body .market-product-card--compact .market-product-card__placeholder {
+  min-height: 0;
+  height: 100%;
+}
+
+/* The shimmer sweep on hover added motion without information. */
+.site-body .market-product-card__media::after {
+  display: none;
+}
+
+/* Browsers without aspect-ratio keep a fixed minimum height instead. */
+@supports not (aspect-ratio: 1 / 1) {
+  .site-body .market-product-card--compact .market-product-card__media {
+    min-height: 11rem;
+  }
+}
+
+/* Text */
+.site-body .market-product-card--compact .market-product-card__body {
+  gap: 0.6rem;
+  padding: 0.9rem;
+}
+
+.site-body .market-product-card--compact .market-product-card__title {
+  min-height: 2.7em;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.site-body .market-product-card--compact .market-product-card__title a {
+  color: var(--sf-ink);
+}
+
+.site-body .market-product-card--compact .market-product-card__title a:hover {
+  color: var(--sf-blue-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Price: the number shoppers compare, so it gets the strongest weight. */
+.site-body .market-product-card--compact .market-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.45rem;
+}
+
+.site-body .market-product-card--compact .market-price strong {
+  color: var(--sf-ink);
+  font-size: 1.12rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.site-body .market-product-card--compact .market-price small,
+.site-body .market-product-card--compact .market-price del {
+  color: var(--sf-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bootstrap's .text-success badge was 4.3:1; use a darker green. */
+.site-body .market-product-card .badge.text-success {
+  color: var(--sf-green-text) !important;
+}
+
+.site-body .market-product-card .badge {
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+/* ---- Actions: one layout for every breakpoint ----
+ * Row 1: the main call to action, full width.
+ * Row 2: equal-width icon buttons (add to cart, compare, save, ask, quick view).
+ */
+.site-body .market-product-card--compact .market-product-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+.site-body .market-product-card--compact .market-product-card__actions > :first-child {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.site-body .market-product-card--compact .market-product-card__actions > form,
+.site-body .market-product-card--compact .market-product-card__actions > a:not(:first-child),
+.site-body .market-product-card--compact .market-product-card__actions > .market-card-quick-view {
+  display: block;
+  min-width: 0;
+  flex: 1 1 2.75rem;
+  margin: 0;
+}
+
+/* Remove the hairline separators added in desktop_commerce_pro.css. */
+.site-body .market-product-card--compact .market-product-card__actions > form::before,
+.site-body .market-product-card--compact .market-product-card__actions > a::before {
+  content: none;
+}
+
+.site-body .market-product-card--compact .market-product-card__actions .btn,
+.site-body .market-product-card--compact .market-card-quick-view > summary {
+  display: inline-flex;
+  width: 100%;
+  min-width: 2.75rem;
+  min-height: 2.75rem;           /* comfortable touch target */
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--sf-radius-control);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.site-body .market-product-card--compact .market-product-card__actions .btn-outline-primary,
+.site-body .market-product-card--compact .market-product-card__actions .btn-outline-secondary {
+  color: #2d3f52;
+  background: #fff;
+  border-color: var(--sf-line-strong);
+}
+
+.site-body .market-product-card--compact .market-product-card__actions .btn-outline-primary:hover,
+.site-body .market-product-card--compact .market-product-card__actions .btn-outline-secondary:hover {
+  color: var(--sf-blue-dark);
+  background: #f1f6fd;
+  border-color: var(--sf-blue);
+}
+
+/* Call / WhatsApp row sits quietly under the buttons. */
+.site-body .market-product-card .product-order-actions {
+  margin-top: 0.1rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #edf1f5;
+}
+
+.site-body .market-product-card--compact :focus-visible {
+  outline: 2px solid var(--sf-blue);
+  outline-offset: 2px;
+}
+
+/* On phones the primary button stays full width; icons keep a 44px+ target. */
+@media (max-width: 575.98px) {
+  .site-body .market-product-card--compact .market-product-card__body {
+    padding: 0.8rem;
+  }
+
+  .site-body .market-product-card--compact .market-product-card__actions .btn {
+    min-height: 2.85rem;
+  }
+}
+
+/* ============================================================
+   2. Catalogue page
+   ============================================================ */
+
+.public-catalog-page .market-filter-panel {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-line);
+  border-radius: var(--sf-radius-card);
+  box-shadow: 0 1px 2px rgba(16, 34, 53, 0.05);
+}
+
+.public-catalog-page .market-filter-form label,
+.public-catalog-page .market-filter-section h3 {
+  color: #2d3f52;
+  font-size: 0.85rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.public-catalog-page .market-filter-form .form-control,
+.public-catalog-page .market-filter-form .form-select {
+  min-height: 2.75rem;
+  border-color: #8a98a8;           /* 3:1 against white for the control edge */
+  border-radius: var(--sf-radius-control);
+}
+
+.public-catalog-page .market-filter-form .form-control:focus,
+.public-catalog-page .market-filter-form .form-select:focus {
+  border-color: var(--sf-blue);
+  box-shadow: var(--sf-focus);
+}
+
+.public-catalog-page .market-filter-list a.is-active {
+  color: var(--sf-blue-dark);
+  background: #eaf2fd;
+  font-weight: 650;
+}
+
+.public-catalog-page .market-collection-chip {
+  border-color: var(--sf-line-strong);
+}
+
+.public-catalog-page .market-collection-chip.is-active {
+  color: #fff;
+  background: var(--sf-blue-dark);
+  border-color: var(--sf-blue-dark);
+}
+
+.public-catalog-page .market-catalog-toolbar h2 {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.public-catalog-page .market-catalog-toolbar .form-select {
+  min-height: 2.75rem;
+  border-color: #8a98a8;
+  border-radius: var(--sf-radius-control);
+}
+
+.public-catalog-page .market-mobile-filter > summary {
+  min-height: 3rem;
+  border: 1px solid var(--sf-line-strong);
+  border-radius: var(--sf-radius-control);
+}
+
+/* Pagination reads as controls, not as decoration. */
+.public-catalog-page .public-pagination .page-link {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  color: var(--sf-blue-dark);
+  border: 1px solid var(--sf-line-strong);
+}
+
+.public-catalog-page .public-pagination .active > .page-link {
+  color: #fff;
+  background: var(--sf-blue-dark);
+  border-color: var(--sf-blue-dark);
+}
+
+/* ============================================================
+   3. Product page
+   ============================================================ */
+
+/* Breadcrumb sits on the dark hero; raise it above 4.5:1. */
+.public-product-page .detail-breadcrumb,
+.public-product-page .detail-breadcrumb .breadcrumb-item,
+.public-product-page .detail-breadcrumb .breadcrumb-item::before {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.public-product-page .detail-breadcrumb a {
+  color: rgba(255, 255, 255, 0.9);
+  text-underline-offset: 3px;
+}
+
+.public-product-page .detail-eyebrow {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* The buy panel stays in view while people read specs and reviews,
+ * but only when the screen is tall enough to hold it. */
+@media (min-width: 992px) and (min-height: 780px) {
+  .public-product-page .product-buy-card {
+    position: sticky;
+    top: 5.25rem;
+    align-self: start;
+  }
+}
+
+.public-product-page .product-buy-card {
+  border-radius: var(--sf-radius-card);
+  border-top: 3px solid var(--sf-blue-dark);
+  box-shadow: 0 6px 20px rgba(16, 34, 53, 0.08);
+}
+
+.public-product-page .product-buy-card__header {
+  background: #fff;
+  padding: 1.1rem 1.4rem 0.9rem;
+}
+
+.public-product-page .product-category-label {
+  color: var(--sf-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.public-product-page .product-price {
+  color: var(--sf-ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.public-product-page .product-primary-action {
+  box-shadow: none;
+  border-radius: var(--sf-radius-control);
+}
+
+.public-product-page .product-buy-card .form-control,
+.public-product-page .product-buy-card .form-select {
+  border-color: #8a98a8;
+  border-radius: var(--sf-radius-control);
+}
+
+.public-product-page .product-buy-card .form-control:focus,
+.public-product-page .product-buy-card .form-select:focus {
+  border-color: var(--sf-blue);
+  box-shadow: var(--sf-focus);
+}
+
+/* Availability: pair the colour with a stronger border so it is not colour-only. */
+.public-product-page .product-status-line {
+  border-radius: var(--sf-radius-control);
+  font-weight: 600;
+}
+
+.public-product-page .product-status-line.is-available {
+  color: var(--sf-green-text);
+  background: #eaf7f0;
+  border-color: #9fd3b6;
+}
+
+.public-product-page .product-status-line.is-low {
+  color: #7a4e03;
+  background: #fff5d9;
+  border-color: #e3bd68;
+}
+
+.public-product-page .product-secondary-actions .btn {
+  border-radius: var(--sf-radius-control);
+}
+
+.public-product-page .product-buy-assurance span {
+  color: #4b5a6b;
+}
+
+.public-product-page .product-buy-assurance i {
+  color: var(--sf-green-text);
+}
+
+.public-product-page .product-gallery-card,
+.public-product-page .product-info-card,
+.public-product-page .product-support-card {
+  border-radius: var(--sf-radius-card);
+}
+
+/* Specification labels: sentence case, readable size. */
+.public-product-page .product-spec-item dt {
+  color: var(--sf-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.public-product-page .product-section-nav a {
+  min-height: 2.75rem;
+  color: #3b4b5d;
+}
+
+.public-product-page .product-section-nav a:hover,
+.public-product-page .product-section-nav a:focus-visible {
+  color: var(--sf-blue-dark);
+}
+
+/* Section jump links should not hide under the sticky header. */
+.public-product-page [id] {
+  scroll-margin-top: 6rem;
+}
+
+/* ============================================================
+   4. Motion preferences
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .site-body .market-product-card--compact,
+  .public-product-page .product-detail-image {
+    transition: none;
+  }
+}

@@ -26,7 +26,7 @@
       <div class="market-filter-section"><h3>Need guidance?</h3><p class="small text-muted">Share the purpose, budget and preferred specifications. The team can recommend a practical option.</p><a class="btn btn-outline-primary w-100" href="{% url 'contact' %}?type=product">Ask the team</a></div>
     </aside>
 
-    <main aria-labelledby="catalog-heading">
+    <section aria-labelledby="catalog-heading">
       {% if selected_subcategories %}<nav class="market-subcategory-strip" aria-label="Subcategories"><a href="{% url 'product_category' selected_category.slug %}">All {{ selected_category.name }}</a>{% for subcategory in selected_subcategories %}<a href="{% url 'product_category' subcategory.slug %}">{{ subcategory.name }}</a>{% endfor %}</nav>{% endif %}
 
       <div class="desktop-catalog-control-deck" data-desktop-catalog-control>
@@ -77,6 +77,6 @@
         <p class="text-center text-muted small">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
       </nav>
       {% endif %}
-    </main>
+    </section>
   </div>
 </div>

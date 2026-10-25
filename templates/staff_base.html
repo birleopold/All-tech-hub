@@ -3,6 +3,7 @@
 {% block body_class %}staff-workspace-body{% endblock %}
 {% block extra_css %}
 <link href="{% static 'css/staff_workspace.css' %}" rel="stylesheet">
+<link href="{% static 'css/staff_refresh.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block mobile_tabbar %}
@@ -63,7 +64,8 @@
         <form method="get" action="{% url 'staff_search' %}" class="staff-topbar-search" role="search">
           <i class="bi bi-search" aria-hidden="true"></i>
           <label class="visually-hidden" for="staff-global-search">Search staff workspace</label>
-          <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search customers, orders, SKUs, serials…">
+          <input id="staff-global-search" type="search" name="q" value="{{ search_q|default:'' }}" placeholder="Search customers, orders, SKUs, serials…" aria-keyshortcuts="/ Control+K Meta+K">
+          <kbd class="staff-search-hint" aria-hidden="true">/</kbd>
         </form>
         {% if perms.billing.add_commercialdocument or perms.operations.add_jobcard or perms.catalog.add_product or perms.core.add_supportticket %}
         <div class="dropdown">
@@ -100,5 +102,6 @@
     </div>
   </section>
 </div>
+<script src="{% static 'js/staff_refresh.js' %}" defer></script>
 {% endblock %}
 
