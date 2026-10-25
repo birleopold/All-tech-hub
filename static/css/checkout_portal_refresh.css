@@ -1,0 +1,404 @@
+/* Cart, checkout and customer portal refresh: checkout_portal_refresh.css
+ *
+ * Loaded after storefront_refresh.css in templates/base.html (public pages only).
+ * Scoped to the body classes the templates already set:
+ *   .mobile-cart-page      cart
+ *   .mobile-checkout-page  checkout
+ *   .customer-account-page customer portal (login, orders, repairs, documents ...)
+ *
+ * What it fixes
+ *  - Contrast: muted text on the page background was 4.4:1, hero captions
+ *    4.48:1, form borders 1.3:1 (Bootstrap default), success text 4.53:1.
+ *  - Order tracking steps used Bootstrap's default blue/green instead of
+ *    the site palette.
+ *  - Small ALL-CAPS labels and table headers become sentence case.
+ *  - Form errors are visible next to the field, not just red text.
+ *  - Money and numbers use tabular figures so columns line up.
+ */
+
+.mobile-cart-page,
+.mobile-checkout-page,
+.customer-account-page {
+  --cp-ink: var(--public-ink, #102235);
+  --cp-muted: #566273;               /* 5.81:1 on the #f5f8fa page background */
+  --cp-line: #dce5ed;
+  --cp-control-border: #8693a5;      /* 3.12:1 against white */
+  --cp-blue: var(--public-blue, #1267e8);
+  --cp-blue-dark: var(--public-blue-dark, #0b4fb9);
+  --cp-green-text: #146d3e;          /* 6.39:1 on white */
+  --cp-danger: #b42318;
+  --cp-radius-control: 0.65rem;
+  --cp-focus: 0 0 0 3px rgba(18, 103, 232, 0.28);
+}
+
+/* ============================================================
+   1. Shared: text, labels, forms
+   ============================================================ */
+
+/* Bootstrap's .text-muted is 4.4:1 on this page background. */
+.mobile-cart-page .text-muted,
+.mobile-checkout-page .text-muted,
+.customer-account-page .text-muted {
+  color: var(--cp-muted) !important;
+}
+
+/* Captions on the dark page header. */
+.mobile-cart-page .catalog-hero .text-white-50,
+.mobile-checkout-page .catalog-hero .text-white-50,
+.customer-account-page .catalog-hero .text-white-50 {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* Small labels read better in sentence case. */
+.mobile-cart-page .text-uppercase,
+.mobile-checkout-page .text-uppercase,
+.customer-account-page .text-uppercase {
+  letter-spacing: 0;
+  text-transform: none !important;
+}
+
+.mobile-cart-page .text-success,
+.mobile-checkout-page .text-success,
+.customer-account-page .text-success {
+  color: var(--cp-green-text) !important;
+}
+
+.mobile-cart-page .form-label,
+.mobile-checkout-page .form-label,
+.customer-account-page .form-label {
+  color: #2d3a4b;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.mobile-cart-page .form-control,
+.mobile-cart-page .form-select,
+.mobile-checkout-page .form-control,
+.mobile-checkout-page .form-select,
+.customer-account-page .form-control,
+.customer-account-page .form-select {
+  border-color: var(--cp-control-border);
+  border-radius: var(--cp-radius-control);
+}
+
+.mobile-cart-page .form-control:focus,
+.mobile-cart-page .form-select:focus,
+.mobile-checkout-page .form-control:focus,
+.mobile-checkout-page .form-select:focus,
+.customer-account-page .form-control:focus,
+.customer-account-page .form-select:focus {
+  border-color: var(--cp-blue);
+  box-shadow: var(--cp-focus);
+}
+
+.mobile-cart-page .form-check-input,
+.mobile-checkout-page .form-check-input,
+.customer-account-page .form-check-input {
+  border-color: var(--cp-control-border);
+}
+
+.mobile-cart-page .form-check-input:checked,
+.mobile-checkout-page .form-check-input:checked,
+.customer-account-page .form-check-input:checked {
+  background-color: var(--cp-blue-dark);
+  border-color: var(--cp-blue-dark);
+}
+
+.mobile-cart-page .form-text,
+.mobile-checkout-page .form-text,
+.customer-account-page .form-text {
+  color: var(--cp-muted);
+}
+
+/* Errors: icon-free but unmistakable: bold text plus a red edge on the field. */
+.mobile-checkout-page .errorlist,
+.customer-account-page .errorlist {
+  margin: 0 0 0.4rem;
+  padding: 0;
+  color: var(--cp-danger);
+  font-size: 0.86rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+.mobile-checkout-page .errorlist + .form-control,
+.mobile-checkout-page .errorlist + .form-select,
+.customer-account-page .errorlist + .form-control,
+.customer-account-page .errorlist + .form-select {
+  border-color: var(--cp-danger);
+  box-shadow: inset 3px 0 0 var(--cp-danger);
+}
+
+.mobile-cart-page :focus-visible,
+.mobile-checkout-page :focus-visible,
+.customer-account-page :focus-visible {
+  outline: 2px solid var(--cp-blue);
+  outline-offset: 2px;
+}
+
+/* Buttons: no glow, same radius as inputs. */
+.mobile-cart-page .btn,
+.mobile-checkout-page .btn,
+.customer-account-page .btn {
+  border-radius: var(--cp-radius-control);
+  font-weight: 650;
+}
+
+.mobile-cart-page .btn-outline-secondary,
+.mobile-checkout-page .btn-outline-secondary,
+.customer-account-page .btn-outline-secondary {
+  color: #2d3a4b;
+  border-color: var(--cp-control-border);
+}
+
+.mobile-cart-page .btn-outline-secondary:hover,
+.mobile-checkout-page .btn-outline-secondary:hover,
+.customer-account-page .btn-outline-secondary:hover {
+  color: #fff;
+}
+
+/* ============================================================
+   2. Cart
+   ============================================================ */
+
+.mobile-cart-page .cart-table thead th {
+  color: #3f4b5c;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.mobile-cart-page .cart-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-cart-page .cart-line-total {
+  color: var(--cp-ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mobile-cart-page .cart-quantity-input {
+  min-height: 2.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.mobile-cart-page .cart-line-remove {
+  min-height: 2.5rem;
+  padding-inline: 0.75rem;
+}
+
+/* Labels on the stacked phone layout. */
+.mobile-cart-page .cart-table td::before {
+  color: var(--cp-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Order summary: the total is the number that matters. */
+.mobile-cart-page .product-purchase-card .fs-4,
+.mobile-checkout-page .product-purchase-card .fs-4 {
+  color: var(--cp-ink);
+  font-weight: 800;
+}
+
+.mobile-cart-page .desktop-order-confidence li,
+.mobile-checkout-page .desktop-order-confidence li {
+  color: var(--cp-muted);
+}
+
+.mobile-cart-page .desktop-order-confidence i,
+.mobile-checkout-page .desktop-order-confidence i {
+  color: var(--cp-green-text);
+}
+
+/* ============================================================
+   3. Checkout
+   ============================================================ */
+
+/* Delivery or pickup: clear radio cards with a visible selected state. */
+.mobile-checkout-page .fulfillment-option {
+  border-color: var(--cp-control-border) !important;
+  background: #fff;
+}
+
+.mobile-checkout-page .fulfillment-option:has(input:checked) {
+  border-color: var(--cp-blue-dark) !important;
+  background: #eaf2fd;
+  box-shadow: inset 0 0 0 1px var(--cp-blue-dark);
+  font-weight: 650;
+}
+
+.mobile-checkout-page .fulfillment-option:has(input:focus-visible) {
+  outline: 2px solid var(--cp-blue);
+  outline-offset: 2px;
+}
+
+.mobile-checkout-page .checkout-summary-line > strong,
+.mobile-checkout-page [data-checkout-tax],
+.mobile-checkout-page [data-checkout-delivery-amount],
+.mobile-checkout-page [data-checkout-total] {
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-checkout-page .checkout-inline-submit {
+  min-height: 3.25rem;
+  font-weight: 750;
+}
+
+/* Bank or mobile money details: easy to copy on a phone with one tap. */
+.mobile-checkout-page .payment-instructions {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.mobile-checkout-page details > summary {
+  min-height: 2.75rem;
+}
+
+/* Progress steps: sentence case, readable current step. */
+.mobile-cart-page .desktop-checkout-progress__step,
+.mobile-checkout-page .desktop-checkout-progress__step {
+  color: #4b5a6b;
+  font-weight: 600;
+}
+
+.mobile-cart-page .desktop-checkout-progress__step.is-current,
+.mobile-checkout-page .desktop-checkout-progress__step.is-current {
+  color: var(--cp-blue-dark);
+}
+
+.mobile-cart-page .desktop-checkout-progress__step.is-complete,
+.mobile-checkout-page .desktop-checkout-progress__step.is-complete {
+  color: var(--cp-green-text);
+}
+
+.mobile-checkout-page .mobile-checkout-progress span {
+  color: #4b5a6b;
+  font-weight: 600;
+}
+
+.mobile-checkout-page .mobile-checkout-progress span.is-current {
+  color: var(--cp-blue-dark);
+}
+
+/* ============================================================
+   4. Customer portal
+   ============================================================ */
+
+/* Account navigation: current section is obvious, not just tinted. */
+.customer-account-page .account-navigation > a {
+  color: #3b4b5d;
+  font-weight: 600;
+}
+
+.customer-account-page .account-navigation > a[aria-current="page"] {
+  color: var(--cp-blue-dark);
+  background: #eaf2fd;
+  border-color: #c3d8f5;
+  box-shadow: inset 0 -2px 0 var(--cp-blue-dark);
+}
+
+.customer-account-page .account-navigation > a:hover {
+  color: var(--cp-blue-dark);
+}
+
+.customer-account-page .account-metrics .card::before {
+  background: var(--cp-blue-dark);
+}
+
+.customer-account-page .account-metrics .home-feature-icon {
+  color: var(--cp-blue-dark);
+  background: #eaf2fd;
+}
+
+/* Tables (orders, repairs, documents): same treatment as the cart. */
+.customer-account-page .table thead th {
+  color: #3f4b5c;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.customer-account-page .table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-account-page .table-hover > tbody > tr:hover > * {
+  background-color: #f3f8fe;
+}
+
+/* Order and repair tracking: the site palette instead of Bootstrap defaults. */
+.customer-account-page .order-progress__step {
+  font-size: 0.9rem;
+}
+
+.customer-account-page .order-progress__step.is-complete .order-progress__marker {
+  color: #fff;
+  background: var(--cp-green-text);
+  border-color: var(--cp-green-text);
+}
+
+.customer-account-page .order-progress__step.is-complete::after,
+.customer-account-page .order-progress__step.is-complete:not(:last-child)::after {
+  background: var(--cp-green-text);
+}
+
+.customer-account-page .order-progress__step.is-current {
+  color: var(--cp-ink);
+  font-weight: 650;
+}
+
+.customer-account-page .order-progress__step.is-current .order-progress__marker {
+  color: var(--cp-blue-dark);
+  border-color: var(--cp-blue-dark);
+  box-shadow: 0 0 0 0.25rem rgba(11, 79, 185, 0.14);
+}
+
+.customer-account-page .order-progress__step.is-upcoming {
+  color: var(--cp-muted);
+}
+
+.customer-account-page .order-progress__step.is-upcoming .order-progress__marker {
+  border-color: var(--cp-control-border);
+  color: var(--cp-muted);
+}
+
+/* Sign-in and sign-up cards. */
+.customer-account-page .form-control-lg {
+  min-height: 3.25rem;
+  font-size: 1rem;
+}
+
+.customer-account-page .alert {
+  border-radius: var(--cp-radius-control);
+}
+
+/* ============================================================
+   5. Small screens and motion
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+  .mobile-checkout-page .checkout-inline-submit {
+    min-height: 3.4rem;
+  }
+
+  .customer-account-page .account-navigation > a {
+    min-height: 2.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-checkout-page .fulfillment-option,
+  .mobile-cart-page .desktop-cart-table tbody tr {
+    transition: none;
+  }
+}

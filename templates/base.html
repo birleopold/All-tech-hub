@@ -47,7 +47,10 @@
   {% block extra_css %}{% endblock %}
   <link href="{% static 'css/storefront_polish.css' %}" rel="stylesheet">
   <link href="{% static 'css/storefront_product_cards.css' %}" rel="stylesheet">
-  {% if public_navigation_enabled %}<link href="{% static 'css/storefront_refresh.css' %}" rel="stylesheet">{% endif %}
+  {% if public_navigation_enabled %}
+  <link href="{% static 'css/storefront_refresh.css' %}" rel="stylesheet">
+  <link href="{% static 'css/checkout_portal_refresh.css' %}" rel="stylesheet">
+  {% endif %}
 </head>
 <body class="{% block body_class %}d-flex flex-column min-vh-100 site-body{% endblock %}{% if resolve_url_name|slice:':7' == 'portal_' %} customer-account-page{% endif %}"
       data-ga4-id="{{ growth_settings.ga4_measurement_id }}"

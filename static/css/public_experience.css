@@ -1479,6 +1479,10 @@
     min-height: 3rem;
   }
 
+  .public-catalog-search__icon {
+    top: calc(0.45rem + 1.55rem);
+  }
+
   .public-catalog-card__media {
     aspect-ratio: 16 / 11;
   }

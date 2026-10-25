@@ -258,7 +258,7 @@
 .public-catalog-page .market-filter-form .form-control,
 .public-catalog-page .market-filter-form .form-select {
   min-height: 2.75rem;
-  border-color: #8a98a8;           /* 3:1 against white for the control edge */
+  border-color: #8693a5;           /* 3.12:1 against white for the control edge */
   border-radius: var(--sf-radius-control);
 }
 
@@ -292,7 +292,7 @@
 
 .public-catalog-page .market-catalog-toolbar .form-select {
   min-height: 2.75rem;
-  border-color: #8a98a8;
+  border-color: #8693a5;
   border-radius: var(--sf-radius-control);
 }
 
@@ -379,7 +379,7 @@
 
 .public-product-page .product-buy-card .form-control,
 .public-product-page .product-buy-card .form-select {
-  border-color: #8a98a8;
+  border-color: #8693a5;
   border-radius: var(--sf-radius-control);
 }
 

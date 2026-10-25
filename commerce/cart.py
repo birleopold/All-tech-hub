@@ -31,6 +31,10 @@ class CartLine:
         return self.product.price
 
     @property
+    def line_total(self) -> Decimal:
+        return self.unit_price * self.quantity
+
+    @property
     def label(self) -> str:
         if self.variant is not None:
             return f"{self.product.name} — {self.variant.name}"
